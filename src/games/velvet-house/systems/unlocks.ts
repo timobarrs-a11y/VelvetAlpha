@@ -1,11 +1,39 @@
-import { unlockFor } from '../state/unlockCodes';
+import { unlockFor, UNLOCK_CODES, type UnlockCode } from '../state/unlockCodes';
 import { catalogById, setQuote } from '../state/catalog';
 import { isPaintable } from '../state/scenes';
+import { run } from '../kernel/config';
 import type { Game } from '../kernel/game';
 
-/** Unlock codes (state/unlockCodes.ts) applied to the house. */
+/** How long the new look gets to show (camera pull-back and sparkle) before the picture is taken. */
+const SHOT_DELAY_MS = 1700;
+
+/** Unlock codes (state/unlockCodes.ts) applied to the house, with a pop-up showing what was unlocked. */
 export function createUnlocks(g: Game): Partial<Game> {
-  const { view, owned, log } = g;
+  const { owned, log, flags } = g;
+  const pending = (): string[] => ((flags.pendingUnlocks as string[] | undefined) ??= []);
+  let presenting = false;
+
+  /** The pack goes on the house, and once it has settled a picture of the room goes in the pop-up. */
+  function present(code: UnlockCode): void {
+    const set = catalogById(code.setId);
+    if (!set?.set) return;
+    presenting = true;
+    if (!isPaintable(g.view.level)) g.setLevel(1);
+    for (const m of setQuote(set, new Set()).members) g.handleBuy(m, undefined, true);
+    setTimeout(() => {
+      let image: string | undefined;
+      try { image = g.canvas.toDataURL('image/jpeg', 0.88); } catch { /* no picture: the pop-up still says what they got */ }
+      g.celebrate({ kicker: 'Congrats, you just unlocked', title: code.packName, tagline: 'Try it out today!', image });
+      log(code.welcome);
+      presenting = false;
+    }, SHOT_DELAY_MS);
+  }
+
+  const ready = (): boolean => g.s.settleDone && !g.s.scriptMode && !presenting;
+
+  function codeForSet(id: string): UnlockCode | undefined {
+    return Object.values(UNLOCK_CODES).find((c) => c.setId === id);
+  }
 
   /** True if `text` was a code (so chat should not handle it). */
   function tryUnlock(text: string): boolean {
@@ -14,14 +42,22 @@ export function createUnlocks(g: Game): Partial<Game> {
     const set = catalogById(code.setId);
     if (!set?.set) return false;
     if (owned.has(set.id)) { log('You already have that one. It is in your Sets tab.'); return true; }
-    // Everything in the set is theirs, free; and if they are looking at a floor of the house, it goes on.
-    const members = setQuote(set, new Set()).members;
-    for (const m of members) owned.add(m.id);
+    // Everything in the set is theirs, free, from this moment.
+    for (const m of setQuote(set, new Set()).members) owned.add(m.id);
     owned.add(set.id);
-    if (isPaintable(view.level)) for (const m of members) g.handleBuy(m, undefined, true);
-    log(code.welcome);
+    if (ready()) present(code);
+    else { pending().push(set.id); log(`${code.packName} is yours. It will be waiting once you have moved in.`); }
     g.refreshDrawer();
     return true;
+  }
+
+  // Packs unlocked mid-story or before moving in wait for a quiet moment.
+  if (!run.attract) {
+    setInterval(() => {
+      if (!pending().length || !ready()) return;
+      const code = codeForSet(pending().shift()!);
+      if (code) present(code);
+    }, 1000);
   }
   return { tryUnlock };
 }

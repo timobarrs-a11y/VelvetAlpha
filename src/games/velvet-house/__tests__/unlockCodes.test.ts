@@ -10,8 +10,8 @@ const memory = (): KeyValueStore & { data: Record<string, string> } => { const d
 
 describe('unlock codes', () => {
   it('are exact phrases, in any case, and every one points at a secret set that exists', () => {
-    expect(unlockFor('rainbowhugs')?.setId).toBe('set-cloud');
-    expect(unlockFor('  RainbowHugs ')?.setId).toBe('set-cloud');
+    expect(unlockFor('rainbowhugs')?.setId).toBe('set-cuddle');
+    expect(unlockFor('  RainbowHugs ')?.setId).toBe('set-cuddle');
     for (const t of ['', 'hi', 'rainbow', 'rainbowhugs please', 'say rainbowhugs', 'cloud']) expect(unlockFor(t), t).toBeNull();
     for (const c of Object.values(UNLOCK_CODES)) { const s = catalogById(c.setId); expect(s?.secret).toBe(true); expect(s?.set).toBeDefined(); }
   });
@@ -19,7 +19,7 @@ describe('unlock codes', () => {
 
 describe('a secret pack', () => {
   it('is not in the shop until the player has it, in any tab', () => {
-    const cloud = CATALOG.filter((c) => c.id.endsWith('-cloud') || c.id === 'paper-cloudnine-sky' || c.id === 'floor-confetti');
+    const cloud = CATALOG.filter((c) => c.id.endsWith('-cuddle') || c.id === 'paper-clouds-sky' || c.id === 'floor-skycheck' || c.id === 'set-cuddle');
     expect(cloud.length).toBe(9);
     for (const c of cloud) expect(c.secret, c.id).toBe(true);
     for (const tab of ['Today', 'Sets', 'Furniture', 'Wallpaper', 'Floors']) {
@@ -32,38 +32,68 @@ describe('a secret pack', () => {
 });
 
 describe('what a code does to the house', () => {
-  const game = (level = 1, owned: string[] = []) => {
-    const logs: string[] = [], applied: string[] = [], own = new Set(owned);
-    const g = { view: { level }, owned: own, log: (m: string) => logs.push(m), refreshDrawer: () => {}, handleBuy: (m: { id: string }, _c: unknown, free: boolean) => { applied.push(m.id + (free ? ':free' : '')); own.add(m.id); } } as unknown as Game;
-    return { logs, applied, own, tryUnlock: createUnlocks(g).tryUnlock! };
+  afterEach(() => { vi.useRealTimers(); });
+  const game = (opts: { level?: number; owned?: string[]; settled?: boolean; script?: boolean } = {}) => {
+    vi.useFakeTimers();
+    const logs: string[] = [], applied: string[] = [], shown: Array<{ title: string; image?: string }> = [], own = new Set(opts.owned ?? []);
+    const g = {
+      view: { level: opts.level ?? 1 }, owned: own, flags: {}, s: { settleDone: opts.settled ?? true, scriptMode: opts.script ? 'cutscene' : null },
+      canvas: { toDataURL: () => 'data:image/jpeg;base64,AAAA' },
+      log: (m: string) => logs.push(m), refreshDrawer: () => {},
+      setLevel: (l: number) => { (g.view as { level: number }).level = l; },
+      celebrate: (o: { title: string; image?: string }) => shown.push(o),
+      handleBuy: (m: { id: string }, _c: unknown, free: boolean) => { applied.push(m.id + (free ? ':free' : '')); own.add(m.id); },
+    } as unknown as Game;
+    return { g, logs, applied, shown, own, tryUnlock: createUnlocks(g).tryUnlock! };
   };
-  const ids = () => catalogById('set-cloud')!.set!.items;
+  const ids = () => catalogById('set-cuddle')!.set!.items;
 
-  it('gives the whole set free and puts it on, when they are looking at a floor of the house', () => {
-    const { own, applied, logs, tryUnlock } = game();
+  it('gives the whole set free, puts it on, and then pops up with a picture of it', () => {
+    const { own, applied, shown, logs, tryUnlock } = game();
     expect(tryUnlock('rainbowhugs')).toBe(true);
-    for (const id of [...ids(), 'set-cloud']) expect(own.has(id), id).toBe(true);
+    for (const id of [...ids(), 'set-cuddle']) expect(own.has(id), id).toBe(true);
     expect(applied).toEqual(ids().map((id) => id + ':free'));
-    expect(logs[0]).toMatch(/Cloud Nine is yours/);
+    expect(shown).toEqual([]);
+    vi.advanceTimersByTime(2000);
+    expect(shown).toHaveLength(1);
+    expect(shown[0].title).toBe('Cuddle Clouds');
+    expect(shown[0].image).toMatch(/^data:image/);
+    expect(logs.join(' ')).toMatch(/Cuddle Clouds is yours/);
   });
 
-  it('on the backyard it is still theirs, just not put on yet', () => {
-    const { own, applied, tryUnlock } = game(3);
+  it('on the backyard it moves inside first, so the picture is of the pack', () => {
+    const { g, own, applied, tryUnlock } = game({ level: 3 });
     expect(tryUnlock('rainbowhugs')).toBe(true);
-    expect(own.has('set-cloud')).toBe(true);
-    expect(applied).toEqual([]);
+    expect(own.has('set-cuddle')).toBe(true);
+    expect(g.view.level).toBe(1);
+    expect(applied.length).toBe(ids().length);
+  });
+
+  it('before they have moved in, or mid-story, it is theirs but waits for a quiet moment', () => {
+    for (const opts of [{ settled: false }, { script: true }]) {
+      const { g, own, applied, shown, logs, tryUnlock } = game(opts);
+      expect(tryUnlock('rainbowhugs')).toBe(true);
+      vi.advanceTimersByTime(3000);
+      expect(own.has('set-cuddle')).toBe(true);
+      expect(applied).toEqual([]);
+      expect(shown).toEqual([]);
+      expect(logs[0]).toMatch(/waiting once you have moved in/);
+      expect((g.flags as { pendingUnlocks: string[] }).pendingUnlocks).toEqual(['set-cuddle']);
+    }
   });
 
   it('the second time it says so and changes nothing; ordinary talk is not a code', () => {
-    const { applied, logs, tryUnlock } = game(1, ['set-cloud']);
+    const { applied, shown, logs, tryUnlock } = game({ owned: ['set-cuddle'] });
     expect(tryUnlock('rainbowhugs')).toBe(true);
+    vi.advanceTimersByTime(3000);
     expect(applied).toEqual([]);
+    expect(shown).toEqual([]);
     expect(logs[0]).toMatch(/already have/);
     expect(tryUnlock('how are you')).toBe(false);
   });
 
   it('shows in the Sets tab once owned, as an Apply, with nothing to pay', () => {
-    const quote = setQuote(catalogById('set-cloud')!, new Set(ids()));
+    const quote = setQuote(catalogById('set-cuddle')!, new Set(ids()));
     expect(quote.missing).toEqual([]);
     expect(quote.cost).toBe(0);
   });

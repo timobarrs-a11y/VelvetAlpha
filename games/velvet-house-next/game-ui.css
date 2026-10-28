@@ -717,3 +717,32 @@
 
 /* A menu screen with a form or a list sits on a solid panel, so the house moving behind the title does not show through. */
 .vh-menu-card.vh-menu-panel { margin-top: 6vh; padding: 18px 16px; border-radius: 20px; background: rgba(20,17,28,.94); border: 1px solid rgba(165,130,240,.28); box-shadow: 0 16px 48px rgba(0,0,0,.5); max-height: calc(100dvh - 24px); overflow-y: auto; box-sizing: border-box; }
+
+/* The celebration pop-up: what you just got, a picture of it, and a button to carry on. */
+.vh-celebrate {
+  position: absolute; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
+  background: radial-gradient(ellipse at 50% 40%, rgba(60,40,90,.72), rgba(10,8,16,.86)); backdrop-filter: blur(6px);
+  animation: vh-cel-fade .25s ease both; transition: opacity .18s ease;
+}
+.vh-celebrate-out { opacity: 0; pointer-events: none; }
+@keyframes vh-cel-fade { from { opacity: 0; } to { opacity: 1; } }
+.vh-celebrate-card {
+  position: relative; overflow: hidden; width: min(380px, 100%); max-height: 100%; box-sizing: border-box; overflow-y: auto;
+  display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 22px 18px 18px; text-align: center; border-radius: 24px;
+  background: linear-gradient(180deg, #2B2340, #1B1726); border: 1px solid rgba(165,130,240,.5);
+  box-shadow: 0 24px 70px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04) inset, 0 0 60px rgba(165,130,240,.25);
+  color: #F2EEE8; font-family: Inter, system-ui, sans-serif; animation: vh-cel-pop .45s cubic-bezier(.2,1.2,.3,1) both;
+}
+@keyframes vh-cel-pop { from { opacity: 0; transform: translateY(14px) scale(.9); } to { opacity: 1; transform: none; } }
+.vh-celebrate-kicker { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #C9B8EE; }
+.vh-celebrate-title { margin: 0; font-size: 30px; line-height: 1.1; font-weight: 800; letter-spacing: -.02em; background: linear-gradient(90deg, #FFB3C7, #FFE49A, #A8E6C8, #9CC8FF); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.vh-celebrate-pic { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 16px; border: 1px solid rgba(255,255,255,.18); box-shadow: 0 10px 30px rgba(0,0,0,.45); background: #14111C; }
+.vh-celebrate-tag { margin: 0; font-size: 15px; font-weight: 600; color: #E9E4EC; }
+.vh-celebrate-btn { appearance: none; border: 0; border-radius: 14px; padding: 0 26px; min-height: 46px; width: 100%; font: 800 15px/1 Inter, system-ui, sans-serif; color: #1B1130; background: linear-gradient(180deg, #C9B0FF, #A582F0); box-shadow: 0 8px 22px rgba(165,130,240,.4); cursor: pointer; transition: transform .12s ease, filter .15s ease; }
+.vh-celebrate-btn:hover { filter: brightness(1.06); }
+.vh-celebrate-btn:active { transform: scale(.97); }
+.vh-celebrate-btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.vh-celebrate-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.vh-celebrate-confetti i { position: absolute; top: -12px; left: var(--x); width: 7px; height: 12px; border-radius: 2px; background: var(--c); opacity: 0; animation: vh-cel-fall 2.4s ease-in var(--d) 1 both; }
+@keyframes vh-cel-fall { 0% { opacity: 0; transform: translateY(0) rotate(0); } 12% { opacity: 1; } 100% { opacity: 0; transform: translateY(420px) rotate(540deg); } }
+@media (prefers-reduced-motion: reduce) { .vh-celebrate, .vh-celebrate-card, .vh-celebrate-confetti i { animation: none; } .vh-celebrate-confetti { display: none; } }

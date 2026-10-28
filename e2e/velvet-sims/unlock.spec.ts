@@ -3,30 +3,39 @@ import { openGame, inGame, objects, savedGame, saveNow, SAVE_KEY } from './helpe
 
 test('an unlock code said to Maya gives the secret pack, free, and is not a message', async ({ page }) => {
   const game = await openGame(page);
+  await inGame(page, 'v.settle()');
   const money = await inGame<number>(page, 'v.money');
 
   // Before the code the pack is nowhere in the shop.
   await game.locator('.vh-dock [data-open=shop]').click();
   await game.locator('[data-tab=Sets]').click();
-  await expect(game.locator('[data-item=set-cloud]')).toHaveCount(0);
+  await expect(game.locator('[data-item=set-cuddle]')).toHaveCount(0);
   await game.locator('.vh-drawer[data-open=shop] .vh-drawer-close').click();
 
   await inGame(page, 'v.openChat()');
   const input = game.locator('.vh-dialogue input');
   await input.fill('rainbowhugs');
   await input.press('Enter');
-  await expect(game.locator('.vh-log')).toContainText('Cloud Nine is yours');
   await expect(input).toHaveValue('');
+  // A pop-up says what they got, with a picture of the pack.
+  const pop = game.locator('.vh-celebrate');
+  await expect(pop).toContainText('Cuddle Clouds', { timeout: 10000 });
+  await expect(pop).toContainText('Congrats, you just unlocked');
+  await expect(pop).toContainText('Try it out today!');
+  await expect(pop.locator('img')).toHaveAttribute('src', /^data:image/);
+  await pop.locator('.vh-celebrate-btn').click();
+  await expect(pop).toHaveCount(0);
+  await expect(game.locator('.vh-log')).toContainText('Cuddle Clouds is yours');
   expect(await inGame<number>(page, 'v.money')).toBe(money);
   // It was put on the main floor.
   const objs = await objects(page);
-  for (const id of ['fridge', 'counter', 'dining', 'sofa']) expect(objs.find((o) => o.id === id)!.skin, id).toBe('cloud');
+  for (const id of ['fridge', 'counter', 'dining', 'sofa']) expect(objs.find((o) => o.id === id)!.skin, id).toBe('cuddle');
   // Now it is in the Sets tab as an Apply.
   await inGame(page, 'v.closeChat()');
   await game.locator('.vh-dock [data-open=shop]').click();
   await game.locator('[data-tab=Sets]').click();
-  await expect(game.locator('[data-item=set-cloud]')).toContainText('Cloud Nine');
-  await expect(game.locator('[data-item=set-cloud] [data-buy]')).toHaveText('Apply');
+  await expect(game.locator('[data-item=set-cuddle]')).toContainText('Cuddle Clouds');
+  await expect(game.locator('[data-item=set-cuddle] [data-buy]')).toHaveText('Apply');
   // Not remembered as something said.
   await saveNow(page);
   expect(JSON.stringify((await savedGame(page)).turns ?? [])).not.toContain('rainbowhugs');
@@ -80,8 +89,10 @@ test('codes saved on the start menu are redeemed in the house: the pack and the 
   await page.evaluate((key) => localStorage.setItem(key + ':codes', JSON.stringify(['rainbowhugs', 'xoxotimoisgodxoxo'])), SAVE_KEY);
   await page.reload();
   const again = await openGame(page, { fresh: false });
-  await expect(again.locator('.vh-log')).toContainText('Cloud Nine is yours', { timeout: 15000 });
-  await expect(again.locator('.vh-log')).toContainText('+$500000');
+  await inGame(page, 'v.settle()');
+  await expect(again.locator('.vh-celebrate')).toContainText('Cuddle Clouds', { timeout: 15000 });
+  await again.locator('.vh-celebrate-btn').click();
+  await expect(again.locator('.vh-log')).toContainText('Cuddle Clouds is yours', { timeout: 15000 });
   expect(await inGame<number>(page, 'v.money')).toBeGreaterThanOrEqual(500000);
-  expect((await objects(page)).find((o) => o.id === 'fridge')!.skin).toBe('cloud');
+  expect((await objects(page)).find((o) => o.id === 'fridge')!.skin).toBe('cuddle');
 });

@@ -11,7 +11,7 @@ See `dev-money.md`. `xoxotimoisgodxoxo` said to the partner, or entered on the s
 ## 2. Unlock codes (secret packs, as gifts and for marketing)
 
 A phrase said to the partner in chat, or entered on the start menu's Cheats screen, gives the player something for free.
-The first gives a secret pack, **Cloud Nine** (clouds, rainbows, stars, hearts, a confetti carpet): its six looks, its
+The first gives a secret pack, **Cuddle Clouds** (pastel bears, clouds and rainbows, a sky-check floor): its six looks, its
 wallpaper and its floor are in the catalog as `secret(...)`, so they are in no shop tab until the player has them. The
 code is:
 
