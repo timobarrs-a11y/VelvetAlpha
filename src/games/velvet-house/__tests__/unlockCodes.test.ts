@@ -19,7 +19,8 @@ describe('unlock codes', () => {
 
 describe('a secret pack', () => {
   it('is not in the shop until the player has it, in any tab', () => {
-    const cloud = CATALOG.filter((c) => c.id.endsWith('-cuddle') || c.id === 'paper-clouds-sky' || c.id === 'floor-skycheck' || c.id === 'set-cuddle');
+    const pack = catalogById('set-cuddle')!;
+    const cloud = [pack, ...setQuote(pack, new Set()).members];
     expect(cloud.length).toBe(9);
     for (const c of cloud) expect(c.secret, c.id).toBe(true);
     for (const tab of ['Today', 'Sets', 'Furniture', 'Wallpaper', 'Floors']) {
@@ -28,6 +29,17 @@ describe('a secret pack', () => {
     }
     // nothing else is secret
     expect(CATALOG.filter((c) => c.secret && !cloud.includes(c))).toEqual([]);
+  });
+
+  it('its finishing touches wait on the shelves until the pack is unlocked, then sell as usual', () => {
+    const touches = catalogById('touches-cuddle')!;
+    const waiting = [touches, ...setQuote(touches, new Set()).members];
+    for (const c of waiting) { expect(c.secret, c.id).toBeFalsy(); expect(c.needs, c.id).toBe('set-cuddle'); }
+    for (const tab of ['Today', 'Sets', 'Furniture', 'Wall', 'Decor', 'Hobbies']) {
+      expect(visibleItems(itemsForTab(tab), new Set()).some((c) => waiting.includes(c)), tab).toBe(false);
+      expect(visibleItems(itemsForTab(tab), new Set(['set-cuddle'])).some((c) => waiting.includes(c)), tab).toBe(tab === 'Today' || waiting.some((c) => c.tab === tab));
+    }
+    expect(CATALOG.filter((c) => c.needs && !waiting.includes(c))).toEqual([]);
   });
 });
 

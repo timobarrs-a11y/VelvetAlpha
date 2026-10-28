@@ -33,7 +33,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
   const drawer = createDrawer(closing({
     onClose: () => { g.s.drawerPage = ''; try { localStorage.removeItem('velvet-drawer'); } catch {} },
     onPage: (pg) => { g.scriptEmit({ type: 'tab.opened', tab: pg }); if (pg === 'arrange') g.enterArrange(); else if (g.isArranging()) g.exitArrange(); g.studioPage?.(pg); },
-    onArrangePick: (id) => { const o = world.objs.find(q => q.id === id); if (o) g.selectObject(o); },
+    onArrangePick: (id) => { const o = world.objs.find(q => q.id === id); if (o) g.selectObject(o); else if (id.startsWith('wall-')) g.selectWall(id); },
     onArrangeRotate: () => g.rotateSelected(),
     onArrangeSet: () => g.setDown(),
     onArrangeBack: () => g.putBack(),
@@ -41,7 +41,8 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onArrangeLook: (id) => g.useLook(id),
     onArrangeFloor: (lv) => g.carryTo(lv),
     onArrangeStore: () => g.storeSelected(),
-    onArrangeUnstore: (id) => g.unstore(id),
+    onArrangeUnstore: (id) => { if (id.startsWith('wall-')) g.rehangWall(id); else g.unstore(id); },
+    onArrangeTakeDown: () => g.takeDownWall(),
     onPickFloor: (lv) => g.setLevel(lv),
     onBuy: (item, color) => g.handleBuy(item, color),
     onPetOrder: (act, id) => g.petOrder(act, id),
