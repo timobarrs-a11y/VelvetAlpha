@@ -14,13 +14,11 @@ describe('AdminPromoCodesPage', () => {
   it('lists every code in the game with what it gives and how often it was used, and codes no longer in the game as retired', async () => {
     render(<AdminPromoCodesPage />);
     await waitFor(() => expect(screen.getByText('rainbowhugs')).toBeTruthy());
-    expect(screen.getByText('luv2dance')).toBeTruthy();
     expect(screen.getByText('Cuddle Clouds')).toBeTruthy();
-    expect(screen.getByText('Nana')).toBeTruthy();
     expect(screen.getByText(/Cuddle Clouds kitchen and living room \+ Cuddle Clouds finishing touches · 13 pieces, free/)).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
     expect(screen.getByText(/Latest: Ana/)).toBeTruthy();
-    expect(screen.getAllByText('Copy')).toHaveLength(2);
+    expect(screen.getAllByText('Copy')).toHaveLength(1);
     expect(screen.getByText('oldcode')).toBeTruthy();
     expect(screen.getByText('Retired')).toBeTruthy();
   });

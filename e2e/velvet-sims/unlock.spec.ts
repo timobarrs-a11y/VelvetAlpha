@@ -20,8 +20,7 @@ test('a promo code said to Maya gives the promo pack, free, and is not a message
   }
   // The Promo tab lists the promo packs.
   await game.locator('[data-tab=Promo]').click();
-  await expect(game.locator('.vh-shop-list .vh-shop-card')).toHaveCount(3);
-  await expect(game.locator('[data-item=set-nana]')).toHaveClass(/vh-promo-locked/);
+  await expect(game.locator('.vh-shop-list .vh-shop-card')).toHaveCount(2);
   await expect(game.locator('[data-item=set-cuddle]')).toHaveClass(/vh-promo-locked/);
   await game.locator('.vh-drawer[data-open=shop] .vh-drawer-close').click();
 

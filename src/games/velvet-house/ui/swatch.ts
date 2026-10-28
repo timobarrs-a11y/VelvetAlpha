@@ -35,7 +35,6 @@ export function paperCss(info: LookInfo | null, thumb?: string): string {
     case 'squiggle': return `${stripes(ink, '0deg', 10)}, ${base}`;
     case 'sprig': case 'sprinkles': return `radial-gradient(circle, ${ink} 0 1.6px, transparent 2px) 0 0 / 9px 9px, ${base}`;
     case 'serape': return `${stripes(ink, '0deg', 8)}, ${base}`;
-    case 'ditsy': return `repeating-linear-gradient(90deg, rgba(255,255,255,.45) 0 3px, transparent 3px 12px), radial-gradient(circle, #fff 0 2px, transparent 2.5px) 0 0 / 14px 14px, ${base}`;
     case 'clouds': return `radial-gradient(circle, ${ink} 0 4px, transparent 4.5px) 0 0 / 16px 14px, ${base}`;
     case 'pixels': return `linear-gradient(${ink}, ${ink}) 3px 3px / 4px 4px no-repeat, linear-gradient(${ink}, ${ink}) 9px 3px / 4px 4px no-repeat, linear-gradient(${ink}, ${ink}) 1px 7px / 14px 4px no-repeat, ${base}`;
     case 'circuit': return `${stripes(ink, '90deg', 14)}, ${stripes(ink, '0deg', 14)}, ${base}`;

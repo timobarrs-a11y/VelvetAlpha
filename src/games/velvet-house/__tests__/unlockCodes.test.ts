@@ -12,7 +12,6 @@ describe('unlock codes', () => {
   it('are exact phrases, in any case, and every one points at promo sets that exist', () => {
     expect(unlockFor('rainbowhugs')?.setIds).toEqual(['set-cuddle', 'touches-cuddle']);
     expect(unlockFor('  RainbowHugs ')?.packName).toBe('Cuddle Clouds');
-    expect(unlockFor('Luv2dance')?.setIds).toEqual(['set-nana']);
     for (const t of ['', 'hi', 'rainbow', 'rainbowhugs please', 'say rainbowhugs', 'cloud']) expect(unlockFor(t), t).toBeNull();
     for (const c of Object.values(UNLOCK_CODES)) for (const id of c.setIds) { const s = catalogById(id); expect(s?.promo, id).toBe(true); expect(s?.set, id).toBeDefined(); }
   });
@@ -47,7 +46,7 @@ describe('a promo pack', () => {
 
   it('has its own Promo tab, listing the packs (not every piece again)', () => {
     expect(TABS).toContain('Promo');
-    expect(itemsForTab('Promo').map((c) => c.id)).toEqual(['set-cuddle', 'touches-cuddle', 'set-nana']);
+    expect(itemsForTab('Promo').map((c) => c.id)).toEqual(['set-cuddle', 'touches-cuddle']);
   });
 });
 

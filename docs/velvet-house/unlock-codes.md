@@ -34,10 +34,14 @@ The codes (also on the admin **Promo codes** page, with a copy button and how ma
 | Code | Gives |
 |---|---|
 | `rainbowhugs` | **Cuddle Clouds**: the kitchen and living room (six looks, the clouds wallpaper, the sky-check floor) and its finishing touches (cloud rug, rainbow arch, cloud night light, plush pile, cloud swing) |
-| `luv2dance` | **Nana**, the soft-girl era: the kitchen and living room (six looks in pastel pink, lilac and butter, the pink sky wallpaper, the plush blush carpet) |
+| `luv2dance` | **Nana** (reserved: the pack is still being made on `claude/nana-pack`; the line goes in when it lands) |
 
 It gives everything, puts it on if they are looking at a floor of the house, and the packs then show in the **Sets**
 tab with an **Apply** button. In chat it is caught in `handleTalk` before anything goes to the AI or the chat history.
+
+**When Nana lands** (`claude/nana-pack`): wrap the set and every piece in `promo(...)` (not `secret(...)`, which is gone),
+add `luv2dance: { setIds: ['set-nana'], packName: 'Nana', welcome: '...' }` to `UNLOCK_CODES`, and drop that branch's
+own shop lock (`isLockedPromo` and its card in `ui/drawer.ts`): the promo card and the Promo tab here cover it.
 
 To add one: mark the pack and every piece in it `promo(...)` in `state/catalog.ts` (look drawers in `art/houseArt.js`),
 then a line in `UNLOCK_CODES` in `state/unlockCodes.ts` naming the sets it gives. Code: `state/unlockCodes.ts`,

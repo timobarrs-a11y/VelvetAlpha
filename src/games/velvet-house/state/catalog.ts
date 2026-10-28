@@ -563,18 +563,6 @@ export const CATALOG: CatalogEntry[] = [
   wallItem('wobj-plates', 'Plate wall', 80, ['vintage', 'cozy'], ['#4A88B8', '#C2413A', '#4F9460']),
   wallItem('wobj-neon', 'Neon heart', 150, ['bold', 'playful', 'modern'], ['#FF5FA2', '#5FE3FF', '#FFD25F']),
   wallItem('wobj-aquarium', 'Aquarium', 200, ['modern', 'playful', 'cool'], ['#2B2B30', '#9C6B45', '#F2EEE8']),
-
-  // Nana: the soft-girl era, a promo pack (code luv2dance in state/unlockCodes.ts).
-  promo(wallpaper('paper-nana-sky', 'Pink sky and clouds', 'nana-sky', 100, ['soft', 'playful', 'cozy'])),
-  promo(floor('floor-nanaplush', 'Plush blush carpet', 'nanaplush', 150, ['soft', 'playful', 'cozy'])),
-  promo(look('look-fridge-nana', 'fridge', 'nana', 'Pastel pink fridge', 'Blush pink with a cream cloud cap, cloud stickers and little frames on the upper door, a lilac bow and a ruffle band on the lower one, and heart handles.', 360, ['soft', 'playful', 'cozy'], ['#F8C8DC', '#FFF8F0', '#D9C8F2'])),
-  promo(look('look-counter-nana', 'counter', 'nana', 'Cream cabinets with a ruffle valance', 'Cream fronts with heart knobs under a pink ruffle valance, a butter top scattered with hearts, a lilac basin with a gold tap and a posy of daisies.', 430, ['soft', 'playful', 'cozy'], ['#FFF8F0', '#F8C8DC', '#FFF1B8'])),
-  promo(look('look-dining-nana', 'dining', 'nana', 'Tea-party table and bow chairs', 'A lace-edged cloth over a gold-legged table set with a teapot and cups, chairs with cloud-and-bow backs in pink and lilac, and a cloud lamp overhead.', 350, ['soft', 'playful', 'cozy'], ['#FFF8F0', '#F8C8DC', '#D9C8F2'])),
-  promo(look('look-sofa-nana', 'sofa', 'nana', 'Plush ruffle sofa', 'A plush lilac sofa with a ruffled skirt, pink pillows with a heart and a bow, and a butter throw over one arm.', 390, ['soft', 'playful', 'cozy'], ['#E4D6F7', '#F8C8DC', '#FFF1B8'])),
-  promo(look('look-lamp-nana', 'lamp', 'nana', 'Cloud lamp', 'A fluffy cluster of clouds for a shade on a gold stem, a little star on top and a soft pink glow when it is on.', 100, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F8C8DC', '#E8C877'])),
-  promo(look('look-plant-nana', 'plant', 'nana', 'Ruffle pot', 'Your plant in a pink pot with a ruffled rim and a bow, daisies in its leaves.', 65, ['soft', 'playful', 'cozy'], ['#F8C8DC', '#FFF8F0', '#D9C8F2', '#FFF1B8'])),
-  promo(bundle('set-nana', 'Nana kitchen and living room', 'The soft-girl era: pastel pink, lilac and butter, a plush ruffle sofa, a tea-party table with bow chairs, cloud lights, ruffles, bows and daisies, with a pink sky of clouds on the walls and a plush blush carpet underfoot.',
-    ['look-fridge-nana', 'look-counter-nana', 'look-dining-nana', 'look-sofa-nana', 'look-lamp-nana', 'look-plant-nana', 'paper-nana-sky', 'floor-nanaplush'], ['soft', 'playful', 'cozy'])),
   wallItem('wobj-marquee', 'Marquee sign', 140, ['playful', 'bold', 'vintage'], ['#F4C430', '#FF2E9A', '#19E6F0']),
   wallItem('wobj-pixelprint', 'Pixel art print', 60, ['playful', 'bold', 'vintage'], ['#19E6F0', '#FF2E9A', '#39D353']),
   promo(wallItem('wobj-rainbowarch', 'Rainbow arch', 140, ['soft', 'playful', 'cozy'], ['#F58A8A', '#AEDDF7'])),
