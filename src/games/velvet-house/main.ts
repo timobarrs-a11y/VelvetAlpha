@@ -22,6 +22,7 @@ import { createConcerns } from './systems/concerns';
 import { createPets } from './systems/pets';
 import { createDevMoney } from './systems/devMoney';
 import { createUnlocks } from './systems/unlocks';
+import { createCelebrate } from './ui/celebrate';
 import { createCodeQueue } from './systems/codeQueue';
 import { createScripts } from './script/gameHost';
 import { createFrame } from './view/frame';
@@ -56,6 +57,7 @@ function boot(attract: boolean): void {
   // Before the vitals: the HUD asks for the partner's mood the moment it is drawn.
   Object.assign(g, createConcerns(g));
   Object.assign(g, createDevMoney(g));
+  Object.assign(g, createCelebrate(g));
   Object.assign(g, createUnlocks(g));
   Object.assign(g, createVitals(g));
   Object.assign(g, createGoals(g));

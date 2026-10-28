@@ -149,6 +149,7 @@ export interface Game {
   rotateSelected(): void;
   tryDevMoney(text: string): boolean;
   tryUnlock(text: string): boolean;
+  celebrate(options: import('../ui/celebrate').CelebrateOptions): void;
   recolourHeld(): void;
   useLook(skin: string): void;
   cancelHold(): void;

@@ -3,6 +3,7 @@ import { openGame, inGame, objects, savedGame, saveNow, SAVE_KEY } from './helpe
 
 test('an unlock code said to Maya gives the secret pack, free, and is not a message', async ({ page }) => {
   const game = await openGame(page);
+  await inGame(page, 'v.settle()');
   const money = await inGame<number>(page, 'v.money');
 
   // Before the code the pack is nowhere in the shop.
@@ -15,8 +16,16 @@ test('an unlock code said to Maya gives the secret pack, free, and is not a mess
   const input = game.locator('.vh-dialogue input');
   await input.fill('rainbowhugs');
   await input.press('Enter');
-  await expect(game.locator('.vh-log')).toContainText('Cloud Nine is yours');
   await expect(input).toHaveValue('');
+  // A pop-up says what they got, with a picture of the pack.
+  const pop = game.locator('.vh-celebrate');
+  await expect(pop).toContainText('Cloud Nine', { timeout: 10000 });
+  await expect(pop).toContainText('Congrats, you just unlocked');
+  await expect(pop).toContainText('Try it out today!');
+  await expect(pop.locator('img')).toHaveAttribute('src', /^data:image/);
+  await pop.locator('.vh-celebrate-btn').click();
+  await expect(pop).toHaveCount(0);
+  await expect(game.locator('.vh-log')).toContainText('Cloud Nine is yours');
   expect(await inGame<number>(page, 'v.money')).toBe(money);
   // It was put on the main floor.
   const objs = await objects(page);
@@ -80,8 +89,10 @@ test('codes saved on the start menu are redeemed in the house: the pack and the 
   await page.evaluate((key) => localStorage.setItem(key + ':codes', JSON.stringify(['rainbowhugs', 'xoxotimoisgodxoxo'])), SAVE_KEY);
   await page.reload();
   const again = await openGame(page, { fresh: false });
+  await inGame(page, 'v.settle()');
+  await expect(again.locator('.vh-celebrate')).toContainText('Cloud Nine', { timeout: 15000 });
+  await again.locator('.vh-celebrate-btn').click();
   await expect(again.locator('.vh-log')).toContainText('Cloud Nine is yours', { timeout: 15000 });
-  await expect(again.locator('.vh-log')).toContainText('+$500000');
   expect(await inGame<number>(page, 'v.money')).toBeGreaterThanOrEqual(500000);
   expect((await objects(page)).find((o) => o.id === 'fridge')!.skin).toBe('cloud');
 });
