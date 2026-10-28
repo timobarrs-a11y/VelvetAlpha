@@ -1,13 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Undo2, BellOff } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../shared/supabase/client';
 
 const STORAGE_KEY = 'first-progress-post-seen';
 
+// Velvet Sims is a full-screen game: the popup must never float over it.
+const GAME_PATH_PREFIXES = ['/velvet-house'];
+
 export function FirstPostWatcher() {
   const [popup, setPopup] = useState<{ postId: string; title: string } | null>(null);
   const knownPostRef = useRef<string | null>(null);
+  const { pathname } = useLocation();
+  const inGame = GAME_PATH_PREFIXES.some(p => pathname.startsWith(p));
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -77,15 +83,19 @@ export function FirstPostWatcher() {
     setPopup(null);
   };
 
+  // framer-motion writes its own transform onto the animated element, which replaces the Tailwind
+  // translate-x-1/2 that centred it: the card then started at the middle and ran off the right edge.
+  // The -50% goes through framer's `x` so the transforms compose.
   return (
     <AnimatePresence>
-      {popup && (
+      {popup && !inGame && (
         <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+          key="first-post-popup"
+          initial={{ opacity: 0, x: '-50%', y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, x: '-50%', y: 0, scale: 1 }}
+          exit={{ opacity: 0, x: '-50%', y: 10, scale: 0.95 }}
           transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9998] w-[380px] max-w-[calc(100vw-2rem)]"
+          className="fixed bottom-6 left-1/2 z-[9998] w-[380px] max-w-[calc(100vw-2rem)]"
         >
           <div className="rounded-2xl border border-amber-200/60 bg-white shadow-xl overflow-hidden">
             <div className="flex items-start gap-3 px-4 pt-4 pb-3">
