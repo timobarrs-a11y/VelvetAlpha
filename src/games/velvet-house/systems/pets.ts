@@ -44,6 +44,12 @@ export function createPets(g: Game): Partial<Game> {
   const r = () => rng.next();
   const absMin = () => world.day * 1440 + world.minutes;
   const personById = (id: unknown): Agent | null => (typeof id === 'string' ? people.find(c => c.id === id) ?? null : null);
+  const petById = (id: unknown): Pet | null => (typeof id === 'string' ? world.pets.find(q => q.id === id) ?? null : null);
+  /** Whoever a pet went to be with: a person or another pet. */
+  const whoIs = (id: unknown): { level: number; x: number; y: number; z: number; away: boolean } | null => {
+    const c = personById(id); if (c) return { level: c.level, x: c.x, y: c.y, z: c.z, away: !!c.away };
+    const q = petById(id); return q ? { level: q.level, x: q.x, y: q.y, z: q.z, away: !!q.away } : null;
+  };
   const objById = (id: unknown): ObjectInstance | null => (typeof id === 'string' ? world.objs.find(o => o.id === id) ?? null : null);
   const routeTo = (p: { level: number; x: number; y: number }, lv: number, x: number, y: number): RouteLeg[] =>
     planRoute(p, lv, x, y, (l) => house.grids[l], STAIRS, WX, WY);
@@ -127,10 +133,17 @@ export function createPets(g: Game): Partial<Game> {
     p.who = n.who || null;
     p.pose = PET_STATE_POSE[n.state] || 'stand';
     p.spd = 1;
-    const who = personById(n.who);
+    const who = whoIs(n.who);
     if (who && who.level === p.level) faceToward(p, who);
     const bed = objById(p.bed), litter = objById(p.litter), bowl = objById(p.bowl);
     if (n.state === 'sleep' && bed && bed.level === p.level) { p.offBed = [p.x, p.y]; [p.x, p.y] = xf(bed, 0.4, 0.38); p.z = 0.1; }
+    if (n.state === 'cuddle' && who && who.level === p.level) {
+      // Curled up against the sleeper, on their bed if that is where they are.
+      const pal = petById(n.who);
+      p.offBed = [p.x, p.y]; p.x = who.x + 0.16; p.y = who.y + 0.1; p.z = who.z;
+      if (pal && r() < 0.5) log(`${p.name} curled up with ${pal.name}.`);
+    }
+    if (n.state === 'romp') { const pal = petById(n.who); if (pal && r() < 0.5) log(`${p.name} and ${pal.name} are tearing round the ${LEVEL_NAMES[p.level].toLowerCase()}.`); }
     if (n.state === 'litter' && litter) { p.offBed = [p.x, p.y]; [p.x, p.y] = xf(litter, 0.35, 0.28); p.z = 0.2; }
     if (n.state === 'eat' && bowl) { const [bx, by] = xf(bowl, 0.37, 0.2); faceToward(p, { x: bx, y: by }); }
     if (n.state === 'door' && !p.doorLogged) { p.doorLogged = true; log(`${p.name} is sitting by the front door, staring at it. Time for a walk.`); }
@@ -153,6 +166,7 @@ export function createPets(g: Game): Partial<Game> {
       randomFree: (lv) => randomFree(house.grids[lv], r, LEVELS[lv].anchor),
       spotNear: (who, p) => spotNear(who, p, (l) => house.grids[l], WX, WY),
       door: DOOR, mainFloor: 1, yard: YARD >= 0 ? YARD : null, floors: indoorFloors(), rng: r,
+      others: world.pets.map(o => ({ id: o.id, kind: o.kind, level: o.level, x: o.x, y: o.y, z: o.z, state: o.state, busy: !!o.hold || !!o.away || onStairLeg(o) })),
     };
   }
 
@@ -329,6 +343,27 @@ export function createPets(g: Game): Partial<Game> {
     if (p.cameIn && absMin() - p.cameIn < 40 && r() < 0.65 * gameMin / 15) spot('paws', 0.6);
   }
 
+  /** Two pets near each other: a romp is joined, a cat startles when a dog comes bounding in, and they look at each other. */
+  function noticeOthers(p: Pet, gameMin: number): void {
+    if (p.state === 'walk' || p.state === 'sleep' || p.state === 'cuddle' || p.state === 'eat' || p.state === 'litter' || p.state === 'potty') return;
+    for (const o of world.pets) {
+      if (o === p || o.away || o.hold || o.level !== p.level) continue;
+      const d = Math.hypot(o.x - p.x, o.y - p.y);
+      if (d > 1.2) continue;
+      // Someone has come over to play: join in.
+      if (o.state === 'romp' && o.who === p.id && p.state !== 'romp') { p.state = 'romp'; p.pose = 'play'; p.timer = Math.max(o.timer, 3); p.who = o.id; faceToward(p, o); continue; }
+      // A dog bounding up to a cat: the cat may shoot off somewhere quieter.
+      if (p.kind === 'cat' && o.kind === 'dog' && (o.pose === 'run' || o.pose === 'walk') && d < 0.8 && !(p.startleAt && absMin() - p.startleAt < 60) && r() < 0.5 * Math.min(1, gameMin)) {
+        p.startleAt = absMin();
+        const lv = p.level === 2 ? 1 : 2, [x, y] = randomFree(house.grids[lv], r, LEVELS[lv].anchor);
+        petEnd(p); petGo(p, lv, x, y, 'idle', 4, null, 2.4);
+        if (r() < 0.5) log(`${p.name} shot ${lv === 2 ? 'upstairs' : 'downstairs'} when ${o.name} came bounding in.`);
+        return;
+      }
+      if (p.state === 'idle' || p.state === 'sit') faceToward(p, o);
+    }
+  }
+
   function greet(ch: Agent): void {
     for (const p of world.pets) {
       if (p.kind !== 'dog' || !petFree(p) || p.state === 'sleep') continue;
@@ -367,10 +402,13 @@ export function createPets(g: Game): Partial<Game> {
       }
       if (p.state === 'walk') { arrive(p); continue; }
       p.timer -= gameMin;
-      if (p.state === 'sit' && p.who) {
-        const who = personById(p.who);
-        if (who && !who.away && who.level === p.level) p.needs.love = Math.min(100, p.needs.love + 6 * gameMin / 60);
+      if ((p.state === 'sit' || p.state === 'cuddle') && p.who) {
+        // Company does them good: a person's more than another pet's.
+        const who = whoIs(p.who), person = !!personById(p.who);
+        if (who && !who.away && who.level === p.level) p.needs.love = Math.min(100, p.needs.love + (person ? 6 : 3) * gameMin / 60);
+        else if (!who || who.away) p.timer = 0;
       }
+      noticeOthers(p, gameMin);
       if (p.state === 'beg' && p.want && !petWantsNow(p)) p.timer = 0;
       if (p.timer > 0) { shed(p, gameMin); continue; }
       petEnd(p);
@@ -382,7 +420,8 @@ export function createPets(g: Game): Partial<Game> {
 
   // ---- What the rest of the game reads ----
   const holderOf = (p: Pet) => { const h = personById(p.hold); return h ? { name: h.name, act: h.task?.act ?? null, phase: h.task?.phase ?? null } : null; };
-  const statusOf = (p: Pet): string => petStatusText(p, world.minutes / 60, holderOf(p));
+  const petNames = (): Record<string, string> => Object.fromEntries(world.pets.map(q => [q.id, q.name]));
+  const statusOf = (p: Pet): string => petStatusText(p, world.minutes / 60, holderOf(p), petNames());
 
   function petFrames(): PetFrame[] {
     return world.pets.map(p => ({
