@@ -118,6 +118,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-scallop-peach', 'Peach scallop', 'scallop-peach', 100, ['soft', 'warm', 'playful']),
   wallpaper('paper-damask-plum', 'Plum damask', 'damask-plum', 120, ['luxe', 'bold', 'vintage']),
   wallpaper('paper-damask-cream', 'Cream damask', 'damask-cream', 120, ['luxe', 'soft', 'vintage']),
+  wallpaper('paper-starburst-mint', 'Atomic mint', 'starburst-mint', 100, ['vintage', 'playful', 'bold']),
   wallpaper('paper-shiplap', 'Shiplap', 'shiplap', 80, ['natural', 'minimal', 'cozy']),
   wallpaper('paper-subway', 'Subway tile', 'subway', 80, ['modern', 'minimal', 'industrial']),
   wallpaper('paper-stars-night', 'Starry night', 'stars-night', 120, ['playful', 'cool', 'bold']),
@@ -159,6 +160,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-hexsage', 'Sage hex', 'hexsage', 150, ['natural', 'cool', 'modern']),
   floor('floor-terracotta-tile', 'Terracotta tile', 'terracotta', 120, ['warm', 'natural', 'vintage']),
   floor('floor-slate', 'Slate stone', 'slate', 150, ['cool', 'industrial', 'modern']),
+  floor('floor-linoleum', 'Diner linoleum', 'linoleum', 160, ['vintage', 'playful', 'bold']),
   floor('floor-checker', 'Checkerboard', 'checker', 180, ['bold', 'playful', 'vintage']),
   floor('floor-rose', 'Rose carpet', 'rose', 100, ['soft', 'warm', 'cozy']),
   floor('floor-navy-carpet', 'Navy carpet', 'navy', 100, ['cool', 'modern', 'cozy']),
@@ -197,6 +199,15 @@ export const CATALOG: CatalogEntry[] = [
   furn('floormirror', 'floormirror', 'Floor mirror', 90, ['modern', 'minimal', 'luxe'], ['#C9A24A', '#2B2B30', '#F2EEE8', '#9C6B45']),
   furn('gclock', 'gclock', 'Grandfather clock', 300, ['vintage', 'luxe', 'bold'], ['#5A3E2E', '#2B2B30', '#E4DDD2']),
   furn('globe', 'globe', 'Antique globe', 120, ['vintage', 'luxe', 'natural'], ['#9C6B45', '#2B2B30']),
+
+  // Looks: the same pieces, drawn differently. Buying one restyles the piece already on the main floor.
+  // Retro: a 1950s-70s American kitchen and living room.
+  look('look-fridge-retro', 'fridge', 'retro', 'Pastel icebox', 'Rounded, cheerful and cold, with a chrome handle you can hold onto.', 360, ['vintage', 'playful', 'bold'], ['#9ED8C6', '#F3B6C4', '#F6E3A1']),
+  look('look-counter-retro', 'counter', 'retro', 'Diner counter', 'Cream laminate, chrome trim and a deep white sink.', 420, ['vintage', 'playful', 'bold'], ['#9ED8C6', '#F3B6C4', '#F6E3A1']),
+  look('look-dining-retro', 'dining', 'retro', 'Boomerang table set', 'A laminate table with boomerangs on top, chrome legs and vinyl chairs.', 340, ['vintage', 'playful', 'bold'], ['#E58F8F', '#6FBFB0', '#F2C75C']),
+  look('look-sofa-retro', 'sofa', 'retro', 'Davenport', 'Buttoned vinyl and a chrome trim. It squeaks a little when you sit.', 380, ['vintage', 'playful', 'bold'], ['#E5A33B', '#5FB3A6', '#E58F8F']),
+  look('look-lamp-retro', 'lamp', 'retro', 'Atomic lamp', 'A chrome starburst with glowing bulbs on every arm.', 90, ['vintage', 'playful', 'bold'], ['#F08A6B', '#6FBFB0', '#F2C75C']),
+  look('look-plant-retro', 'plant', 'retro', 'Atomic planter', 'Your plant on three wooden legs, in a glazed pot with a cream band.', 45, ['vintage', 'playful', 'bold'], ['#F08A6B', '#6FBFB0', '#F2C75C', '#E58F8F']),
 
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
