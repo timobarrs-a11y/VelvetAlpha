@@ -53,6 +53,8 @@ interface AvatarCreatorV2Props {
   contained?: boolean;
   // Lets the avatar blink now and then (the preview only).
   blink?: boolean;
+  // The person this look is for already has a gender (a companion or coach being made): no Male/Female toggle.
+  lockGender?: boolean;
 }
 
 function ColorSwatch({
@@ -218,6 +220,7 @@ export function AvatarCreatorV2({
   unlocks: unlocksProp,
   contained = false,
   blink = true,
+  lockGender = false,
 }: AvatarCreatorV2Props) {
   const ownUnlocks = useAvatarUnlocks();
   const unlocks = unlocksProp ?? ownUnlocks;
@@ -233,6 +236,8 @@ export function AvatarCreatorV2({
   };
 
   const [config, setConfig] = useState<AvatarConfigV2>(getInitial);
+  // With lockGender the look keeps the gender it started with, whatever a preset or saved look carries.
+  const lockedGender = useRef<Gender>(config.gender);
   const [tab, setTab] = useState<Tab>('face');
   const history = useRef<AvatarConfigV2[]>([getInitial()]);
   const historyIdx = useRef<number>(0);
@@ -241,7 +246,8 @@ export function AvatarCreatorV2({
 
   const push = useCallback((incoming: AvatarConfigV2) => {
     // Saved looks and presets can be older configs; read them the old way first.
-    const next = migrateAvatarConfig(incoming);
+    const migrated = migrateAvatarConfig(incoming);
+    const next = lockGender && migrated.gender !== lockedGender.current ? { ...migrated, gender: lockedGender.current } : migrated;
     const slice = history.current.slice(0, historyIdx.current + 1);
     slice.push(next);
     if (slice.length > HISTORY_LIMIT) slice.shift();
@@ -253,7 +259,7 @@ export function AvatarCreatorV2({
     if (draftKey) {
       try { localStorage.setItem(draftKey, JSON.stringify(next)); } catch {}
     }
-  }, [draftKey, onChange]);
+  }, [draftKey, onChange, lockGender]);
 
   const update = useCallback((partial: Partial<AvatarConfigV2>) => {
     // Compute the next config from the current config without nesting a
@@ -288,7 +294,8 @@ export function AvatarCreatorV2({
     trackRandomize();
     // A new face, same clothes: shuffling a pirate should give another pirate.
     const randomized = {
-      ...coherentRandomize(),
+      // Randomize keeps the gender it is on: a shuffle must never turn him into her.
+      ...coherentRandomize(config.gender),
       outfit: config.outfit, outfitColor: config.outfitColor, outfitAccent: config.outfitAccent,
       bottom: config.bottom, bottomColor: config.bottomColor, bottomAccent: config.bottomAccent,
       headwear: config.headwear, faceAccessory: config.faceAccessory,
@@ -864,7 +871,7 @@ export function AvatarCreatorV2({
         <div className="hidden lg:block">{preview('w-64 h-64', 'w-44 h-[22rem]')}</div>
 
         <div className="lg:mt-6 w-full space-y-3">
-          <div className="grid grid-cols-2 gap-2">
+          {!lockGender && <div className="grid grid-cols-2 gap-2">
             {(['male', 'female'] as Gender[]).map(g => (
               <button key={g}
                 onClick={() => update({ gender: g })}
@@ -877,7 +884,7 @@ export function AvatarCreatorV2({
                 {g.charAt(0).toUpperCase() + g.slice(1)}
               </button>
             ))}
-          </div>
+          </div>}
 
           <div className="grid grid-cols-4 gap-2">
             <button onClick={randomize} title="Randomize"

@@ -6,8 +6,6 @@ import { RouteFallback } from '../shared/ui/RouteFallback';
 const QuestionnairePage = lazy(() => import('../pages/QuestionnairePageV2').then(m => ({ default: m.QuestionnairePageV2 })));
 const UserProfileQuestionnairePage = lazy(() => import('../pages/UserProfileQuestionnairePageV2').then(m => ({ default: m.UserProfileQuestionnairePageV2 })));
 const CompanionPathSelectPage = lazy(() => import('../pages/CompanionPathSelectPage').then(m => ({ default: m.CompanionPathSelectPage })));
-const CreateAdditionalCompanionPage = lazy(() => import('../pages/CreateAdditionalCompanionPage').then(m => ({ default: m.CreateAdditionalCompanionPage })));
-const AnalyzingPage = lazy(() => import('../pages/AnalyzingPage').then(m => ({ default: m.AnalyzingPage })));
 const SignatureVoiceSelectionPage = lazy(() => import('../pages/SignatureVoiceSelectionPage'));
 const PricingOfferPage = lazy(() => import('../pages/PricingOfferPage').then(m => ({ default: m.PricingOfferPage })));
 const CreateUserAvatarPage = lazy(() => import('../pages/CreateUserAvatarPage').then(m => ({ default: m.CreateUserAvatarPage })));
@@ -46,8 +44,10 @@ export const onboardingRoutes = [
   <Route key="expert-questionnaire" path="/expert-questionnaire" element={wrap(<ExpertQuestionnairePage />)} />,
   <Route key="expert-builder" path="/expert-builder" element={wrap(<ExpertBuilderPage />)} />,
   <Route key="questionnaire" path="/questionnaire" element={wrap(<QuestionnairePage />)} />,
-  <Route key="create-additional-companion" path="/create-additional-companion" element={wrap(<CreateAdditionalCompanionPage />)} />,
-  <Route key="analyzing" path="/analyzing" element={wrap(<AnalyzingPage />)} />,
+  // Two older copies of the companion pipeline (their own questions, their own order) were removed: every way of making a
+  // companion starts at the same place, friend or companion, then male or female, then your own or random.
+  <Route key="create-additional-companion" path="/create-additional-companion" element={<Navigate to="/intent-select?people=1" replace />} />,
+  <Route key="analyzing" path="/analyzing" element={<Navigate to="/intent-select?people=1" replace />} />,
   <Route key="voice-selection" path="/voice-selection" element={wrap(<SignatureVoiceSelectionPage />)} />,
   <Route key="create-companion-avatar" path="/create-companion-avatar" element={wrap(<CreateCompanionAvatarPage />)} />,
   <Route key="pricing-offer" path="/pricing-offer" element={wrap(<PricingOfferPage />)} />,
