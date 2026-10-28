@@ -34,8 +34,9 @@ describe('activities catalog', () => {
     expect(ACTIVITIES.shower.gives?.hygiene).toBe(95);
   });
 
-  it('tv has level 1', () => {
-    expect(ACTIVITIES.tv.level).toBe(1);
+  it('tv is watched on a floor with a TV, not on a fixed floor', () => {
+    expect(ACTIVITIES.tv.screen).toBe(true);
+    expect(ACTIVITIES.tv.level).toBeUndefined();
   });
 
   it('bath gives hygiene 100', () => {

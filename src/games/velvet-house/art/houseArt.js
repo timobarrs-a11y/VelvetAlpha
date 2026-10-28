@@ -29,8 +29,11 @@ export function createHouseArt(ctx0, opts = {}) {
   // Things you've just tapped: 'objectId:part' -> animT until which it runs.
   const liveUntil = new Map();
   const live = (id, part = '') => (liveUntil.get(id + ':' + part) || 0) > animT;
-  // Switches you flip by tapping: the TV, and the fireplace (lit by default).
-  let tvOn = false;
+  // Switches you flip by tapping: each TV (by id), and the fireplace (lit by default). A TV is also on while someone on
+  // its floor watches.
+  const tvTapped = new Set();
+  let tvWatchLevel = -1;
+  const tvLit = (o) => (!power ? 0 : tvTapped.has(o.id) ? 1 : o.level === tvWatchLevel ? tvF : 0);
   const fireOut = new Set();
   let parcel = null, flags = {}, owned = new Set(), arranging = false, wallMode = 'cut', tapFocus = null;
   let OBJS = [];
@@ -1709,8 +1712,73 @@ export function createHouseArt(ctx0, opts = {}) {
         [[0.1, 0.26], [0.28, 0.44]].forEach(([zb, zt]) => { T.poly([[x0, CONF, zb], [x1, CONF, zb], [x1, CONF, zt], [x0, CONF, zt]], shade(oak, 0.04), 'rgba(80,60,40,.35)', 1); const [kx, ky] = T.P((x0 + x1) / 2, CONF + 0.002, (zb + zt) / 2); circle(kx, ky, 1.6, '#2B2B30'); });
       });
     }
-    // The speakers stay until the big TV comes; then the soundbar is part of it.
-    if (!has('bigtv')) { T.box(0.6, 0.12, 0.5, 0.8, 0.12, 0.07, '#2B2B30'); T.line([0.64, 0.241, 0.535], [1.36, 0.241, 0.535], 'rgba(255,255,255,.12)', 1); }
+  }
+
+  // ---- TVs: pieces of their own, on a wall or standing on something ----
+  // The picture on a flat screen (local corners: bottom left, bottom right, top right, top left): dark glass with a sheen
+  // when off; when on, a slow wash of colour with shapes drifting across it.
+  function tvPicture(T, q, lit) {
+    const at = (u, v) => [0, 1, 2].map((k) => q[0][k] + (q[1][k] - q[0][k]) * u + (q[3][k] - q[0][k]) * v);
+    if (lit < 0.05) { T.poly(q, '#2A2D35'); T.line(at(0.08, 0.82), at(0.3, 0.55), 'rgba(255,255,255,.08)', 3); return; }
+    const hue = (animT * 25) % 360;
+    T.poly(q, `hsl(${hue},55%,${28 + lit * 18}%)`);
+    for (let i = 0; i < 4; i++) {
+      const u = 0.05 + ((i * 0.37 + animT * 0.15) % 0.72), v = 0.08 + ((i * 0.23 + Math.sin(animT + i) * 0.1 + 0.3) % 0.66);
+      T.poly([at(u, v), at(u + 0.2, v), at(u + 0.2, v + 0.18), at(u, v + 0.18)], `hsla(${(hue + i * 70) % 360},80%,70%,${0.5 * lit})`);
+    }
+  }
+  const TV_DRAWERS = {
+    // On the wall: a slim black panel on a bracket.
+    walltv: (T, o) => {
+      const big = has('bigtv'), x0 = big ? -0.1 : 0, x1 = big ? 1.5 : 1.4, z0 = big ? 0.74 : 0.82, z1 = big ? 1.86 : 1.68;
+      T.box(0.55, -0.08, 1.1, 0.3, 0.09, 0.3, '#2B2B30');
+      T.box(x0, 0.01, z0, x1 - x0, 0.06, z1 - z0, '#1B1A1F');
+      tvPicture(T, [[x0 + 0.05, 0.072, z0 + 0.05], [x1 - 0.05, 0.072, z0 + 0.05], [x1 - 0.05, 0.072, z1 - 0.05], [x0 + 0.05, 0.072, z1 - 0.05]], tvLit(o));
+      const [lx, ly] = T.P(x1 - 0.08, 0.073, z0 + 0.025); circle(lx, ly, 0.9, tvLit(o) > 0.05 ? '#7FD36A' : '#C2413A');
+    },
+    // A flat screen on a foot, for a TV unit, a console or the entertainment center.
+    tvflat: (T, o) => {
+      T.box(0.3, 0.04, 0, 0.4, 0.18, 0.03, '#2B2B30'); T.box(0.47, 0.08, 0.03, 0.06, 0.05, 0.1, '#2B2B30');
+      T.box(0, 0.1, 0.12, 1.0, 0.05, 0.6, '#1B1A1F');
+      tvPicture(T, [[0.04, 0.152, 0.16], [0.96, 0.152, 0.16], [0.96, 0.152, 0.68], [0.04, 0.152, 0.68]], tvLit(o));
+    },
+    // A little screen in a coloured frame, for a desk or a dresser.
+    tvdesk: (T, o) => {
+      const c = cl(o);
+      T.box(0.16, 0.03, 0, 0.2, 0.14, 0.025, c); T.box(0.23, 0.07, 0.025, 0.06, 0.04, 0.06, shade(c, -0.15));
+      T.box(0, 0.08, 0.08, 0.52, 0.04, 0.36, c);
+      tvPicture(T, [[0.04, 0.122, 0.11], [0.48, 0.122, 0.11], [0.48, 0.122, 0.41], [0.04, 0.122, 0.41]], tvLit(o));
+    },
+    // A tube TV: a deep cabinet, knobs and a grille beside the screen, and rabbit ears.
+    tvtube: (T, o) => {
+      const c = cl(o);
+      T.box(0, 0, 0, 0.6, 0.4, 0.48, c);
+      T.poly([[0.03, 0.401, 0.05], [0.46, 0.401, 0.05], [0.46, 0.401, 0.44], [0.03, 0.401, 0.44]], '#1B1A1F');
+      tvPicture(T, [[0.06, 0.402, 0.09], [0.43, 0.402, 0.09], [0.43, 0.402, 0.4], [0.06, 0.402, 0.4]], tvLit(o));
+      [0.35, 0.24].forEach((z) => { const [kx, ky] = T.P(0.53, 0.402, z); circle(kx, ky, 2.4, '#2B2B30'); circle(kx - 0.6, ky - 0.6, 0.9, '#9AA0A6'); });
+      for (let z = 0.08; z < 0.17; z += 0.03) T.line([0.49, 0.402, z], [0.57, 0.402, z], 'rgba(0,0,0,.4)', 1);
+      const [bx, by] = T.P(0.3, 0.2, 0.48); ell(bx, by, 4, 2, '#2B2B30');
+      T.line([0.3, 0.2, 0.49], [0.12, 0.12, 0.84], '#9AA0A6', 1.3); T.line([0.3, 0.2, 0.49], [0.5, 0.26, 0.86], '#9AA0A6', 1.3);
+    },
+  };
+  // The entertainment center: two tall shelf towers, a cabinet and a bridge round a niche the TV stands in.
+  function entCenter(T, o) {
+    const c = cl(o), dk = shade(c, -0.35), W = 2.4, D = 0.55;
+    T.box(0.52, 0, 0, 1.36, D, 0.62, shade(c, -0.05));
+    T.poly([[0.52, 0.012, 0.62], [1.88, 0.012, 0.62], [1.88, 0.012, 1.6], [0.52, 0.012, 1.6]], dk);
+    [[0.52, 1.2], [1.2, 1.88]].forEach(([x0, x1]) => { T.poly([[x0 + 0.03, D + 0.001, 0.05], [x1 - 0.03, D + 0.001, 0.05], [x1 - 0.03, D + 0.001, 0.57], [x0 + 0.03, D + 0.001, 0.57]], null, 'rgba(0,0,0,.3)', 1); });
+    [1.14, 1.26].forEach((x) => { const [px, py] = T.P(x, D + 0.002, 0.34); circle(px, py, 1.6, '#C9A24A'); });
+    const books = ['#B5476E', '#3F5B4C', '#2E3B57', '#C9A24A', '#E8DCC8', '#7A4E32'];
+    [[0, 0.52], [1.88, 2.4]].forEach(([x0, x1], side) => {
+      T.box(x0, 0, 0, x1 - x0, D, 1.85, c);
+      [0.45, 0.9, 1.35].forEach((z, row) => {
+        T.poly([[x0 + 0.04, D + 0.001, z - 0.38], [x1 - 0.04, D + 0.001, z - 0.38], [x1 - 0.04, D + 0.001, z], [x0 + 0.04, D + 0.001, z]], dk);
+        for (let k = 0; k < 6; k++) { const x = x0 + 0.07 + k * 0.065, h = 0.22 + ((k * 7 + row * 3 + side) % 4) * 0.03; T.line([x, D + 0.002, z - 0.37], [x, D + 0.002, z - 0.37 + h], books[(k + row * 2 + side) % books.length], 2.6); }
+        T.line([x0 + 0.02, D + 0.002, z], [x1 - 0.02, D + 0.002, z], shade(c, 0.12), 1.6);
+      });
+    });
+    T.box(0.52, 0, 1.6, 1.36, D, 0.25, c);
+    T.box(-0.02, -0.02, 1.85, W + 0.04, D + 0.04, 0.08, shade(c, 0.1));
   }
   const DRAWN = {
     sofa: {    
@@ -1966,6 +2034,11 @@ export function createHouseArt(ctx0, opts = {}) {
        },
     chestfreezer: { parts: () => [F(0, 0, 1.2, 0.75, (T) => chestFreezer(T, T.o))] },
     mediaconsole: { parts: () => [F(0, 0, 2.0, 0.5, (T) => mediaConsole(T, T.o))] },
+    walltv: { parts: () => [F(0, 0, 1.4, 0.1, (T) => TV_DRAWERS.walltv(T, T.o))] },
+    tvflat: { parts: () => [F(0, 0, 1.0, 0.26, (T) => TV_DRAWERS.tvflat(T, T.o))] },
+    tvdesk: { parts: () => [F(0, 0, 0.52, 0.2, (T) => TV_DRAWERS.tvdesk(T, T.o))] },
+    tvtube: { parts: () => [F(0, 0, 0.62, 0.55, (T) => TV_DRAWERS.tvtube(T, T.o))] },
+    entcenter: { parts: () => [F(0, 0, 2.4, 0.55, (T) => entCenter(T, T.o))] },
     tvunit: {    
       parts: () => [F(0, 0, 1.6, 0.45, (T) => { T.box(0, 0, 0, 1.6, 0.45, 0.42, '#3A3340'); T.line([0.8, 0.45, 0.06], [0.8, 0.45, 0.36], 'rgba(255,255,255,.12)', 1); if (!has('bigtv')) { T.box(0.1, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); T.box(1.32, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); } })] },
     shower: {    
@@ -2697,13 +2770,6 @@ export function createHouseArt(ctx0, opts = {}) {
     else if (f.k === 'highwin') { poly(featPoly(f), '#E9E4DD', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.06), skyColor()); gMat = MATERIAL.matte; }
     else if (f.k === 'door') { poly([P(f.u[0] - 0.08, 0), P(f.u[1] + 0.08, 0), P(f.u[1] + 0.08, f.z[1] + 0.05), P(f.u[0] - 0.08, f.z[1] + 0.05)], '#EFE8DE', EDGE, 0.8); poly(featPoly(f), '#7A5236'); poly([P(f.u[0] + 0.1, 1.15), P(f.u[1] - 0.1, 1.15), P(f.u[1] - 0.1, 1.9), P(f.u[0] + 0.1, 1.9)], null, 'rgba(0,0,0,.25)', 1); poly([P(f.u[0] + 0.1, 0.2), P(f.u[1] - 0.1, 0.2), P(f.u[1] - 0.1, 0.95), P(f.u[0] + 0.1, 0.95)], null, 'rgba(0,0,0,.25)', 1); const [kx, ky] = iso(...P(f.u[0] + 0.15, 1.02)); circle(kx, ky, 2, '#E0B85A'); }
     else if (f.k === 'switch') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); const mid = (f.u[0] + f.u[1]) / 2; poly(party ? [P(mid - 0.03, 1.11), P(mid + 0.03, 1.11), P(mid + 0.03, 1.19), P(mid - 0.03, 1.19)] : [P(mid - 0.03, 1.03), P(mid + 0.03, 1.03), P(mid + 0.03, 1.11), P(mid - 0.03, 1.11)], party ? '#D24A7A' : '#9C9298'); }
-    else if (f.k === 'tv') {
-      const big = has('bigtv'), u0 = big ? f.u[0] - 0.15 : f.u[0], u1 = big ? f.u[1] + 0.15 : f.u[1], z0 = big ? 0.72 : f.z[0], z1 = big ? 1.9 : f.z[1];
-      poly([P(u0, z0), P(u1, z0), P(u1, z1), P(u0, z1)], '#1B1A1F');
-      const pts = [P(u0 + 0.06, z0 + 0.06), P(u1 - 0.06, z0 + 0.06), P(u1 - 0.06, z1 - 0.06), P(u0 + 0.06, z1 - 0.06)];
-      if (tvF < 0.05) poly(pts, '#2A2D35');
-      else { const t = animT, hue = (t * 25) % 360; poly(pts, `hsl(${hue},55%,${28 + tvF * 18}%)`); for (let i = 0; i < 4; i++) { const uu = u0 + 0.1 + ((i * 0.37 + t * 0.15) % (u1 - u0 - 0.35)), zz = z0 + 0.1 + ((i * 0.23 + Math.sin(t + i) * 0.1 + 0.3) % (z1 - z0 - 0.3)); poly([P(uu, zz), P(uu + 0.18, zz), P(uu + 0.18, zz + 0.12), P(uu, zz + 0.12)], `hsla(${(hue + i * 70) % 360},80%,70%,${0.5 * tvF})`); } }
-    }
     else if (f.k === 'art') {
       if (has('art')) { poly(featPoly(f), '#F2EEE8', EDGE, 0.8); poly(featPoly(f, 0.08), '#1F2A44'); poly([P(f.u[0] + 0.15, f.z[0] + 0.15), P(f.u[0] + 0.95, f.z[0] + 0.15), P(f.u[0] + 0.55, f.z[1] - 0.15)], '#E0A43A'); poly([P(f.u[0] + 0.75, f.z[0] + 0.15), P(f.u[1] - 0.12, f.z[0] + 0.15), P(f.u[1] - 0.45, f.z[1] - 0.25)], '#D24A7A'); }
       else { const g = { u: [f.u[0] + 0.2, f.u[1] - 0.2], z: [f.z[0] + 0.1, f.z[1] - 0.1], p: f.p }; poly(featPoly(g), '#2B2430'); poly(featPoly(g, 0.06), '#E8C9A0'); poly([P(g.u[0] + 0.2, g.z[0] + 0.1), P(g.u[0] + 0.8, g.z[0] + 0.1), P(g.u[0] + 0.5, g.z[1] - 0.1)], '#B5476E'); }
@@ -3167,7 +3233,14 @@ export function createHouseArt(ctx0, opts = {}) {
       ctx.globalCompositeOperation = 'source-over';
       drawMotes(lights);
     }
-    if (level === 1 && tvF > 0.02) { ctx.globalCompositeOperation = 'lighter'; const [tx, ty] = iso(6.8, 0.3, 1.25), hue = (animT * 25) % 360, g = ctx.createRadialGradient(tx, ty, 6, tx, ty, has('bigtv') ? 190 : 150); g.addColorStop(0, `hsla(${hue},70%,65%,${(0.12 + a * 0.5) * tvF})`); g.addColorStop(1, 'hsla(0,0%,0%,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
+    // Each TV that is on lights the room round it a little, in the colour of its picture.
+    for (const o of OBJS) {
+      const sc = STATE_TYPES[o.type]?.screen, lit = sc && o.level === level ? tvLit(o) : 0;
+      if (lit < 0.02) continue;
+      const [wx, wy] = xf(o, sc[0], sc[1]), [tx, ty] = iso(wx, wy, sc[2] + (o.z || 0)), hue = (animT * 25) % 360, g = ctx.createRadialGradient(tx, ty, 6, tx, ty, 60 + STATE_TYPES[o.type].W * 65);
+      g.addColorStop(0, `hsla(${hue},70%,65%,${(0.12 + a * 0.5) * lit})`); g.addColorStop(1, 'hsla(0,0%,0%,0)');
+      ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over';
+    }
     if (level === 1 && partyF > 0.02) {
       const t = animT, [rx1, ry1, rx2, ry2] = LEVELS[1].rug, cx = (rx1 + rx2) / 2, cy = (ry1 + ry2) / 2;
       ctx.fillStyle = `rgba(18,8,40,${0.45 * partyF})`; ctx.fillRect(0, 0, W, H);
@@ -4104,8 +4177,9 @@ export function createHouseArt(ctx0, opts = {}) {
     // The pets, so the bowls and litter boxes can show what is in them.
     PETS.length = 0; if (s.pets) for (const p of s.pets) PETS.push(p);
     const t = animT, lv = viewLevel;
-    const watching = [jordan, maya].some(c => c && c.task && c.task.phase === 'do' && (c.task.name === 'tv' || c.task.name === 'movie'));
-    tvF += ((power && (watching || tvOn) ? 1 : 0) - tvF) * Math.min(1, rdt * 4);
+    const watcher = [jordan, maya].find(c => c && c.task && c.task.phase === 'do' && (c.task.name === 'tv' || c.task.name === 'movie'));
+    if (watcher) tvWatchLevel = watcher.level;
+    tvF += ((power && watcher ? 1 : 0) - tvF) * Math.min(1, rdt * 4);
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     const lights = activeLights(lv);
@@ -4224,7 +4298,8 @@ export function createHouseArt(ctx0, opts = {}) {
 
   // The outline of an object on screen: its footprint and its top, wrapped.
   function objHull(o) {
-    const [fw, fd] = fp(o), up = o.z || 0, h = (T_OF(o).h || 1) + up, pts = [];
+    // A piece on a table starts at its top; one hung on a wall at the height it hangs.
+    const [fw, fd] = fp(o), up = (o.z || 0) + (T_OF(o).mount ?? 0), h = (T_OF(o).h || 1) + (o.z || 0), pts = [];
     [[o.x, o.y], [o.x + fw, o.y], [o.x + fw, o.y + fd], [o.x, o.y + fd]].forEach(([x, y]) => { pts.push(iso(x, y, up)); pts.push(iso(x, y, h)); });
     pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
     const cross = (q, a, b) => (a[0] - q[0]) * (b[1] - q[1]) - (a[1] - q[1]) * (b[0] - q[0]);
@@ -4294,12 +4369,32 @@ export function createHouseArt(ctx0, opts = {}) {
     return best;
   }
 
+  function flipTv(tv) {
+    if (tvTapped.has(tv.id)) { tvTapped.delete(tv.id); return 'TV off.'; }
+    tvTapped.add(tv.id); return 'The TV flickers on.';
+  }
+  function tvFor(host) {
+    const on = OBJS.find((o) => o.on === host.id && STATE_TYPES[o.type]?.screen);
+    if (on) return on;
+    const [hw, hd] = fp(host), cx = host.x + hw / 2, cy = host.y + hd / 2;
+    let best = null, bd = 1.6;
+    for (const o of OBJS) {
+      const sc = STATE_TYPES[o.type]?.screen;
+      if (!sc || o.level !== host.level) continue;
+      const [x, y] = xf(o, sc[0], sc[1]), d = Math.hypot(x - cx, y - cy);
+      if (d < bd) { bd = d; best = o; }
+    }
+    return best;
+  }
+
   // Tapping an object brings it to life for a moment (or flips its switch).
   // Returns what happened, for the log, or null if it does nothing on a tap.
   function poke(o, part = '') {
     const run = (secs, msg) => { liveUntil.set(o.id + ':' + part, animT + secs); return msg; };
     switch (o.type) {
-      case 'tvunit': case 'mediaconsole': tvOn = !tvOn; return tvOn ? 'The TV flickers on.' : 'TV off.';
+      case 'walltv': case 'tvflat': case 'tvdesk': case 'tvtube': return flipTv(o);
+      // A stand switches the TV on it, or the one on the wall above it.
+      case 'tvunit': case 'mediaconsole': case 'entcenter': { const tv = tvFor(o); return tv ? flipTv(tv) : null; }
       case 'fireplace': if (fireOut.has(o.id)) { fireOut.delete(o.id); return 'The fire crackles back to life.'; } fireOut.add(o.id); return 'The fire dies down.';
       case 'laundry': return run(12, 'The washer churns into a spin cycle.');
       case 'records': return run(14, 'The needle drops. A record starts spinning.');

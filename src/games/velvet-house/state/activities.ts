@@ -37,6 +37,8 @@ export interface ActivityMeta {
   appeal?: number;
   // Done anywhere free on its level (`level`), not at an object.
   open?: boolean;
+  // Done from a seat on a floor with a TV, the nearer to it the better.
+  screen?: boolean;
 }
 
 export const ACTIVITIES: Record<string, ActivityMeta> = {
@@ -49,7 +51,7 @@ export const ACTIVITIES: Record<string, ActivityMeta> = {
   shower: { pose: 'shower', dur: 20, gives: { hygiene: 95 }, verb: 'Showering' },
   read: { pose: 'read', dur: 40, gives: { fun: 35, comfort: 30 }, verb: 'Reading' },
   phone: { pose: 'phone', dur: 30, gives: { fun: 25, social: 15 }, verb: 'On her phone' },
-  tv: { pose: 'tv', dur: 50, gives: { fun: 45, comfort: 25 }, verb: 'Watching TV', level: 1 },
+  tv: { pose: 'tv', dur: 50, gives: { fun: 45, comfort: 25 }, verb: 'Watching TV', screen: true },
   workout: { pose: 'run', dur: 25, gives: { fun: 15, energy: -12, hygiene: -25 }, verb: 'Running' },
   lift: { pose: 'lift', dur: 15, gives: { energy: -6, hygiene: -10, fun: 5 }, verb: 'Lifting weights' },
   stretch: { pose: 'stretch', dur: 15, gives: { comfort: 20, energy: 5 }, verb: 'stretching on the mat' },

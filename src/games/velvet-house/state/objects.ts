@@ -61,6 +61,13 @@ export interface ObjectTypeDef {
    * Unset, the type is its own kind.
    */
   kind?: string;
+  /** A TV: where the middle of its picture is (local x, y and height), for its glow. People watch from seats on its floor. */
+  screen?: [number, number, number];
+  /**
+   * Hung on a wall this high off the floor: its back must be against one, it hangs over whatever stands below it, and
+   * nobody walks into it.
+   */
+  mount?: number;
 }
 
 export const TYPES: Record<string, ObjectTypeDef> = {
@@ -88,9 +95,9 @@ export const TYPES: Record<string, ObjectTypeDef> = {
     spots: { t: { stand: [-0.45, 0.31], pos: [0.6, 0.31, 0.18], dir: [1, 0], tag: 'tread', base: 'deck' } } },
   gym: { W: 1.45, D: 1.0, h: 0.6, name: 'Weights and mat', blocks: [[1.1, 0.1, 1.45, 0.9]],
     spots: { l: { stand: [0.55, 0.5], dir: [0, 1], tag: 'lift', group: 'mat' }, s: { stand: [0.55, 0.5], dir: [0, 1], tag: 'stretch', group: 'mat' } } },
-  desk: { W: 1.2, D: 1.25, h: 1.2, name: 'Desk', light: { at: [1.06, 0.18, 1.02], r: 95 },
+  desk: { W: 1.2, D: 1.25, h: 1.2, name: 'Desk', light: { at: [1.06, 0.18, 1.02], r: 95 }, surface: { z: 0.78, rect: [0.03, 0.3, 1.17, 0.58] },
     spots: { d: { stand: [0.6, 1.75], pos: [0.6, 0.98, 0.49], dir: [0, -1], tag: 'desk', base: 'seat' } } },
-  dresser: { W: 1.2, D: 0.5, h: 0.85, name: 'Dresser',
+  dresser: { W: 1.2, D: 0.5, h: 0.85, name: 'Dresser', surface: { z: 0.85, rect: [0.38, 0.03, 1.17, 0.47] },
     spots: { f: { stand: [0.6, 0.95], dir: [0, -1], tag: 'dresser' } } },
   nightstand: { W: 0.45, D: 0.45, h: 0.75, name: 'Nightstand', light: { at: [0.22, 0.22, 0.8], r: 100 } },
   counter: { W: 2.8, D: 0.8, h: 1.1, fixed: true, name: 'Kitchen counter', skins: { arcade: { name: 'Coin-op counter', material: 'laminate', theme: 'arcade', cols: ['#1E1A2E', '#F4C430', '#19E6F0'] }, cuddle: { name: 'Cloud counter', material: 'laminate', theme: 'cuddle', cols: ['#FFFFFF', '#AEDDF7', '#F6B7CC'] }, provence: { name: 'Whitewashed pine counter', material: 'wood', theme: 'provence', cols: ['#E8DCC4', '#D9D2C2', '#3A3A40'] }, adobe: { name: 'Adobe and saltillo counter', material: 'stone', theme: 'adobe', cols: ['#D9A47A', '#9C7046', '#3FA7A0'] }, neon: { name: 'Steel mesh counter', material: 'metal', theme: 'neon', cols: ['#111118', '#19E6F0', '#3A3F4A'] }, candy: { name: 'Scalloped mint counter', material: 'laminate', theme: 'candy', cols: ['#BFE8D6', '#FFF8F0', '#F6B7CC'] }, gothic: { name: 'Ebony and brass counter', material: 'wood', theme: 'gothic', cols: ['#2A2224', '#B08D57', '#2C2B2F'] }, riad: { name: 'Zellige and cedar counter', material: 'stone', theme: 'riad', cols: ['#F3EEE4', '#2E4C9A', '#8A5A3A'] }, tropical: { name: 'Bamboo-slat counter', material: 'wood', theme: 'tropical', cols: ['#D9BE82', '#8A5A3A', '#F7F1E3'] }, memphis: { name: 'Squiggle counter', material: 'laminate', theme: 'memphis', cols: ['#F4F1EA', '#1B1A1F', '#F4C430'] }, deco: { name: 'Black lacquer and gold counter', material: 'stone', theme: 'deco', cols: ['#1B1A1F', '#C9A24A', '#1F5E4A'] }, japandi: { name: 'Walnut and stone counter', material: 'wood', theme: 'japandi', cols: ['#4A3A2E', '#6B5444', '#B9B4AC'] }, boho: { name: 'Rattan-front counter', material: 'wood', theme: 'boho', cols: ['#D2B48C', '#A8865A', '#C9B28A'] }, space: { name: 'Moulded pod counter', material: 'laminate', theme: 'space', cols: ['#F4F6F8', '#1B1A24', '#D5DAE0'] }, scandi: { name: 'Ash slab counter', material: 'wood', theme: 'scandi', cols: ['#D8C7A8', '#E3D6BD', '#C9B693'] }, industrial: { name: 'Concrete and steel counter', material: 'stone', theme: 'industrial', cols: ['#2B2B30', '#4A4D52', '#7B4A3A'] }, beach: { name: 'Whitewashed shiplap counter', material: 'wood', theme: 'beach', cols: ['#F7F5EF', '#DDE8EA', '#E8DCC2'] }, retro: { name: 'Diner counter', material: 'laminate', theme: 'retro', cols: ['#9ED8C6', '#F3B6C4', '#F6E3A1'] }, farmhouse: { name: 'Butcher-block counter', material: 'wood', theme: 'farmhouse', cols: ['#F1E8D2', '#B9CBB5', '#9DB3C6'] }, modern: { name: 'Slab counter', material: 'stone', theme: 'modern', cols: ['#2B2B30', '#E8EAEC', '#5E646B'] }, spring: { name: 'Potting-bench counter', material: 'wood', theme: 'spring', cols: ['#CFE6D3', '#F3D6DC', '#F6EBC0'] }, summer: { name: 'Lemonade-stand counter', material: 'wood', theme: 'summer', cols: ['#7FD1CF', '#F6D56E', '#F2A38A'] }, fall: { name: 'Harvest counter', material: 'wood', theme: 'fall', cols: ['#8A5E3B', '#B5532F', '#3F5B4C'] }, winter: { name: 'Evergreen counter', material: 'wood', theme: 'winter', cols: ['#3F5B4C', '#8E1F2F', '#2E3B57'] }, cloud: { name: 'Candy-cloud counter', material: 'wood', theme: 'cloud', cols: ['#F9C6DA', '#BFE3F5', '#FFF2B8'] } },
@@ -101,9 +108,9 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   // The fridge's: low and wide, and the lid lifts on its back hinge.
   chestfreezer: { kind: 'fridge', W: 1.2, D: 0.75, h: 0.92, fixed: true, name: 'Chest freezer', skins: { camp: { name: 'Camp cooler chest', material: 'metal', theme: 'camp', cols: ['#2F5D43', '#B5532F', '#3F6E8C'] } },
     spots: { f: { stand: [0.6, 1.3], dir: [0, -1], tag: 'fridge' } } },
-  tvunit: { W: 1.6, D: 0.45, h: 0.75, fixed: true, name: 'TV unit' },
+  tvunit: { W: 1.6, D: 0.45, h: 0.75, fixed: true, name: 'TV unit', surface: { z: 0.42, rect: [0.3, 0.02, 1.3, 0.44] } },
   // The TV unit's: a long, low console under the screen on the wall.
-  mediaconsole: { kind: 'tvunit', W: 2.0, D: 0.5, h: 0.5, fixed: true, name: 'Media console', skins: { midcentury: { name: 'Walnut credenza', material: 'wood', theme: 'midcentury', cols: ['#D9A84A', '#3D6B73', '#C2603A'] } } },
+  mediaconsole: { kind: 'tvunit', W: 2.0, D: 0.5, h: 0.5, fixed: true, name: 'Media console', surface: { z: 0.5, rect: [0.04, 0.03, 1.96, 0.47] }, skins: { midcentury: { name: 'Walnut credenza', material: 'wood', theme: 'midcentury', cols: ['#D9A84A', '#3D6B73', '#C2603A'] } } },
   shower: { W: 1.18, D: 1.18, h: 2.1, fixed: true, name: 'Shower',
     spots: { s: { stand: [0.6, 1.7], pos: [0.6, 0.6, 0.1], dir: [0, 1], tag: 'shower', base: 'tray' } } },
   toilet: { W: 0.42, D: 0.62, h: 0.8, fixed: true, name: 'Toilet' },
@@ -280,6 +287,13 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   floorcushion: { W: 1.1, D: 1.1, h: 0.25, name: 'Floor cushions', store: true, cols: ['#B5476E', '#4F6F74', '#C9A24A', '#E8DCC8', '#6E3C50'],
     spots: { s: { stand: [0.55, 1.7], pos: [0.55, 0.55, 0.16], dir: [0, 1], tag: 'seat', base: 'base' } } },
   crates: { W: 0.8, D: 0.5, h: 0.55, name: 'Book crates', store: true, cols: ['#B98A6A', '#3A2E2A', '#E4DDD2'] },
+  // TVs are pieces like any other: one hangs on a wall, the rest stand on a TV unit, a console, a desk or a dresser (or the
+  // floor). Whoever wants to watch sits on a seat on a floor that has one.
+  walltv: { W: 1.4, D: 0.1, h: 1.7, mount: 0.8, blocks: [], name: 'Wall-mounted TV', store: true, screen: [0.7, 0.1, 1.25] },
+  tvflat: { W: 1.0, D: 0.26, h: 0.72, small: true, name: 'Flat-screen TV', store: true, screen: [0.5, 0.15, 0.42] },
+  tvdesk: { W: 0.52, D: 0.2, h: 0.44, small: true, name: 'Desk TV', store: true, cols: ['#2B2B30', '#F2EEE8', '#C2413A'], screen: [0.26, 0.11, 0.27] },
+  tvtube: { W: 0.6, D: 0.4, h: 0.58, small: true, name: 'Tube TV', store: true, cols: ['#8A5E3B', '#E4DDD2', '#2B2B30'], screen: [0.25, 0.4, 0.27] },
+  entcenter: { wall: true, W: 2.4, D: 0.55, h: 2.0, name: 'Entertainment center', store: true, cols: ['#9C6B45', '#2B2B30', '#E4DDD2'], surface: { z: 0.62, rect: [0.56, 0.04, 1.84, 0.5] } },
 };
 
 export interface ObjectInstance {
@@ -308,6 +322,8 @@ export interface ObjectInstance {
 
 /** The house's own rugs. A house saved before they were pieces gets them once (see `kernel/config.ts`). */
 export const STARTER_RUG_IDS = ['rug1', 'rug2'];
+/** The TV on the living room wall. A house saved while it was part of the wall gets it as a piece, once. */
+export const STARTER_TV_IDS = ['walltv'];
 
 export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'stair01', type: 'flightY', level: 0, x: 9.0, y: 0, rot: 0 },
@@ -329,6 +345,7 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'fridge', type: 'fridge', level: 1, x: 3.35, y: 0.12, rot: 0 },
   { id: 'dining', type: 'dining', level: 1, x: 1.0, y: 1.9, rot: 1 },
   { id: 'tvunit', type: 'tvunit', level: 1, x: 6.0, y: 0.12, rot: 0 },
+  { id: 'walltv', type: 'walltv', level: 1, x: 6.1, y: 0.08, rot: 0 },
   { id: 'sofa', type: 'sofa', level: 1, x: 5.6, y: 3.3, rot: 2 },
   { id: 'plant1', type: 'plant', level: 1, x: 4.95, y: 0.15, rot: 0 },
   { id: 'lamp1', type: 'lamp', level: 1, x: 5.1, y: 3.4, rot: 0 },
@@ -372,6 +389,16 @@ export function isFixed(type: string): boolean {
 
 export function isRug(type: string): boolean {
   return !!TYPES[type]?.rug;
+}
+
+/** Hung on a wall (see `mount`). */
+export function isMount(type: string): boolean {
+  return TYPES[type]?.mount !== undefined;
+}
+
+/** A TV (see `screen`). */
+export function isScreen(type: string): boolean {
+  return !!TYPES[type]?.screen;
 }
 
 export function isWall(type: string): boolean {

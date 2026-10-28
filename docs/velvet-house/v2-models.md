@@ -35,13 +35,29 @@ spots, doing the same job. Mixing models changes the room; each model then gets 
 - Drawing: `chestFreezer` and `mediaConsole` in `art/houseArt.js`. The chest freezer's lid stands up on its hinge
   while someone is at it or after a tap. Tapping the console switches the TV, as the TV unit does.
 
+## TVs are pieces
+
+The director: "make the tv removable an create tvs that also sit on desks and entertainment centers". The screen used
+to be part of the living room's back wall (a `tv` feature in `state/house.ts`); it is a piece now.
+
+- **Wall-mounted TV** (`walltv`): starts where the old one was, and can be moved, stored or sold like any piece. It is
+  hung (`mount`, the height it hangs at): its back must be against a wall (`backToWall`), it hangs over whatever stands
+  below it, and nobody walks into it. With no spot chosen it hangs itself on the nearest free wall. A house saved
+  before this gets it once (`STARTER_TV_IDS`, flag `tvObject`), as the rugs were given.
+- **TVs that stand on things** (`small`): a flat-screen (`tvflat`), a desk TV (`tvdesk`) and a tube TV (`tvtube`).
+  The TV unit, the media console, the desk, the dresser and the new **entertainment center** (`entcenter`: shelf
+  towers round a niche) have tops for them. A TV bought in the shop goes on a free stand on that floor
+  (`setOnStand`: the TV unit first, then the entertainment center, a dresser, a desk), else on the floor.
+- **Watching** (`tv` activity, `screen: true`): from a seat on any floor with a TV, the nearer the seat to one the
+  better; with no TV in the house, nobody watches. The world knows where the TVs are (`HouseWorld.screens`).
+- **On and off:** tapping a TV switches it; tapping the TV unit, the console or the entertainment center switches the
+  TV on it or on the wall just above it. A TV is also on while someone on its floor watches. Each lit TV lights the
+  room round it from where it is.
+
 ## Still open
 
 - **The rest of the bundle** (counter, dining table, sofa, lamp, plant, wallpaper, floor) is not built. The director
   named the TV unit; the others wait on a yes.
-- **The TV as a piece:** the director asked for the TV to be removable, and for TVs that sit on desks and entertainment
-  centres. Today the screen is part of the living room's back wall (`state/house.ts` feature `tv`, with `screenQuad`
-  and the screen glow in `art/houseArt.js`), so this is its own change.
 - The legacy copy of the save (`toV1Compatible`) carries the new types as they are; the legacy game does not know them,
   as it already does not know the other pieces added since.
 - Sets do not include V2 models yet. A set that puts a fridge look on brings the tall fridge back in place of a chest

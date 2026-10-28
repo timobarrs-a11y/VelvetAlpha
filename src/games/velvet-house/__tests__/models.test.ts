@@ -188,7 +188,9 @@ describe('drawing the V2 models', () => {
       for (const skin of [undefined, ...Object.keys(TYPES[type].skins ?? {})]) {
         for (const rot of [0, 1, 2, 3]) {
           const o: ObjectInstance = { id: `${type}-${skin}-${rot}`, type, level: 1, x: 3, y: 1, rot, ...(skin ? { skin } : {}) };
-          const frame = { level: 1, rot: 0, minutes: 600, day: 1, t: 1, dt: 0.016, objs: [o], wallMode: 'up' as const, chars: [] };
+          // The console switches the TV standing on it.
+          const tv: ObjectInstance = { id: `tv-${type}-${skin}-${rot}`, type: 'tvflat', level: 1, x: 3.4, y: 1.1, rot, on: o.id, z: 0.5 };
+          const frame = { level: 1, rot: 0, minutes: 600, day: 1, t: 1, dt: 0.016, objs: [o, tv], wallMode: 'up' as const, chars: [] };
           expect(() => art.render(frame)).not.toThrow();
           expect(art.poke(o, '')).toMatch(said);
           expect(() => art.render(frame)).not.toThrow();

@@ -127,7 +127,10 @@ export function createInteract(g: Game): Partial<Game> {
     const jordan = people[0];
     if (jordan.away) { log(`${jordan.name} is at work until ${CORNER_MARKET.end - 12} PM.`); return; }
     world.life.working = null;
-    startChain(house, jordan, chain, people[1], () => rng.next());
+    if (!startChain(house, jordan, chain, people[1], () => rng.next()) && chain === 'tv' && !house.screens.length) {
+      log('There is no TV in the house. The shop has some (Furniture).');
+      return;
+    }
     view.follow = 'jordan';
     if (jordan.level !== view.level) g.setLevel(jordan.level, true);
     g.syncControls();

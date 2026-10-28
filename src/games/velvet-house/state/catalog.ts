@@ -364,6 +364,12 @@ export const CATALOG: CatalogEntry[] = [
   furn('floormirror', 'floormirror', 'Floor mirror', 90, ['modern', 'minimal', 'luxe'], ['#C9A24A', '#2B2B30', '#F2EEE8', '#9C6B45']),
   furn('gclock', 'gclock', 'Grandfather clock', 300, ['vintage', 'luxe', 'bold'], ['#5A3E2E', '#2B2B30', '#E4DDD2']),
   furn('globe', 'globe', 'Antique globe', 120, ['vintage', 'luxe', 'natural'], ['#9C6B45', '#2B2B30']),
+  // TVs: one for the wall, the rest stand on a TV unit, a console, a desk or a dresser; and somewhere to put one.
+  furn('walltv', 'walltv', 'Wall-mounted TV', 380, ['modern', 'minimal', 'cool']),
+  furn('tvflat', 'tvflat', 'Flat-screen TV', 300, ['modern', 'minimal']),
+  furn('tvdesk', 'tvdesk', 'Desk TV', 120, ['playful', 'modern'], ['#2B2B30', '#F2EEE8', '#C2413A']),
+  furn('tvtube', 'tvtube', 'Tube TV', 90, ['vintage', 'playful', 'cozy'], ['#8A5E3B', '#E4DDD2', '#2B2B30']),
+  furn('entcenter', 'entcenter', 'Entertainment center', 450, ['cozy', 'natural', 'vintage'], ['#9C6B45', '#2B2B30', '#E4DDD2']),
 
   // Models: other shapes of a piece the house has, each with looks drawn for its own shape. One takes the place of
   // the piece it stands in for (the fridge stays in its corner of the kitchen), so mixing models changes the room.

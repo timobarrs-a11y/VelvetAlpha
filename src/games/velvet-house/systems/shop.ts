@@ -1,6 +1,6 @@
 import { ownsAvatarItem, buyAvatarItem } from '../bridge/avatarShop';
 import { simsShopItems, itemLabel } from '../../../data/avatarCatalog';
-import { relocate, modelFits, swapModel } from '../state/arrange';
+import { relocate, modelFits, swapModel, setOnStand } from '../state/arrange';
 import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
 import { LEVEL_NAMES, ATTIC } from '../state/house';
 import { isPaintable } from '../state/scenes';
@@ -149,8 +149,14 @@ export function createShop(g: Game): Partial<Game> {
       };
       world.objs.push(newObj);
       flags.furniture = ((flags.furniture as number) ?? 0) + 1;
-      // Set it down on free floor; if the floor is full it waits in storage.
-      if (relocate(world.objs, newObj, level, g.peopleOnFloor())) {
+      // A TV goes on a free TV stand (or another top) on that floor.
+      const stand = TYPES[newObj.type]?.screen && setOnStand(world.objs, newObj, level) ? world.objs.find((h) => h.id === newObj.on) : null;
+      if (stand) {
+        g.relearnLayout(newObj);
+        art.objectPlaced(newObj.id);
+        log(`${item.name} is on the ${displayName(stand).toLowerCase()}. Use Arrange to move it.`);
+      } else if (relocate(world.objs, newObj, level, g.peopleOnFloor())) {
+        // Set it down on free floor; if the floor is full it waits in storage.
         g.relearnLayout(newObj);
         art.objectPlaced(newObj.id);
         log(`${item.name} is in the ${LEVEL_NAMES[level].toLowerCase()}. Use Arrange to move it.`);
