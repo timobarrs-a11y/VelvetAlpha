@@ -186,6 +186,7 @@ export function createHouseArt(ctx0, opts = {}) {
     grate: { kind: 'tile', a: '#1A1C24', b: '#171920', line: 'rgba(25,230,240,.35)' },
     checkpink: { kind: 'check', a: '#FFF8F0', b: '#F6B7CC', line: 'rgba(0,0,0,.05)' },
     skycheck: { kind: 'check', a: '#F7FAFE', b: '#DCEEFA', line: 'rgba(0,0,0,.04)' },
+    riverslate: { kind: 'stone', a: '#6E6A64', b: '#62605A', line: 'rgba(0,0,0,.28)' },
     whiteherring: { kind: 'herring', a: '#F1EDE6', b: '#E3DCD1', line: 'rgba(120,105,90,.22)' },
     walnutparquet: { kind: 'parquet', a: '#8A5A36', b: '#7A4E2D', line: 'rgba(40,20,8,.32)' },
     paintedpine: { kind: 'plank', a: '#EDE3D0', b: '#E4D8C2', line: 'rgba(120,95,60,.22)' },
@@ -222,6 +223,7 @@ export function createHouseArt(ctx0, opts = {}) {
     circuit: { pat: 'circuit', base: '#111118', ink: 'rgba(25,230,240,.6)', ink2: 'rgba(255,46,154,.75)' },
     sprinkles: { pat: 'sprinkles', base: '#FFF8F0', ink: 'rgba(224,74,106,.9)', pal: ['#E04A6A', '#BFE0F5', '#FBE7A6', '#D6C4F0', '#BFE8D6'] },
     'clouds-sky': { pat: 'clouds', base: '#C9E6F8', ink: 'rgba(255,255,255,.95)' },
+    'knotty-pine': { pat: 'knotty', base: '#D2A770', ink: 'rgba(110,70,30,.3)', ink2: 'rgba(110,65,25,.55)' },
     'banana-leaf': { pat: 'monstera', base: '#F7F1EC', ink: 'rgba(63,140,92,.85)', ink2: 'rgba(38,104,66,.85)' },
     'starburst-amber': { pat: 'starburst', base: '#F3E6CC', ink: 'rgba(210,105,58,.7)', ink2: 'rgba(63,127,122,.85)' },
     'ditsy-cream': { pat: 'ditsy', base: '#F8F1E1', ink: 'rgba(232,160,168,.9)', pal: ['#E8A0A8', '#F2D98A', '#9DB7D5', '#A9BFA0'] },
@@ -992,6 +994,71 @@ export function createHouseArt(ctx0, opts = {}) {
       }, { name: 'tray' }),
       F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [0, 1.18, 2.06]], 'rgba(200,226,232,.2)', RG.gold, 1.8); T.line([0.59, 1.18, 0.06], [0.59, 1.18, 2.06], RG.gold, 1.4); T.line([0.5, 1.18, 1.0], [0.5, 1.18, 1.3], RG.gold, 2.2); T.line([0.2, 1.18, 1.9], [0.45, 1.18, 1.4], 'rgba(255,255,255,.5)', 2); }),
       F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [1.18, 0, 2.06]], 'rgba(200,226,232,.18)', RG.gold, 1.8); })],
+  });
+
+  // Alpine Chalet: honey logs, knotty pine, buffalo check, sheepskin, river stone and black iron.
+  const AL = { log: '#B07A45', logDark: '#8A5A30', logEnd: '#D9B07A', pine: '#C89A62', iron: '#2A2826', red: '#B3262E', cream: '#F2EADB', stone: '#9A948A', stoneDark: '#7E786E', sheep: '#F5F0E6' };
+  // A round log seen side-on along x or y: a box with rounded shading, and its end grain where it shows.
+  const logEnd = (T, x, y, z, r) => { const [ex, ey] = T.P(x, y, z); circle(ex, ey, r, AL.logEnd, AL.logDark); circle(ex, ey, r * 0.55, null, 'rgba(120,80,40,.5)'); };
+  const check = (T, x0, x1, y0, y1, z, base) => { T.poly([[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]], base); for (let x = x0; x < x1 - 0.01; x += 0.16) T.poly([[x, y0, z + 0.001], [Math.min(x1, x + 0.08), y0, z + 0.001], [Math.min(x1, x + 0.08), y1, z + 0.001], [x, y1, z + 0.001]], 'rgba(20,10,10,.32)'); for (let y = y0; y < y1 - 0.01; y += 0.16) T.poly([[x0, y, z + 0.002], [x1, y, z + 0.002], [x1, Math.min(y1, y + 0.08), z + 0.002], [x0, Math.min(y1, y + 0.08), z + 0.002]], 'rgba(20,10,10,.32)'); };
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A log bed: thick round posts, a headboard of stacked logs, a buffalo-check blanket in the piece's colour, a sheepskin
+    // over the foot, and flannel pillows.
+    chalet: (o) => { const c = cl(o); return [
+      F(0, 0, 0.18, 1.6, (T) => { for (let k = 0; k < 6; k++) { const z = 0.25 + k * 0.17; T.box(0.03, 0.08, z, 0.12, 1.44, 0.15, k % 2 ? AL.log : shade(AL.log, -0.06)); logEnd(T, 0.09, 1.52, z + 0.075, 4); }
+        [0.06, 1.54].forEach((y) => { T.box(0.02, y - 0.07, 0, 0.14, 0.14, 1.35, AL.logDark); logEnd(T, 0.09, y, 1.36, 5.5); }); }),
+      F(0.18, 0, 2.5, 1.6, (T) => [0.06, 1.54].forEach((y) => { T.box(2.36, y - 0.07, 0, 0.14, 0.14, 0.7, AL.logDark); logEnd(T, 2.43, y, 0.71, 5.5); }), { onTop: true }),
+      B(0.16, 0.02, 0.1, 2.24, 1.56, 0.2, AL.log), B(0.18, 0.05, 0.3, 2.2, 1.5, 0.2, AL.cream, { name: 'mattress' }),
+      pillowsOn([0.18, 0.05, 0.3, 2.2, 1.5], [[0.2, 0.06, 0.5, 0.4, 0.72, 0.14, shade(c, 0.35)], [0.2, 0.82, 0.5, 0.4, 0.72, 0.14, shade(c, 0.35)]]),
+      B(0.86, 0.03, 0.5, 1.5, 1.54, 0.05, c), B(0.86, 0.03, 0.55, 1.5, 1.54, 0.01, c, { cover: true }),
+      F(0.86, 0, 2.36, 1.6, (T) => { check(T, 0.86, 2.36, 0.03, 1.57, 0.561, c); T.poly([[0.86, 1.57, 0.56], [2.36, 1.57, 0.56], [2.36, 1.57, 0.34], [0.86, 1.57, 0.34]], shade(c, -0.12));
+        // A cream cable-knit throw folded across the foot, hanging over the near side.
+        T.poly([[1.98, 0.03, 0.575], [2.3, 0.03, 0.575], [2.3, 1.58, 0.575], [1.98, 1.58, 0.575]], AL.sheep, 'rgba(0,0,0,.1)', 0.8); T.poly([[1.98, 1.58, 0.575], [2.3, 1.58, 0.575], [2.3, 1.58, 0.32], [1.98, 1.58, 0.32]], shade(AL.sheep, -0.06));
+        [2.06, 2.14, 2.22].forEach((x) => { for (let y = 0.05; y < 1.56; y += 0.08) T.line([x - 0.02, y, 0.576], [x + 0.02, y + 0.04, 0.576], 'rgba(150,135,110,.45)', 0.8); }); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A tree-stump side table with bark and rings, and a black iron lantern with a candle glow.
+    chalet: (T, o) => { const lit = isLit(o.id);
+      const [bx, by] = T.P(0.22, 0.22, 0), [tx, ty] = T.P(0.22, 0.22, 0.5); ctx.fillStyle = AL.logDark; ctx.fillRect(bx - 13, ty, 26, by - ty); ctx.strokeStyle = 'rgba(40,20,5,.35)'; ctx.lineWidth = 1; for (let k = -10; k <= 10; k += 5) { ctx.beginPath(); ctx.moveTo(bx + k, ty + 3); ctx.lineTo(bx + k + 1, by - 2); ctx.stroke(); }
+      ell(bx, by, 13, 6.5, AL.logDark); ell(tx, ty, 13, 6.5, AL.logEnd, AL.logDark); [9, 6, 3].forEach((r) => ell(tx, ty, r, r / 2, null, 'rgba(120,80,40,.45)'));
+      T.box(0.14, 0.14, 0.5, 0.14, 0.14, 0.2, 'rgba(40,38,36,.35)'); T.line([0.14, 0.14, 0.5], [0.14, 0.14, 0.7], AL.iron, 1.4); T.line([0.28, 0.28, 0.5], [0.28, 0.28, 0.7], AL.iron, 1.4); T.box(0.13, 0.13, 0.7, 0.16, 0.16, 0.03, AL.iron);
+      const [lx, ly] = T.P(0.21, 0.21, 0.6); if (lit) { circle(lx, ly, 14, 'rgba(255,190,110,.28)'); circle(lx, ly, 3, '#FFD27A'); } else circle(lx, ly, 2, '#E8DCC4'); const [hx, hy] = T.P(0.21, 0.21, 0.76); ctx.strokeStyle = AL.iron; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(hx, hy, 3, Math.PI, 0); ctx.stroke(); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A rough-hewn pine chest with black iron strap hinges and ring pulls, a candle and a bowl of pinecones.
+    chalet: (T, o) => { const c = cl(o);
+      T.box(0, 0, 0, 1.2, 0.5, 0.82, c); for (let k = 0; k < 6; k++) T.line([0.01 + k * 0.2, 0.501, 0.02], [0.01 + k * 0.2, 0.501, 0.8], 'rgba(60,35,10,.22)', 0.8); [[0.25, 0.3], [0.85, 0.6]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.501, z); ell(kx, ky, 2.4, 1.4, 'rgba(90,55,20,.45)'); });
+      [0.3, 0.56].forEach((z) => T.line([0.01, 0.501, z], [1.19, 0.501, z], 'rgba(40,20,5,.4)', 1.2));
+      [0.17, 0.43, 0.69].forEach((z) => { [0.04, 1.02].forEach((x) => T.poly([[x, 0.502, z - 0.03], [x + 0.14, 0.502, z - 0.03], [x + 0.14, 0.502, z + 0.03], [x, 0.502, z + 0.03]], AL.iron)); const [rx, ry] = T.P(0.6, 0.503, z); ctx.strokeStyle = AL.iron; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(rx, ry + 1.5, 2, 0, Math.PI * 2); ctx.stroke(); });
+      T.box(-0.03, -0.03, 0.82, 1.26, 0.56, 0.06, shade(c, -0.08));
+      T.box(0.2, 0.2, 0.88, 0.08, 0.08, 0.12, AL.cream); const [fx, fy] = T.P(0.24, 0.24, 1.03); circle(fx, fy, 3, 'rgba(255,200,120,.35)'); ell(fx, fy, 1.2, 2.2, '#FFC861');
+      const [px, py] = T.P(0.85, 0.25, 0.9); ell(px, py, 9, 4, AL.logDark); [[-4, -3], [3, -3], [0, -6], [-1, -1]].forEach(([dx, dy]) => ell(px + dx, py + dy, 2.6, 3.2, '#6E4A28', '#4A3018')); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A white toilet with a knotty pine seat and a pine-boxed tank.
+    chalet: (T, o) => {
+      T.box(0.04, 0, 0.36, 0.34, 0.16, 0.42, AL.pine); for (let k = 1; k < 4; k++) T.line([0.04 + k * 0.085, 0.161, 0.37], [0.04 + k * 0.085, 0.161, 0.77], 'rgba(60,35,10,.3)', 0.8); T.line([0.06, 0.161, 0.7], [0.13, 0.161, 0.7], AL.iron, 1.6);
+      T.box(0.09, 0.16, 0, 0.24, 0.26, 0.32, '#FFFFFF'); const [bx, by] = T.P(0.21, 0.42, 0.3); ell(bx, by, 7.5, 6, '#FFFFFF', 'rgba(0,0,0,.12)');
+      const [sx, sy] = T.P(0.21, 0.4, 0.385); ell(sx, sy, 7, 4, AL.pine); ell(sx, sy, 5, 2.8, '#E8EEF0');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A hammered copper basin on a thick pine plank over a log-legged stand, a black iron tap and a wool towel.
+    chalet: (T, o) => { const c = cl(o);
+      [[0.08, 0.08], [0.92, 0.08], [0.08, 0.42], [0.92, 0.42]].forEach(([x, y]) => { T.box(x - 0.05, y - 0.05, 0, 0.1, 0.1, 0.74, AL.logDark); });
+      T.box(0.06, 0.06, 0.2, 0.88, 0.38, 0.04, AL.pine); T.box(0.15, 0.12, 0.24, 0.3, 0.24, 0.12, AL.red); T.box(0.55, 0.12, 0.24, 0.28, 0.24, 0.1, AL.cream);
+      T.box(-0.03, -0.02, 0.74, 1.06, 0.54, 0.08, c); const [vx, vy] = T.P(0.5, 0.27, 0.82); ell(vx, vy + 3, 11, 6, '#9A5A30'); ell(vx, vy, 11, 5.5, '#C27A45', '#8A4A20'); ell(vx, vy, 8, 3.8, '#A8653A');
+      T.line([0.5, 0.04, 0.82], [0.5, 0.04, 1.0], AL.iron, 2.2); T.line([0.5, 0.04, 1.0], [0.5, 0.16, 0.98], AL.iron, 2.2); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // River-stone walls, a cedar slat floor, black iron pipes to a big rain head, and a frosted glass door.
+    chalet: (o) => [F(0, 0, 1.18, 1.18, (T) => {
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, AL.logDark); for (let k = 0; k < 9; k++) T.box(0.04 + k * 0.125, 0.06, 0.06, 0.1, 1.06, 0.02, k % 2 ? AL.pine : shade(AL.pine, -0.06));
+        T.box(0, 0, 0.06, 1.18, 0.08, 2.04, AL.stone); for (let k = 0; k < 60; k++) { const u = 0.04 + ((k * 0.618) % 1) * 1.1, z = 0.12 + ((k * 0.382) % 1) * 1.92, [rx, ry] = T.P(u, 0.081, z); ell(rx, ry, 4 + (k % 3), 2.6 + (k % 2), [AL.stoneDark, '#B0AA9E', '#8C867C', '#A39C90'][k % 4], 'rgba(0,0,0,.18)'); }
+        T.line([0.6, 0.08, 0.9], [0.6, 0.08, 2.08], AL.iron, 2.2); T.line([0.6, 0.08, 2.08], [0.6, 0.45, 2.08], AL.iron, 2.2); const [hx, hy] = T.P(0.6, 0.5, 2.05); ell(hx, hy, 10, 5, AL.iron); [[0.48, 1.0], [0.72, 1.0]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.082, z); circle(kx, ky, 2.6, AL.iron); });
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.5); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
+      }, { name: 'tray' }),
+      F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.04], [0, 1.18, 2.04]], 'rgba(235,240,240,.5)', AL.iron, 1.6); T.line([0.59, 1.18, 0.06], [0.59, 1.18, 2.04], AL.iron, 1.2); T.line([0.5, 1.18, 1.0], [0.5, 1.18, 1.3], AL.iron, 2.2); })],
   });
   const diningLife = () => F(0, 0.74, 1.3, 1.74, (T, o) => {
     ['c1', 'c2'].forEach((s, i) => { const sid = o.id + ':' + s, who = reserved[sid]; if (who && who.task && who.task.slot === sid && (doing(who, 'eat') || doing(who, 'eatOut') || doing(who, 'sip'))) { const [px, py] = T.P(0.65, i ? 1.5 : 0.98, 0.775); if (doing(who, 'eatOut')) { rr(px - 5, py - 7, 10, 7, 1.5, '#F2EEE8'); } else if (doing(who, 'sip')) { rr(px - 3, py - 6, 6, 6, 1.2, '#F2EEE8'); } else { ell(px, py, 10, 5, '#F5F2EC', 'rgba(0,0,0,.15)'); ell(px, py - 1, 6, 2.8, who.mealFresh ? '#7FB069' : '#D9822B'); circle(px + 3, py - 2, 1.8, '#4F9460'); } } });
@@ -2463,6 +2530,23 @@ export function createHouseArt(ctx0, opts = {}) {
           T.poly([[0.28, 0.601, 0.2], [0.44, 0.601, 0.2], [0.44, 0.601, 0.34], [0.28, 0.601, 0.34]], AR.ink, AR.chrome, 1);
         }, { onTop: true })]; },
        },
+    woodstove: {
+      // A black cast-iron stove on stone hearth tiles, a glass door, a flue pipe up to the ceiling and a log basket.
+      // Lit, flames dance behind the glass, embers glow, sparks rise from the flue collar and the room warms orange.
+      parts: (o) => [F(0, 0, 0.9, 0.8, (T, ob, t) => { const lit = isLit(ob.id), fl = Math.sin(t * 9) * 0.5 + Math.sin(t * 13.7) * 0.3;
+        T.box(0, 0, 0, 0.9, 0.8, 0.05, AL.stoneDark); for (let k = 1; k < 3; k++) T.line([k * 0.3, 0, 0.051], [k * 0.3, 0.8, 0.051], 'rgba(0,0,0,.25)', 0.8);
+        [[0.18, 0.2], [0.62, 0.2], [0.18, 0.5], [0.62, 0.5]].forEach(([x, y]) => T.box(x, y, 0.05, 0.05, 0.05, 0.12, AL.iron));
+        T.box(0.16, 0.18, 0.17, 0.52, 0.38, 0.5, AL.iron); T.box(0.14, 0.16, 0.67, 0.56, 0.42, 0.04, '#3A3634');
+        T.poly([[0.24, 0.561, 0.24], [0.6, 0.561, 0.24], [0.6, 0.561, 0.58], [0.24, 0.561, 0.58]], lit ? '#3A1A0A' : '#1A1816', '#5A5450', 1.6);
+        // The fire stays behind the glass: everything is clipped to the door.
+        if (lit) { const door = [[0.24, 0.562, 0.24], [0.6, 0.562, 0.24], [0.6, 0.562, 0.58], [0.24, 0.562, 0.58]].map((p) => T.P(...p)), [fx, fy] = T.P(0.42, 0.562, 0.28);
+          ctx.save(); ctx.beginPath(); door.forEach(([px, py], k) => (k ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath(); ctx.clip();
+          ell(fx, fy + 1, 9, 3, '#C2410C'); ctx.globalAlpha = 0.9; ell(fx, fy - 5 - fl * 1.5, 5, 6 + fl * 1.5, '#F28C28'); ell(fx - 3, fy - 3, 3, 4, '#FFC861'); ell(fx + 3, fy - 2 + fl, 2.4, 3.5, '#FFD98A'); ctx.restore();
+          if ((t * 3) % 1 < 0.5) { const [sx, sy] = T.P(0.42, 0.37, 0.75 + ((t * 0.8) % 1) * 0.4); circle(sx + Math.sin(t * 7) * 3, sy, 1, '#FFB347'); } }
+        T.line([0.42, 0.37, 0.71], [0.42, 0.37, 2.6], AL.iron, 5); T.line([0.42, 0.37, 0.95], [0.42, 0.37, 0.98], '#4A4644', 7);
+        const [bx, by] = T.P(0.8, 0.65, 0); ell(bx, by - 4, 9, 4, '#7A5A3A'); [[-4, -8], [2, -9], [-1, -12]].forEach(([dx, dy]) => { limb(bx + dx - 4, by + dy, bx + dx + 5, by + dy - 3, AL.logDark, 3.5); circle(bx + dx + 5, by + dy - 3, 1.8, AL.logEnd); });
+      })],
+    },
     glamtable: {
       // A Hollywood dressing table: a blush-skirted table with a gold-legged stool, a tall mirror ringed with round bulbs.
       // Tapped, the bulbs light one after another until all are on; getting glam, they blaze and sparkles flash round it.
@@ -2678,6 +2762,8 @@ export function createHouseArt(ctx0, opts = {}) {
     else if (pat === 'starburst') { for (let z = 0.55, r = 0; z < WH - 0.05; z += 0.55, r++) for (let u = 0.3 + (r % 2) * 0.3; u < len - 0.05; u += 0.6) { const [sx, sy] = iso(...P(u, z)); for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, l = k % 2 ? 4 : 7; limb(sx - Math.cos(a) * 1.5, sy - Math.sin(a) * 1.5, sx + Math.cos(a) * l, sy + Math.sin(a) * l, ink, 1.1); } circle(sx, sy, 1.2, S.ink2 || ink); } }
     // Board-formed concrete: the seams of the formwork boards, and a grid of tie holes.
     // Limewash: soft clouds of darker and lighter wash, brushed across the wall.
+    // Knotty pine: tongue-and-groove boards with a knot here and there.
+    else if (pat === 'knotty') { for (let u = 0.16; u < len; u += 0.16) line3(P(u, 0.14), P(u, WH), ink, 1); for (let k = 0; k < len * 3; k++) { const u = 0.08 + ((k * 0.618 * 4.1) % (len - 0.16)), z = 0.4 + ((k * 0.414 * 3.3) % (WH - 0.6)), [sx, sy] = iso(...P(u, z)); ell(sx, sy, 2.4, 1.8, S.ink2); ell(sx, sy, 1, 0.8, 'rgba(70,40,15,.6)'); } }
     // Ditsy floral: tiny four-petal flowers in a scatter of colours, with a leaf beside each.
     else if (pat === 'ditsy') { const pal = S.pal || [ink]; for (let z = 0.35, r = 0; z < WH - 0.05; z += 0.28, r++) for (let u = 0.12 + (r % 2) * 0.14; u < len - 0.05; u += 0.28) { const [sx, sy] = iso(...P(u, z)), col = pal[(r * 3 + Math.round(u * 7)) % pal.length]; [[-1.6, 0], [1.6, 0], [0, -1.6], [0, 1.6]].forEach(([dx, dy]) => circle(sx + dx, sy + dy, 1.3, col)); circle(sx, sy, 0.9, '#FFF6D8'); ell(sx + 3, sy + 2, 1.8, 0.8, 'rgba(110,143,90,.7)', null, 0.6); } }
     // Hotel pinstripe: pairs of fine gold lines.
@@ -4380,6 +4466,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const run = (secs, msg) => { liveUntil.set(o.id + ':' + part, animT + secs); return msg; };
     switch (o.type) {
       case 'overseer': return 'The eye turns toward you.';
+      case 'woodstove': { const on = toggleObjectLight(o.id); return on ? 'The kindling catches and the stove roars into life.' : 'The fire in the stove settles down to embers and goes out.'; }
       case 'glamtable': return run(4, 'The bulbs light up one after another round the mirror.');
       case 'hificonsole': return run(40, 'The lid lifts, the needle drops, and the room goes amber.');
       case 'musicbox': return run(30, 'The lid opens and a tinkly little tune starts to play.');

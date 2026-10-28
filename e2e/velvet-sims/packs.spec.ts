@@ -9,6 +9,7 @@ const PACKS = [
   { theme: 'cottage', extra: 'musicbox' },
   { theme: 'midcentury', extra: 'hificonsole' },
   { theme: 'regency', extra: 'glamtable' },
+  { theme: 'chalet', extra: 'woodstove' },
 ];
 for (const P of PACKS) {
   test(`buying the ${P.theme} pack upstairs restyles the bedroom and bath`, async ({ page }) => {

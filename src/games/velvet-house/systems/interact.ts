@@ -30,7 +30,7 @@ export function createInteract(g: Game): Partial<Game> {
     const acts: TrayAction[] = [];
     if (obj.type === 'pbox' && obj.contents) acts.push({ act: 'unpack', label: 'Unpack', icon: '' });
     if (obj.type === 'bag' && obj.contents) acts.push({ act: 'unpack', label: 'Open', icon: '' });
-    if (isLight) acts.push({ act: 'toggleLight', label: 'Turn light on/off', icon: '' });
+    if (isLight) acts.push({ act: 'toggleLight', label: obj.type === 'woodstove' ? 'Light or bank the stove' : 'Turn light on/off', icon: '' });
     if (obj.type === 'servicebell') acts.push({ act: 'ringBell', label: 'Ring for room service', icon: '' });
     if (obj.type === 'overseer') {
       acts.push({ act: 'overseerTalk', label: 'Ask for encouragement', icon: '' }, { act: 'overseerCake', label: 'Request cake', icon: '' }, { act: 'overseerUnplug', label: 'Unplug', icon: '' });
