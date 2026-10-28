@@ -12,6 +12,7 @@ import {
 import { getGoals, getCommitments, CoachingGoal, CoachingCommitment } from '../services/coachingService';
 import { toggleGoalShowOnProfile, toggleCommitmentShowOnProfile } from '../services/publicProfileService';
 import { toast } from '../shared/ui/Toast';
+import { saveErrorMessage } from '../services/moderation';
 import { SMILIES, smilieUrl } from '../config/smilieRegistry';
 import { PublicProfileImage } from './PublicProfileImage';
 import { ReachControls, type ReachValues } from './ReachControls';
@@ -132,8 +133,8 @@ export function PublicProfileSettings() {
       }
       setProfile(updated);
       toast.success('Public profile saved.');
-    } catch {
-      toast.error('Failed to save profile.');
+    } catch (err) {
+      toast.error(saveErrorMessage(err, 'Failed to save profile.'));
     } finally {
       setSaving(false);
     }

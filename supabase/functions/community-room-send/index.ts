@@ -127,6 +127,11 @@ Deno.serve(async (req: Request) => {
       .insert({ room_id: room.id, author_id: user.id, body, reply_to_id: replyToId, kind: 'user' })
       .select('id, room_id, board_id, author_id, body, reply_to_id, kind, created_at')
       .single();
+    // The database word bank refuses slurs and hate speech with VM001 and a
+    // message written for the sender.
+    if (insertError?.code === 'VM001') {
+      return json(403, { error: 'Content policy violation', message: insertError.message });
+    }
     if (insertError) throw insertError;
 
     // @mentions: the client inserts <@user-uuid> tokens from its autocomplete.

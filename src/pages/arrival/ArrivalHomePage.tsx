@@ -6,6 +6,7 @@ import { MoveInPanel } from '../../features/velvet-world/MoveInSheet';
 import type { HouseConfig } from '../../features/velvet-world/art/streetArt';
 import { getMyPlot } from '../../services/worldService';
 import { upsertMyMemberProfile } from '../../services/memberProfileService';
+import { saveErrorMessage } from '../../services/moderation';
 import { updateSetupProgress } from '../../services/setupProgressService';
 import { colorNameToHex } from '../../utils/colorMapping';
 import { supabase } from '../../shared/supabase/client';
@@ -88,8 +89,8 @@ export function ArrivalHomePage() {
       });
       await updateSetupProgress(loaded.userId, { step: 'arrival_atlas' });
       navigate(ARRIVAL_ROUTES.atlas);
-    } catch {
-      setError("Couldn't save your billboard. Please try again.");
+    } catch (err) {
+      setError(saveErrorMessage(err, "Couldn't save your billboard. Please try again."));
       setSaving(false);
     }
   };

@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { throwIfModerated } from './moderation';
 import type {
   CommunityBoard,
   CommunityPost,
@@ -90,7 +91,7 @@ export async function createBoard(input: {
     .select()
     .maybeSingle();
 
-  if (error) return null;
+  if (error) { throwIfModerated(error); return null; }
   return data;
 }
 
@@ -220,7 +221,7 @@ export async function createPost(input: {
     .select()
     .maybeSingle();
 
-  if (error) return null;
+  if (error) { throwIfModerated(error); return null; }
   return data;
 }
 
@@ -229,6 +230,7 @@ export async function editPost(postId: string, body: string): Promise<boolean> {
     .from('community_posts')
     .update({ body, edited_at: new Date().toISOString() })
     .eq('id', postId);
+  throwIfModerated(error);
   return !error;
 }
 
@@ -287,7 +289,7 @@ export async function createComment(input: {
     .select()
     .maybeSingle();
 
-  if (error) return null;
+  if (error) { throwIfModerated(error); return null; }
   return data;
 }
 

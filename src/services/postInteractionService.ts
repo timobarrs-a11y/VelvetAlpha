@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { throwIfModerated } from './moderation';
 
 export interface PostComment {
   id: string;
@@ -119,6 +120,7 @@ export async function addComment(postId: string, body: string): Promise<PostComm
     .maybeSingle();
 
   if (error) {
+    throwIfModerated(error);
     console.error('[postInteraction] addComment error:', error.message);
     return null;
   }

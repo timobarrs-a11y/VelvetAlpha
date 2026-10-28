@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { throwIfModerated } from './moderation';
 
 export type MessagePolicy = 'everyone' | 'friends' | 'nobody';
 export type CommentPolicy = 'everyone' | 'friends';
@@ -96,6 +97,7 @@ export async function upsertMyMemberProfile(updates: {
     .maybeSingle();
 
   if (error) {
+    throwIfModerated(error);
     console.error('[memberProfileService] upsert error:', error.message);
     throw new Error(error.message);
   }

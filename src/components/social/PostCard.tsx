@@ -19,6 +19,8 @@ import {
   PostComment,
 } from '../../services/postInteractionService';
 import { AuthoredBadge } from './AuthoredBadge';
+import { saveErrorMessage } from '../../services/moderation';
+import { toast } from '../../shared/ui/Toast';
 
 const POST_ICONS: Record<string, React.ElementType> = {
   check: Check,
@@ -128,13 +130,20 @@ export function PostCard({ post, index, liked, currentUserId, onLikeChange, onDe
   const handleSubmitComment = async () => {
     if (!commentText.trim() || submitting) return;
     setSubmitting(true);
-    const newComment = await addComment(post.id, commentText);
-    if (newComment) {
-      // Reload to get enriched author info
-      await loadComments();
-      setCommentText('');
+    try {
+      const newComment = await addComment(post.id, commentText);
+      if (newComment) {
+        // Reload to get enriched author info
+        await loadComments();
+        setCommentText('');
+      } else {
+        toast.error("Couldn't post that comment. Try again.");
+      }
+    } catch (err) {
+      toast.error(saveErrorMessage(err, "Couldn't post that comment. Try again."));
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   const handleDeleteComment = async (commentId: string) => {
