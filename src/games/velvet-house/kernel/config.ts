@@ -1,7 +1,7 @@
 import { revivePet, type Pet } from '../state/pets';
 import { validateGarment } from '../state/garment';
 import { migrateSave, isCurrentContent } from '../state/saveMigration';
-import { INITIAL_OBJS, type ObjectInstance } from '../state/objects';
+import { INITIAL_OBJS, STARTER_RUG_IDS, type ObjectInstance } from '../state/objects';
 import { type AgentId, type AgentLook } from '../state/agents';
 import { type CharacterLook } from '../state/types';
 import { type WallMode } from '../art/houseArt.js';
@@ -96,6 +96,15 @@ export function loadWorld(): World {
       if (typeof s.day === 'number') day = s.day;
       if (typeof s.minutes === 'number') minutes = s.minutes;
       if (Array.isArray(s.objs) && s.objs.length) objs = s.objs as unknown as ObjectInstance[];
+      // A house from before the rugs were pieces gets the two it used to have painted on the floor, once. A rug the player
+      // already put away (or one that is in the house) is not added again.
+      const saved = s as unknown as { flags?: Record<string, unknown>; storage?: Array<{ id?: string }> };
+      if (!saved.flags?.rugObjects) {
+        for (const id of STARTER_RUG_IDS) {
+          const rug = INITIAL_OBJS.find((o) => o.id === id);
+          if (rug && !objs.some((o) => o.id === id) && !(saved.storage ?? []).some((o) => o?.id === id)) objs.push({ ...rug });
+        }
+      }
       // A small piece whose table is gone goes back on the floor.
       for (const o of objs) if (o.on && !objs.some((h) => h.id === o.on)) { delete o.on; delete o.z; }
     }
