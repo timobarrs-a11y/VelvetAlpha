@@ -26,6 +26,7 @@ const THEMES: ThemeSpec[] = [
   { theme: 'adobe', tags: ['warm', 'natural', 'cozy'], materials: ['metal', 'stone', 'wood', 'fabric'], paper: { id: 'paper-serape-adobe', pattern: 'serape-adobe' }, floor: { id: 'floor-saltillo', floor: 'saltillo' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'neon', tags: ['bold', 'modern', 'industrial'], materials: ['metal', 'glass', 'fabric'], paper: { id: 'paper-circuit', pattern: 'circuit' }, floor: { id: 'floor-grate', floor: 'grate' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [450, 700] },
   { theme: 'candy', tags: ['soft', 'playful', 'warm'], materials: ['metal', 'laminate', 'fabric', 'stone'], paper: { id: 'paper-sprinkles', pattern: 'sprinkles' }, floor: { id: 'floor-checkpink', floor: 'checkpink' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
+  { theme: 'nana', tags: ['soft', 'playful', 'cozy'], materials: ['metal', 'laminate', 'fabric', 'stone', 'wood'], paper: { id: 'paper-nana-sky', pattern: 'nana-sky' }, floor: { id: 'floor-nanaplush', floor: 'nanaplush' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'cuddle', tags: ['soft', 'playful', 'cozy'], materials: ['metal', 'laminate', 'fabric', 'stone'], paper: { id: 'paper-clouds-sky', pattern: 'clouds-sky' }, floor: { id: 'floor-skycheck', floor: 'skycheck' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'arcade', tags: ['playful', 'bold', 'vintage'], materials: ['metal', 'laminate', 'fabric'], paper: { id: 'paper-pixel-invaders', pattern: 'pixel-invaders' }, floor: { id: 'floor-arcadecarpet', floor: 'arcadecarpet' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [450, 700] },
   { theme: 'spring', tags: ['soft', 'natural', 'playful'], materials: ['wood', 'stone', 'metal', 'fabric', 'glass'], paper: { id: 'paper-blossom-mint', pattern: 'blossom-mint' }, floor: { id: 'floor-birch', floor: 'birchplank' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
@@ -130,8 +131,19 @@ for (const T of THEMES) {
         s: { bond: 50 }, cameraBeat: () => {}, scriptEmit: () => {}, refreshDrawer: () => {}, dezDeliveries: () => false, spendOn: (_: string, n: number) => { paid.push(n); return true; }, peopleOnFloor: () => [], relearnLayout: () => {},
       } as unknown as Game;
       const before = objs.filter((o) => o.level === 1).map((o) => [o.id, o.x, o.y, o.rot]);
-      createShop(g).handleBuy!(catalogById(`set-${T.theme}`)!);
-      expect(paid).toEqual([setQuote(catalogById(`set-${T.theme}`)!, new Set()).cost]);
+      const set = catalogById(`set-${T.theme}`)!;
+      if (set.promo) {
+        // A promo pack cannot be bought: with no code it does nothing, and once the code has given it, applying it is free.
+        createShop(g).handleBuy!(set);
+        expect(paid).toEqual([]);
+        expect(objs.find((o) => o.id === 'fridge')!.skin).toBeUndefined();
+        for (const id of [...set.set!.items, set.id]) g.owned.add(id);
+        createShop(g).handleBuy!(set);
+        expect(paid).toEqual([]);
+      } else {
+        createShop(g).handleBuy!(set);
+        expect(paid).toEqual([setQuote(set, new Set()).cost]);
+      }
       for (const id of ['fridge', 'counter', 'dining', 'sofa', 'lamp1', 'plant1']) expect(objs.find((o) => o.id === id)!.skin, id).toBe(T.theme);
       expect(applied).toEqual([T.paper.pattern, T.floor.floor]);
       expect(objs.filter((o) => o.level === 1).map((o) => [o.id, o.x, o.y, o.rot])).toEqual(before);

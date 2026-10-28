@@ -60,6 +60,7 @@ export function createShop(g: Game): Partial<Game> {
   }
 
   function handleBuy(item: CatalogEntry, color?: string, fromSet = false): void {
+    if (item.promo && !owned.has(item.id)) { log(`${item.name} is a promo pack: it comes with a code, and cannot be bought.`); return; }
     if (item.set) { buySet(item); return; }
     if (item.wallLamp) {
       if (!g.spendOn(`Shop: ${item.name}`, item.price)) { log('Not enough money.'); return; }

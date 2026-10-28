@@ -19,6 +19,8 @@ export interface UnlockCode {
 /** Codes are lower case; what the player types is compared in any case with the spaces around it ignored. */
 export const UNLOCK_CODES: Record<string, UnlockCode> = {
   rainbowhugs: { setId: 'set-cuddle', packName: 'Cuddle Clouds', welcome: 'Cuddle Clouds is yours, free: bears, clouds and rainbows. It is in your Sets tab, and Arrange can switch any piece to it.' },
+  // A placeholder: the real promo phrase is the director's to choose and hand out (change the key, nothing else).
+  'nana-promo': { setId: 'set-nana', packName: 'Nana', welcome: 'Nana is yours, free: pastel pink, lilac and butter, ruffles, bows and cloud lights. It is in your Sets tab, and Arrange can switch any piece to it.' },
 };
 
 /** The code the text is exactly, or null (so it goes on to the partner as an ordinary message). */

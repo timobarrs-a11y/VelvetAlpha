@@ -4,7 +4,7 @@ import { createGarmentPreview } from './garmentPreview';
  * Drawer UI — the sidebar/bottom-sheet with pages: Shop, Goals, Do, Partner, You, Home, Log.
  * Pure DOM manipulation, called from main.ts.
  */
-import { CATALOG, TABS, itemsForTab, visibleItems, lockOf, setQuote, type CatalogEntry } from '../state/catalog';
+import { CATALOG, TABS, itemsForTab, visibleItems, lockOf, setQuote, isLockedPromo, type CatalogEntry } from '../state/catalog';
 import { SETTLE, LIFE, lifeGoalProgress, type GoalContext } from '../state/goals';
 import { careerTitle } from '../state/career';
 import { paperCss, floorCss, type LookInfo } from './swatch';
@@ -398,6 +398,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     const cards = items.map(item => {
       const lock = lockOf(item.id, state.day, state.bond);
       const quote = item.set ? setQuote(item, state.owned) : null;
+      const promoLocked = isLockedPromo(item, state.owned);
       const owned = quote ? quote.missing.length === 0 : state.owned.has(item.id) && !item.repeat;
       const locked = lock?.locked;
       const price = quote ? quote.cost : item.price;
@@ -407,6 +408,14 @@ export function createDrawer(cb: DrawerCallbacks): {
         ? `<div class="vh-swatches">${item.cols.map(c => `<span class="vh-swatch" style="background:${c}" data-color="${c}"></span>`).join('')}</div>`
         : '';
       const lockHint = locked ? `<span class="vh-lock">${lock!.hint}</span>` : '';
+      if (promoLocked) {
+        // The name and what it is are on show; the picture is not, and there is nothing to buy.
+        return `<div class="vh-shop-card vh-promo-locked" data-item="${item.id}">
+          <div class="vh-shop-icon vh-promo-lock" data-icon="${item.id}" aria-label="Locked picture"></div>
+          <div class="vh-shop-info"><strong>${item.name}</strong>${item.desc ? `<span class="vh-shop-desc">${item.desc}</span>` : ''}<span class="vh-promo-tag">Promo pack · unlock it with a code</span></div>
+          <div class="vh-shop-actions"><button data-buy="${item.id}" disabled>Code only</button></div>
+        </div>`;
+      }
       return `<div class="vh-shop-card ${cls}" data-item="${item.id}">
         <div class="vh-shop-icon" data-icon="${item.id}" style="${iconStyle(item, state)}"></div>
         <div class="vh-shop-info">

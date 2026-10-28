@@ -36,6 +36,11 @@ export interface CatalogEntry {
   secret?: boolean;
   /** A wall lamp of this style (state/wallLamps.ts): buying it hangs one, and it can be moved along the walls. */
   wallLamp?: string;
+  /**
+   * A promo pack: its name and description are on the shelf (to build hype) but its picture is locked and it cannot be
+   * bought. It comes only from a code (state/unlockCodes.ts); once the player has it, it is an ordinary set.
+   */
+  promo?: boolean;
 }
 
 export const TABS = [
@@ -75,6 +80,12 @@ export const look = (id: string, type: string, skin: string, name: string, desc:
 const bundle = (id: string, name: string, desc: string, items: string[], tags: string[], off = 0.2): CatalogEntry => ({
   id, name, desc, price: 0, icon: 'set', tab: 'Sets', tags, set: { items, off },
 });
+
+/** A promo entry: on the shelf with its picture locked, and only a code opens it. */
+export const promo = (e: CatalogEntry): CatalogEntry => ({ ...e, promo: true });
+
+/** True for a promo pack the player does not have yet: the shop shows it locked. */
+export const isLockedPromo = (e: CatalogEntry, owned: ReadonlySet<string>): boolean => !!e.promo && !owned.has(e.id);
 
 /** A secret entry: out of the shop until the player owns it. */
 const secret = (e: CatalogEntry): CatalogEntry => ({ ...e, secret: true });
@@ -541,6 +552,17 @@ export const CATALOG: CatalogEntry[] = [
   wallItem('wobj-neon', 'Neon heart', 150, ['bold', 'playful', 'modern'], ['#FF5FA2', '#5FE3FF', '#FFD25F']),
   wallItem('wobj-aquarium', 'Aquarium', 200, ['modern', 'playful', 'cool'], ['#2B2B30', '#9C6B45', '#F2EEE8']),
 
+  // Nana: the soft-girl era, a promo pack that only a code opens (its name and description show, its picture is locked).
+  secret(wallpaper('paper-nana-sky', 'Pink sky and clouds', 'nana-sky', 100, ['soft', 'playful', 'cozy'])),
+  secret(floor('floor-nanaplush', 'Plush blush carpet', 'nanaplush', 150, ['soft', 'playful', 'cozy'])),
+  secret(look('look-fridge-nana', 'fridge', 'nana', 'Pastel pink fridge', 'Blush pink with a cream cloud cap, cloud stickers and little frames on the upper door, a lilac bow and a ruffle band on the lower one, and heart handles.', 360, ['soft', 'playful', 'cozy'], ['#F8C8DC', '#FFF8F0', '#D9C8F2'])),
+  secret(look('look-counter-nana', 'counter', 'nana', 'Cream cabinets with a ruffle valance', 'Cream fronts with heart knobs under a pink ruffle valance, a butter top scattered with hearts, a lilac basin with a gold tap and a posy of daisies.', 430, ['soft', 'playful', 'cozy'], ['#FFF8F0', '#F8C8DC', '#FFF1B8'])),
+  secret(look('look-dining-nana', 'dining', 'nana', 'Tea-party table and bow chairs', 'A lace-edged cloth over a gold-legged table set with a teapot and cups, chairs with cloud-and-bow backs in pink and lilac, and a cloud lamp overhead.', 350, ['soft', 'playful', 'cozy'], ['#FFF8F0', '#F8C8DC', '#D9C8F2'])),
+  secret(look('look-sofa-nana', 'sofa', 'nana', 'Plush ruffle sofa', 'A plush lilac sofa with a ruffled skirt, pink pillows with a heart and a bow, and a butter throw over one arm.', 390, ['soft', 'playful', 'cozy'], ['#E4D6F7', '#F8C8DC', '#FFF1B8'])),
+  secret(look('look-lamp-nana', 'lamp', 'nana', 'Cloud lamp', 'A fluffy cluster of clouds for a shade on a gold stem, a little star on top and a soft pink glow when it is on.', 100, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F8C8DC', '#E8C877'])),
+  secret(look('look-plant-nana', 'plant', 'nana', 'Ruffle pot', 'Your plant in a pink pot with a ruffled rim and a bow, daisies in its leaves.', 65, ['soft', 'playful', 'cozy'], ['#F8C8DC', '#FFF8F0', '#D9C8F2', '#FFF1B8'])),
+  promo(bundle('set-nana', 'Nana kitchen and living room', 'The soft-girl era: pastel pink, lilac and butter, a plush ruffle sofa, a tea-party table with bow chairs, cloud lights, ruffles, bows and daisies, with a pink sky of clouds on the walls and a plush blush carpet underfoot.',
+    ['look-fridge-nana', 'look-counter-nana', 'look-dining-nana', 'look-sofa-nana', 'look-lamp-nana', 'look-plant-nana', 'paper-nana-sky', 'floor-nanaplush'], ['soft', 'playful', 'cozy'])),
   // Wall lamps: hung where there is wall, and movable along the walls with Arrange.
   ...LAMP_STYLES.map((s): CatalogEntry => ({ id: `lamp-${s}`, name: LAMP_NAMES[s], desc: 'A wall lamp. Hang it, then slide it anywhere on the walls with Arrange.', price: LAMP_PRICES[s], icon: 'obj', tab: 'Decor', wallLamp: s, tags: ['cozy', 'warm'], repeat: true })),
   // Decor

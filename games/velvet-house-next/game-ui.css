@@ -759,3 +759,11 @@
 .vh-lampbar-stock button { background: rgba(255, 214, 120, .22); }
 /* On a phone the panel holds the top of the screen: the bar sits in the clear band above the floor buttons. */
 @media (max-width: 560px) { .vh-lampbar { top: auto; bottom: 190px; left: 50%; transform: translateX(-50%); width: calc(100% - 32px); } }
+
+/* A promo pack on the shelf: its name and description show, its picture is locked. */
+.vh-shop-card.vh-promo-locked { border-color: rgba(247, 198, 217, .35); background: linear-gradient(135deg, rgba(247, 198, 217, .08), rgba(201, 184, 240, .08)); }
+.vh-promo-lock { position: relative; overflow: hidden; background: linear-gradient(135deg, #5b4a78, #7b5a86) !important; }
+.vh-promo-lock::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 30% 35%, rgba(255, 255, 255, .35), transparent 55%), radial-gradient(circle at 70% 70%, rgba(247, 198, 217, .4), transparent 50%); filter: blur(5px); }
+.vh-promo-lock::after { content: "🔒"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 18px; }
+.vh-promo-tag { display: block; margin-top: 3px; font-size: 11px; font-weight: 700; letter-spacing: .02em; color: #F7C6D9; }
+.vh-shop-card.vh-promo-locked button[data-buy] { opacity: .55; cursor: not-allowed; }

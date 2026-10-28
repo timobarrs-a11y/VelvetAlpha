@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { unlockFor, UNLOCK_CODES } from '../state/unlockCodes';
 import { createUnlocks } from '../systems/unlocks';
-import { CATALOG, catalogById, visibleItems, itemsForTab, setQuote } from '../state/catalog';
+import { CATALOG, catalogById, visibleItems, itemsForTab, setQuote, isLockedPromo } from '../state/catalog';
 import { readQueue, writeQueue, enqueue, QUEUE_MAX, type KeyValueStore } from '../state/codeQueue';
 import { createCodeQueue, CODE_QUEUE_KEY } from '../systems/codeQueue';
 import type { Game } from '../kernel/game';
@@ -13,7 +13,7 @@ describe('unlock codes', () => {
     expect(unlockFor('rainbowhugs')?.setId).toBe('set-cuddle');
     expect(unlockFor('  RainbowHugs ')?.setId).toBe('set-cuddle');
     for (const t of ['', 'hi', 'rainbow', 'rainbowhugs please', 'say rainbowhugs', 'cloud']) expect(unlockFor(t), t).toBeNull();
-    for (const c of Object.values(UNLOCK_CODES)) { const s = catalogById(c.setId); expect(s?.secret).toBe(true); expect(s?.set).toBeDefined(); }
+    for (const c of Object.values(UNLOCK_CODES)) { const s = catalogById(c.setId); expect(s?.secret || s?.promo).toBe(true); expect(s?.set).toBeDefined(); }
   });
 });
 
@@ -26,8 +26,30 @@ describe('a secret pack', () => {
       expect(visibleItems(itemsForTab(tab), new Set()).some((c) => cloud.includes(c)), tab).toBe(false);
       expect(visibleItems(itemsForTab(tab), new Set(cloud.map((c) => c.id))).some((c) => cloud.includes(c)), tab).toBe(tab === 'Today' || cloud.some((c) => c.tab === tab));
     }
-    // nothing else is secret
-    expect(CATALOG.filter((c) => c.secret && !cloud.includes(c))).toEqual([]);
+    // nothing else is secret, but the Nana pack's pieces
+    expect(CATALOG.filter((c) => c.secret && !cloud.includes(c) && !/-nana$|^paper-nana|^floor-nana/.test(c.id))).toEqual([]);
+  });
+});
+
+describe('a promo pack', () => {
+  const nana = () => catalogById('set-nana')!;
+  it('shows its name and description on the shelf before anyone has it, but is locked and its pieces stay hidden', () => {
+    expect(nana().promo).toBe(true);
+    expect(nana().secret).toBeFalsy();
+    const shown = visibleItems(itemsForTab('Sets'), new Set());
+    expect(shown).toContain(nana());
+    expect(nana().name).toBeTruthy();
+    expect(nana().desc).toMatch(/soft-girl|pastel/i);
+    expect(isLockedPromo(nana(), new Set())).toBe(true);
+    for (const id of nana().set!.items) expect(visibleItems(CATALOG.filter((c) => c.id === id), new Set()), id).toEqual([]);
+  });
+
+  it('cannot be bought, only opened by its code, and is an ordinary set after that', () => {
+    expect(Object.values(UNLOCK_CODES).some((c) => c.setId === 'set-nana')).toBe(true);
+    expect(isLockedPromo(nana(), new Set(['set-nana']))).toBe(false);
+    const pieces = nana().set!.items;
+    expect(pieces).toHaveLength(8);
+    for (const id of pieces) expect(catalogById(id)!.secret, id).toBe(true);
   });
 });
 
