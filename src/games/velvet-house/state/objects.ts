@@ -21,7 +21,7 @@ export type BlockRect = [number, number, number, number];
 
 /** What a look is mostly made of, and the theme set it belongs to. */
 export type Material = 'wood' | 'metal' | 'laminate' | 'stone' | 'fabric' | 'glass';
-export type Theme = 'retro' | 'farmhouse' | 'modern' | 'scandi' | 'industrial' | 'beach' | 'deco' | 'japandi' | 'boho' | 'space' | 'gothic' | 'riad' | 'tropical' | 'memphis' | 'provence' | 'adobe' | 'neon' | 'candy' | 'cuddle' | 'arcade' | 'spring' | 'summer' | 'fall' | 'winter' | 'cloud';
+export type Theme = 'retro' | 'farmhouse' | 'modern' | 'scandi' | 'industrial' | 'beach' | 'deco' | 'japandi' | 'boho' | 'space' | 'gothic' | 'riad' | 'tropical' | 'memphis' | 'provence' | 'adobe' | 'neon' | 'candy' | 'cuddle' | 'arcade' | 'spring' | 'summer' | 'fall' | 'winter' | 'cloud' | 'camp' | 'midcentury';
 
 /**
  * One look of a piece. A look only changes how the piece is drawn, named, priced and coloured; the footprint, height
@@ -55,6 +55,12 @@ export interface ObjectTypeDef {
   surface?: { z: number; rect: [number, number, number, number] };
   /** The looks this piece has besides the stock one, by id. */
   skins?: Record<string, SkinDef>;
+  /**
+   * The job this piece does, when it is another model of a piece the house has (a chest freezer is a fridge): its own
+   * size, height and spots, so it changes the room, while the household, the shop and the story treat it as that piece.
+   * Unset, the type is its own kind.
+   */
+  kind?: string;
 }
 
 export const TYPES: Record<string, ObjectTypeDef> = {
@@ -91,7 +97,13 @@ export const TYPES: Record<string, ObjectTypeDef> = {
     spots: { sink: { stand: [0.65, 1.23], dir: [0, -1], tag: 'sink', group: 'counterL' }, window: { stand: [0.95, 1.23], dir: [0, -1], tag: 'window', group: 'counterL' }, stove: { stand: [1.65, 1.23], dir: [0, -1], tag: 'stove' }, coffee: { stand: [2.45, 1.23], dir: [0, -1], tag: 'coffee' } } },
   fridge: { W: 0.9, D: 0.85, h: 1.95, fixed: true, name: 'Fridge', skins: { arcade: { name: 'Cabinet fridge', material: 'metal', theme: 'arcade', cols: ['#1E1A2E', '#F4C430', '#FF2E9A'] }, cuddle: { name: 'Rainbow bear fridge', material: 'metal', theme: 'cuddle', cols: ['#AEDDF7', '#FFFFFF', '#F6B7CC'] }, provence: { name: 'Lavender enamel fridge', material: 'metal', theme: 'provence', cols: ['#F4EFE3', '#8E7CC3', '#3A3A40'] }, adobe: { name: 'Turquoise serape fridge', material: 'metal', theme: 'adobe', cols: ['#3FA7A0', '#B5533C', '#F4ECD8'] }, neon: { name: 'Holo fridge', material: 'metal', theme: 'neon', cols: ['#111118', '#FF2E9A', '#19E6F0'] }, candy: { name: 'Bow fridge', material: 'metal', theme: 'candy', cols: ['#F6B7CC', '#FFF8F0', '#BFE8D6'] }, gothic: { name: 'Stained-glass icebox', material: 'metal', theme: 'gothic', cols: ['#2A2224', '#B08D57', '#5E1F2A'] }, riad: { name: 'Zellige fridge', material: 'metal', theme: 'riad', cols: ['#F3EEE4', '#2E4C9A', '#C9A24A'] }, tropical: { name: 'Palm fridge', material: 'metal', theme: 'tropical', cols: ['#2F6B40', '#F08AA0', '#D9BE82'] }, memphis: { name: 'Squiggle fridge', material: 'metal', theme: 'memphis', cols: ['#F4F1EA', '#1B1A1F', '#E63946'] }, deco: { name: 'Lacquered icebox', material: 'metal', theme: 'deco', cols: ['#1B1A1F', '#1F5E4A', '#6E2A3A'] }, japandi: { name: 'Paper-white fridge', material: 'metal', theme: 'japandi', cols: ['#F7F3EA', '#B9B4AC', '#7A8A6A'] }, boho: { name: 'Terracotta fridge', material: 'metal', theme: 'boho', cols: ['#C26B4A', '#D9A84A', '#3D6B73'] }, space: { name: 'Capsule fridge', material: 'metal', theme: 'space', cols: ['#F4F6F8', '#1B1A24', '#F26A2E'] }, scandi: { name: 'Ash-handled fridge', material: 'metal', theme: 'scandi', cols: ['#F4F2EC', '#DDE3DF', '#F1E6D8'] }, industrial: { name: 'Riveted steel fridge', material: 'metal', theme: 'industrial', cols: ['#5A5E66', '#2B2B30', '#7B4A3A'] }, beach: { name: 'Sea-glass fridge', material: 'metal', theme: 'beach', cols: ['#7FB8C9', '#F7F5EF', '#E8907A'] }, retro: { name: 'Pastel icebox', material: 'metal', theme: 'retro', cols: ['#9ED8C6', '#F3B6C4', '#F6E3A1'] }, farmhouse: { name: 'Cream enamel icebox', material: 'metal', theme: 'farmhouse', cols: ['#F1E8D2', '#B9CBB5', '#F2DFA0'] }, modern: { name: 'Brushed steel fridge', material: 'metal', theme: 'modern', cols: ['#B9BEC3', '#2B2B30', '#E8EAEC'] }, spring: { name: 'Blossom icebox', material: 'metal', theme: 'spring', cols: ['#F3D6DC', '#CFE6D3', '#F6EBC0'] }, summer: { name: 'Sunny icebox', material: 'metal', theme: 'summer', cols: ['#F6D56E', '#7FD1CF', '#F2A38A'] }, fall: { name: 'Harvest icebox', material: 'metal', theme: 'fall', cols: ['#B5532F', '#D9A84A', '#8A5E3B'] }, winter: { name: 'Frosted icebox', material: 'metal', theme: 'winter', cols: ['#E3EEF6', '#C8D9E6', '#F2EEE8'] }, cloud: { name: 'Cloud-nine icebox', material: 'metal', theme: 'cloud', cols: ['#BFE3F5', '#F9C6DA', '#C9F0DC'] } },
     spots: { f: { stand: [0.45, 1.45], dir: [0, -1], tag: 'fridge' } } },
+  // V2 models: the same jobs in new shapes, so a room can mix sizes. Each has its own looks, drawn for its shape.
+  // The fridge's: low and wide, and the lid lifts on its back hinge.
+  chestfreezer: { kind: 'fridge', W: 1.2, D: 0.75, h: 0.92, fixed: true, name: 'Chest freezer', skins: { camp: { name: 'Camp cooler chest', material: 'metal', theme: 'camp', cols: ['#2F5D43', '#B5532F', '#3F6E8C'] } },
+    spots: { f: { stand: [0.6, 1.3], dir: [0, -1], tag: 'fridge' } } },
   tvunit: { W: 1.6, D: 0.45, h: 0.75, fixed: true, name: 'TV unit' },
+  // The TV unit's: a long, low console under the screen on the wall.
+  mediaconsole: { kind: 'tvunit', W: 2.0, D: 0.5, h: 0.5, fixed: true, name: 'Media console', skins: { midcentury: { name: 'Walnut credenza', material: 'wood', theme: 'midcentury', cols: ['#D9A84A', '#3D6B73', '#C2603A'] } } },
   shower: { W: 1.18, D: 1.18, h: 2.1, fixed: true, name: 'Shower',
     spots: { s: { stand: [0.6, 1.7], pos: [0.6, 0.6, 0.1], dir: [0, 1], tag: 'shower', base: 'tray' } } },
   toilet: { W: 0.42, D: 0.62, h: 0.8, fixed: true, name: 'Toilet' },
@@ -342,6 +354,16 @@ export const ATTIC_STAIR_OBJS: ObjectInstance[] = [
 export function footprint(o: ObjectInstance): [number, number] {
   const t = TYPES[o.type];
   return o.rot % 2 ? [t.D, t.W] : [t.W, t.D];
+}
+
+/** The job a piece does: its kind if it is another model of a piece (a chest freezer is a fridge), else its own type. */
+export function kindOf(type: string): string {
+  return TYPES[type]?.kind ?? type;
+}
+
+/** Every model of a kind, the kind's own type first. */
+export function modelsOf(kind: string): string[] {
+  return Object.keys(TYPES).filter((k) => kindOf(k) === kind).sort((a, b) => Number(b === kind) - Number(a === kind));
 }
 
 export function isFixed(type: string): boolean {

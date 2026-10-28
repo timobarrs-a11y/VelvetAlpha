@@ -1,4 +1,4 @@
-import { TYPES, blocksOf, isRug, isFixed, footprint, colsOf, type ObjectInstance } from './objects';
+import { TYPES, blocksOf, isRug, isFixed, footprint, colsOf, kindOf, type ObjectInstance } from './objects';
 import { LEVELS, STAIRS, WX, WY } from './house';
 import { buildWorld } from './agents';
 import { cellOf, reachableSet, NY } from './pathfinding';
@@ -217,6 +217,39 @@ export function nextColour(o: ObjectInstance): string | null {
   return cols[(i + 1) % cols.length];
 }
 
+/**
+ * Make `o` another model of its kind, where it stands: its back stays against the same wall and it slides along that wall
+ * to the nearest place the new size fits (left edge kept, right edge kept, centred, then a step at a time either way).
+ * False, with `o` as it was, when nothing near fits.
+ */
+export function swapModel(objs: ObjectInstance[], o: ObjectInstance, type: string, people: Array<{ level: number; x: number; y: number }> = []): boolean {
+  if (!TYPES[type] || kindOf(type) !== kindOf(o.type)) return false;
+  const was = { type: o.type, x: o.x, y: o.y };
+  const [ow, od] = footprint(o);
+  o.type = type;
+  const [nw, nd] = footprint(o);
+  // Which edge is the back: rot 0 keeps its low y, 1 its high x, 2 its high y, 3 its low x.
+  const bx = o.rot === 1 ? was.x + ow - nw : was.x, by = o.rot === 2 ? was.y + od - nd : was.y;
+  const alongX = o.rot % 2 === 0, span = alongX ? ow - nw : od - nd;
+  const steps = [0, span, span / 2];
+  for (let k = 1; k <= 6; k++) steps.push(-0.25 * k, span + 0.25 * k);
+  for (const d of steps) {
+    o.x = alongX ? bx + d : bx;
+    o.y = alongX ? by : by + d;
+    if (checkPlacement(objs, o, people).ok) return true;
+  }
+  Object.assign(o, was);
+  return false;
+}
+
+/** Whether `o` could become that model where it stands (see `swapModel`), without changing it. */
+export function modelFits(objs: ObjectInstance[], o: ObjectInstance, type: string, people: Array<{ level: number; x: number; y: number }> = []): boolean {
+  const was = { type: o.type, x: o.x, y: o.y };
+  const ok = swapModel(objs, o, type, people);
+  Object.assign(o, was);
+  return ok;
+}
+
 const CARRY_LEVELS = [0, 1, 2, 3, 4];
 
 /**
@@ -274,7 +307,7 @@ export function fridgeUnder(objs: ObjectInstance[], food: ObjectInstance): Objec
   const [fw, fd] = footprint(food);
   const cx = food.x + fw / 2, cy = food.y + fd / 2;
   for (const o of objs) {
-    if (o.type !== 'fridge' || o.level !== food.level) continue;
+    if (kindOf(o.type) !== 'fridge' || o.level !== food.level) continue;
     const [w, d] = footprint(o);
     if (cx >= o.x - 0.3 && cx <= o.x + w + 0.3 && cy >= o.y - 0.3 && cy <= o.y + d + 0.3) return o;
   }

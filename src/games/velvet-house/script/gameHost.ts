@@ -1,7 +1,7 @@
 import type { Game } from '../kernel/game';
 import { startGoto, placeAgent, startChain, createNpc, buildWorld, type Agent } from '../state/agents';
 import { deposit } from '../state/finance';
-import { TYPES, type ObjectInstance } from '../state/objects';
+import { TYPES, kindOf, type ObjectInstance } from '../state/objects';
 import { relocate } from '../state/arrange';
 import { npcDef, NPC_IDS } from '../content/characters';
 import { MARKS, type Spot } from '../content/marks';
@@ -242,7 +242,8 @@ export function createScripts(g: Game): Partial<Game> {
       if (!o) return false;
       // A piece in hand, or let go of but not set down, is nowhere yet.
       if (g.inHand() === o.id) return false;
-      if (w.is && o.type !== w.is) return false;
+      // Any model of a piece is that piece: a chest freezer is the fridge.
+      if (w.is && o.type !== w.is && kindOf(o.type) !== w.is) return false;
       if (w.level !== undefined && o.level !== w.level) return false;
       if (w.at) {
         const s = resolve(w.at);

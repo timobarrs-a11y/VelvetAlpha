@@ -1614,6 +1614,104 @@ export function createHouseArt(ctx0, opts = {}) {
     T.box(0, 0, 0, 0.5, 0.5, 0.42, cl(o)); T.box(-0.01, -0.01, 0.36, 0.52, 0.52, 0.06, CN.white);
     CN.rainbow.slice(0, 4).forEach((c, i) => T.line([0.02, 0.501, 0.06 + i * 0.07], [0.48, 0.501, 0.06 + i * 0.07], c, 3)); } });
   SEASON_BLOOM.cloud = (T, o, sx, sy) => { [[-9, -22, '#F9C6DA'], [8, -28, '#FFF2B8'], [0, -35, '#E2D3F7'], [11, -16, '#BFE3F5']].forEach(([dx, dy, c]) => { circle(sx + dx, sy + dy, 3, c); circle(sx + dx, sy + dy, 1.1, '#FFFFFF'); }); };
+
+  // ---- The chest freezer: the fridge's second model, low and wide, with its own looks ----
+  // One shape, drawn for every look: a foot (or feet), the body, and the lid, shut or standing up on its back hinge while
+  // someone is in it. A look gives its colours ({ foot, footH, lid, lidH, liner }) and what makes it that look: `feet`
+  // instead of the plain foot, `front` on the body, `top` on the shut lid, `handle` on the lid's front edge.
+  const CHEST = { W: 1.2, D: 0.75, Z: 0.78 };
+  const CF = CHEST.D + 0.004;
+  const CHEST_LOOKS = {
+    stock: (b) => ({ lid: shade(b, 0.05) }),
+    // Camp: a camping cooler grown up. Ribbed steel in forest green, a white lid, chrome corners, latches and a side handle.
+    camp: (b) => ({ foot: '#2B2B30', footH: 0.05, lid: '#F2EEE6', lidH: 0.14, liner: '#F2EEE6',
+      front: (T) => {
+        for (let z = 0.16; z < 0.66; z += 0.1) { T.line([0.04, CF, z], [CHEST.W - 0.04, CF, z], 'rgba(0,0,0,.2)', 1.4); T.line([0.04, CF + 0.001, z + 0.012], [CHEST.W - 0.04, CF + 0.001, z + 0.012], 'rgba(255,255,255,.14)', 1); }
+        [0, CHEST.W - 0.08].forEach((x) => T.box(x, CHEST.D - 0.08, 0.05, 0.08, 0.085, 0.1, '#C9CED6'));
+        T.poly([[0.42, CF + 0.002, 0.46], [0.78, CF + 0.002, 0.46], [0.78, CF + 0.002, 0.58], [0.42, CF + 0.002, 0.58]], '#F2EEE6', 'rgba(0,0,0,.25)', 1);
+        T.line([0.47, CF + 0.003, 0.52], [0.73, CF + 0.003, 0.52], '#B5332F', 2.4);
+        T.line([CHEST.W + 0.004, 0.22, CHEST.Z - 0.1], [CHEST.W + 0.05, 0.3, CHEST.Z - 0.04], '#C9CED6', 2.4);
+        T.line([CHEST.W + 0.05, 0.3, CHEST.Z - 0.04], [CHEST.W + 0.05, 0.45, CHEST.Z - 0.04], '#C9CED6', 2.4);
+        T.line([CHEST.W + 0.05, 0.45, CHEST.Z - 0.04], [CHEST.W + 0.004, 0.53, CHEST.Z - 0.1], '#C9CED6', 2.4);
+      },
+      top: (T, z) => { for (let k = 1; k < 5; k++) { const y = (CHEST.D * k) / 5; T.line([0.06, y, z], [CHEST.W - 0.06, y, z], 'rgba(0,0,0,.12)', 1.6); T.line([0.06, y + 0.015, z], [CHEST.W - 0.06, y + 0.015, z], 'rgba(255,255,255,.6)', 1); } },
+      handle: (T, Z, lh) => {
+        [0.16, CHEST.W - 0.24].forEach((x) => { T.box(x, CHEST.D, Z - 0.1, 0.08, 0.03, lh + 0.06, '#C9CED6'); T.line([x + 0.01, CF + 0.032, Z - 0.08], [x + 0.07, CF + 0.032, Z - 0.08], '#FFFFFF', 1); });
+      } }),
+  };
+  function chestFreezer(T, o) {
+    const { W, D, Z } = CHEST, sk = skinId(o), body = sk ? cl(o) : '#E9EEF0';
+    const L = (CHEST_LOOKS[sk] || CHEST_LOOKS.stock)(body);
+    const fh = L.footH ?? 0.06, lh = L.lidH ?? 0.12, open = live(o.id) || usingSlot(o.id + ':f');
+    if (L.feet) L.feet(T); else T.box(0.03, 0.03, 0, W - 0.06, D - 0.06, fh, L.foot ?? '#9AA3A8');
+    T.box(0, 0, fh, W, D, Z - fh, body);
+    for (let k = 0; k < 4; k++) T.line([W + 0.002, 0.2, fh + 0.08 + k * 0.05], [W + 0.002, 0.55, fh + 0.08 + k * 0.05], 'rgba(0,0,0,.22)', 1.2);
+    if (L.front) L.front(T, body);
+    // The light that says whether there is food in it, as on the fridge.
+    const n = fridge.basic + fridge.fresh, [ix, iy] = T.P(W - 0.1, CF + 0.001, Z - 0.07);
+    circle(ix, iy, 1.9, n === 0 ? '#C2413A' : '#E0A43A');
+    if (!open) {
+      T.box(-0.01, -0.01, Z, W + 0.02, D + 0.02, lh, L.lid);
+      T.line([-0.01, D + 0.012, Z], [W + 0.01, D + 0.012, Z], 'rgba(0,0,0,.28)', 1.2);
+      if (L.top) L.top(T, Z + lh);
+      if (L.handle) L.handle(T, Z, lh);
+      else T.line([0.42, CF + 0.016, Z + lh * 0.45], [0.78, CF + 0.016, Z + lh * 0.45], '#8E979C', 3);
+      return;
+    }
+    // Open: the lid stands up on its hinge behind, and the frosted inside shows, with the food in it.
+    const liner = L.liner ?? '#E3ECF0';
+    T.box(-0.01, -lh + 0.01, Z, W + 0.02, lh, D + 0.02, L.lid);
+    T.poly([[0.05, 0.012, Z + 0.05], [W - 0.05, 0.012, Z + 0.05], [W - 0.05, 0.012, Z + D - 0.05], [0.05, 0.012, Z + D - 0.05]], liner, 'rgba(0,0,0,.18)', 1);
+    const rim = [[0.07, 0.07], [W - 0.07, 0.07], [W - 0.07, D - 0.07], [0.07, D - 0.07]].map(([x, y]) => T.P(x, y, Z));
+    ctx.save(); ctx.beginPath(); rim.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.clip();
+    const deep = Z - 0.5;
+    T.poly([[0.07, 0.07, deep], [W - 0.07, 0.07, deep], [W - 0.07, D - 0.07, deep], [0.07, D - 0.07, deep]], '#CFE0E8');
+    T.poly([[0.07, 0.07, Z], [W - 0.07, 0.07, Z], [W - 0.07, 0.07, deep], [0.07, 0.07, deep]], shade(liner, -0.08));
+    T.poly([[0.07, 0.07, Z], [0.07, D - 0.07, Z], [0.07, D - 0.07, deep], [0.07, 0.07, deep]], shade(liner, -0.18));
+    const pal = ['#C2413A', '#7FB069', '#F2EEE8', '#E0A43A', '#4A88B8', '#D9822B'];
+    for (let i = 0; i < Math.min(n, 8); i++) { const [fx, fy] = T.P(0.22 + (i % 4) * 0.24, 0.24 + Math.floor(i / 4) * 0.26, deep + 0.06); rr(fx - 5, fy - 4, 10, 7, 1.5, pal[i % pal.length]); }
+    ctx.restore();
+    T.poly([[0.07, 0.07, Z + 0.001], [W - 0.07, 0.07, Z + 0.001], [W - 0.07, D - 0.07, Z + 0.001], [0.07, D - 0.07, Z + 0.001]], null, 'rgba(255,255,255,.6)', 1.2);
+    const [mx, my] = T.P(W / 2, D / 2, Z + 0.06), drift = Math.sin(animT * 2) * 2;
+    ell(mx - 8, my - 4 - drift, 16, 4, 'rgba(240,250,255,.32)'); ell(mx + 10, my - 9 + drift, 12, 3, 'rgba(240,250,255,.22)');
+  }
+
+  // ---- The media console: the TV unit's V2 model, long and low under the screen on the wall ----
+  const CON = { W: 2.0, D: 0.5 }, CONF = CON.D + 0.004;
+  function mediaConsole(T, o) {
+    const { W, D } = CON;
+    if (skinId(o) === 'midcentury') {
+      // Mid-century: a walnut credenza floating on splayed, tapered legs. Two slatted walnut doors between two coloured
+      // ones, brass pulls, and a little ceramic vase at one end.
+      const wal = '#6B4A35', panel = cl(o), z0 = 0.18;
+      [[0.12, 0.08, -1, -1], [W - 0.12, 0.08, 1, -1], [0.12, D - 0.08, -1, 1], [W - 0.12, D - 0.08, 1, 1]].forEach(([x, y, sx, sy]) => {
+        T.line([x, y, z0], [x + sx * 0.05, y + sy * 0.03, 0], '#3E2A1E', 3.2); T.line([x, y, z0], [x + sx * 0.05, y + sy * 0.03, 0], '#7A5640', 1.4);
+      });
+      T.box(0, 0, z0, W, D, 0.5 - z0, wal);
+      const doors = [0.03, 0.51, 1.0, 1.49, 1.97];
+      for (let k = 0; k < 4; k++) {
+        const x0 = doors[k] + 0.01, x1 = doors[k + 1] - 0.01, zb = z0 + 0.04, zt = 0.46;
+        if (k === 0 || k === 3) T.poly([[x0, CONF, zb], [x1, CONF, zb], [x1, CONF, zt], [x0, CONF, zt]], panel, 'rgba(0,0,0,.25)', 1);
+        else { T.poly([[x0, CONF, zb], [x1, CONF, zb], [x1, CONF, zt], [x0, CONF, zt]], shade(wal, -0.06), 'rgba(0,0,0,.3)', 1); for (let x = x0 + 0.05; x < x1 - 0.02; x += 0.06) T.line([x, CONF + 0.001, zb + 0.02], [x, CONF + 0.001, zt - 0.02], 'rgba(0,0,0,.28)', 1.2); }
+        const [px, py] = T.P(k < 2 ? x1 - 0.05 : x0 + 0.05, CONF + 0.002, 0.33); circle(px, py, 1.8, '#C9A24A'); circle(px - 0.5, py - 0.5, 0.7, '#F0DCA0');
+      }
+      for (let k = 1; k < 6; k++) T.line([0.02, (D * k) / 6, 0.5], [W - 0.02, (D * k) / 6 + 0.01, 0.5], 'rgba(255,255,255,.06)', 1.2);
+      T.box(1.8, 0.16, 0.5, 0.12, 0.12, 0.18, '#E8DCC8'); T.box(1.82, 0.18, 0.68, 0.08, 0.08, 0.06, '#E8DCC8');
+      const [vx, vy] = T.P(1.86, 0.22, 0.74); ell(vx, vy, 2.4, 1.1, '#8E8A84');
+    } else {
+      // Stock: pale oak on a dark plinth. Two drawers either side of an open shelf with the game console in it.
+      const oak = '#D8C7A8';
+      T.box(0.04, 0.04, 0, W - 0.08, D - 0.08, 0.06, '#2B2B30');
+      T.box(0, 0, 0.06, W, D, 0.44, oak);
+      T.poly([[0.68, CONF, 0.1], [1.32, CONF, 0.1], [1.32, CONF, 0.44], [0.68, CONF, 0.44]], '#3A3340');
+      T.box(0.78, D - 0.2, 0.1, 0.36, 0.18, 0.08, '#F2EEE8'); const [lx, ly] = T.P(1.08, CONF, 0.14); circle(lx, ly, 1.1, '#5BE3E6');
+      [[0.06, 0.64], [1.36, 1.94]].forEach(([x0, x1]) => {
+        [[0.1, 0.26], [0.28, 0.44]].forEach(([zb, zt]) => { T.poly([[x0, CONF, zb], [x1, CONF, zb], [x1, CONF, zt], [x0, CONF, zt]], shade(oak, 0.04), 'rgba(80,60,40,.35)', 1); const [kx, ky] = T.P((x0 + x1) / 2, CONF + 0.002, (zb + zt) / 2); circle(kx, ky, 1.6, '#2B2B30'); });
+      });
+    }
+    // The speakers stay until the big TV comes; then the soundbar is part of it.
+    if (!has('bigtv')) { T.box(0.6, 0.12, 0.5, 0.8, 0.12, 0.07, '#2B2B30'); T.line([0.64, 0.241, 0.535], [1.36, 0.241, 0.535], 'rgba(255,255,255,.12)', 1); }
+  }
   const DRAWN = {
     sofa: {    
       parts: (o) => { const s1 = usingSlot(o.id + ':s1') ? 1 : 0, s2 = usingSlot(o.id + ':s2') ? 1 : 0;
@@ -1866,6 +1964,8 @@ export function createHouseArt(ctx0, opts = {}) {
         const n = fridge.basic + fridge.fresh; T.poly([[0.08, 0.851, 1.45], [0.32, 0.851, 1.45], [0.32, 0.851, 1.68], [0.08, 0.851, 1.68]], n === 0 ? '#C2413A' : '#E0A43A');
         if (live(T.o.id)) { T.poly([[0.04, 0.851, 0.05], [0.86, 0.851, 0.05], [0.86, 0.851, 1.25], [0.04, 0.851, 1.25]], 'rgba(255,248,220,.95)'); [0.4, 0.75].forEach(z => T.line([0.06, 0.852, z], [0.84, 0.852, z], 'rgba(150,160,170,.6)', 1)); [[0.2, 0.42, '#C2413A'], [0.5, 0.42, '#7FB069'], [0.3, 0.77, '#F2EEE8'], [0.62, 0.77, '#E0A43A']].forEach(([x, z, col]) => { const [cx, cy] = T.P(x, 0.853, z + 0.06); rr(cx - 3, cy - 5, 6, 6, 1, col); }); T.poly([[0.86, 0.851, 0.05], [0.86, 1.6, 0.05], [0.86, 1.6, 1.25], [0.86, 0.851, 1.25]], door, 'rgba(60,70,80,.3)', 1); } })],
        },
+    chestfreezer: { parts: () => [F(0, 0, 1.2, 0.75, (T) => chestFreezer(T, T.o))] },
+    mediaconsole: { parts: () => [F(0, 0, 2.0, 0.5, (T) => mediaConsole(T, T.o))] },
     tvunit: {    
       parts: () => [F(0, 0, 1.6, 0.45, (T) => { T.box(0, 0, 0, 1.6, 0.45, 0.42, '#3A3340'); T.line([0.8, 0.45, 0.06], [0.8, 0.45, 0.36], 'rgba(255,255,255,.12)', 1); if (!has('bigtv')) { T.box(0.1, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); T.box(1.32, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); } })] },
     shower: {    
@@ -4199,7 +4299,7 @@ export function createHouseArt(ctx0, opts = {}) {
   function poke(o, part = '') {
     const run = (secs, msg) => { liveUntil.set(o.id + ':' + part, animT + secs); return msg; };
     switch (o.type) {
-      case 'tvunit': tvOn = !tvOn; return tvOn ? 'The TV flickers on.' : 'TV off.';
+      case 'tvunit': case 'mediaconsole': tvOn = !tvOn; return tvOn ? 'The TV flickers on.' : 'TV off.';
       case 'fireplace': if (fireOut.has(o.id)) { fireOut.delete(o.id); return 'The fire crackles back to life.'; } fireOut.add(o.id); return 'The fire dies down.';
       case 'laundry': return run(12, 'The washer churns into a spin cycle.');
       case 'records': return run(14, 'The needle drops. A record starts spinning.');
@@ -4216,6 +4316,7 @@ export function createHouseArt(ctx0, opts = {}) {
       case 'bathtub': return run(10, 'The tub fills with steaming water.');
       case 'toilet': return run(3, 'Flush.');
       case 'fridge': return run(3, 'The fridge door swings open. Snacks.');
+      case 'chestfreezer': return run(3, 'The lid swings up on a breath of cold air.');
       case 'counter': {
         const msg = { sink: 'The faucet runs.', stove: 'Click, click, whoomph: the burner lights.', coffee: 'The coffee machine gurgles.' }[part];
         return msg ? run(part === 'stove' ? 8 : 5, msg) : null;
