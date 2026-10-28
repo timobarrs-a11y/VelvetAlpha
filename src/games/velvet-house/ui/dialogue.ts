@@ -183,6 +183,8 @@ export function createTray(): {
   el.className = 'vh-tray';
   el.hidden = true;
   let timer: ReturnType<typeof setTimeout> | null = null;
+  // The tap that opened the tray is still on its way up to the document; it must not count as a tap outside.
+  let armed = true;
 
   function hide(): void {
     el.hidden = true;
@@ -198,6 +200,8 @@ export function createTray(): {
       `<button data-act="${a.act}">${a.icon ?? ''} ${a.label}</button>`
     ).join('');
     el.hidden = false;
+    armed = false;
+    setTimeout(() => { armed = true; }, 0);
     el.querySelectorAll('button').forEach(b => {
       b.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -213,7 +217,7 @@ export function createTray(): {
   }
 
   function handleOutsideClick(e: MouseEvent): void {
-    if (!el.hidden && e.target instanceof Node && !el.contains(e.target)) hide();
+    if (armed && !el.hidden && e.target instanceof Node && !el.contains(e.target)) hide();
   }
   document.addEventListener('click', handleOutsideClick);
 
