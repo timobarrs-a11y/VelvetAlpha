@@ -11,7 +11,6 @@ import { hasChoice, anyHouse, askWho, listenForCompanions, onCompanionsChanged }
  * move-in (after a warning when it would replace a house), Settings holds what is not part of the game itself. The
  * game starts once one of the first two is chosen.
  */
-import { CHEATS, isPublicCode, setNames } from '../state/cheats';
 import { unlockFor } from '../state/unlockCodes';
 import { enqueue, readQueue } from '../state/codeQueue';
 import { CODE_QUEUE_KEY } from '../systems/codeQueue';
@@ -71,13 +70,12 @@ export function showMainMenu(): Promise<LaunchChoice> {
       root.innerHTML = `
         <div class="vh-menu-card vh-menu-panel">
           <h2 class="vh-menu-h">Cheats</h2>
-          <p class="vh-menu-sub">Type a code and it is saved. It happens when you are in your house (cheats wait until the move-in is over).</p>
+          <p class="vh-menu-sub">Have a code? Enter it here and it is yours once you are in your house.</p>
           <form class="vh-menu-code" autocomplete="off">
             <input name="code" placeholder="Enter a code" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Code" />
             <button type="submit" class="vh-menu-btn vh-menu-primary"><span>Redeem</span></button>
           </form>
           <p class="vh-menu-codemsg" role="status" aria-live="polite">${waiting ? `${waiting} saved, waiting for your house.` : ''}</p>
-          <ul class="vh-menu-codes">${CHEATS.filter((c) => c.code !== 'help').map((c) => `<li><b>${esc(c.code)}${c.arg ? ' ' + esc(c.arg) : ''}</b><span>${esc(c.help.replace(/ \(see the Sets tab[^)]*\)/, ` (${setNames().join(', ')})`))}</span></li>`).join('')}</ul>
           <button class="vh-menu-btn" data-m="back"><span>Back</span></button>
         </div>`;
       const msg = root.querySelector('.vh-menu-codemsg')!, input = root.querySelector<HTMLInputElement>('.vh-menu-code input')!;
@@ -85,9 +83,9 @@ export function showMainMenu(): Promise<LaunchChoice> {
         e.preventDefault();
         const text = input.value.trim();
         if (!text) return;
-        if (unlockFor(text) || isPublicCode(text)) {
+        if (unlockFor(text)) {
           enqueue(localStorage, CODE_QUEUE_KEY, text);
-          msg.textContent = unlockFor(text) ? 'Code accepted. It is yours once you are in your house.' : 'Saved. It happens once you are in your house.';
+          msg.textContent = 'Code accepted. It is yours once you are in your house.';
           msg.setAttribute('data-ok', 'true');
         } else {
           msg.textContent = 'That is not a code.';

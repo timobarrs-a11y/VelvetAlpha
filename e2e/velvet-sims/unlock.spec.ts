@@ -32,26 +32,40 @@ test('an unlock code said to Maya gives the secret pack, free, and is not a mess
   expect(JSON.stringify((await savedGame(page)).turns ?? [])).not.toContain('rainbowhugs');
 });
 
-test('the start menu has a Cheats screen: public codes are checked and saved for the house', async ({ page }) => {
+test('the start menu has a Cheats screen that takes unlock codes and saves them for the house', async ({ page }) => {
   const game = await openGame(page, { menu: true });
   await game.locator('[data-m=cheats]').click();
-  await expect(game.locator('.vh-menu-codes')).toContainText('kaching');
-  await expect(game.locator('.vh-menu-codes')).toContainText('decorate');
-  // The secret code is never listed.
+  // It lists no codes, and the old cheats are gone.
+  await expect(game.locator('.vh-menu-codes')).toHaveCount(0);
+  await expect(game.locator('.vh-menu-card')).not.toContainText('kaching');
   await expect(game.locator('.vh-menu-card')).not.toContainText('rainbowhugs');
   const input = game.locator('.vh-menu-code input');
-  await input.fill('nonsense');
-  await input.press('Enter');
-  await expect(game.locator('.vh-menu-codemsg')).toContainText('not a code');
-  await input.fill('kaching');
-  await input.press('Enter');
-  await expect(game.locator('.vh-menu-codemsg')).toContainText('Saved');
+  for (const wrong of ['nonsense', 'kaching', 'decorate retro', 'xoxotimoisgodxoxo']) {
+    await input.fill(wrong);
+    await input.press('Enter');
+    await expect(game.locator('.vh-menu-codemsg')).toContainText('not a code');
+  }
   await input.fill('rainbowhugs');
   await input.press('Enter');
   await expect(game.locator('.vh-menu-codemsg')).toContainText('Code accepted');
   const saved = await page.evaluate(() => Object.entries(localStorage).filter(([k]) => k.endsWith(':codes')).map(([, v]) => JSON.parse(v)));
-  expect(saved.flat()).toEqual(['kaching', 'rainbowhugs']);
+  expect(saved.flat()).toEqual(['rainbowhugs']);
   await game.locator('[data-m=back]').click();
   await expect(game.locator('[data-m=cheats]')).toBeVisible();
   void SAVE_KEY;
+});
+
+test('there is no console, no key and no tap that opens a cheat menu in the house', async ({ page }) => {
+  const game = await openGame(page);
+  await page.locator('#g').focus();
+  await page.keyboard.press('`');
+  await game.locator('[data-el=money]').evaluate((el) => { for (let i = 0; i < 8; i++) (el as HTMLElement).click(); });
+  await expect(game.locator('.vh-cheat')).toHaveCount(0);
+  // The old public codes are plain talk now.
+  const before = await inGame<number>(page, 'v.money');
+  await inGame(page, 'v.openChat()');
+  const box = game.locator('.vh-dialogue input');
+  await box.fill('kaching');
+  await game.locator('[data-send]').click();
+  expect(await inGame<number>(page, 'v.money')).toBe(before);
 });

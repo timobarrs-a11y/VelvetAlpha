@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { parseFund, DEV_PHRASE, DEV_FUND } from '../state/devMoney';
 import { createDevMoney } from '../systems/devMoney';
+import { createShop } from '../systems/shop';
+import { simsShopItems } from '../../../data/avatarCatalog';
 import type { Game } from '../kernel/game';
 
 describe('the developer money phrase', () => {
@@ -42,5 +44,29 @@ describe('what the phrase does to the house', () => {
     expect(household.money).toBe(850);
     expect(flags.cheated).toBeUndefined();
     expect(logs).toEqual([]);
+  });
+});
+
+describe('the Salon and found money', () => {
+  const game = (cheated: boolean) => {
+    const logs: string[] = [], spent: number[] = [];
+    const g = {
+      world: { objs: [] }, partnerName: 'Maya', house: {}, view: { level: 1 }, owned: new Set<string>(), closet: [], flags: { cheated }, style: {}, tasteNorm: { key: '', mean: 0, sd: 1 },
+      log: (m: string) => logs.push(m), art: {}, hasAttic: () => false, storage: [], spendOn: (_: string, n: number) => { spent.push(n); return true; }, refreshDrawer: () => {},
+    } as unknown as Game;
+    return { logs, spent, buy: createShop(g).handleBuyAvatarItem! };
+  };
+  it('takes only money the player earned: after the phrase nothing is bought', () => {
+    const item = simsShopItems()[0];
+    expect(item).toBeDefined();
+    const cheated = game(true);
+    cheated.buy(item.id);
+    expect(cheated.spent).toEqual([]);
+    expect(cheated.logs.join(' ')).toMatch(/only takes money you earned/);
+  });
+  it('still takes honest money', () => {
+    const honest = game(false);
+    honest.buy(simsShopItems()[0].id);
+    expect(honest.spent).toHaveLength(1);
   });
 });

@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { unlockFor, UNLOCK_CODES } from '../state/unlockCodes';
 import { createUnlocks } from '../systems/unlocks';
-import { createCheats } from '../systems/cheats';
 import { CATALOG, catalogById, visibleItems, itemsForTab, setQuote } from '../state/catalog';
 import { readQueue, writeQueue, enqueue, QUEUE_MAX, type KeyValueStore } from '../state/codeQueue';
-import { isPublicCode, setNames } from '../state/cheats';
 import { createCodeQueue, CODE_QUEUE_KEY } from '../systems/codeQueue';
 import type { Game } from '../kernel/game';
 
@@ -71,18 +69,6 @@ describe('what a code does to the house', () => {
   });
 });
 
-describe('the public cheats cannot give the secret pack', () => {
-  it('decorate refuses it, and still decorates a pack from the shelves', () => {
-    const applied: string[] = [], logs: string[] = [];
-    const g = { view: { level: 1 }, owned: new Set<string>(), log: (m: string) => logs.push(m), refreshDrawer: () => {}, handleBuy: (m: { id: string }) => { applied.push(m.id); }, s: { settleDone: true, scriptMode: '' } } as unknown as Game;
-    const { runCheat } = createCheats(g);
-    expect(runCheat('decorate cloud')).toMatch(/no "cloud" set/);
-    expect(applied).toEqual([]);
-    expect(runCheat('decorate winter')).toMatch(/is in/);
-    expect(applied.length).toBe(8);
-  });
-});
-
 describe('codes saved from the start menu', () => {
   it('are a small list that survives bad storage', () => {
     const s = memory();
@@ -97,32 +83,18 @@ describe('codes saved from the start menu', () => {
     writeQueue(s, 'k', []); expect(s.data.k).toBeUndefined();
   });
 
-  it('only accepts public codes, typed in full', () => {
-    for (const t of ['kaching', 'fillerup', 'lovebomb', 'stockup', 'decorate retro', 'DECORATE Winter']) expect(isPublicCode(t), t).toBe(true);
-    for (const t of ['', 'help', 'kaching now', 'decorate', 'decorate nothing', 'decorate cloud', 'xoxotimoisgodxoxo', 'rainbowhugs', 'hello']) expect(isPublicCode(t), t).toBe(false);
-    // The secret pack is not one a public cheat can give.
-    expect(setNames()).not.toContain('cloud');
-    expect(setNames()).toContain('winter');
-  });
-
   describe('redeeming', () => {
     afterEach(() => { vi.useRealTimers(); localStorage.clear(); });
-    const run = (blocked: string | null) => {
+    it('puts the codes saved at the start menu to use once the house is there, and empties the list', () => {
       vi.useFakeTimers();
       localStorage.clear();
-      writeQueue(localStorage, CODE_QUEUE_KEY, ['rainbowhugs', 'kaching']);
+      writeQueue(localStorage, CODE_QUEUE_KEY, ['rainbowhugs']);
       const calls: string[] = [];
-      const g = { tryUnlock: (t: string) => { calls.push('unlock ' + t); return true; }, runCheat: (t: string) => { calls.push('cheat ' + t); return ''; }, cheatsBlocked: () => blocked } as unknown as Game;
+      const g = { tryUnlock: (t: string) => { calls.push(t); return true; } } as unknown as Game;
       createCodeQueue(g);
+      expect(calls).toEqual([]);
       vi.advanceTimersByTime(2000);
-      return calls;
-    };
-    it('an unlock code goes at once; a cheat waits for the move-in to be over, and is kept', () => {
-      expect(run('Finish the move-in first.')).toEqual(['unlock rainbowhugs']);
-      expect(readQueue(localStorage, CODE_QUEUE_KEY)).toEqual(['kaching']);
-    });
-    it('once the move-in is over everything runs and the list empties', () => {
-      expect(run(null)).toEqual(['unlock rainbowhugs', 'cheat kaching']);
+      expect(calls).toEqual(['rainbowhugs']);
       expect(readQueue(localStorage, CODE_QUEUE_KEY)).toEqual([]);
     });
   });

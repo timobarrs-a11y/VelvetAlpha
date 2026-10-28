@@ -1,7 +1,7 @@
 /**
- * The developer's money phrase, for testing the shop (the mix-and-match sets). It is separate from the cheat console
- * (state/cheats.ts, the one players may get): there is no menu, key or gesture, only a phrase said to the partner in
- * chat. It is caught in `handleTalk` before anything is sent to the AI or written to the chat history, so it leaves no
+ * The developer's money phrase, for testing the shop (the mix-and-match sets). It is one of the game's two code
+ * mechanisms: this one is the developer's (a phrase said to the partner in chat, no menu, key or gesture); the other is
+ * the unlock codes given to players (state/unlockCodes.ts). It is caught in `handleTalk` before anything is sent to the AI or written to the chat history, so it leaves no
  * trace there. Money is all it does: no story flag, no clock.
  */
 

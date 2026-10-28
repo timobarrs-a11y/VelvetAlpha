@@ -14,7 +14,7 @@ It adds **$500,000** (any case; it must be the whole message). It goes through t
 - It only adds money: no story flag, no clock, so it cannot skip anything in the story.
 - It marks the house (`flags.cheated`, saved with it), so the **Salon** refuses to sell (what it sells stays with the
   player's account outside the game); everything else in the shop takes the money.
-- This is separate from the cheat console (`docs/velvet-house/cheats.md`), which is the one that may be for players.
+- It is one of the game's two code mechanisms; the other is the unlock codes for players (`unlock-codes.md`).
 
 Code: `state/devMoney.ts`, `systems/devMoney.ts`, `systems/chat.ts`. Tests: `__tests__/devMoney.test.ts`,
 `e2e/velvet-sims/devMoney.spec.ts`.

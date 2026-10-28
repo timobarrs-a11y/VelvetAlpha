@@ -20,11 +20,9 @@ import { createLifeSim } from './systems/lifeSim';
 import { createDeliveries } from './systems/deliveries';
 import { createConcerns } from './systems/concerns';
 import { createPets } from './systems/pets';
-import { createCheats } from './systems/cheats';
 import { createDevMoney } from './systems/devMoney';
 import { createUnlocks } from './systems/unlocks';
 import { createCodeQueue } from './systems/codeQueue';
-import { createCheatsUi } from './ui/cheats';
 import { createScripts } from './script/gameHost';
 import { createFrame } from './view/frame';
 import { installDevHooks } from './dev/hooks';
@@ -57,7 +55,6 @@ function boot(attract: boolean): void {
   Object.assign(g, createHud(g));
   // Before the vitals: the HUD asks for the partner's mood the moment it is drawn.
   Object.assign(g, createConcerns(g));
-  Object.assign(g, createCheats(g));
   Object.assign(g, createDevMoney(g));
   Object.assign(g, createUnlocks(g));
   Object.assign(g, createVitals(g));
@@ -70,7 +67,6 @@ function boot(attract: boolean): void {
   Object.assign(g, createPets(g));
   Object.assign(g, createScripts(g));
   if (!attract) createCodeQueue(g);
-  if (!attract) createCheatsUi(g);
   if (!attract) installDevHooks(g);
   startGameLoop(g);
   if (attract) { startAttract(g); return; }

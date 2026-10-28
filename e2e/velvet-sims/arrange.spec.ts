@@ -129,7 +129,7 @@ test('the Arrange action buttons are all the same size', async ({ page }) => {
   const game = await openGame(page);
   await game.locator('.vh-dock [data-open=arrange]').click();
   await game.locator('[data-arr-pick=sofa]').click();
-  const boxes = await game.locator('.vh-arr-acts > button').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
-  expect(boxes.length).toBeGreaterThanOrEqual(3);
-  for (const b of boxes) expect(b).toEqual(boxes[0]);
+  const sizes = () => game.locator('.vh-arr-acts > button').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return `${Math.round(r.width)}x${Math.round(r.height)}`; }));
+  // Wait for the panel to settle, then every button is the same size.
+  await expect.poll(async () => { const z = await sizes(); return z.length >= 3 && z.every((x) => x === z[0]); }).toBe(true);
 });
