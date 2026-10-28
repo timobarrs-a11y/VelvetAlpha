@@ -143,6 +143,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-serape-adobe', 'Serape band', 'serape-adobe', 100, ['warm', 'natural', 'cozy']),
   wallpaper('paper-circuit', 'Circuit', 'circuit', 110, ['bold', 'modern', 'industrial']),
   wallpaper('paper-sprinkles', 'Sprinkles', 'sprinkles', 90, ['soft', 'playful', 'warm']),
+  wallpaper('paper-clouds-sky', 'Clouds and rainbows', 'clouds-sky', 90, ['soft', 'playful', 'cozy']),
   wallpaper('paper-shiplap', 'Shiplap', 'shiplap', 80, ['natural', 'minimal', 'cozy']),
   wallpaper('paper-subway', 'Subway tile', 'subway', 80, ['modern', 'minimal', 'industrial']),
   wallpaper('paper-stars-night', 'Starry night', 'stars-night', 120, ['playful', 'cool', 'bold']),
@@ -206,6 +207,9 @@ export const CATALOG: CatalogEntry[] = [
   bundle('set-candy', 'Candy kitchen and living room', 'Pastel pink, mint and lilac: the bow fridge, scalloped mint counter with a cupcake stand, scalloped table with heart-back chairs under a lollipop light, scalloped pink sofa, an ice cream cone lamp and a teacup planter, with sprinkles on the walls and a pink check underfoot.',
     ['look-fridge-candy', 'look-counter-candy', 'look-dining-candy', 'look-sofa-candy', 'look-lamp-candy', 'look-plant-candy', 'paper-sprinkles', 'floor-checkpink'], ['soft', 'playful', 'warm']),
 
+  bundle('set-cuddle', 'Cuddle Clouds kitchen and living room', 'Pastel bears, clouds and rainbows: the rainbow bear fridge, cloud counter with a heart basin and a bear plush, cloud table with bear-face chairs under a rainbow, a puffy cloud sofa, a cloud lamp with rainbow drops and a cloud pot, with clouds and rainbows on the walls and a sky check underfoot.',
+    ['look-fridge-cuddle', 'look-counter-cuddle', 'look-dining-cuddle', 'look-sofa-cuddle', 'look-lamp-cuddle', 'look-plant-cuddle', 'paper-clouds-sky', 'floor-skycheck'], ['soft', 'playful', 'cozy']),
+
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
 
@@ -257,6 +261,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-saltillo', 'Saltillo tile', 'saltillo', 140, ['warm', 'natural', 'cozy']),
   floor('floor-grate', 'Lit grate', 'grate', 170, ['bold', 'modern', 'industrial']),
   floor('floor-checkpink', 'Pink check', 'checkpink', 140, ['soft', 'playful', 'warm']),
+  floor('floor-skycheck', 'Sky check', 'skycheck', 140, ['soft', 'playful', 'cozy']),
   floor('floor-checker', 'Checkerboard', 'checker', 180, ['bold', 'playful', 'vintage']),
   floor('floor-rose', 'Rose carpet', 'rose', 100, ['soft', 'warm', 'cozy']),
   floor('floor-navy-carpet', 'Navy carpet', 'navy', 100, ['cool', 'modern', 'cozy']),
@@ -428,6 +433,13 @@ export const CATALOG: CatalogEntry[] = [
   look('look-sofa-candy', 'sofa', 'candy', 'Scalloped pink sofa', 'A pink sofa with a scalloped skirt, mint and lilac cushions, a cherry bow on one arm and sprinkles on the back.', 380, ['soft', 'playful', 'warm'], ['#F6B7CC', '#BFE8D6', '#D6C4F0']),
   look('look-lamp-candy', 'lamp', 'candy', 'Ice cream cone lamp', 'A waffle cone with a pink scoop that glows, sprinkles and a cherry on top.', 90, ['soft', 'playful', 'warm'], ['#F6B7CC', '#FBE7A6', '#FFF8F0']),
   look('look-plant-candy', 'plant', 'candy', 'Teacup planter', 'Your plant in a pink teacup with a handle, on a scalloped saucer.', 60, ['soft', 'playful', 'warm'], ['#F6B7CC', '#FFF8F0', '#BFE8D6', '#E04A6A']),
+
+  look('look-fridge-cuddle', 'fridge', 'cuddle', 'Rainbow bear fridge', 'Sky blue with a cloud cap, a rainbow between two clouds on the upper door, a pink bear face with a heart on the lower one, and heart handles.', 350, ['soft', 'playful', 'cozy'], ['#AEDDF7', '#FFFFFF', '#F6B7CC']),
+  look('look-counter-cuddle', 'counter', 'cuddle', 'Cloud counter', 'Cloud-white fronts with a rainbow band at the kick, hearts and stars for pulls, cloud puffs along the top edge, a sky top with stars, a pink heart basin and a blue bear plush at the end.', 420, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F6B7CC']),
+  look('look-dining-cuddle', 'dining', 'cuddle', 'Cloud table and bear chairs', 'A scalloped cloud top on a stack of puffs, chairs with bear-face backs in pink and blue, and a rainbow hanging from a cloud above.', 340, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F6B7CC', '#9CCBF2']),
+  look('look-sofa-cuddle', 'sofa', 'cuddle', 'Cloud sofa', 'A puffy white cloud sofa with a rainbow band along the base, sky-blue cushions with a heart and a star, and a yellow bear plush in the corner.', 380, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F6B7CC']),
+  look('look-lamp-cuddle', 'lamp', 'cuddle', 'Cloud lamp', 'A cloud shade on a sky-blue pole with a star on top and rainbow drops hanging under it.', 90, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F9E27A']),
+  look('look-plant-cuddle', 'plant', 'cuddle', 'Cloud pot', 'Your plant in a puffy white pot with cloud bumps round the rim, a rainbow on the front and a star on the side.', 60, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F9E27A', '#F6B7CC']),
 
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),

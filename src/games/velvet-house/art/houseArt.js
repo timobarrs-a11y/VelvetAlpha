@@ -185,6 +185,7 @@ export function createHouseArt(ctx0, opts = {}) {
     saltillo: { kind: 'tile', a: '#CF8A5C', b: '#C27F54', line: 'rgba(240,225,210,.5)' },
     grate: { kind: 'tile', a: '#1A1C24', b: '#171920', line: 'rgba(25,230,240,.35)' },
     checkpink: { kind: 'check', a: '#FFF8F0', b: '#F6B7CC', line: 'rgba(0,0,0,.05)' },
+    skycheck: { kind: 'check', a: '#F7FAFE', b: '#DCEEFA', line: 'rgba(0,0,0,.04)' },
     rubber: { kind: 'speck', a: '#3A3A3F', b: '#3A3A3F', line: 'rgba(255,255,255,.04)', pal: ['#5A5A62', '#4C4C54', '#6E6E76', '#55555D'] }
   };
   // wallpapers: a pattern drawn over the paint, or with its own base color
@@ -213,6 +214,7 @@ export function createHouseArt(ctx0, opts = {}) {
     'serape-adobe': { pat: 'serape', base: '#E7C9A4', ink: 'rgba(43,36,32,.8)', pal: ['#B5533C', '#F4ECD8', '#3FA7A0', '#F4ECD8', '#2B2420'] },
     circuit: { pat: 'circuit', base: '#111118', ink: 'rgba(25,230,240,.6)', ink2: 'rgba(255,46,154,.75)' },
     sprinkles: { pat: 'sprinkles', base: '#FFF8F0', ink: 'rgba(224,74,106,.9)', pal: ['#E04A6A', '#BFE0F5', '#FBE7A6', '#D6C4F0', '#BFE8D6'] },
+    'clouds-sky': { pat: 'clouds', base: '#C9E6F8', ink: 'rgba(255,255,255,.95)' },
     'gingham-sage': { pat: 'gingham', base: '#F4F1E8', ink: 'rgba(110,150,115,.3)' },
     'starburst-mint': { pat: 'starburst', base: '#CFEBDD', ink: 'rgba(224,122,92,.75)', ink2: 'rgba(224,122,92,.9)' },
     'wainscot-white': { pat: 'wainscot', ink: '#F4F1EA' }, 'wainscot-navy': { pat: 'wainscot', ink: '#2E3B57' }, subway: { pat: 'subway', base: '#F5F5F2', ink: 'rgba(0,0,0,.14)' },
@@ -586,6 +588,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (style === 'tin') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.96], AD.black, 1.2); ctx.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? 6 : 13; ctx.lineTo(px + Math.cos(a) * r, py + Math.sin(a) * r); } ctx.closePath(); ctx.fillStyle = '#B9B4AC'; ctx.fill(); ctx.strokeStyle = AD.black; ctx.lineWidth = 0.8; ctx.stroke(); for (let k = 0; k < 5; k++) { const a = -Math.PI / 2 + k * Math.PI * 2 / 5; circle(px + Math.cos(a) * 7, py + Math.sin(a) * 7, 1.2, on ? '#FFE9B8' : AD.black); } circle(px, py, 2.4, on ? '#FFF1C9' : AD.black); if (on) ell(px, py + 5, 15, 7, 'rgba(255,214,150,.18)'); return; }
     if (style === 'neonring') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.9], NE.steel, 1.4); if (on) ell(px, py, 16, 8, 'rgba(25,230,240,.16)'); ctx.beginPath(); ctx.ellipse(px, py, 13, 5.5, 0, 0, Math.PI * 2); ctx.strokeStyle = on ? NE.cyan : NE.steel; ctx.lineWidth = 2.4; ctx.stroke(); ctx.beginPath(); ctx.ellipse(px, py, 13, 5.5, 0, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 0.8; ctx.stroke(); circle(px, py - 4, 2, NE.steel); return; }
     if (style === 'lollipop') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.92], CA.cream, 1.6); if (on) circle(px, py, 15, 'rgba(255,226,210,.22)'); circle(px, py, 10, on ? '#FFD9E4' : CA.pink, 'rgba(0,0,0,.08)'); ctx.beginPath(); for (let a = 0; a < Math.PI * 4; a += 0.2) { const r = a * 0.72; const x = px + Math.cos(a) * r, y = py + Math.sin(a) * r * 0.9; a ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.4; ctx.stroke(); ell(px - 3, py - 4, 2.5, 1.5, 'rgba(255,255,255,.7)'); return; }
+    if (style === 'rainbow') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.98], CC.sky, 1.4); cloud(px, py - 6, 12, on ? '#FFFDF6' : CC.cloud); rainbow(px, py + 2, 11, 1.8, 0, Math.PI); if (on) ell(px, py + 6, 16, 7, 'rgba(255,226,168,.18)'); circle(px, py - 10, 2.2, on ? CC.yellow : CC.cloudShade); return; }
     if (style === 'woven') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.95], BE.rope, 1.6); ctx.beginPath(); ctx.ellipse(px, py - 2, 11, 9, 0, Math.PI, 0); ctx.fillStyle = BE.rattan; ctx.fill(); for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(px, py - 2, 11, 9, 0, Math.PI + k * 0.6, Math.PI + k * 0.6 + 0.3); ctx.strokeStyle = 'rgba(90,60,30,.35)'; ctx.lineWidth = 1; ctx.stroke(); } ell(px, py - 2, 11, 4, on ? '#FFF1C9' : '#B9A07A'); return; }
     T.line([0.65, 1.24, WH], [0.65, 1.24, 1.95], '#3A3340', 1.2); ctx.beginPath(); ctx.ellipse(px, py, 10, 9, 0, Math.PI, 0); ctx.fillStyle = '#2B2B30'; ctx.fill(); ell(px, py, 10, 3.8, on ? '#FFF1C9' : '#4A4450');
   }, { onTop: true });
@@ -1211,6 +1214,78 @@ export function createHouseArt(ctx0, opts = {}) {
       const [bx, by] = T.P(0.4, 0.851, 1.6); ell(bx - 7, by, 6, 3.5, CA.cherry, null, -0.35); ell(bx + 7, by, 6, 3.5, CA.cherry, null, 0.35); circle(bx, by, 2.6, CA.cherry); limb(bx - 2, by + 2, bx - 5, by + 10, CA.cherry, 1.6); limb(bx + 2, by + 2, bx + 5, by + 10, CA.cherry, 1.6);
       const [sx, sy] = T.P(0.08, 0.851, 1.2); sprinkles(sx, sy, 34, 40, 18, 0.4);
       [[0.7, 1.15], [1.42, 1.78]].forEach(([z0, z1]) => T.line([0.78, 0.855, z0], [0.78, 0.855, z1], CA.cream, 3.4));
+      return body; },
+  });
+
+  // ---- Cuddle Clouds: pastel bears, clouds, rainbows, hearts and stars ----
+  const CC = { cloud: '#FFFFFF', cloudShade: '#E4ECF6', sky: '#AEDDF7', skyDeep: '#8EC9F2', pink: '#F6B7CC', pinkDeep: '#EE8FAE', yellow: '#F9E27A', green: '#9FDB9A', orange: '#F7B46A', lilac: '#C7A8F0', red: '#F58A8A', bear: '#F6B7CC', bearBlue: '#9CCBF2', bearYellow: '#F9E27A', muzzle: '#FFF4E6', ink: '#5A4A5E', bands: ['#F58A8A', '#F7B46A', '#F9E27A', '#9FDB9A', '#8EC9F2', '#C7A8F0'] };
+  /** A cloud in screen space: a row of puffs on a flat base. */
+  const cloud = (sx, sy, w, col = CC.cloud) => { ell(sx, sy + 1, w, w * 0.4, col); circle(sx - w * 0.45, sy - w * 0.1, w * 0.36, col); circle(sx, sy - w * 0.3, w * 0.46, col); circle(sx + w * 0.45, sy - w * 0.05, w * 0.34, col); };
+  /** A rainbow arc in screen space: the six pastel bands, outermost first. */
+  const rainbow = (sx, sy, r, w, a0 = Math.PI, a1 = Math.PI * 2) => { CC.bands.forEach((c, k) => { ctx.beginPath(); ctx.arc(sx, sy, Math.max(0.4, r - k * w), a0, a1); ctx.strokeStyle = c; ctx.lineWidth = w; ctx.stroke(); }); };
+  /** A bear's face in screen space: round head, round ears, a pale muzzle, two eyes and a nose. */
+  const bearFace = (sx, sy, r, col) => { circle(sx - r * 0.75, sy - r * 0.7, r * 0.36, col); circle(sx + r * 0.75, sy - r * 0.7, r * 0.36, col); circle(sx - r * 0.75, sy - r * 0.7, r * 0.18, CC.muzzle); circle(sx + r * 0.75, sy - r * 0.7, r * 0.18, CC.muzzle); circle(sx, sy, r, col); ell(sx, sy + r * 0.3, r * 0.5, r * 0.36, CC.muzzle); circle(sx - r * 0.35, sy - r * 0.15, r * 0.1, CC.ink); circle(sx + r * 0.35, sy - r * 0.15, r * 0.1, CC.ink); ell(sx, sy + r * 0.2, r * 0.14, r * 0.1, CC.ink); };
+  /** A five-point star in screen space. */
+  const star5 = (sx, sy, r, col) => { ctx.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * 0.45 : r; ctx.lineTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr); } ctx.closePath(); ctx.fillStyle = col; ctx.fill(); };
+  /** A rainbow band along a line in the piece's frame: six stripes stacked in z. */
+  const rainbowBand = (T, from, to, w) => { CC.bands.forEach((c, k) => T.line([from[0], from[1], from[2] + k * w], [to[0], to[1], to[2] + k * w], c, 1.8)); };
+  Object.assign(LOOK_DRAWERS.sofa, {
+    // Cuddle Clouds: a puffy white cloud sofa with a rainbow band along the base, sky-blue cushions with a heart and a star, and a bear plush in the corner.
+    cuddle: (o, s1, s2) => { const c = cl(o); return [
+      B(0, 0, 0, 2.4, 1.0, 0.38, c, { name: 'base' }), B(0, 0, 0.38, 2.4, 0.3, 0.52, c), B(0, 0, 0.38, 0.24, 1.0, 0.3, c), B(2.16, 0, 0.38, 0.24, 1.0, 0.3, c),
+      B(0.24, 0.3, 0.38 - s1 * 0.018, 0.96, 0.66, 0.1 - s1 * 0.035, CC.sky), B(1.2, 0.3, 0.38 - s2 * 0.018, 0.96, 0.66, 0.1 - s2 * 0.035, CC.sky),
+      F(0, 0, 2.4, 1.0, (T) => {
+        for (let x = 0.3; x < 2.3; x += 0.4) { const [px, py] = T.P(x, 0.15, 0.9); ell(px, py, 9, 5, c, 'rgba(0,0,0,.06)'); } [[0.12, 0.5], [2.28, 0.5]].forEach(([x, y]) => { const [px, py] = T.P(x, y, 0.68); ell(px, py, 7, 4.5, c, 'rgba(0,0,0,.06)'); });
+        rainbowBand(T, [0.02, 1.001, 0.06], [2.38, 1.001, 0.06], 0.035);
+        const [hx, hy] = T.P(0.72, 0.481, 0.62); heart(hx, hy, 1.33, CC.pinkDeep); const [sx, sy] = T.P(1.68, 0.481, 0.62); star5(sx, sy, 5, CC.yellow);
+        const [bx, by] = T.P(2.0, 0.5, 0.62); ell(bx, by + 4, 6, 5, CC.bearYellow); bearFace(bx, by - 4, 5, CC.bearYellow); heart(bx, by + 4, 0.67, CC.pinkDeep);
+      }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.dining, {
+    // Cuddle Clouds: a cloud table on a stack of puffs, chairs with bear-face backs in pink and blue, and a rainbow hanging from a cloud.
+    cuddle: (o) => { const ps = [], c = cl(o);
+      const chair = (y0, back, col) => { [[0.39, y0 + 0.04], [0.83, y0 + 0.04], [0.39, y0 + 0.48], [0.83, y0 + 0.48]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.05, 0.05, 0.42, CC.cloud)));
+        ps.push(B(0.35, y0, 0.42, 0.6, 0.58, 0.07, col, { name: y0 === 0 ? 'seat1' : 'seat2' }));
+        ps.push(F(0.35, back - 0.02, 0.95, back + 0.08, (T) => { const [cx, cy] = T.P(0.65, back + 0.03, 0.56); bearFace(cx, cy, 9, col); }, { onTop: true })); };
+      chair(0, 0, CC.bear); chair(1.89, 2.42, CC.bearBlue);
+      ps.push(B(0.45, 1.04, 0, 0.4, 0.4, 0.2, CC.cloud), B(0.5, 1.09, 0.2, 0.3, 0.3, 0.25, CC.cloudShade), B(0.45, 1.04, 0.45, 0.4, 0.4, 0.25, CC.cloud));
+      ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, c, { name: 'top' }));
+      ps.push(F(0, 0.74, 1.3, 1.74, (T) => { scallops(T, [0, 1.74, 0.7], [1.3, 1.74, 0.7], 7, 5, c); scallops(T, [1.3, 0.74, 0.7], [1.3, 1.74, 0.7], 5, 5, c); const [rx, ry] = T.P(0.3, 1.5, 0.772); rainbow(rx, ry, 8, 1.4); [[1.1, 0.9], [0.2, 0.95]].forEach(([x, y], k) => { const [px, py] = T.P(x, y, 0.772); k ? star5(px, py, 3, CC.yellow) : heart(px, py, 0.87, CC.pinkDeep); }); }, { onTop: true }));
+      ps.push(diningLife(), diningLight('rainbow'));
+      return ps; },
+  });
+  Object.assign(LOOK_DRAWERS.lamp, {
+    // Cuddle Clouds: a cloud shade on a sky-blue pole with a star on top and rainbow drops hanging under it.
+    cuddle: (T, o) => { const lit = isLit(o.id), c = cl(o);
+      T.box(0.06, 0.06, 0, 0.28, 0.28, 0.05, CC.sky); const [bx, by] = T.P(0.2, 0.2, 0.05); cloud(bx, by - 2, 7, CC.cloud); T.line([0.2, 0.2, 0.05], [0.2, 0.2, 1.3], CC.sky, 2.6);
+      const [px, py] = T.P(0.2, 0.2, 1.42); if (lit) ell(px, py + 4, 20, 12, 'rgba(255,241,201,.28)'); cloud(px, py, 15, lit ? '#FFFDF2' : c);
+      CC.bands.forEach((col, k) => { const x = px - 10 + k * 4; limb(x, py + 6, x, py + 12 + (k % 2) * 3, col, 1); circle(x, py + 13 + (k % 2) * 3, 1.5, col); });
+      star5(px, py - 12, 4, lit ? CC.yellow : CC.cloudShade); },
+  });
+  Object.assign(LOOK_DRAWERS.plant, {
+    // Cuddle Clouds: a puffy white pot with cloud bumps round the rim and a rainbow on the front.
+    cuddle: (T, o) => { const c = cl(o); T.box(0.05, 0.05, 0, 0.4, 0.4, 0.4, c); for (let x = 0.1; x < 0.45; x += 0.1) { const [px, py] = T.P(x, 0.451, 0.4); circle(px, py, 3.2, c); } for (let y = 0.1; y < 0.45; y += 0.1) { const [px, py] = T.P(0.451, y, 0.4); circle(px, py, 3.2, c); } const [rx, ry] = T.P(0.25, 0.452, 0.14); rainbow(rx, ry, 6, 1.1); const [sx, sy] = T.P(0.452, 0.25, 0.22); star5(sx, sy, 2.6, CC.yellow); },
+  });
+  Object.assign(LOOK_DRAWERS.counter, {
+    // Cuddle Clouds: cloud-white fronts with a rainbow band at the kick, cloud puffs along the top edge, a sky top with stars, a pink heart basin and a bear plush at the end.
+    cuddle: (T, o) => { const c = cl(o);
+      T.box(0, 0, 0, 2.8, 0.8, 0.86, c); [0.7, 1.4, 2.1].forEach(x => T.line([x, 0.802, 0.1], [x, 0.802, 0.84], 'rgba(0,0,0,.07)', 1.2));
+      rainbowBand(T, [0, 0.801, 0.06], [2.8, 0.801, 0.06], 0.035); [0.35, 1.05, 1.75, 2.45].forEach((x, k) => { const [px, py] = T.P(x, 0.803, 0.5); k % 2 ? heart(px, py, 1.17, CC.pinkDeep) : star5(px, py, 4, CC.yellow); });
+      for (let x = 0.12; x < 2.8; x += 0.25) { const [px, py] = T.P(x, 0.801, 0.86); circle(px, py, 4, c); }
+      T.box(-0.05, -0.04, 0.86, 2.9, 0.88, 0.07, CC.sky); for (let k = 0; k < 12; k++) { const x = ((k * 0.618 * 5.3) % 2.8) + 0.0, y = (k * 0.414 * 3.1) % 0.8; const [sx, sy] = T.P(x, y, 0.931); star5(sx, sy, 2.2, k % 3 ? CC.cloud : CC.yellow); } T.line([-0.05, 0.84, 0.86], [2.85, 0.84, 0.86], CC.skyDeep, 1.2);
+      T.poly([[0.3, 0.13, 0.932], [1.0, 0.13, 0.932], [1.0, 0.6, 0.932], [0.3, 0.6, 0.932]], CC.pink, 'rgba(0,0,0,.1)', 1); const [hx, hy] = T.P(0.65, 0.37, 0.933); heart(hx, hy, 2.33, CC.pinkDeep);
+      T.line([0.65, 0.04, 0.93], [0.65, 0.04, 1.18], CC.yellow, 2.2); T.line([0.65, 0.04, 1.18], [0.65, 0.24, 1.12], CC.yellow, 2.2);
+      const [bx, by] = T.P(0.18, 0.22, 0.95); ell(bx, by - 4, 6, 6, CC.bearBlue); ell(bx - 5, by, 2.5, 3, CC.bearBlue); ell(bx + 5, by, 2.5, 3, CC.bearBlue); bearFace(bx, by - 13, 5, CC.bearBlue); rainbow(bx, by - 2, 3.5, 0.8); },
+  });
+  Object.assign(LOOK_DRAWERS.fridge, {
+    // Cuddle Clouds: a sky-blue fridge with a cloud cap, a rainbow across the upper door, a bear's face on the lower one and heart handles. Returns the open door's colour.
+    cuddle: (T, o) => { const body = cl(o);
+      T.box(0, 0, 0, 0.9, 0.85, 1.87, body); T.box(0, 0, 1.87, 0.9, 0.85, 0.08, CC.cloud); for (let x = 0.1; x < 0.9; x += 0.16) { const [px, py] = T.P(x, 0.851, 1.95); circle(px, py, 4, CC.cloud); }
+      T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], 'rgba(0,0,0,.12)', 1.2);
+      const [rx, ry] = T.P(0.4, 0.851, 1.42); rainbow(rx, ry, 15, 2.2); cloud(rx - 14, ry + 2, 6); cloud(rx + 14, ry + 2, 6);
+      const [bx, by] = T.P(0.4, 0.851, 0.7); bearFace(bx, by, 11, CC.bear); heart(bx, by + 16, 1.17, CC.pinkDeep);
+      [[0.95, 1.1], [1.55, 1.72]].forEach(([z0, z1]) => { T.line([0.78, 0.855, z0], [0.78, 0.855, z1], CC.cloud, 3.2); const [hx, hy] = T.P(0.78, 0.856, (z0 + z1) / 2); heart(hx, hy, 0.8, CC.pinkDeep); });
+      for (let k = 0; k < 5; k++) { const [sx, sy] = T.P(0.1 + (k * 0.618 * 2.3) % 0.7, 0.851, 0.2 + (k * 0.414 * 1.7) % 0.3); star5(sx, sy, 2, CC.yellow); }
       return body; },
   });
 
@@ -2005,6 +2080,7 @@ export function createHouseArt(ctx0, opts = {}) {
     else if (pat === 'serape') { S.pal.forEach((c, k) => rect(0, len, 0.3 + k * 0.1, 0.4 + k * 0.1, c)); const pts = []; for (let u = 0, k = 0; u < len + 0.1; u += 0.12, k++) pts.push([Math.min(u, len), 0.86 + (k % 2) * 0.06]); path(pts, ink, 1.4); const pts2 = []; for (let u = 0, k = 0; u < len + 0.1; u += 0.12, k++) pts2.push([Math.min(u, len), 0.2 + (k % 2) * 0.06]); path(pts2, ink, 1.4); }
     else if (pat === 'circuit') { for (let u = 0.3; u < len; u += 0.6) line3(P(u, 0.14), P(u, WH), ink, 0.8); for (let z = 0.5; z < WH; z += 0.6) line3(P(0, z), P(len, z), ink, 0.8); for (let z = 0.5, r = 0; z < WH; z += 0.6, r++) for (let u = 0.3; u < len; u += 0.6) { const [sx, sy] = iso(...P(u, z)); if ((r + Math.round(u * 3)) % 3 === 0) circle(sx, sy, 2, S.ink2); else { ctx.fillStyle = ink; ctx.fillRect(sx - 1.5, sy - 1.5, 3, 3); } } for (let u = 0.6; u < len - 0.3; u += 1.2) line3(P(u, 0.8), P(u + 0.3, 1.1), S.ink2, 1); }
     else if (pat === 'sprinkles') { for (let k = 0; k < len * 22; k++) { const u = (k * 0.618 * 4.7) % len, z = 0.2 + ((k * 0.414 * 3.9) % (WH - 0.3)), [sx, sy] = iso(...P(u, z)), a = (k * 1.7) % Math.PI; limb(sx - Math.cos(a) * 2.6, sy - Math.sin(a) * 2.6, sx + Math.cos(a) * 2.6, sy + Math.sin(a) * 2.6, S.pal[k % 5], 1.8); } }
+    else if (pat === 'clouds') { for (let z = 0.6, r = 0; z < WH; z += 0.7, r++) for (let u = 0.4 + (r % 2) * 0.45; u < len; u += 0.9) { const [sx, sy] = iso(...P(u, z)); cloud(sx, sy, 9, ink); const m = (r * 3 + Math.round(u * 2)) % 4; if (m === 0) heart(sx + 14, sy - 10, 0.9, '#EE8FAE'); else if (m === 1) star5(sx - 14, sy - 10, 3, '#F9E27A'); else if (m === 2) rainbow(sx + 16, sy - 2, 6, 1, Math.PI, Math.PI * 2); } }
     else if (pat === 'cork') { for (let k = 0; k < len * 40; k++) { const u = (k * 0.618 * 3.7) % len, z = 0.16 + ((k * 0.414 * 2.3) % (WH - 0.2)); const [sx, sy] = iso(...P(u, z)); circle(sx, sy, 0.6 + (k % 2) * 0.5, ink); } }
   }
   function featPoly(f, inset = 0, dz = 0) { const P = (u, z) => wallPoint(f.p, u, z); return [P(f.u[0] + inset, f.z[0] + inset + dz), P(f.u[1] - inset, f.z[0] + inset + dz), P(f.u[1] - inset, f.z[1] - inset), P(f.u[0] + inset, f.z[1] - inset)]; }
