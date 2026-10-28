@@ -229,7 +229,8 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   blossomvase: { W: 0.45, D: 0.45, h: 1.6, name: 'Cherry blossom branches', store: true, cols: ['#F2EEE8', '#2B2B30', '#9EC1C9'] },
   clawmachine: { W: 0.7, D: 0.6, h: 1.7, name: 'Claw machine', store: true, cols: ['#FF2E9A', '#19E6F0', '#F4C430', '#7A5CFF'], light: { at: [0.35, 0.3, 1.2], r: 60, col: '255,46,154' },
     spots: { c: { stand: [0.35, 1.05], dir: [0, -1], tag: 'claw' } } },
-  diffuser: { W: 0.35, D: 0.35, h: 0.6, name: 'Aroma diffuser', store: true, cols: ['#D8D0C2', '#9DB3A5', '#F6F4EE'], light: { at: [0.17, 0.17, 0.4], r: 70, col: '200,235,220' },
+  // Small, so it sits on a side table, coffee table, console or shelf; on the floor it stands on its own teak stand.
+  diffuser: { W: 0.35, D: 0.35, h: 0.6, name: 'Aroma diffuser', store: true, small: true, cols: ['#D8D0C2', '#9DB3A5', '#F6F4EE'], light: { at: [0.17, 0.17, 0.4], r: 70, col: '200,235,220' },
     spots: { d: { stand: [0.17, 0.85], dir: [0, -1], tag: 'diffuse' } } },
   overseer: { W: 0.6, D: 0.6, h: 2.05, name: 'The Overseer', store: true, cols: ['#2B2B30', '#8E939A', '#E8EAEC'] },
   jukebox: { W: 0.8, D: 0.5, h: 1.45, name: 'Jukebox', store: true, cols: ['#C2413A', '#4A5DA8', '#E0A43A'], light: { at: [0.4, 0.5, 1.0], r: 70, col: '255,140,200' },

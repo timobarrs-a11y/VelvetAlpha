@@ -2161,13 +2161,15 @@ export function createHouseArt(ctx0, opts = {}) {
        },
     diffuser: {
       // A stone cone on a teak base; it glows when on, and mist curls up from the top while it runs or someone breathes it in.
-      parts: (o) => [F(0, 0, 0.35, 0.35, (T, ob, t) => { const c = cl(o), on = isLit(ob.id), busy = usingSlot(ob.id + ':d') || live(ob.id);
-        T.box(0.05, 0.05, 0, 0.25, 0.25, 0.06, '#9C6B45');
-        const [bx, by] = T.P(0.175, 0.175, 0.06), [tx, ty] = T.P(0.175, 0.175, 0.42);
+      // On a table it sits on the top; on the floor it stands on a slim teak stand of its own.
+      parts: (o) => [F(0, 0, 0.35, 0.35, (T, ob, t) => { const c = cl(o), on = isLit(ob.id), busy = usingSlot(ob.id + ':d') || live(ob.id), z0 = ob.on ? 0 : 0.5;
+        if (!ob.on) { T.box(0.08, 0.08, 0, 0.19, 0.19, 0.03, '#7A5236'); [[0.1, 0.1], [0.25, 0.1], [0.1, 0.25], [0.25, 0.25]].forEach(([x, y]) => T.line([x, y, 0.03], [x, y, z0 - 0.03], '#7A5236', 1.8)); T.box(0.02, 0.02, z0 - 0.03, 0.31, 0.31, 0.03, '#9C6B45'); }
+        T.box(0.05, 0.05, z0, 0.25, 0.25, 0.06, '#9C6B45');
+        const [bx, by] = T.P(0.175, 0.175, z0 + 0.06), [tx, ty] = T.P(0.175, 0.175, z0 + 0.42);
         ctx.beginPath(); ctx.moveTo(bx - 10, by); ctx.quadraticCurveTo(bx - 9, (by + ty) / 2, tx - 3, ty); ctx.lineTo(tx + 3, ty); ctx.quadraticCurveTo(bx + 9, (by + ty) / 2, bx + 10, by); ctx.closePath(); ctx.fillStyle = c; ctx.fill(); ctx.strokeStyle = shade(c, -0.2); ctx.lineWidth = 0.8; ctx.stroke();
         if (on) { ctx.save(); ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 1.2); circle(bx, by - 6, 9, '#CFEBDD'); ctx.restore(); }
         ell(tx, ty, 3, 1.4, '#6E6A64');
-        if (on || busy) steamAt(T, 0.175, 0.175, 0.44, t, busy ? 5 : 2, busy ? 0.9 : 0.5);
+        if (on || busy) steamAt(T, 0.175, 0.175, z0 + 0.44, t, busy ? 5 : 2, busy ? 0.9 : 0.5);
       })],
     },
     overseer: {
