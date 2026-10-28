@@ -25,8 +25,8 @@ export interface UnlockCode {
 /** Codes are lower case; what the player types is compared in any case with the spaces around it ignored. */
 export const UNLOCK_CODES: Record<string, UnlockCode> = {
   rainbowhugs: { setId: 'set-cuddle', packName: 'Cuddle Clouds', welcome: 'Cuddle Clouds is yours, free: bears, clouds and rainbows. It is in your Sets tab, and Arrange can switch any piece to it.' },
-  // A placeholder: the real promo phrase is the director's to choose and hand out (change the key, nothing else).
-  'nana-promo': { setId: 'set-nana', packName: 'Nana', lamps: ['cloud', 'cloud'], objects: ['cloudnook'], also: ['lamp-cloud', 'nook-nana'], welcome: 'Nana is yours, free: pastel pink, lilac and butter, ruffles, bows, breezy drapes and a plush rug. The cloud nook is set out for you to curl up in, and two cloud wall lamps are in storage to hang from Arrange. The set is in your Sets tab.' },
+  // The Nana promo code. Codes are lower case here; what a player types is compared in any case.
+  iluv2dance: { setId: 'set-nana', packName: 'Nana', lamps: ['cloud', 'cloud'], objects: ['cloudnook'], also: ['lamp-cloud', 'nook-nana'], welcome: 'Nana is yours, free: pastel pink, lilac and butter, ruffles, bows, breezy drapes and a plush rug. The cloud nook is set out for you to curl up in, and two cloud wall lamps are in storage to hang from Arrange. The set is in your Sets tab.' },
 };
 
 /** The code the text is exactly, or null (so it goes on to the partner as an ordinary message). */

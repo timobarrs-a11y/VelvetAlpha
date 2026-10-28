@@ -12,6 +12,9 @@ describe('unlock codes', () => {
   it('are exact phrases, in any case, and every one points at a secret set that exists', () => {
     expect(unlockFor('rainbowhugs')?.setId).toBe('set-cuddle');
     expect(unlockFor('  RainbowHugs ')?.setId).toBe('set-cuddle');
+    expect(unlockFor('Iluv2dance')?.setId).toBe('set-nana');
+    expect(unlockFor('  ILUV2DANCE ')?.setId).toBe('set-nana');
+    expect(unlockFor('nana-promo')).toBeNull();
     for (const t of ['', 'hi', 'rainbow', 'rainbowhugs please', 'say rainbowhugs', 'cloud']) expect(unlockFor(t), t).toBeNull();
     for (const c of Object.values(UNLOCK_CODES)) { const s = catalogById(c.setId); expect(s?.secret || s?.promo).toBe(true); expect(s?.set).toBeDefined(); }
   });
