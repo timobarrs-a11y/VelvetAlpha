@@ -36,7 +36,7 @@ export function createShop(g: Game): Partial<Game> {
   // A set: every piece, the wallpaper and the floor, for the discounted price of what the player does not own yet.
   function buySet(item: CatalogEntry): void {
     const q = setQuote(item, owned);
-    if (q.members.some((m) => (m.icon === 'paper' || m.icon === 'floor') && !isPaintable(view.level))) {
+    if (q.members.some((m) => (m.icon === 'paper' || m.icon === 'floor' || m.icon === 'drapes') && !isPaintable(view.level))) {
       log('Pick a floor of the house first (Basement, Main floor or Upstairs): the set\'s walls and floor go inside.');
       return;
     }
@@ -63,9 +63,16 @@ export function createShop(g: Game): Partial<Game> {
     // Promo items come with a promo code and are never sold (a code gives them through fromSet, free).
     if (!fromSet && promoLocked(item, owned)) { log(`${item.name} comes free with a promo code. It isn't sold in the shop.`); return; }
     if (item.set) { buySet(item); return; }
+    if (item.wallLamp) {
+      if (!g.spendOn(`Shop: ${item.name}`, item.price)) { log('Not enough money.'); return; }
+      log(`Bought ${item.name} for $${item.price}.`);
+      g.addLamp(item.wallLamp);
+      g.refreshDrawer();
+      return;
+    }
     const price = item.price;
     if (item.icon === 'upgrade' && item.id === 'upgrade-attic' && hasAttic()) { log('The attic is already built.'); return; }
-    if ((item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor' || item.icon === 'wobj') && !isPaintable(view.level)) {
+    if ((item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor' || item.icon === 'drapes' || item.icon === 'wobj') && !isPaintable(view.level)) {
       log('Pick a floor of the house first (Basement, Main floor or Upstairs): walls and floors go inside.');
       return;
     }
@@ -108,6 +115,12 @@ export function createShop(g: Game): Partial<Game> {
       art.applyFloor(view.level, item.floor);
       roomReveal();
       flags.styled = true;
+    }
+    if (item.icon === 'drapes' && item.drapes !== undefined) {
+      art.applyDrapes(view.level, item.drapes);
+      roomReveal();
+      flags.styled = true;
+      if (!fromSet) log(`Hung the ${item.name.toLowerCase()} in the ${LEVEL_NAMES[view.level].toLowerCase()}.`);
     }
     // Wall decor: hung on a back wall of the floor you are looking at.
     if (item.icon === 'wobj') {

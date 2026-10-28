@@ -3,6 +3,7 @@ import { catalogById, setQuote, type CatalogEntry } from '../state/catalog';
 import { isPaintable } from '../state/scenes';
 import { run } from '../kernel/config';
 import { createHostPromo, type HostPromo } from '../bridge/hostPromo';
+import { TYPES } from '../state/objects';
 import type { Game } from '../kernel/game';
 
 /** How long the new look gets to show (camera pull-back and sparkle) before the picture is taken. */
@@ -27,6 +28,8 @@ export function createUnlocks(g: Game, host: HostPromo | null = createHostPromo(
     presenting = true;
     if (!isPaintable(g.view.level)) g.setLevel(1);
     for (const set of sets) for (const m of setQuote(set, new Set()).members) g.handleBuy(m, undefined, true);
+    // The pack's furniture is set out with it (it waits in storage until then).
+    for (const type of code.objects ?? []) g.unstore(`${type}-gift`);
     setTimeout(() => {
       let image: string | undefined;
       try { image = g.canvas.toDataURL('image/jpeg', 0.88); } catch { /* no picture: the pop-up still says what they got */ }
@@ -42,12 +45,22 @@ export function createUnlocks(g: Game, host: HostPromo | null = createHostPromo(
     return Object.values(UNLOCK_CODES).find((c) => c.setIds.includes(id));
   }
 
-  /** Everything in the packs is theirs, free, from this moment. */
-  function grant(code: UnlockCode, sets: CatalogEntry[]): void {
+  /** Everything in the packs is theirs, free, from this moment: the sets, anything else the code gives, its wall lamps and its furniture (in storage). */
+  function own(code: UnlockCode, sets: CatalogEntry[]): void {
     for (const set of sets) {
       for (const m of setQuote(set, new Set()).members) owned.add(m.id);
       owned.add(set.id);
     }
+    for (const id of code.also ?? []) owned.add(id);
+    if (code.lamps?.length) g.stockLamps(code.lamps);
+    for (const type of code.objects ?? []) {
+      const id = `${type}-gift`;
+      if (TYPES[type] && !g.storage.some((o) => o.id === id) && !g.world.objs.some((o) => o.id === id)) g.storage.push({ id, type, level: 1, x: 5, y: 5, rot: 0 });
+    }
+  }
+
+  function grant(code: UnlockCode, sets: CatalogEntry[]): void {
+    own(code, sets);
     if (ready()) present(code);
     else { pending().push(sets[0].id); log(`${code.packName} is yours. It will be waiting once you have moved in.`); }
     g.refreshDrawer();
@@ -74,10 +87,7 @@ export function createUnlocks(g: Game, host: HostPromo | null = createHostPromo(
       if (!code) continue;
       const sets = setsOf(code);
       if (!sets.length || sets.every((s) => owned.has(s.id))) continue;
-      for (const set of sets) {
-        for (const m of setQuote(set, new Set()).members) owned.add(m.id);
-        owned.add(set.id);
-      }
+      own(code, sets);
       got.push(code.packName);
     }
     if (!got.length) return;

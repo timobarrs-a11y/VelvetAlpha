@@ -7,6 +7,7 @@ import { createControls } from './ui/controls';
 import { createHud } from './ui/hud';
 import { createVitals } from './ui/vitals';
 import { createArrange } from './systems/arrange';
+import { createWallLamps } from './systems/wallLamps';
 import { createInteract } from './systems/interact';
 import { createInput } from './systems/input';
 import { createShop } from './systems/shop';
@@ -48,6 +49,7 @@ function boot(attract: boolean): void {
   Object.assign(g, createOutfit(g));
   Object.assign(g, createControls(g));
   Object.assign(g, createArrange(g));
+  Object.assign(g, createWallLamps(g));
   Object.assign(g, createInteract(g));
   createInput(g);
   Object.assign(g, createShop(g));

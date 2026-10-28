@@ -1,6 +1,7 @@
 import { TYPES } from '../state/objects';
 import { checkPlacement } from '../state/arrange';
 import { CATALOG } from '../state/catalog';
+import { checkLamp, type WallLamp } from '../state/wallLamps';
 import { isWalking, poseOf, startGoto } from '../state/agents';
 import { type SampleFn } from '../state/companionAI';
 import { MARKS } from '../content/marks';
@@ -74,6 +75,17 @@ export function installDevHooks(g: Game): void {
         return [r.left + (p.x / canvas.width) * r.width, r.top + (p.y / canvas.height) * r.height];
       },
       lightOn: (id: string) => art.objectLightOn(id),
+      lamps: () => JSON.parse(JSON.stringify(g.flags.wallLamps ?? [])) as Array<{ id: string; level: number; p: 'B' | 'L'; u: number; z: number; style: string }>,
+      lampOk: (id: string, p: 'B' | 'L', u: number, z: number) => { const ls = (g.flags.wallLamps ?? []) as WallLamp[], l = ls.find((q) => q.id === id); return !!l && checkLamp(ls, { ...l, p, u, z }, world.objs).ok; },
+      wallPointAtClient: (cx: number, cy: number) => { const [sx, sy] = g.toView(cx, cy); return art.wallPointAt(view.level, sx, sy); },
+      setLampStyle: (style: string) => { for (const l of (g.flags.wallLamps ?? []) as WallLamp[]) if (l.level === 0) l.style = style as WallLamp['style']; },
+      lampStock: () => [...((g.flags.lampStock as string[] | undefined) ?? [])],
+      wallClientPos: (p: 'B' | 'L', u: number, z: number, out = 0.12): [number, number] => {
+        const [vx, vy] = art.project(p === 'B' ? u : out, p === 'B' ? out : u, z);
+        const pt = ctx.getTransform().transformPoint(new DOMPoint(vx, vy));
+        const r = canvas.getBoundingClientRect();
+        return [r.left + (pt.x / canvas.width) * r.width, r.top + (pt.y / canvas.height) * r.height];
+      },
       marks: () => MARKS,
       clientPosOf: (id: string): [number, number] | null => {
         const o = world.objs.find(q => q.id === id);

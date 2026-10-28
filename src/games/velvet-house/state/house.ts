@@ -165,23 +165,25 @@ export interface WallLightDef {
   amb?: boolean;
   night?: boolean;
   onlyIn?: string;
+  /** The look of a sconce (art/wallLamps.js): classic, swing, cylinder, globe, candle, lantern, deco or cage. */
+  style?: string;
 }
 
 export const WALL_LIGHTS: WallLightDef[] = [
   { level: 0, p: 'L', u: [1.3, 3.7], z: 2.12, k: 'strip', room: 'Gym', r: 190 },
   { level: 0, p: 'L', u: [6.95, 7.15], z: 2.05, k: 'bulb', room: 'Utility', r: 125 },
-  { level: 0, p: 'B', u: [5.55, 5.75], z: 1.8, k: 'sconce', room: 'Rec room', r: 140 },
-  { level: 0, p: 'B', u: [8.3, 8.5], z: 1.8, k: 'sconce', room: 'Rec room', r: 120 },
+  { level: 0, p: 'B', u: [5.55, 5.75], z: 1.8, k: 'sconce', style: 'cage', room: 'Rec room', r: 140 },
+  { level: 0, p: 'B', u: [8.3, 8.5], z: 1.8, k: 'sconce', style: 'cage', room: 'Rec room', r: 120 },
   { level: 1, p: 'B', u: [1.75, 3.25], z: 1.5, k: 'under', room: 'Kitchen', r: 120 },
-  { level: 1, p: 'L', u: [6.2, 6.4], z: 1.75, k: 'sconce', room: 'Entry', r: 130 },
-  { level: 1, p: 'L', u: [7.4, 7.6], z: 1.75, k: 'sconce', room: 'Dining room', r: 120, onlyIn: 'craftsman' },
-  { level: 1, p: 'B', u: [7.85, 8.05], z: 1.85, k: 'sconce', room: 'Living room', r: 140 },
-  { level: 1, p: 'B', u: [9.35, 9.55], z: 1.85, k: 'sconce', room: 'Living room', r: 130 },
-  { level: 2, p: 'B', u: [2.5, 2.7], z: 1.8, k: 'sconce', room: 'Bedroom', r: 130 },
+  { level: 1, p: 'L', u: [6.2, 6.4], z: 1.75, k: 'sconce', style: 'classic', room: 'Entry', r: 130 },
+  { level: 1, p: 'L', u: [7.4, 7.6], z: 1.75, k: 'sconce', style: 'candle', room: 'Dining room', r: 120, onlyIn: 'craftsman' },
+  { level: 1, p: 'B', u: [7.85, 8.05], z: 1.85, k: 'sconce', style: 'swing', room: 'Living room', r: 140 },
+  { level: 1, p: 'B', u: [9.35, 9.55], z: 1.85, k: 'sconce', style: 'deco', room: 'Living room', r: 130 },
+  { level: 2, p: 'B', u: [2.5, 2.7], z: 1.8, k: 'sconce', style: 'globe', room: 'Bedroom', r: 130 },
   { level: 2, p: 'B', u: [0.3, 2.9], z: 2.3, k: 'string', room: 'Bedroom', r: 130, need: 'stringlights', col: '255,160,190', amb: true },
   { level: 2, p: 'B', u: [6.9, 7.7], z: 1.86, k: 'bar', room: 'Bathroom', r: 110 },
-  { level: 2, p: 'L', u: [4.5, 4.7], z: 1.8, k: 'sconce', room: 'Hall office', r: 130, night: true },
-  { level: 3, p: 'L', u: [4.3, 4.5], z: 2.05, k: 'sconce', room: 'Backyard', r: 170, night: true, amb: true },
+  { level: 2, p: 'L', u: [4.5, 4.7], z: 1.8, k: 'sconce', style: 'cylinder', room: 'Hall office', r: 130, night: true },
+  { level: 3, p: 'L', u: [4.3, 4.5], z: 2.05, k: 'sconce', style: 'lantern', room: 'Backyard', r: 170, night: true, amb: true },
 ];
 
 export const PRIVATE_ROOMS = new Set([

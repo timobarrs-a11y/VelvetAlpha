@@ -5,13 +5,15 @@
 
 import { CLOTHES, clothId } from './clothing';
 import { PICTURE_WALLS } from './pictureWalls';
+import { UNLOCK_CODES } from './unlockCodes';
+import { LAMP_STYLES, LAMP_NAMES, LAMP_PRICES } from './wallLamps';
 
 export interface CatalogEntry {
   id: string;
   name: string;
   desc?: string;
   price: number;
-  icon: 'paint' | 'paper' | 'floor' | 'set' | 'upgrade' | 'obj' | 'cloth' | 'wobj' | 'box' | 'bag' | 'pet' | 'home';
+  icon: 'paint' | 'paper' | 'floor' | 'drapes' | 'set' | 'upgrade' | 'obj' | 'cloth' | 'wobj' | 'box' | 'bag' | 'pet' | 'home';
   tab: string;
   tags?: string[];
   type?: string;
@@ -31,6 +33,10 @@ export interface CatalogEntry {
   buy?: string;
   /** A themed set sold as one bundle: the catalog ids it holds and the share taken off what is not owned yet. */
   set?: { items: string[]; off: number };
+  /** Drapes for the windows of a floor, in this style (art/houseArt.js `drawDrapes`); '' takes them down. */
+  drapes?: string;
+  /** A wall lamp of this style (state/wallLamps.ts): buying it hangs one, and it can be moved along the walls. */
+  wallLamp?: string;
   /**
    * A promo item: it comes free with a promo code (state/unlockCodes.ts) and can't be bought. Until the player has it,
    * the shop shows it by name only, locked, with no preview; the Promo tab lists the promo packs.
@@ -77,7 +83,7 @@ const bundle = (id: string, name: string, desc: string, items: string[], tags: s
 });
 
 /** A promo entry: free with a promo code, never sold. */
-const promo = (e: CatalogEntry): CatalogEntry => ({ ...e, promo: true });
+export const promo = (e: CatalogEntry): CatalogEntry => ({ ...e, promo: true });
 
 const hobby = (id: string, type: string, name: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
   id, name, price, icon: 'obj', tab: 'Hobbies', type, tags, cols, repeat: true,
@@ -576,6 +582,23 @@ export const CATALOG: CatalogEntry[] = [
   wallItem('wobj-tikimasks', 'Tiki masks', 140, ['playful', 'natural', 'bold'], ['#8A5A3A', '#D9BE82', '#F08AA0']),
   wallItem('wobj-flamingoneon', 'Flamingo neon', 60, ['playful', 'natural', 'bold'], ['#F08AA0', '#19E6F0', '#F9E27A']),
 
+  // Nana: the soft-girl era, a promo pack that only a code opens (its name and description show, its picture is locked).
+  promo(wallpaper('paper-nana-sky', 'Pink sky and clouds', 'nana-sky', 100, ['soft', 'playful', 'cozy'])),
+  promo(floor('floor-nanaplush', 'Plush blush carpet', 'nanaplush', 150, ['soft', 'playful', 'cozy'])),
+  promo(look('look-fridge-nana', 'fridge', 'nana', 'Pastel pink fridge', 'Blush pink with a cream cloud cap, cloud stickers and little frames on the upper door, a lilac bow and a ruffle band on the lower one, and heart handles.', 360, ['soft', 'playful', 'cozy'], ['#F8C8DC', '#FFF8F0', '#D9C8F2'])),
+  promo(look('look-counter-nana', 'counter', 'nana', 'Cream cabinets with a ruffle valance', 'Cream fronts with heart knobs under a pink ruffle valance, a butter top scattered with hearts, a lilac basin with a gold tap and a posy of daisies.', 430, ['soft', 'playful', 'cozy'], ['#FFF8F0', '#F8C8DC', '#FFF1B8'])),
+  promo(look('look-dining-nana', 'dining', 'nana', 'Tea-party table and bow chairs', 'A lace-edged cloth over a gold-legged table set with a teapot and cups, chairs with cloud-and-bow backs in pink and lilac, and a cloud lamp overhead.', 350, ['soft', 'playful', 'cozy'], ['#FFF8F0', '#F8C8DC', '#D9C8F2'])),
+  promo(look('look-sofa-nana', 'sofa', 'nana', 'Plush ruffle sofa', 'A plush lilac sofa with a ruffled skirt, pink pillows with a heart and a bow, and a butter throw over one arm.', 390, ['soft', 'playful', 'cozy'], ['#E4D6F7', '#F8C8DC', '#FFF1B8'])),
+  promo(look('look-lamp-nana', 'lamp', 'nana', 'Cloud lamp', 'A fluffy cluster of clouds for a shade on a gold stem, a little star on top and a soft pink glow when it is on.', 100, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F8C8DC', '#E8C877'])),
+  promo(look('look-rug-nana', 'rugwide', 'nana', 'Plush cloud rug', 'A plush blush rug with a cream cloud in the middle, a shag of little tufts and pom-poms along the ends.', 220, ['soft', 'playful', 'cozy'], ['#F8C8DC', '#FFF8F0', '#D9C8F2'])),
+  promo({ id: 'drapes-nana', name: 'Breezy drapes', desc: 'Sheer pink drapes on a gold rod, tied back with lilac bows, that stir in the breeze.', price: 140, icon: 'drapes', tab: 'Decor', drapes: 'nana', tags: ['soft', 'playful', 'cozy'] }),
+  promo({ id: 'nook-nana', name: 'Cloud nook', desc: 'A plush cloud lounger under a canopy of sheer pink with twinkling fairy lights. Sit to read, scroll or watch; tap it for its lights.', price: 280, icon: 'obj', tab: 'Furniture', type: 'cloudnook', cols: ['#FFF8F0', '#F8C8DC', '#D9C8F2'], tags: ['soft', 'playful', 'cozy'], repeat: true }),
+  promo({ id: 'lamp-cloud', name: 'Cloud wall lamp', desc: 'A fluffy cloud that glows pink and gold on the wall.', price: 75, icon: 'obj', tab: 'Decor', wallLamp: 'cloud', tags: ['soft', 'playful', 'cozy'], repeat: true }),
+  promo(look('look-plant-nana', 'plant', 'nana', 'Ruffle pot', 'Your plant in a pink pot with a ruffled rim and a bow, daisies in its leaves.', 65, ['soft', 'playful', 'cozy'], ['#F8C8DC', '#FFF8F0', '#D9C8F2', '#FFF1B8'])),
+  promo(bundle('set-nana', 'Nana kitchen and living room', 'The soft-girl era: pastel pink, lilac and butter, a plush ruffle sofa, a tea-party table with bow chairs, cloud lights, ruffles, bows and daisies, breezy drapes at the windows, a plush cloud rug, pink striped walls and a blush carpet underfoot.',
+    ['look-fridge-nana', 'look-counter-nana', 'look-dining-nana', 'look-sofa-nana', 'look-lamp-nana', 'look-plant-nana', 'paper-nana-sky', 'floor-nanaplush', 'look-rug-nana', 'drapes-nana'], ['soft', 'playful', 'cozy'])),
+  // Wall lamps: hung where there is wall, and movable along the walls with Arrange.
+  ...LAMP_STYLES.map((s): CatalogEntry => ({ id: `lamp-${s}`, name: LAMP_NAMES[s], desc: 'A wall lamp. Hang it, then slide it anywhere on the walls with Arrange.', price: LAMP_PRICES[s], icon: 'obj', tab: 'Decor', wallLamp: s, tags: ['cozy', 'warm'], repeat: true })),
   // Decor
   decor('pampas', 'pampas', 'Pampas vase', 40, ['modern', 'minimal', 'natural'], ['#E8DCC8', '#2B2B30', '#C27A5A', '#9EC1C9']),
   decor('candles', 'candles', 'Pillar candles', 35, ['cozy', 'warm', 'soft'], ['#F2EEE8', '#C9A24A', '#B5476E', '#3F5B4C']),
@@ -683,7 +706,9 @@ export function promoLocked(item: CatalogEntry, owned: ReadonlySet<string>): boo
   return !!item.promo && !owned.has(item.id);
 }
 
-const inPromoSet = (c: CatalogEntry): boolean => CATALOG.some((s) => s.promo && s.set?.items.includes(c.id));
+// Part of a promo pack: one of its pieces, or an extra its code gives with it (Nana's cloud nook and wall lamp).
+const inPromoSet = (c: CatalogEntry): boolean =>
+  CATALOG.some((s) => s.promo && s.set?.items.includes(c.id)) || Object.values(UNLOCK_CODES).some((u) => u.also?.includes(c.id));
 
 export function itemsForTab(tab: string): CatalogEntry[] {
   if (tab === 'Today') return CATALOG.filter(c => c.tab !== 'Today');
