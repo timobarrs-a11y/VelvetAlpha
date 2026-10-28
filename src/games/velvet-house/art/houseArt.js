@@ -2525,10 +2525,12 @@ export function createHouseArt(ctx0, opts = {}) {
       if (al > 0.03) circle(m.x, m.y, 0.5 + m.s * 0.6, `rgba(255,238,210,${al})`);
     });
   }
+  /** How far every light reaches, against its authored radius: more means pools of light that read more strongly. */
+  const LIGHT_GAIN = 1.3;
   function activeLights(level) {
     const out = [];
-    WALL_LIGHTS.forEach((L, i) => { if (L.level !== level || (L.need && !has(L.need)) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return; const manual = wallLightOverrides.get(i); const target = manual === true ? 1 : manual === false ? 0 : wantLight(level, roomFor(L.room), L.night, L.amb); const s = ease('w' + i, target); if (s < 0.02) return; const um = (L.u[0] + L.u[1]) / 2, off = L.k === 'under' ? 0.5 : 0.2; out.push({ src: L.p === 'B' ? [um, off, L.z] : [off, um, L.z], pool: L.p === 'B' ? [um, L.k === 'under' ? 1.1 : 1.4, 0] : [1.4, um, 0], r: L.r, s, col: L.col, vis: BACK[VR].includes(L.p) }); });
-    OBJS.forEach(o => { const lt = T_OF(o).light; if (!lt || o.level !== level) return; const [x, y] = xf(o, lt.at[0], lt.at[1]); const manual = objectLights.get(o.id); const target = manual === true ? Math.max(0.75, wantLight(level, roomName(level, x, y))) : manual === false ? 0 : wantLight(level, roomName(level, x, y)); const s = ease(o.id, target); if (s < 0.02) return; out.push({ src: [x, y, lt.at[2] + (o.z || 0)], pool: [x, y, 0], r: lt.r, s, col: lt.col, vis: true }); });
+    WALL_LIGHTS.forEach((L, i) => { if (L.level !== level || (L.need && !has(L.need)) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return; const manual = wallLightOverrides.get(i); const target = manual === true ? 1 : manual === false ? 0 : wantLight(level, roomFor(L.room), L.night, L.amb); const s = ease('w' + i, target); if (s < 0.02) return; const um = (L.u[0] + L.u[1]) / 2, off = L.k === 'under' ? 0.5 : 0.2; out.push({ src: L.p === 'B' ? [um, off, L.z] : [off, um, L.z], pool: L.p === 'B' ? [um, L.k === 'under' ? 1.1 : 1.4, 0] : [1.4, um, 0], r: L.r * LIGHT_GAIN, s, col: L.col, vis: BACK[VR].includes(L.p), room: roomFor(L.room) }); });
+    OBJS.forEach(o => { const lt = T_OF(o).light; if (!lt || o.level !== level) return; const [x, y] = xf(o, lt.at[0], lt.at[1]); const manual = objectLights.get(o.id); const target = manual === true ? Math.max(0.75, wantLight(level, roomName(level, x, y))) : manual === false ? 0 : wantLight(level, roomName(level, x, y)); const s = ease(o.id, target); if (s < 0.02) return; out.push({ src: [x, y, lt.at[2] + (o.z || 0)], pool: [x, y, 0], r: lt.r * LIGHT_GAIN, s, col: lt.col, vis: true, room: roomName(level, x, y) }); });
     return out;
   }
   function drawWallLights(level) {
@@ -2807,6 +2809,31 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.globalCompositeOperation = 'source-over';
     return true;
   }
+  /**
+   * Each room has a brightness of its own: with its light off a room sits darker than one whose light is on, at night
+   * a lot darker and by day a little. A lit room gets a warm lift over the whole room, not just a pool round the lamp.
+   * `lit` is the brightest light in the room, 0..1.
+   */
+  function roomAmbient(level, lights) {
+    const a = levelDark(level);
+    if (isOutdoor(level) && a < 0.05) return;
+    LEVELS[level].rooms.forEach((rm) => {
+      let lit = 0; lights.forEach((l) => { if (l.room === rm.n && l.s > lit) lit = l.s; });
+      const dim = (1 - Math.min(1, lit)) * (0.05 + 0.55 * a), warm = Math.min(1, lit) * (0.03 + 0.2 * a);
+      if (dim < 0.01 && warm < 0.01) return;
+      // A soft patch over the middle of the room that fades out toward its edges, so neighbours blend and no box shows.
+      const [a1, b1, a2, b2] = vrect(rm.r[0], rm.r[1], rm.r[2], rm.r[3]);
+      const [cx, cy] = isoV((a1 + a2) / 2, (b1 + b2) / 2, 0.9), rx = ((a2 - a1) + (b2 - b1)) * TW * 0.62 + 20;
+      const patch = (col, alpha, mode) => {
+        ctx.save(); ctx.globalCompositeOperation = mode; ctx.transform(1, 0, 0, 0.72, 0, cy * 0.28);
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx);
+        g.addColorStop(0, `rgba(${col},${alpha})`); g.addColorStop(0.55, `rgba(${col},${alpha * 0.8})`); g.addColorStop(1, `rgba(${col},0)`);
+        ctx.fillStyle = g; ctx.fillRect(cx - rx, cy - rx, rx * 2, rx * 2); ctx.restore();
+      };
+      if (dim >= 0.01) patch('10,8,28', Math.min(0.6, dim), 'source-over');
+      if (warm >= 0.01) patch('255,196,128', warm, 'lighter');
+    });
+  }
   function lighting(level, lights, deferred) {
     const a = levelDark(level);
     ctx.save(); roomPath(); ctx.clip();
@@ -2851,6 +2878,7 @@ export function createHouseArt(ctx0, opts = {}) {
       lights.forEach(l => { if (!l.vis) return; const [sx, sy] = iso(...l.src), col = l.col || '255,190,120', s = l.s * Math.min(1, a / 0.35), g = ctx.createRadialGradient(sx, sy, 1, sx, sy, l.r * 1.5); g.addColorStop(0, `rgba(${col},${0.12 * s})`); g.addColorStop(0.4, `rgba(${col},${0.05 * s})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); });
       ctx.globalCompositeOperation = 'source-over';
     }
+    roomAmbient(level, lights);
     ctx.restore();
   }
 
