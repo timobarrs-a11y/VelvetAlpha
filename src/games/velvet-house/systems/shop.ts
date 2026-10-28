@@ -63,7 +63,7 @@ export function createShop(g: Game): Partial<Game> {
     if (item.set) { buySet(item); return; }
     const price = item.price;
     if (item.icon === 'upgrade' && item.id === 'upgrade-attic' && hasAttic()) { log('The attic is already built.'); return; }
-    if ((item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor') && !isPaintable(view.level)) {
+    if ((item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor' || item.icon === 'wobj') && !isPaintable(view.level)) {
       log('Pick a floor of the house first (Basement, Main floor or Upstairs): walls and floors go inside.');
       return;
     }
@@ -106,6 +106,11 @@ export function createShop(g: Game): Partial<Game> {
       art.applyFloor(view.level, item.floor);
       roomReveal();
       flags.styled = true;
+    }
+    // Wall decor: hung on a back wall of the floor you are looking at.
+    if (item.icon === 'wobj') {
+      const hung = art.hangWallObj(view.level, item.id.replace(/^wobj-/, ''), color || item.cols?.[0]);
+      log(hung ? `${item.name} is on the wall in the ${LEVEL_NAMES[view.level].toLowerCase()}.` : `The ${item.name.toLowerCase()} has nowhere to hang.`);
     }
     // Furniture: add to world
     if (target && item.skin) {

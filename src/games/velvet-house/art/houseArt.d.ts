@@ -89,6 +89,8 @@ export interface HouseArt {
   render(frame: HouseFrame): void;
   /** Furniture was just set down: it lands with a bounce and a puff of dust. */
   objectPlaced(id: string): void;
+  /** Hangs a bought wall piece (a WTYPES key, e.g. 'print') on a back wall of the level; false if the type is unknown. */
+  hangWallObj(level: number, type: string, col?: string): boolean;
   /** Pulsing outlines on the pieces a script wants tapped (by object id). */
   spotlight(ids: string[]): void;
   /** A ghost of where a piece should go: its type, spot, turn and whose colour. Null clears it. */
