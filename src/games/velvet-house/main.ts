@@ -18,6 +18,7 @@ import { createOutfit } from './systems/outfit';
 import { createStudio } from './ui/studio';
 import { createLifeSim } from './systems/lifeSim';
 import { createDeliveries } from './systems/deliveries';
+import { createConcerns } from './systems/concerns';
 import { createScripts } from './script/gameHost';
 import { createFrame } from './view/frame';
 import { installDevHooks } from './dev/hooks';
@@ -55,6 +56,7 @@ function boot(attract: boolean): void {
   Object.assign(g, createStudio(g));
   Object.assign(g, createLifeSim(g));
   Object.assign(g, createDeliveries(g));
+  Object.assign(g, createConcerns(g));
   Object.assign(g, createScripts(g));
   if (!attract) installDevHooks(g);
   startGameLoop(g);

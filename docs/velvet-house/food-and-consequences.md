@@ -16,7 +16,16 @@ sliding system** that shapes how she responds.
 **Built (PR #87):** the bag at the door, opened by a tap into a crate of food; dropping the food on the fridge in
 Arrange puts it away (stock up, crate gone, fridge door swings); food grazes down one serving every eight game hours
 besides meals; fitness (treadmill and weights raise it, time lowers it); the vitals panel bottom-left with Food,
-Fitness, Tidy, Bills and the bond. **Next:** the concerns below, with the hard pass.
+Fitness, Tidy, Bills and the bond.
+
+**Built (same PR, second push):** the concerns below and the hard pass. `state/concerns.ts` holds the rules (food,
+bills, dishes, laundry; grace, a level per day ignored, hard pass for food and bills at level 3), the mood and the
+bond drift; `systems/concerns.ts` ticks them every game minute, raises `concern.raised` / `concern.cleared` events,
+and opens the chat with her line from the humor bank (`concern.<kind>.<level>`, `relief.<kind>`, every style, m/f).
+`systems/chat.ts` shows the hard-pass line with the input closed, and passes the live concern and mood to the AI
+persona. The bond row of the vitals panel shows the mood. Verified at level A (`concerns.test.ts`, bank
+completeness) and S; not yet played (P). **Not built:** sparks and wishes pausing during a concern (they are not
+wired yet at all), a resident putting food away herself in free play.
 
 ## What exists
 

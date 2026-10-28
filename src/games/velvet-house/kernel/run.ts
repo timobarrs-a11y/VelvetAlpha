@@ -71,6 +71,7 @@ export function startGameLoop(g: Game): void {
       const jt = people[0].task;
       tickFitness(g.flags, gameMin, !!jt && jt.phase === 'do' && (jt.act === 'workout' || jt.act === 'lift'));
       if (snackTick(world.household, g.flags, gameMin)) log('Somebody raided the fridge for a snack.');
+      g.concernsTick(gameMin);
       g.deliveriesTick();
       // Visitors a script has brought in (people after the two who live here).
       for (const npc of people.slice(2)) tickAgent(house, npc, null, dt, gameMin, walkMul, hourF, () => rng.next(), world.household);

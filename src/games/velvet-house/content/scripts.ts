@@ -365,4 +365,37 @@ export const TUTORIAL: ScriptDef[] = [
   ]),
 ];
 
-export const SCRIPTS: ScriptDef[] = [OPENING, DEZ_DELIVERY, ...TUTORIAL];
+/**
+ * The house talking back through her (state/concerns.ts): when a concern is raised she comes over, a "!", and the chat
+ * opens with her line; the hard pass is a closed door instead. When it clears, a line of relief.
+ */
+export const CONCERN_NOTICE: ScriptDef = {
+  id: 'concern.notice',
+  trigger: { on: 'cond', cond: { event: 'concern.raised' } },
+  mode: 'beat',
+  once: false,
+  priority: 2,
+  vars: { kind: '$event.kind', level: '$event.level' },
+  steps: [
+    { do: 'walk', who: 'maya', to: 'jordan' },
+    { do: 'face', who: 'maya', toward: 'jordan' },
+    { do: 'emote', who: 'maya', emote: 'alert' },
+    { do: 'wait', seconds: 1 },
+    { do: 'deliver', category: 'concernChat', id: '$kind.$level' },
+  ],
+};
+
+export const CONCERN_RELIEF: ScriptDef = {
+  id: 'concern.relief',
+  trigger: { on: 'cond', cond: { event: 'concern.cleared' } },
+  mode: 'beat',
+  once: false,
+  priority: 1,
+  vars: { kind: '$event.kind' },
+  steps: [
+    { do: 'emote', who: 'maya', emote: 'heart' },
+    { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'relief.$kind' } },
+  ],
+};
+
+export const SCRIPTS: ScriptDef[] = [OPENING, DEZ_DELIVERY, ...TUTORIAL, CONCERN_NOTICE, CONCERN_RELIEF];

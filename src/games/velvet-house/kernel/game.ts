@@ -26,6 +26,8 @@ import { mountShell } from '../ui/shell';
 import { loadWorld } from './config';
 import type { ScriptEngine } from '../script/engine';
 import type { GameEvent, Mode, UiTarget } from '../script/types';
+import type { ConcernContext } from '../systems/concerns';
+import type { ConcernKind, Mood } from '../state/concerns';
 
 
 /** What the camera, the controls and the modules read and change while the game runs. */
@@ -177,6 +179,12 @@ export interface Game {
   putFoodAway(food: ObjectInstance, fridge: ObjectInstance): void;
   /** The vital signs panel. */
   refreshVitals(): void;
+  // concerns: the house talking back through her
+  concernsTick(gameMin: number): void;
+  concernMood(): Mood;
+  hardPass(): ConcernKind | null;
+  concernContext(): ConcernContext | null;
+  openConcernChat(id: string): void;
   /** The piece being dragged: its centre on the floor (world units) and its height. */
   heldCentre(): { x: number; y: number; h: number } | null;
   /** Where a script wants the piece to end up (the outline), so the camera can frame both. */

@@ -27,14 +27,14 @@ export function createVitals(g: Game): Partial<Game> {
 
   function refreshVitals(): void {
     const v = vitals(world.household, world.life, flags, world.day, g.s.bond);
-    const sig = JSON.stringify(v);
+    const sig = JSON.stringify(v) + g.concernMood();
     if (sig === last) return;
     last = sig;
     for (const key of ['food', 'fitness', 'tidy', 'bond'] as const) {
       const n = Math.round(v[key]);
       bars[key].style.width = `${n}%`;
       bars[key].dataset.tone = n < 25 ? 'low' : n < 55 ? 'mid' : 'ok';
-      values[key].textContent = key === 'food' ? `${world.household.fridge.basic + world.household.fridge.fresh} meals` : `${n}`;
+      values[key].textContent = key === 'food' ? `${world.household.fridge.basic + world.household.fridge.fresh} meals` : key === 'bond' ? `${n} · ${g.concernMood()}` : `${n}`;
     }
     const b = v.bills;
     bars.bills.style.width = b.overdue ? '100%' : b.dueIn === null ? '100%' : `${Math.max(10, 100 - Math.max(0, 7 - b.dueIn) * 14)}%`;

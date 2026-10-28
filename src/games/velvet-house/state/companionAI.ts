@@ -52,6 +52,25 @@ export interface PersonaContext {
   coreMem: string[];
   memories: string[];
   pastMem: string[];
+  /** What is wrong with the house and how long it has been (state/concerns.ts), and how she feels about it. */
+  concern?: { kind: 'food' | 'bills' | 'dishes' | 'laundry'; level: number; hours: number } | null;
+  mood?: 'content' | 'unsettled' | 'worried' | 'upset';
+}
+
+const CONCERN_WORDS: Record<string, string> = {
+  food: 'there is no food in the house',
+  bills: 'the rent is overdue and Dez will cut the power',
+  dishes: 'the dishes have piled up in the sink',
+  laundry: 'the laundry has piled up',
+};
+
+/** The house, as it weighs on her: a sentence for the persona, or nothing when all is well. */
+export function concernLine(ctx: PersonaContext): string {
+  if (!ctx.concern) return ctx.mood && ctx.mood !== 'content' ? `You feel ${ctx.mood}. ` : '';
+  const { kind, level, hours } = ctx.concern;
+  const how = level >= 2 ? 'It has gone on more than a day and it is wearing on you' : 'You have noticed and it is on your mind';
+  return `Right now ${CONCERN_WORDS[kind]}, and has been for ${hours} hour${hours === 1 ? '' : 's'}. ${how}; you feel ${ctx.mood ?? 'unsettled'}. ` +
+    `If asked to wait or brushed off, answer in character and do not drop it; it stays until the house changes. `;
 }
 
 // The memory tiers live in ./memory; these are re-exported for the code that imported them from here.
@@ -77,6 +96,7 @@ export function persona(ctx: PersonaContext): string {
   p += `${simName} is ${ctx.jordanStatus} (${ctx.jordanWhere}). `;
   p += `${partnerName} is ${ctx.mayaStatus} (${ctx.mayaWhere}). `;
   if (ctx.recentLog.length) p += `Recent events: ${ctx.recentLog.slice(-5).join('; ')}. `;
+  p += concernLine(ctx);
 
   const brief = memoryBrief({ coreMem: ctx.coreMem, memories: ctx.memories, pastMem: ctx.pastMem });
   if (brief) p += `\n\n${brief}`;
@@ -102,7 +122,7 @@ export function stateLine(ctx: PersonaContext): string {
   return `[Day ${ctx.day}, ${season(ctx.day)}, ${clockText(ctx.minutes)}. ` +
     `${ctx.simName}: ${ctx.jordanStatus}. ${ctx.partnerName}: ${ctx.mayaStatus}. ` +
     `Bond ${ctx.bond}. $${ctx.money}. Fridge ${ctx.fridgeBasic + ctx.fridgeFresh}. ` +
-    `Dishes ${ctx.dishes}. ${ctx.power ? '' : 'Power OFF. '}]`;
+    `Dishes ${ctx.dishes}. ${ctx.power ? '' : 'Power OFF. '}${ctx.mood && ctx.mood !== 'content' ? `Mood ${ctx.mood}. ` : ''}]`;
 }
 
 /** Parses the mood tag from the end of an AI response. */
