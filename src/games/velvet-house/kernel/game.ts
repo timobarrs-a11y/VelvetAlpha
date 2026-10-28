@@ -214,7 +214,7 @@ export interface Game {
   findObjectAt(sx: number, sy: number): ObjectInstance | null;
   showObjectActions(obj: ObjectInstance, x: number, y: number, poked?: boolean): void;
   handleObjectAction(obj: ObjectInstance, tag: string): void;
-  handleOrder(chain: string): void;
+  handleOrder(chain: string, obj?: ObjectInstance): void;
   counterPartAt(obj: ObjectInstance, sx: number, sy: number): string;
   // shop, chat, save, drawer, goals
   handleBuy(item: CatalogEntry, color?: string, fromSet?: boolean): void;
@@ -253,6 +253,14 @@ export interface Game {
   // pets (systems/pets.ts)
   adoptPet(kind: PetKind, itemId?: string): Pet;
   petsTick(dt: number, gameMin: number, walkMul: number, hourF: number): void;
+  /** The Overseer: one push of its actions is one monologue; the tick lets it react to the player nearby. */
+  overseerAction(obj: ObjectInstance, act: string): void;
+  overseerTick(): void;
+  /** The service bell: ring for room service, and a breakfast cart rolls to the bed. */
+  ringBell(obj: ObjectInstance): void;
+  roomServiceTick(): void;
+  /** The Victorian candelabra goes out by itself when someone on its floor falls asleep. */
+  candlesTick(): void;
   /** The player's order for a pet: 'feedPet', 'playPet', 'petPet', 'walkDog' or 'scoop'. */
   petOrder(act: string, petId: string): void;
   petFrames(): PetFrame[];

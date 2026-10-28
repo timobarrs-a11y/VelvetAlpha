@@ -195,6 +195,16 @@ export function createHouseArt(ctx0, opts = {}) {
     grate: { kind: 'tile', a: '#1A1C24', b: '#171920', line: 'rgba(25,230,240,.35)' },
     checkpink: { kind: 'check', a: '#FFF8F0', b: '#F6B7CC', line: 'rgba(0,0,0,.05)' },
     skycheck: { kind: 'check', a: '#F7FAFE', b: '#DCEEFA', line: 'rgba(0,0,0,.04)' },
+    stardust: { kind: 'speck', a: '#CDC4E6', b: '#CDC4E6', line: 'rgba(255,255,255,.06)', pal: ['#F4F1F8', '#E2C46A', '#B9A9DE', '#FFFFFF'] },
+    hinokiboards: { kind: 'plank', a: '#E3CDA6', b: '#D9C29A', line: 'rgba(120,95,55,.22)' },
+    mahoganyherring: { kind: 'herring', a: '#5E3A28', b: '#523222', line: 'rgba(20,8,4,.35)' },
+    riverslate: { kind: 'stone', a: '#6E6A64', b: '#62605A', line: 'rgba(0,0,0,.28)' },
+    whiteherring: { kind: 'herring', a: '#F1EDE6', b: '#E3DCD1', line: 'rgba(120,105,90,.22)' },
+    walnutparquet: { kind: 'parquet', a: '#8A5A36', b: '#7A4E2D', line: 'rgba(40,20,8,.32)' },
+    paintedpine: { kind: 'plank', a: '#EDE3D0', b: '#E4D8C2', line: 'rgba(120,95,60,.22)' },
+    marblecheck: { kind: 'check', a: '#F2EEE6', b: '#26262B', line: 'rgba(0,0,0,.08)' },
+    teakdeck: { kind: 'plank', a: '#9C6B45', b: '#8E6040', line: 'rgba(40,25,10,.32)' },
+    terrazzodark: { kind: 'speck', a: '#3B3C40', b: '#3B3C40', line: 'rgba(255,255,255,.04)', pal: ['#55575C', '#6E7076', '#4A4B50', '#8A8C90'] },
     arcadecarpet: { kind: 'speck', a: '#1E1740', b: '#1E1740', line: 'rgba(255,255,255,.03)', pal: ['#FF2E9A', '#19E6F0', '#F4C430', '#7A5CFF'] },
     rubber: { kind: 'speck', a: '#3A3A3F', b: '#3A3A3F', line: 'rgba(255,255,255,.04)', pal: ['#5A5A62', '#4C4C54', '#6E6E76', '#55555D'] }
   };
@@ -227,6 +237,16 @@ export function createHouseArt(ctx0, opts = {}) {
     circuit: { pat: 'circuit', base: '#111118', ink: 'rgba(25,230,240,.6)', ink2: 'rgba(255,46,154,.75)' },
     sprinkles: { pat: 'sprinkles', base: '#FFF8F0', ink: 'rgba(224,74,106,.9)', pal: ['#E04A6A', '#BFE0F5', '#FBE7A6', '#D6C4F0', '#BFE8D6'] },
     'clouds-sky': { pat: 'clouds', base: '#C9E6F8', ink: 'rgba(255,255,255,.95)' },
+    'constellations': { pat: 'starmap', base: '#232A5C', ink: 'rgba(232,230,255,.9)', ink2: 'rgba(226,196,106,.9)' },
+    'clay-plaster': { pat: 'limewash', base: '#C8B496', ink: 'rgba(120,95,60,.07)', ink2: 'rgba(255,245,225,.1)' },
+    'damask-rose': { pat: 'damask', base: '#E9D3D0', ink: 'rgba(140,60,70,.32)' },
+    'knotty-pine': { pat: 'knotty', base: '#D2A770', ink: 'rgba(110,70,30,.3)', ink2: 'rgba(110,65,25,.55)' },
+    'banana-leaf': { pat: 'monstera', base: '#F7F1EC', ink: 'rgba(63,140,92,.85)', ink2: 'rgba(38,104,66,.85)' },
+    'starburst-amber': { pat: 'starburst', base: '#F3E6CC', ink: 'rgba(210,105,58,.7)', ink2: 'rgba(63,127,122,.85)' },
+    'ditsy-cream': { pat: 'ditsy', base: '#F8F1E1', ink: 'rgba(232,160,168,.9)', pal: ['#E8A0A8', '#F2D98A', '#9DB7D5', '#A9BFA0'] },
+    'pinstripe-gold': { pat: 'pinstripe2', base: '#EFE6D2', ink: 'rgba(201,162,74,.6)' },
+    limewash: { pat: 'limewash', base: '#E7E0D2', ink: 'rgba(160,145,120,.06)', ink2: 'rgba(255,255,255,.1)' },
+    formwork: { pat: 'formwork', base: '#A9A7A2', ink: 'rgba(0,0,0,.14)', ink2: 'rgba(0,0,0,.3)' },
     'nana-sky': { pat: 'ditsy', base: '#F9D8E6', ink: 'rgba(255,255,255,.9)' },
     'pixel-invaders': { pat: 'pixels', base: '#15121F', ink: 'rgba(25,230,240,.9)', pal: ['#19E6F0', '#FF2E9A', '#F4C430', '#39D353'] },
     'gingham-sage': { pat: 'gingham', base: '#F4F1E8', ink: 'rgba(110,150,115,.3)' },
@@ -696,6 +716,697 @@ export function createHouseArt(ctx0, opts = {}) {
         return body; },
     },
   };
+  // ---- Bedroom and bath looks: the upstairs packs. Same contract as above: footprint, spots and lights stay with the type. ----
+  // Brutalist Loft: board-formed concrete, blackened steel and one sheet of glass.
+  const BR = { conc: '#A3A19C', concDark: '#85837E', concLite: '#BDBBB5', steel: '#2B2D31', steelLite: '#4A4E55', linen: '#E9E6E0' };
+  // The seams the formwork boards leave in poured concrete, across a face that looks along +y.
+  const boardSeams = (T, x0, x1, y, z0, z1, n) => { for (let k = 1; k < n; k++) { const z = z0 + (z1 - z0) * k / n; T.line([x0, y, z], [x1, y, z], 'rgba(0,0,0,.13)', 0.8); } };
+  const tieHoles = (T, xs, y, zs) => xs.forEach((x) => zs.forEach((z) => { const [hx, hy] = T.P(x, y, z); circle(hx, hy, 1.1, 'rgba(0,0,0,.28)'); }));
+  // Pillows drawn as one part over the whole mattress, so the depth sort always puts them after (on top of) the mattress.
+  const pillowsOn = (mattress, boxes) => F(mattress[0], mattress[1], mattress[0] + mattress[3], mattress[1] + mattress[4], (T) => boxes.forEach(([x, y, z, w, d, h, c]) => T.box(x, y, z, w, d, h, c)), { onTop: true });
+  Object.assign(LOOK_DRAWERS, {
+    // A concrete slab for a headboard on a low concrete plinth, white linen and a cover in the piece's colour.
+    bed: { brutalist: (o) => { const c = cl(o); return [
+      B(0, 0, 0, 0.16, 1.6, 1.15, BR.conc), B(0.16, 0.06, 0, 2.3, 1.48, 0.3, BR.concDark),
+      // The duvet is a block of its own over the foot of the mattress, so it shows with nobody in bed; its top is a
+      // cover too, drawn over whoever is sleeping.
+      B(0.2, 0.08, 0.3, 0.75, 1.44, 0.2, BR.linen, { name: 'mattress' }),
+      B(0.25, 0.14, 0.5, 0.48, 0.56, 0.11, '#FFFFFF'), B(0.25, 0.9, 0.5, 0.48, 0.56, 0.11, '#FFFFFF'),
+      B(0.95, 0.06, 0.3, 1.5, 1.48, 0.25, c), B(0.95, 0.06, 0.55, 1.5, 1.48, 0.02, shade(c, 0.06), { cover: true }),
+      F(0.95, 0.06, 1.13, 1.54, (T) => T.poly([[0.95, 0.06, 0.571], [1.11, 0.06, 0.571], [1.11, 1.54, 0.571], [0.95, 1.54, 0.571]], shade(c, 0.22)), { onTop: true }),
+      F(0, 0, 0.17, 1.6, (T) => { for (let k = 1; k < 5; k++) { const z = 1.15 * k / 5; T.line([0.161, 0.02, z], [0.161, 1.58, z], 'rgba(0,0,0,.13)', 0.8); } [0.3, 0.8, 1.3].forEach((y) => { const [hx, hy] = T.P(0.161, y, 0.92); circle(hx, hy, 1.1, 'rgba(0,0,0,.28)'); }); }, { onTop: true })]; } },
+    // A poured cube with a recess for a book, and a blackened steel reading arm.
+    nightstand: { brutalist: (T, o) => { const lit = isLit(o.id);
+      T.box(0.02, 0.02, 0, 0.41, 0.41, 0.5, BR.conc); boardSeams(T, 0.02, 0.43, 0.431, 0, 0.5, 3);
+      T.poly([[0.08, 0.432, 0.1], [0.37, 0.432, 0.1], [0.37, 0.432, 0.28], [0.08, 0.432, 0.28]], '#5E5C59');
+      T.line([0.34, 0.3, 0.5], [0.34, 0.3, 0.95], BR.steel, 2); T.line([0.34, 0.3, 0.95], [0.16, 0.24, 0.93], BR.steel, 2);
+      const [lx, ly] = T.P(0.16, 0.24, 0.88); if (lit) ell(lx, ly + 4, 12, 7, 'rgba(255,226,168,.3)');
+      ell(lx, ly, 5, 3, lit ? '#FFE2A8' : BR.steelLite, BR.steel); } },
+    // Three steel lockers under a concrete top: vents, a pull and a number on each door.
+    dresser: { brutalist: (T, o) => { const c = cl(o);
+      T.box(0.03, 0.03, 0, 1.14, 0.44, 0.07, BR.steel); T.box(0, 0, 0.07, 1.2, 0.5, 0.78, c);
+      [0.4, 0.8].forEach((x) => T.line([x, 0.501, 0.08], [x, 0.501, 0.84], 'rgba(0,0,0,.35)', 1.2));
+      [0.2, 0.6, 1.0].forEach((x, k) => { for (let v = 0; v < 3; v++) T.line([x - 0.08, 0.502, 0.72 - v * 0.04], [x + 0.08, 0.502, 0.72 - v * 0.04], 'rgba(0,0,0,.4)', 1);
+        T.line([x + 0.13, 0.503, 0.38], [x + 0.13, 0.503, 0.52], '#C9CED6', 1.6); const [nx, ny] = T.P(x, 0.503, 0.58); rr(nx - 4, ny - 3, 8, 6, 1, '#E8EAEC'); ctx.fillStyle = '#2B2D31'; ctx.font = '600 5px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(String(k + 1), nx, ny + 2); ctx.textAlign = 'start'; });
+      T.box(-0.02, -0.02, 0.85, 1.24, 0.54, 0.05, BR.concLite); T.box(0.85, 0.15, 0.9, 0.16, 0.16, 0.16, BR.conc); } },
+    // Wall-hung: a concrete cistern block with a steel flush plate, and a matte black bowl that floats off the floor.
+    toilet: { brutalist: (T, o) => {
+      T.box(0.02, 0, 0, 0.38, 0.14, 0.8, BR.conc); boardSeams(T, 0.02, 0.4, 0.141, 0, 0.8, 4);
+      T.poly([[0.13, 0.142, 0.6], [0.29, 0.142, 0.6], [0.29, 0.142, 0.7], [0.13, 0.142, 0.7]], BR.steelLite, BR.steel, 0.8);
+      T.box(0.1, 0.14, 0.22, 0.22, 0.16, 0.16, '#2E2F33'); const [bx, by] = T.P(0.21, 0.4, 0.3); ell(bx, by + 1, 7.5, 6, '#2E2F33', '#1B1C1F');
+      const [sx, sy] = T.P(0.21, 0.38, 0.385); ell(sx, sy, 7, 4, '#45464B'); ell(sx, sy, 5, 2.8, '#1E1F22');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } } },
+    // A poured concrete trough on blackened steel legs, a wall tap over it and towels on the shelf below.
+    vanity: { brutalist: (T, o) => {
+      [[0.05, 0.05], [0.93, 0.05], [0.05, 0.43], [0.93, 0.43]].forEach(([x, y]) => T.line([x, y, 0], [x, y, 0.62], BR.steel, 2.2));
+      T.box(0.04, 0.04, 0.2, 0.92, 0.42, 0.03, BR.steel); T.box(0.12, 0.1, 0.23, 0.3, 0.3, 0.1, '#E9E6E0'); T.box(0.5, 0.1, 0.23, 0.3, 0.3, 0.07, '#8E939A');
+      T.box(-0.02, -0.02, 0.62, 1.04, 0.54, 0.2, BR.conc); boardSeams(T, -0.02, 1.02, 0.521, 0.62, 0.82, 2);
+      T.poly([[0.12, 0.08, 0.821], [0.88, 0.08, 0.821], [0.88, 0.42, 0.821], [0.12, 0.42, 0.821]], '#6E6C68');
+      T.line([0.5, 0.0, 1.02], [0.5, 0.16, 1.02], BR.steel, 2.6); T.line([0.5, 0.16, 1.02], [0.5, 0.16, 0.96], BR.steel, 2.6); } },
+    // A walk-in shower: a concrete tray and back wall, a square rain head on a steel arm, a slot drain and one glass panel.
+    shower: { brutalist: (o) => [F(0, 0, 1.18, 1.18, (T) => {
+        T.box(0, 0, 0, 1.18, 1.18, 0.08, BR.concDark); T.box(0, 0, 0.08, 1.18, 0.1, 2.02, BR.conc); boardSeams(T, 0, 1.18, 0.101, 0.08, 2.1, 6); tieHoles(T, [0.3, 0.9], 0.101, [0.7, 1.5]);
+        T.poly([[0.2, 0.95, 0.081], [0.98, 0.95, 0.081], [0.98, 1.0, 0.081], [0.2, 1.0, 0.081]], '#2B2D31');
+        T.line([0.57, 0.1, 2.08], [0.57, 0.42, 2.08], BR.steel, 2.5); T.poly([[0.45, 0.36, 2.06], [0.69, 0.36, 2.06], [0.69, 0.6, 2.06], [0.45, 0.6, 2.06]], BR.steel);
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.57, 0.48); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
+      }, { name: 'tray' }),
+      F(1.16, 0, 1.2, 0.8, (T) => { T.poly([[1.18, 0.1, 0.08], [1.18, 0.8, 0.08], [1.18, 0.8, 2.0], [1.18, 0.1, 2.0]], 'rgba(186,222,232,.2)', 'rgba(40,42,46,.85)', 1.4); T.line([1.18, 0.2, 1.85], [1.18, 0.6, 1.1], 'rgba(255,255,255,.5)', 2); })] },
+  });
+
+  // Spa Retreat: oiled teak, honed limestone, sage linen and steam.
+  const SP = { teak: '#9C6B45', teakDark: '#7A5236', teakLite: '#B98A62', stone: '#D8D0C2', stoneDark: '#BFB5A4', linen: '#EEEAE0', sage: '#9DB3A5', white: '#F6F4EE' };
+  const slats = (T, x0, x1, y, z0, z1, n, col) => { for (let k = 0; k <= n; k++) { const x = x0 + (x1 - x0) * k / n; T.line([x, y, z0], [x, y, z1], col, 1); } };
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A low teak platform wider than the mattress, a slatted teak panel behind, sage linen and a folded throw.
+    spa: (o) => { const c = cl(o); return [
+      B(0, 0, 0, 0.1, 1.6, 0.85, SP.teak), B(0.1, 0, 0, 2.4, 1.6, 0.18, SP.teakDark), B(0.1, 0, 0.18, 2.4, 1.6, 0.04, SP.teak),
+      B(0.2, 0.1, 0.22, 0.75, 1.4, 0.24, SP.linen, { name: 'mattress' }),
+      B(0.26, 0.16, 0.46, 0.46, 0.54, 0.12, SP.white), B(0.26, 0.9, 0.46, 0.46, 0.54, 0.12, SP.white),
+      // The linen over the foot of the bed is its own block, so it shows with nobody in it (see the brutalist bed).
+      B(0.95, 0.08, 0.22, 1.45, 1.44, 0.24, c), B(0.95, 0.08, 0.46, 1.45, 1.44, 0.02, shade(c, 0.05), { cover: true }),
+      B(1.95, 0.05, 0.22, 0.32, 1.5, 0.28, shade(c, -0.2)),
+      F(0, 0, 0.11, 1.6, (T) => { for (let k = 1; k < 12; k++) T.line([0.101, 1.6 * k / 12, 0.05], [0.101, 1.6 * k / 12, 0.85], 'rgba(40,25,10,.3)', 1); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A floating teak box with a limestone top, a pebble dish and a paper globe that glows.
+    spa: (T, o) => { const lit = isLit(o.id);
+      T.box(0.04, 0.04, 0.18, 0.37, 0.37, 0.28, SP.teak); T.box(0.02, 0.02, 0.46, 0.41, 0.41, 0.04, SP.stone);
+      T.line([0.06, 0.411, 0.32], [0.39, 0.411, 0.32], 'rgba(40,25,10,.35)', 1);
+      const [dx, dy] = T.P(0.3, 0.3, 0.51); ell(dx, dy, 5, 2.5, SP.stoneDark); circle(dx - 1, dy - 1, 1.2, '#8E8A84'); circle(dx + 2, dy, 1, '#6E6A64');
+      const [gx, gy] = T.P(0.15, 0.15, 0.68); if (lit) circle(gx, gy, 13, 'rgba(255,236,200,.28)'); circle(gx, gy, 8, lit ? '#FFF2DA' : SP.white, 'rgba(0,0,0,.12)'); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A floating teak dresser with slatted fronts, a stone tray and a sprig of eucalyptus in a jar.
+    spa: (T, o) => { const c = cl(o);
+      T.box(0, 0, 0.12, 1.2, 0.5, 0.72, c); slats(T, 0.03, 1.17, 0.501, 0.16, 0.8, 22, 'rgba(40,25,10,.28)'); T.line([0, 0.502, 0.48], [1.2, 0.502, 0.48], 'rgba(40,25,10,.45)', 1.2);
+      T.box(0.02, 0.02, 0.84, 1.16, 0.46, 0.03, SP.stone); T.box(0.15, 0.12, 0.87, 0.36, 0.22, 0.02, SP.stoneDark);
+      T.box(0.85, 0.18, 0.87, 0.1, 0.1, 0.16, 'rgba(220,235,230,.7)'); for (let k = 0; k < 4; k++) T.line([0.9, 0.23, 1.0], [0.84 + k * 0.05, 0.2 + (k % 2) * 0.06, 1.24 - (k % 2) * 0.05], SP.sage, 1.6); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A soft white rimless bowl with a teak seat, and a limestone ledge behind with a rolled towel.
+    spa: (T, o) => {
+      T.box(0, 0, 0.62, 0.42, 0.16, 0.06, SP.stone); T.box(0.06, 0.02, 0.68, 0.3, 0.1, 0.07, SP.sage);
+      T.box(0.06, 0, 0, 0.3, 0.16, 0.62, SP.white); T.box(0.09, 0.14, 0, 0.24, 0.3, 0.3, SP.white);
+      const [bx, by] = T.P(0.21, 0.4, 0.3); ell(bx, by, 7, 5.5, SP.white, 'rgba(0,0,0,.1)'); const [sx, sy] = T.P(0.21, 0.38, 0.385); ell(sx, sy, 7, 4, SP.teak); ell(sx, sy, 5, 2.8, '#E8EEF0');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A floating teak vanity with a stone vessel basin, a tall spout and a stack of rolled towels underneath.
+    spa: (T, o) => {
+      T.box(0, 0.02, 0.4, 1.0, 0.46, 0.38, SP.teak); slats(T, 0.03, 0.97, 0.481, 0.43, 0.75, 16, 'rgba(40,25,10,.28)');
+      T.box(-0.02, 0, 0.78, 1.04, 0.5, 0.04, SP.stone);
+      [[0.2, 0.25], [0.42, 0.25], [0.31, 0.25]].forEach(([x, y], k) => { const [tx, ty] = T.P(x, y, k === 2 ? 0.2 : 0.08); ell(tx, ty, 5, 4, k === 2 ? SP.sage : SP.white, 'rgba(0,0,0,.12)'); });
+      const [vx, vy] = T.P(0.5, 0.26, 0.86); ell(vx, vy + 2, 10, 6, SP.stoneDark); ell(vx, vy, 10, 5, SP.stone); ell(vx, vy, 7, 3.4, '#C7D9DC');
+      T.line([0.5, 0.03, 0.82], [0.5, 0.03, 1.02], SP.teakDark, 2.2); T.line([0.5, 0.03, 1.02], [0.5, 0.16, 1.02], SP.teakDark, 2.2); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // A rain shower behind glass on a pebble floor, a limestone back wall with a niche, a teak bench and a bamboo in the corner.
+    // Steam comes up thick while it runs.
+    spa: (o) => [F(0, 0, 1.18, 1.18, (T) => {
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, SP.stoneDark);
+        for (let k = 0; k < 26; k++) { const [px, py] = T.P(0.08 + ((k * 0.61) % 1.02), 0.15 + ((k * 0.37) % 0.98), 0.061); ell(px, py, 1.6, 1, ['#CFC6B6', '#BDB3A2', '#E2DACB'][k % 3]); }
+        T.box(0, 0, 0.06, 1.18, 0.08, 2.04, SP.stone); T.poly([[0.75, 0.081, 1.0], [1.05, 0.081, 1.0], [1.05, 0.081, 1.3], [0.75, 0.081, 1.3]], SP.stoneDark);
+        T.box(0.8, 0.05, 1.0, 0.08, 0.04, 0.12, SP.sage); T.box(0.95, 0.05, 1.0, 0.06, 0.04, 0.09, SP.white);
+        T.box(0.1, 0.1, 0.06, 0.24, 0.9, 0.04, SP.teak); T.box(0.1, 0.1, 0.4, 0.24, 0.9, 0.04, SP.teak); [[0.12, 0.12], [0.12, 0.96]].forEach(([x, y]) => T.box(x, y, 0.1, 0.2, 0.04, 0.3, SP.teakDark));
+        T.line([0.6, 0.08, 2.08], [0.6, 0.45, 2.08], '#B9BEC3', 2); const [hx, hy] = T.P(0.6, 0.5, 2.06); ell(hx, hy, 9, 4.5, '#B9BEC3');
+        const on = usingSlot(T.o.id + ':s') || live(T.o.id);
+        if (on) { steamAt(T, 0.6, 0.6, 0.9, 0, 9, 1.3); steamAt(T, 0.4, 0.8, 1.5, 0, 6, 1.1); steamAt(T, 0.8, 0.4, 1.2, 0, 6, 1.1); const [wx, wy] = T.W(0.6, 0.5); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
+        T.box(1.0, 1.0, 0.06, 0.14, 0.14, 0.18, SP.stoneDark); [[1.05, 0.0], [1.09, 0.25], [1.12, 0.1]].forEach(([x, dz]) => { T.line([x, 1.07, 0.24], [x, 1.07, 1.5 + dz], '#7FA06A', 2.2); [0.7, 1.0, 1.3].forEach((z) => { const [lx, ly] = T.P(x, 1.07, z + dz); ell(lx - 4, ly - 1, 5, 1.6, '#8DB06E', null, -0.4); }); });
+      }, { name: 'tray' }),
+      F(0, 1.16, 1.18, 1.2, (T) => { const fog = usingSlot(T.o.id + ':s') || live(T.o.id); T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.08], [0, 1.18, 2.08]], fog ? 'rgba(235,240,240,.55)' : 'rgba(200,226,232,.2)', 'rgba(185,190,195,.8)', 1); T.line([0.2, 1.18, 1.9], [0.65, 1.18, 1.2], 'rgba(255,255,255,.55)', 2); T.line([0, 1.18, 2.08], [1.18, 1.18, 2.08], 'rgba(185,190,195,.9)', 1.6); }),
+      F(1.16, 0, 1.2, 1.18, (T) => { const fog = usingSlot(T.o.id + ':s') || live(T.o.id); T.poly([[1.18, 0.08, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.08], [1.18, 0.08, 2.08]], fog ? 'rgba(235,240,240,.5)' : 'rgba(200,226,232,.18)', 'rgba(185,190,195,.8)', 1); T.line([1.18, 0.08, 2.08], [1.18, 1.18, 2.08], 'rgba(185,190,195,.9)', 1.6); }, { onTop: true })],
+  });
+
+  // Grand Hotel: walnut, veined marble, brass and velvet, with crisp white linen.
+  const HO = { walnut: '#4A3226', walnutLite: '#6B4A36', marble: '#EFEBE4', vein: 'rgba(120,110,100,.35)', brass: '#C9A24A', brassLite: '#E0C26E', black: '#1E1E22', cream: '#F4EEE2', white: '#FAF8F4' };
+  const veins = (T, pts) => pts.forEach(([a, b]) => T.line(a, b, HO.vein, 0.8));
+  const knob = (T, x, y, z) => { const [kx, ky] = T.P(x, y, z); circle(kx, ky, 1.6, HO.brass); };
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A tall channel-tufted velvet headboard edged in brass, a velvet base on a brass trim, a full-length mattress with
+    // upright euro shams and two pillows, a white duvet folded back at the top, and a velvet runner across the foot.
+    // The mattress runs the whole length (as the stock bed's does) so the base never paints over it.
+    hotel: (o) => { const c = cl(o); return [
+      // The headboard and its channels in one part, so the pillows in front of it cover the channel lines.
+      F(0, 0, 0.16, 1.6, (T) => { T.box(0, 0, 0, 0.16, 1.6, 1.45, shade(c, -0.08)); for (let k = 1; k < 10; k++) T.line([0.161, 1.6 * k / 10, 0.2], [0.161, 1.6 * k / 10, 1.38], 'rgba(0,0,0,.25)', 1.2); }),
+      B(0.16, 0.02, 0, 2.34, 1.56, 0.04, HO.brass), B(0.16, 0.02, 0.04, 2.34, 1.56, 0.3, c),
+      B(0.18, 0.05, 0.34, 2.3, 1.5, 0.18, HO.cream, { name: 'mattress' }),
+      // Euro shams upright against the headboard and pillows in front, each pair spanning the mattress edge to edge.
+      pillowsOn([0.18, 0.05, 0.34, 2.3, 1.5], [[0.16, 0.05, 0.52, 0.16, 0.74, 0.32, HO.white], [0.16, 0.81, 0.52, 0.16, 0.74, 0.32, HO.white], [0.32, 0.05, 0.52, 0.4, 0.74, 0.12, HO.white], [0.32, 0.81, 0.52, 0.4, 0.74, 0.12, HO.white]]),
+      B(0.9, 0.05, 0.52, 1.58, 1.5, 0.06, HO.white), B(0.9, 0.05, 0.58, 1.58, 1.5, 0.01, HO.white, { cover: true }),
+      // The brass frame round the headboard: a cap along the top and a post at each end, as boxes so the pillows sort in front.
+      B(-0.01, -0.01, 1.45, 0.18, 1.62, 0.035, HO.brass), B(-0.01, -0.01, 0.04, 0.18, 0.035, 1.41, HO.brass), B(-0.01, 1.575, 0.04, 0.18, 0.035, 1.41, HO.brass),
+      F(0.9, 0.04, 2.5, 1.56, (T) => {
+        T.poly([[0.9, 0.05, 0.591], [1.06, 0.05, 0.591], [1.06, 1.55, 0.591], [0.9, 1.55, 0.591]], '#E9E4DA'); T.line([1.06, 0.05, 0.592], [1.06, 1.55, 0.592], 'rgba(0,0,0,.12)', 1);
+        T.poly([[1.9, 0.03, 0.592], [2.2, 0.03, 0.592], [2.2, 1.57, 0.592], [1.9, 1.57, 0.592]], c); T.line([1.9, 0.03, 0.593], [1.9, 1.57, 0.593], HO.brass, 1); T.line([2.2, 0.03, 0.593], [2.2, 1.57, 0.593], HO.brass, 1);
+        T.poly([[1.9, 1.57, 0.592], [2.2, 1.57, 0.592], [2.2, 1.57, 0.4], [1.9, 1.57, 0.4]], shade(c, -0.12)); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A walnut bedside chest with a marble top and brass pulls, and a brass lamp with a pleated shade.
+    hotel: (T, o) => { const lit = isLit(o.id), c = cl(o);
+      [[0.04, 0.04], [0.37, 0.04], [0.04, 0.37], [0.37, 0.37]].forEach(([x, y]) => T.line([x, y, 0], [x, y, 0.1], HO.brass, 1.6));
+      T.box(0.02, 0.02, 0.1, 0.41, 0.41, 0.38, c); T.line([0.02, 0.431, 0.3], [0.43, 0.431, 0.3], 'rgba(0,0,0,.35)', 1); knob(T, 0.22, 0.432, 0.4); knob(T, 0.22, 0.432, 0.2);
+      T.box(0, 0, 0.48, 0.45, 0.45, 0.03, HO.marble); veins(T, [[[0.05, 0.1, 0.511], [0.3, 0.4, 0.511]]]);
+      T.box(0.12, 0.12, 0.51, 0.1, 0.1, 0.03, HO.brass); T.line([0.17, 0.17, 0.54], [0.17, 0.17, 0.74], HO.brass, 1.6);
+      const [sx, sy] = T.P(0.17, 0.17, 0.8); if (lit) ell(sx, sy + 6, 14, 8, 'rgba(255,226,168,.3)');
+      ctx.beginPath(); ctx.moveTo(sx - 6, sy - 5); ctx.lineTo(sx + 6, sy - 5); ctx.lineTo(sx + 9, sy + 5); ctx.lineTo(sx - 9, sy + 5); ctx.closePath(); ctx.fillStyle = lit ? '#FFF0D2' : HO.cream; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 0.8; ctx.stroke();
+      for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(sx + k * 2.4, sy - 5); ctx.lineTo(sx + k * 3.6, sy + 5); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A walnut lowboy on brass-capped legs: three rows of drawers with brass bails, a marble top and a vase of roses.
+    hotel: (T, o) => { const c = cl(o);
+      [[0.05, 0.05], [1.12, 0.05], [0.05, 0.42], [1.12, 0.42]].forEach(([x, y]) => { T.line([x, y, 0.03], [x, y, 0.14], HO.walnut, 3); T.line([x, y, 0], [x, y, 0.03], HO.brass, 3); });
+      T.box(0, 0, 0.14, 1.2, 0.5, 0.68, c); [0.37, 0.6].forEach((z) => T.line([0.02, 0.501, z], [1.18, 0.501, z], 'rgba(0,0,0,.35)', 1)); T.line([0.6, 0.501, 0.14], [0.6, 0.501, 0.37], 'rgba(0,0,0,.35)', 1);
+      [[0.3, 0.26], [0.9, 0.26], [0.3, 0.49], [0.9, 0.49], [0.3, 0.71], [0.9, 0.71]].forEach(([x, z]) => { const [px, py] = T.P(x, 0.502, z); ctx.strokeStyle = HO.brass; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(px, py - 1, 3, 0.1, Math.PI - 0.1); ctx.stroke(); });
+      T.box(-0.02, -0.02, 0.82, 1.24, 0.54, 0.04, HO.marble); veins(T, [[[0.1, 0.05, 0.861], [0.6, 0.45, 0.861]], [[0.7, 0.05, 0.861], [1.1, 0.3, 0.861]]]);
+      T.box(0.9, 0.18, 0.86, 0.12, 0.12, 0.2, HO.white); [['#B5243A', -4, -2], ['#C9384E', 0, -5], ['#9E1F33', 4, -1], ['#B5243A', 1, 1]].forEach(([col, dx, dy]) => { const [rx, ry] = T.P(0.96, 0.24, 1.12); circle(rx + dx, ry + dy, 2.6, col); });
+      T.box(0.15, 0.15, 0.86, 0.3, 0.2, 0.02, HO.brass); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A white pedestal toilet with a black seat and a brass lever, under a framed print on the wall.
+    hotel: (T, o) => {
+      T.box(0.04, 0, 0.36, 0.34, 0.16, 0.38, HO.white); T.box(0.02, -0.01, 0.74, 0.38, 0.18, 0.03, HO.white); T.line([0.06, 0.161, 0.68], [0.13, 0.161, 0.66], HO.brass, 1.8);
+      T.box(0.09, 0.16, 0, 0.24, 0.26, 0.32, HO.white); const [bx, by] = T.P(0.21, 0.42, 0.3); ell(bx, by, 7.5, 6, HO.white, 'rgba(0,0,0,.12)');
+      const [sx, sy] = T.P(0.21, 0.4, 0.385); ell(sx, sy, 7, 4, HO.black); ell(sx, sy, 5, 2.8, '#E8EEF0');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A walnut vanity with brass knobs under a veined marble top, a deep basin, a brass gooseneck tap and a monogrammed towel.
+    hotel: (T, o) => { const c = cl(o);
+      T.box(0, 0, 0.08, 1.0, 0.5, 0.72, c); T.box(0.02, 0.02, 0, 0.96, 0.46, 0.08, HO.black);
+      T.line([0.5, 0.501, 0.1], [0.5, 0.501, 0.78], 'rgba(0,0,0,.35)', 1); [0.04, 0.54].forEach((x) => T.poly([[x + 0.03, 0.502, 0.16], [x + 0.39, 0.502, 0.16], [x + 0.39, 0.502, 0.72], [x + 0.03, 0.502, 0.72]], null, 'rgba(0,0,0,.25)', 1)); knob(T, 0.44, 0.503, 0.5); knob(T, 0.56, 0.503, 0.5);
+      T.box(-0.03, -0.01, 0.8, 1.06, 0.53, 0.05, HO.marble); veins(T, [[[0.0, 0.1, 0.851], [0.4, 0.45, 0.851]], [[0.6, 0.0, 0.851], [1.0, 0.35, 0.851]]]);
+      const [vx, vy] = T.P(0.5, 0.27, 0.851); ell(vx, vy, 10, 5, '#DCE6E8', 'rgba(0,0,0,.15)');
+      T.line([0.5, 0.04, 0.85], [0.5, 0.04, 1.05], HO.brass, 2.2); T.line([0.5, 0.04, 1.05], [0.5, 0.18, 1.0], HO.brass, 2.2);
+      T.box(0.82, 0.28, 0.85, 0.16, 0.2, 0.05, HO.white); T.line([0.82, 0.481, 0.875], [0.98, 0.481, 0.875], HO.brass, 1.2); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // Marble walls, a black and white hex floor, a brass rain head and a brass-framed glass door, and a stack of white towels.
+    hotel: (o) => [F(0, 0, 1.18, 1.18, (T) => {
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, HO.white);
+        for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) if ((i * 7 + j * 3) % 5 === 0) { const [hx, hy] = T.P(0.08 + i * 0.13, 0.12 + j * 0.12, 0.061); ell(hx, hy, 2.6, 1.4, HO.black); }
+        T.box(0, 0, 0.06, 1.18, 0.08, 2.04, HO.marble); veins(T, [[[0.1, 0.081, 1.8], [0.5, 0.081, 0.9]], [[0.5, 0.081, 0.9], [0.4, 0.081, 0.3]], [[0.8, 0.081, 2.0], [1.1, 0.081, 1.2]]]);
+        T.line([0.6, 0.08, 2.08], [0.6, 0.45, 2.08], HO.brass, 2.4); const [hx, hy] = T.P(0.6, 0.5, 2.06); ell(hx, hy, 9, 4.5, HO.brass, shade(HO.brass, -0.3));
+        T.line([0.15, 0.081, 1.0], [0.45, 0.081, 1.0], HO.brass, 2);
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.5); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
+      }, { name: 'tray' }),
+      F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [0, 1.18, 2.06]], 'rgba(200,226,232,.2)', HO.brass, 1.6); T.line([0.59, 1.18, 0.06], [0.59, 1.18, 2.06], HO.brass, 1.4); T.line([0.5, 1.18, 1.0], [0.5, 1.18, 1.3], HO.brass, 2.2); T.line([0.2, 1.18, 1.9], [0.45, 1.18, 1.4], 'rgba(255,255,255,.5)', 2); }),
+      F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [1.18, 0, 2.06]], 'rgba(200,226,232,.18)', HO.brass, 1.6); })],
+  });
+
+  // Cottagecore: white iron, painted pine, patchwork, chintz and copper.
+  const CO = { cream: '#F6EFDF', sage: '#A9BFA0', rose: '#E8A0A8', butter: '#F2D98A', blue: '#9DB7D5', iron: '#F2F0EA', ironShade: '#D8D4CA', pine: '#C69C6D', copper: '#B87333', lace: 'rgba(255,255,255,.85)' };
+  const PATCH = [CO.rose, CO.butter, CO.sage, CO.blue, CO.cream, '#D98C6A'];
+  const ditsy = (T, x0, x1, y, z0, z1, n) => { for (let k = 0; k < n; k++) { const [fx, fy] = T.P(x0 + ((k * 0.618) % 1) * (x1 - x0), y, z0 + ((k * 0.382) % 1) * (z1 - z0)); circle(fx, fy, 1.2, PATCH[k % 4]); } };
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A white iron bedstead (edged darker so it reads against pale walls) with an arched headboard and brass knobs, a
+    // ruffled white bed skirt to the floor, plump frilled pillows, and a patchwork quilt that drapes down the side and
+    // over the foot.
+    cottage: (o) => { const c = cl(o), iron = (T, a, b, w) => { T.line(a, b, '#9C978C', w + 1.2); T.line(a, b, CO.iron, w); }; return [
+      F(0, 0, 0.1, 1.6, (T) => { [0.03, 1.57].forEach((y) => { T.box(0.02, y - 0.03, 0, 0.06, 0.06, 1.25, CO.iron); const [kx, ky] = T.P(0.05, y, 1.29); circle(kx, ky, 2.8, '#C9A24A', '#8E6E2A'); });
+        const arch = (y) => 1.15 + 0.16 * Math.sin(Math.PI * (y - 0.03) / 1.54);
+        for (let k = 0; k < 16; k++) { const y0 = 0.03 + 1.54 * k / 16, y1 = 0.03 + 1.54 * (k + 1) / 16; iron(T, [0.05, y0, arch(y0)], [0.05, y1, arch(y1)], 2.2); }
+        iron(T, [0.05, 0.03, 0.52], [0.05, 1.57, 0.52], 2.2);
+        for (let k = 1; k < 9; k++) { const y = 1.6 * k / 9; iron(T, [0.05, y, 0.52], [0.05, y, arch(y)], 1.2); } }),
+      // The bed skirt: white with gathered ruffle lines, from the floor to the mattress.
+      F(0.1, 0.02, 2.44, 1.58, (T) => { T.box(0.1, 0.02, 0, 2.34, 1.56, 0.3, '#FBF8F1');
+        for (let x = 0.14; x < 2.42; x += 0.07) T.line([x, 1.581, 0.02], [x, 1.581, 0.28], 'rgba(150,140,125,.35)', 0.8);
+        for (let y = 0.06; y < 1.56; y += 0.07) T.line([2.441, y, 0.02], [2.441, y, 0.28], 'rgba(150,140,125,.35)', 0.8); }),
+      B(0.1, 0.04, 0.3, 2.34, 1.52, 0.2, '#FBF7EE', { name: 'mattress' }),
+      // Plump pillows: a softer box, a rounded top, and a white frill round the front edge.
+      F(0.1, 0.04, 2.44, 1.56, (T) => [0.06, 0.82].forEach((y) => { T.box(0.14, y, 0.5, 0.38, 0.7, 0.1, shade(c, 0.45));
+        const [ax, ay] = T.P(0.33, y + 0.35, 0.62); ell(ax, ay, 15, 5, shade(c, 0.55)); T.line([0.52, y, 0.5], [0.52, y + 0.7, 0.5], '#FFFFFF', 2.4); T.line([0.52, y, 0.6], [0.52, y + 0.7, 0.6], '#FFFFFF', 1.6); }), { onTop: true }),
+      // The quilt: patches on top, the near side and the foot hanging down over the skirt, with a scalloped hem.
+      B(0.8, 0.02, 0.5, 1.66, 1.56, 0.05, c), B(0.8, 0.02, 0.55, 1.66, 1.56, 0.01, c, { cover: true }),
+      F(0.8, 0, 2.5, 1.6, (T) => { const cols = [c, ...PATCH.filter((p) => p !== c)], patch = (q, k) => T.poly(q, cols[k % cols.length], 'rgba(255,255,255,.65)', 0.6);
+        for (let i = 0; i < 6; i++) for (let j = 0; j < 5; j++) { const x = 0.82 + i * 0.27, y = 0.04 + j * 0.305; patch([[x, y, 0.561], [x + 0.26, y, 0.561], [x + 0.26, y + 0.295, 0.561], [x, y + 0.295, 0.561]], i * 2 + j * 3); }
+        for (let i = 0; i < 6; i++) { const x = 0.82 + i * 0.27; patch([[x, 1.585, 0.56], [x + 0.26, 1.585, 0.56], [x + 0.26, 1.585, 0.24], [x, 1.585, 0.24]], i * 2 + 4 * 3 + 1); }
+        for (let j = 0; j < 5; j++) { const y = 0.04 + j * 0.305; patch([[2.465, y, 0.56], [2.465, y + 0.295, 0.56], [2.465, y + 0.295, 0.24], [2.465, y, 0.24]], 5 * 2 + j * 3 + 1); }
+        for (let x = 0.82; x < 2.44; x += 0.09) { const [hx, hy] = T.P(x + 0.045, 1.585, 0.24); ctx.beginPath(); ctx.arc(hx, hy, 2.2, 0, Math.PI); ctx.fillStyle = shade(c, -0.1); ctx.fill(); } }, { onTop: true }),
+      F(2.42, 0, 2.5, 1.6, (T) => { [0.03, 1.57].forEach((y) => { T.box(2.42, y - 0.03, 0, 0.06, 0.06, 0.82, CO.iron); const [kx, ky] = T.P(2.45, y, 0.86); circle(kx, ky, 2.6, '#C9A24A', '#8E6E2A'); }); iron(T, [2.47, 0.03, 0.78], [2.47, 1.57, 0.78], 2.2); for (let k = 1; k < 9; k++) iron(T, [2.47, 1.6 * k / 9, 0.6], [2.47, 1.6 * k / 9, 0.78], 1.2); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A painted pine table with a drawer and a ceramic knob, a lamp with a floral shade and a jar of wildflowers.
+    cottage: (T, o) => { const lit = isLit(o.id), c = cl(o);
+      [[0.04, 0.04], [0.37, 0.04], [0.04, 0.37], [0.37, 0.37]].forEach(([x, y]) => T.line([x, y, 0], [x, y, 0.38], shade(c, -0.15), 2.4));
+      T.box(0.02, 0.02, 0.36, 0.41, 0.41, 0.12, c); T.box(0, 0, 0.48, 0.45, 0.45, 0.03, shade(c, 0.08)); const [kx, ky] = T.P(0.22, 0.431, 0.42); circle(kx, ky, 1.8, '#FFFFFF');
+      T.box(0.1, 0.1, 0.51, 0.1, 0.1, 0.12, CO.cream); const [sx, sy] = T.P(0.15, 0.15, 0.76); if (lit) ell(sx, sy + 6, 14, 8, 'rgba(255,226,168,.3)');
+      ctx.beginPath(); ctx.moveTo(sx - 5, sy - 5); ctx.lineTo(sx + 5, sy - 5); ctx.lineTo(sx + 8, sy + 4); ctx.lineTo(sx - 8, sy + 4); ctx.closePath(); ctx.fillStyle = lit ? '#FFF4DE' : CO.cream; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 0.8; ctx.stroke();
+      [[-4, -1], [0, 1], [4, -2], [-1, -3]].forEach(([dx, dy], k) => circle(sx + dx, sy + dy, 1.1, PATCH[k]));
+      T.box(0.3, 0.28, 0.51, 0.07, 0.07, 0.08, 'rgba(200,225,230,.7)'); [[-3, -2, CO.rose], [0, -5, CO.butter], [3, -2, CO.blue]].forEach(([dx, dy, col]) => { const [fx, fy] = T.P(0.335, 0.315, 0.66); limb(fx, fy + 6, fx + dx, fy + dy, '#6E8F5A', 0.8); circle(fx + dx, fy + dy, 1.8, col); }); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A painted chest with hand-painted flowers on the drawers, white ceramic knobs, a lace runner and a jug of wildflowers.
+    cottage: (T, o) => { const c = cl(o);
+      T.box(0.02, 0.02, 0, 1.16, 0.46, 0.08, shade(c, -0.15)); T.box(0, 0, 0.08, 1.2, 0.5, 0.74, c);
+      [0.32, 0.56].forEach((z) => T.line([0.02, 0.501, z], [1.18, 0.501, z], 'rgba(0,0,0,.2)', 1));
+      [[0.25, 0.2], [0.95, 0.2], [0.25, 0.44], [0.95, 0.44], [0.25, 0.68], [0.95, 0.68]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.502, z); circle(kx, ky, 2, '#FFFFFF'); circle(kx, ky, 0.8, CO.rose); });
+      // A painted posy in the middle of each drawer: three flowers on short stems with a leaf.
+      [0.2, 0.44, 0.68].forEach((z, r) => { const [fx, fy] = T.P(0.6, 0.502, z - 0.03); [[-4, -3], [0, -6], [4, -3]].forEach(([dx, dy], k) => { limb(fx, fy + 3, fx + dx, fy + dy, '#6E8F5A', 0.8); circle(fx + dx, fy + dy, 1.9, PATCH[(k + r) % 4]); circle(fx + dx, fy + dy, 0.7, '#FFFFFF'); }); ell(fx + 3, fy + 1, 1.8, 0.8, '#6E8F5A', null, 0.5); });
+      T.box(-0.02, -0.02, 0.82, 1.24, 0.54, 0.03, shade(c, 0.08)); T.poly([[0.2, 0.04, 0.851], [1.0, 0.04, 0.851], [1.0, 0.46, 0.851], [0.2, 0.46, 0.851]], CO.lace, 'rgba(0,0,0,.08)', 0.6);
+      T.box(0.82, 0.16, 0.85, 0.14, 0.14, 0.18, CO.blue); [[-4, -6, CO.rose], [0, -9, CO.butter], [4, -6, '#FFFFFF'], [-1, -4, CO.sage]].forEach(([dx, dy, col]) => { const [fx, fy] = T.P(0.89, 0.23, 1.04); limb(fx, fy + 4, fx + dx, fy + dy, '#6E8F5A', 0.8); circle(fx + dx, fy + dy, 2, col); }); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A white toilet with a pine seat under a high cistern on the wall with a pull chain.
+    cottage: (T, o) => {
+      T.box(0.05, 0, 1.45, 0.32, 0.14, 0.2, CO.iron); T.line([0.21, 0.07, 1.45], [0.21, 0.07, 0.4], '#9AA3A8', 1.6); T.line([0.33, 0.14, 1.5], [0.33, 0.16, 1.05], '#9AA3A8', 0.8); const [hx, hy] = T.P(0.33, 0.16, 1.03); circle(hx, hy, 2, CO.pine);
+      T.box(0.09, 0.08, 0, 0.24, 0.3, 0.34, '#FFFFFF'); const [bx, by] = T.P(0.21, 0.4, 0.3); ell(bx, by, 7.5, 6, '#FFFFFF', 'rgba(0,0,0,.12)');
+      const [sx, sy] = T.P(0.21, 0.38, 0.385); ell(sx, sy, 7, 4, CO.pine); ell(sx, sy, 5, 2.8, '#E8EEF0');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A sink in a gathered gingham skirt, a pine top, copper taps and a jug and soap dish.
+    cottage: (T, o) => { const c = cl(o);
+      T.box(0.02, 0.02, 0, 0.96, 0.46, 0.78, c); for (let k = 0; k <= 12; k++) T.line([0.02 + k * 0.08, 0.481, 0.02], [0.02 + k * 0.08, 0.481, 0.76], 'rgba(255,255,255,.45)', 1.2); for (let z = 0.1; z < 0.76; z += 0.16) T.line([0.02, 0.482, z], [0.98, 0.482, z], 'rgba(255,255,255,.35)', 1.2);
+      T.box(-0.02, -0.02, 0.78, 1.04, 0.54, 0.05, CO.pine); const [vx, vy] = T.P(0.5, 0.26, 0.831); ell(vx, vy, 10, 5, '#FFFFFF', 'rgba(0,0,0,.15)'); ell(vx, vy, 7, 3.2, '#DCE6E8');
+      [0.38, 0.62].forEach((x) => { T.line([x, 0.05, 0.83], [x, 0.05, 0.98], CO.copper, 2); T.line([x, 0.05, 0.98], [x, 0.14, 0.95], CO.copper, 2); const [cx, cy] = T.P(x, 0.05, 1.0); circle(cx, cy, 2, CO.copper); });
+      T.box(0.8, 0.25, 0.83, 0.12, 0.12, 0.16, CO.blue); T.box(0.1, 0.3, 0.83, 0.14, 0.1, 0.02, '#FFFFFF'); const [px, py] = T.P(0.17, 0.35, 0.86); ell(px, py, 3, 1.6, CO.rose); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // Whitewashed beadboard walls, exposed copper pipes to a big rain head, a pine duckboard, and a floral curtain on a rail.
+    cottage: (o) => [F(0, 0, 1.18, 1.18, (T) => {
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, '#E6E2D8'); for (let k = 0; k < 7; k++) T.box(0.25, 0.25 + k * 0.1, 0.06, 0.7, 0.06, 0.03, CO.pine);
+        T.box(0, 0, 0.06, 1.18, 0.06, 2.04, '#F7F4EC'); for (let k = 1; k < 16; k++) T.line([1.18 * k / 16, 0.061, 0.06], [1.18 * k / 16, 0.061, 1.3], 'rgba(0,0,0,.12)', 0.8); T.line([0, 0.061, 1.3], [1.18, 0.061, 1.3], CO.pine, 2);
+        T.line([0.6, 0.07, 0.9], [0.6, 0.07, 2.08], CO.copper, 2.2); T.line([0.6, 0.07, 2.08], [0.6, 0.45, 2.08], CO.copper, 2.2); const [hx, hy] = T.P(0.6, 0.5, 2.05); ell(hx, hy, 10, 5, CO.copper, shade(CO.copper, -0.3));
+        [[0.48, 1.0], [0.72, 1.0]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.07, z); circle(kx, ky, 2.6, CO.copper); circle(kx, ky, 1, '#FFFFFF'); });
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.5); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
+      }, { name: 'tray' }),
+      F(0, 1.14, 1.18, 1.2, (T, ob) => { const c = cl(ob); T.line([0, 1.17, 2.06], [1.18, 1.17, 2.06], CO.copper, 1.8);
+        const open = usingSlot(T.o.id + ':s') ? 0.45 : 0.85;
+        for (let k = 0; k < 10; k++) { const y0 = k * open / 10 * 1.18, y1 = (k + 1) * open / 10 * 1.18; T.poly([[y0, 1.17 + (k % 2) * 0.02, 0.2], [y1, 1.17 + ((k + 1) % 2) * 0.02, 0.2], [y1, 1.17 + ((k + 1) % 2) * 0.02, 2.04], [y0, 1.17 + (k % 2) * 0.02, 2.04]], k % 2 ? c : shade(c, -0.08)); }
+        ditsy(T, 0.02, open * 1.18, 1.2, 0.3, 1.95, 24); })],
+  });
+
+  // Mid-Century: walnut on tapered legs, cane, mustard and teal, chrome and pastel tile.
+  const MC = { walnut: '#7A4E2D', walnutDark: '#5E3A20', walnutLite: '#9A6A44', cane: '#D9BC86', mustard: '#D9A441', teal: '#3F7F7A', orange: '#D2693A', chrome: '#C9CED6', cream: '#F3E6CC' };
+  const taperLegs = (T, pts, z, col) => pts.forEach(([x, y, dx, dy]) => T.line([x, y, z], [x + dx, y + dy, 0], col, 2.4));
+  // A cane panel on a face that looks along +x: the panel, then a fine weave of straight and diagonal strands clipped to it.
+  const cane = (T, x, y0, y1, z0, z1) => { const q = [[x, y0, z0], [x, y1, z0], [x, y1, z1], [x, y0, z1]]; T.poly(q, MC.cane);
+    ctx.save(); ctx.beginPath(); q.forEach((p, k) => { const [px, py] = T.P(...p); k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }); ctx.closePath(); ctx.clip();
+    const st = 'rgba(120,80,30,.4)', h = z1 - z0;
+    for (let y = y0; y <= y1; y += 0.06) T.line([x + 0.001, y, z0], [x + 0.001, y, z1], st, 0.6);
+    for (let z = z0; z <= z1; z += 0.06) T.line([x + 0.001, y0, z], [x + 0.001, y1, z], st, 0.6);
+    for (let y = y0 - h; y <= y1; y += 0.085) { T.line([x + 0.001, y, z0], [x + 0.001, y + h, z1], st, 0.6); T.line([x + 0.001, y + h, z0], [x + 0.001, y, z1], st, 0.6); }
+    ctx.restore(); };
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A walnut bed on tapered legs with a cane-panelled headboard, a full mattress, two pillows and a cover in the piece's colour.
+    midcentury: (o) => { const c = cl(o); return [
+      F(0, 0, 0.12, 1.6, (T) => { T.box(0, 0, 0.1, 0.12, 1.6, 1.0, MC.walnut); cane(T, 0.121, 0.12, 1.48, 0.42, 0.96); }),
+      F(0.12, 0, 2.5, 1.6, (T) => taperLegs(T, [[0.2, 0.1, -0.03, -0.03], [2.4, 0.1, 0.03, -0.03], [0.2, 1.5, -0.03, 0.03], [2.4, 1.5, 0.03, 0.03]], 0.14, MC.walnutDark)),
+      B(0.12, 0.02, 0.14, 2.36, 1.56, 0.16, MC.walnut), B(0.15, 0.05, 0.3, 2.32, 1.5, 0.18, '#F7F3EA', { name: 'mattress' }),
+      pillowsOn([0.15, 0.05, 0.3, 2.32, 1.5], [[0.16, 0.05, 0.48, 0.4, 0.72, 0.13, shade(c, 0.5)], [0.16, 0.83, 0.48, 0.4, 0.72, 0.13, shade(c, 0.5)]]),
+      B(0.86, 0.03, 0.48, 1.62, 1.54, 0.06, c), B(0.86, 0.03, 0.54, 1.62, 1.54, 0.01, c, { cover: true }),
+      F(0.86, 0, 2.5, 1.6, (T) => { T.poly([[1.95, 0.03, 0.551], [2.3, 0.03, 0.551], [2.3, 1.57, 0.551], [1.95, 1.57, 0.551]], MC.orange); for (let k = 0; k < 6; k++) T.line([1.97 + k * 0.06, 0.03, 0.552], [1.97 + k * 0.06, 1.57, 0.552], 'rgba(255,255,255,.35)', 0.8); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A walnut nightstand on splayed legs with a long recessed pull, and a white mushroom lamp.
+    midcentury: (T, o) => { const lit = isLit(o.id), c = cl(o);
+      taperLegs(T, [[0.06, 0.06, -0.03, -0.03], [0.39, 0.06, 0.03, -0.03], [0.06, 0.39, -0.03, 0.03], [0.39, 0.39, 0.03, 0.03]], 0.2, MC.walnutDark);
+      T.box(0.02, 0.02, 0.2, 0.41, 0.41, 0.3, c); T.poly([[0.08, 0.431, 0.38], [0.37, 0.431, 0.38], [0.37, 0.431, 0.4], [0.08, 0.431, 0.4]], MC.walnutDark);
+      T.box(0.15, 0.15, 0.5, 0.06, 0.06, 0.16, '#FFFFFF'); const [lx, ly] = T.P(0.18, 0.18, 0.72); if (lit) circle(lx, ly + 4, 16, 'rgba(255,214,150,.3)');
+      ctx.beginPath(); ctx.ellipse(lx, ly + 3, 10, 9, 0, Math.PI, Math.PI * 2); ctx.ellipse(lx, ly + 3, 10, 2.5, 0, 0, Math.PI); ctx.closePath(); ctx.fillStyle = lit ? '#FFF6E6' : '#F7F4EE'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 0.8; ctx.stroke(); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A long, low walnut dresser on splayed legs: six drawers with recessed pulls, a ceramic vase and a brass sunburst.
+    midcentury: (T, o) => { const c = cl(o);
+      taperLegs(T, [[0.08, 0.08, -0.04, -0.04], [1.12, 0.08, 0.04, -0.04], [0.08, 0.42, -0.04, 0.04], [1.12, 0.42, 0.04, 0.04]], 0.16, MC.walnutDark);
+      T.box(0, 0, 0.16, 1.2, 0.5, 0.64, c); T.line([0.6, 0.501, 0.16], [0.6, 0.501, 0.8], 'rgba(0,0,0,.3)', 1); [0.37, 0.58].forEach((z) => T.line([0.01, 0.501, z], [1.19, 0.501, z], 'rgba(0,0,0,.3)', 1));
+      [[0.12, 0.48], [0.72, 1.08]].forEach(([a, b]) => [0.33, 0.54, 0.75].forEach((z) => T.poly([[a, 0.502, z - 0.025], [b, 0.502, z - 0.025], [b, 0.502, z], [a, 0.502, z]], MC.walnutDark)));
+      T.box(-0.01, -0.01, 0.8, 1.22, 0.52, 0.02, MC.walnutLite);
+      T.box(0.2, 0.18, 0.82, 0.1, 0.1, 0.24, MC.teal); const [vx, vy] = T.P(0.25, 0.23, 1.06); ell(vx, vy, 3, 1.4, shade(MC.teal, -0.3));
+      const [sx, sy] = T.P(0.85, 0.2, 1.05); for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6; limb(sx, sy, sx + Math.cos(a) * 9, sy + Math.sin(a) * 9, '#C9A24A', 1); } circle(sx, sy, 3, '#E0C26E'); T.line([0.85, 0.2, 0.82], [0.85, 0.2, 0.98], '#C9A24A', 1.4); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A pastel toilet in the piece's colour, with a chrome flush handle on the tank.
+    midcentury: (T, o) => { const c = cl(o);
+      T.box(0.04, 0, 0.36, 0.34, 0.16, 0.38, c); T.box(0.02, -0.01, 0.74, 0.38, 0.18, 0.03, shade(c, 0.08)); T.line([0.06, 0.161, 0.68], [0.13, 0.161, 0.68], MC.chrome, 1.8);
+      T.box(0.09, 0.16, 0, 0.24, 0.26, 0.32, c); const [bx, by] = T.P(0.21, 0.42, 0.3); ell(bx, by, 7.5, 6, c, 'rgba(0,0,0,.12)');
+      const [sx, sy] = T.P(0.21, 0.4, 0.385); ell(sx, sy, 7, 4, shade(c, -0.1)); ell(sx, sy, 5, 2.8, '#E8EEF0');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A laminate vanity in the piece's colour on chrome legs, a round basin and chrome tap, and a square-tile backsplash.
+    midcentury: (T, o) => { const c = cl(o);
+      [[0.06, 0.06], [0.94, 0.06], [0.06, 0.44], [0.94, 0.44]].forEach(([x, y]) => T.line([x, y, 0], [x, y, 0.3], MC.chrome, 2));
+      T.box(0, 0, 0.3, 1.0, 0.5, 0.5, c); T.line([0.5, 0.501, 0.32], [0.5, 0.501, 0.78], 'rgba(0,0,0,.25)', 1); [0.44, 0.56].forEach((x) => T.line([x, 0.502, 0.5], [x, 0.502, 0.62], MC.chrome, 1.8));
+      T.box(-0.02, -0.02, 0.8, 1.04, 0.54, 0.04, '#F4F1EA'); T.line([-0.02, 0.521, 0.82], [1.02, 0.521, 0.82], MC.chrome, 1.2);
+      for (let i = 0; i < 10; i++) for (let j = 0; j < 2; j++) T.poly([[i * 0.1 + 0.005, 0.001, 0.845 + j * 0.1], [i * 0.1 + 0.095, 0.001, 0.845 + j * 0.1], [i * 0.1 + 0.095, 0.001, 0.94 + j * 0.1], [i * 0.1 + 0.005, 0.001, 0.94 + j * 0.1]], (i + j) % 2 ? shade(c, 0.3) : '#FFFFFF');
+      const [vx, vy] = T.P(0.5, 0.27, 0.841); ell(vx, vy, 9, 4.5, '#FFFFFF', 'rgba(0,0,0,.15)'); T.line([0.5, 0.06, 0.84], [0.5, 0.06, 0.98], MC.chrome, 2); T.line([0.5, 0.06, 0.98], [0.5, 0.18, 0.96], MC.chrome, 2); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // Square pastel tile in the piece's colour with a black pencil trim, a chrome head, and a sliding door of reeded glass.
+    midcentury: (o) => [F(0, 0, 1.18, 1.18, (T, ob) => { const c = cl(ob);
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, '#FFFFFF'); for (let i = 0; i < 12; i++) for (let j = 0; j < 12; j++) if ((i + j) % 2) T.poly([[i * 0.098, j * 0.098, 0.061], [i * 0.098 + 0.098, j * 0.098, 0.061], [i * 0.098 + 0.098, j * 0.098 + 0.098, 0.061], [i * 0.098, j * 0.098 + 0.098, 0.061]], shade(c, 0.2));
+        T.box(0, 0, 0.06, 1.18, 0.06, 2.04, c); for (let k = 1; k < 12; k++) T.line([1.18 * k / 12, 0.061, 0.06], [1.18 * k / 12, 0.061, 2.1], 'rgba(255,255,255,.55)', 0.7); for (let z = 0.16; z < 2.1; z += 0.1) T.line([0, 0.061, z], [1.18, 0.061, z], 'rgba(255,255,255,.55)', 0.7); T.line([0, 0.062, 1.2], [1.18, 0.062, 1.2], '#1E1E22', 2.2);
+        T.line([0.6, 0.06, 1.9], [0.6, 0.3, 1.95], MC.chrome, 2.2); const [hx, hy] = T.P(0.6, 0.32, 1.94); ell(hx, hy, 6, 3, MC.chrome, '#8E939A'); [[0.48, 1.05], [0.72, 1.05]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.062, z); circle(kx, ky, 2.4, MC.chrome); });
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.32); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.85, 1); }
+      }, { name: 'tray' }),
+      F(0, 1.16, 1.18, 1.2, (T) => { const open = usingSlot(T.o.id + ':s') ? 0.55 : 0; T.line([0, 1.18, 2.02], [1.18, 1.18, 2.02], MC.chrome, 2);
+        [[0, 0.6], [0.58, 1.18]].forEach(([a, b], k) => { const s0 = k ? a - open : a, s1 = k ? b - open : b; T.poly([[s0, 1.18, 0.06], [s1, 1.18, 0.06], [s1, 1.18, 2.0], [s0, 1.18, 2.0]], 'rgba(220,235,238,.55)', MC.chrome, 1.2); for (let u = s0 + 0.03; u < s1; u += 0.04) T.line([u, 1.18, 0.1], [u, 1.18, 1.96], 'rgba(255,255,255,.35)', 0.7); }); }),
+      F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0.06, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.02], [1.18, 0.06, 2.02]], 'rgba(220,235,238,.5)', MC.chrome, 1.2); for (let v = 0.09; v < 1.18; v += 0.04) T.line([1.18, v, 0.1], [1.18, v, 1.98], 'rgba(255,255,255,.3)', 0.7); T.line([1.18, 0.06, 2.02], [1.18, 1.18, 2.02], MC.chrome, 2); }, { onTop: true })],
+  });
+
+  // Hollywood Regency: blush velvet, black lacquer, mirror, gold and a white orchid.
+  const RG = { black: '#151517', white: '#FAF7F2', gold: '#D4AF37', goldLite: '#EBD27A', mirror: '#DCE6EE', mirrorDark: '#B9C8D4', marble: '#F1EEE9' };
+  const glint = (T, x, y, z0, z1) => T.line([x, y, z0], [x, y, z1], 'rgba(255,255,255,.7)', 1.4);
+  const mirrorFace = (T, a, b, z0, z1, y) => { T.poly([[a, y, z0], [b, y, z0], [b, y, z1], [a, y, z1]], RG.mirror, RG.mirrorDark, 1); T.line([a + (b - a) * 0.2, y + 0.001, z0 + (z1 - z0) * 0.2], [a + (b - a) * 0.45, y + 0.001, z0 + (z1 - z0) * 0.8], 'rgba(255,255,255,.75)', 1.4); };
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A towering channel-tufted headboard in the piece's colour with a gold scalloped crest, black lacquer base on gold
+    // feet, white bedding with a black border, and a lumbar cushion to match the headboard.
+    regency: (o) => { const c = cl(o); return [
+      F(0, 0, 0.16, 1.6, (T) => { T.box(0, 0, 0, 0.16, 1.6, 1.6, c); for (let k = 1; k < 12; k++) T.line([0.161, 1.6 * k / 12, 0.36], [0.161, 1.6 * k / 12, 1.54], 'rgba(0,0,0,.2)', 1.2);
+        // The crest: six gold scallops standing on the top edge, drawn along the headboard so they follow it at any rotation.
+        for (let k = 0; k < 6; k++) { const y0 = k * 1.6 / 6, pts = []; for (let m = 0; m <= 10; m++) { const f = m / 10; pts.push([0.08, y0 + f * 1.6 / 6, 1.6 + Math.sin(f * Math.PI) * 0.12]); }
+          T.poly([...pts, [0.08, y0 + 1.6 / 6, 1.6], [0.08, y0, 1.6]], 'rgba(212,175,55,.25)'); for (let m = 1; m < pts.length; m++) T.line(pts[m - 1], pts[m], RG.gold, 2); }
+        T.line([0.162, 0, 1.6], [0.162, 1.6, 1.6], RG.gold, 2.2); T.line([0.162, 0.005, 0.36], [0.162, 0.005, 1.6], RG.gold, 1.6); T.line([0.162, 1.595, 0.36], [0.162, 1.595, 1.6], RG.gold, 1.6); }),
+      F(0.16, 0, 2.5, 1.6, (T) => [[0.22, 0.06], [2.44, 0.06], [0.22, 1.54], [2.44, 1.54]].forEach(([x, y]) => T.box(x - 0.03, y - 0.03, 0, 0.06, 0.06, 0.1, RG.gold))),
+      B(0.16, 0.02, 0.1, 2.34, 1.56, 0.22, RG.black), B(0.16, 0.02, 0.32, 2.34, 1.56, 0.015, RG.gold),
+      B(0.18, 0.05, 0.335, 2.3, 1.5, 0.18, RG.white, { name: 'mattress' }),
+      pillowsOn([0.18, 0.05, 0.335, 2.3, 1.5], [[0.18, 0.05, 0.515, 0.16, 0.74, 0.3, RG.white], [0.18, 0.81, 0.515, 0.16, 0.74, 0.3, RG.white], [0.36, 0.45, 0.515, 0.16, 0.7, 0.18, c]]),
+      B(0.9, 0.05, 0.515, 1.58, 1.5, 0.06, RG.white), B(0.9, 0.05, 0.575, 1.58, 1.5, 0.01, RG.white, { cover: true }),
+      F(0.9, 0, 2.5, 1.6, (T) => { [[2.3, 2.36], [2.4, 2.44]].forEach(([a, b]) => T.poly([[a, 0.05, 0.586], [b, 0.05, 0.586], [b, 1.55, 0.586], [a, 1.55, 0.586]], RG.black)); T.poly([[0.9, 1.55, 0.585], [2.48, 1.55, 0.585], [2.48, 1.55, 0.45], [0.9, 1.55, 0.45]], RG.white, 'rgba(0,0,0,.1)', 0.6); T.line([0.9, 1.551, 0.47], [2.48, 1.551, 0.47], RG.black, 1.6); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A mirrored nightstand with a gold ring pull, on gold feet, and a gold gourd lamp with a white drum shade.
+    regency: (T, o) => { const lit = isLit(o.id);
+      [[0.05, 0.05], [0.38, 0.05], [0.05, 0.38], [0.38, 0.38]].forEach(([x, y]) => T.box(x - 0.02, y - 0.02, 0, 0.04, 0.04, 0.06, RG.gold));
+      T.box(0.02, 0.02, 0.06, 0.41, 0.41, 0.44, RG.mirrorDark); mirrorFace(T, 0.04, 0.41, 0.09, 0.47, 0.431); mirrorFace(T, 0.04, 0.41, 0.09, 0.47, 0.431);
+      const [rx, ry] = T.P(0.22, 0.432, 0.3); ctx.strokeStyle = RG.gold; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(rx, ry, 2.6, 0, Math.PI * 2); ctx.stroke();
+      T.box(0.02, 0.02, 0.5, 0.41, 0.41, 0.01, RG.gold);
+      const [gx, gy] = T.P(0.17, 0.17, 0.56); ell(gx, gy, 5, 5, RG.gold, shade(RG.gold, -0.3)); T.line([0.17, 0.17, 0.6], [0.17, 0.17, 0.7], RG.gold, 1.4);
+      const [sx, sy] = T.P(0.17, 0.17, 0.76); if (lit) ell(sx, sy + 6, 14, 8, 'rgba(255,226,168,.3)'); rr(sx - 8, sy - 6, 16, 11, 1.5, lit ? '#FFF6E6' : RG.white); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A mirrored chest of three drawers on gold legs, gold ring pulls, a gold tray and a white orchid.
+    regency: (T, o) => {
+      [[0.06, 0.06], [1.14, 0.06], [0.06, 0.44], [1.14, 0.44]].forEach(([x, y]) => T.line([x, y, 0], [x, y, 0.14], RG.gold, 2.6));
+      T.box(0, 0, 0.14, 1.2, 0.5, 0.68, RG.mirrorDark); [[0.16, 0.36], [0.38, 0.58], [0.6, 0.8]].forEach(([z0, z1]) => { mirrorFace(T, 0.02, 1.18, z0 + 0.01, z1 - 0.01, 0.501); const [rx, ry] = T.P(0.6, 0.502, (z0 + z1) / 2); ctx.strokeStyle = RG.gold; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(rx, ry, 2.8, 0, Math.PI * 2); ctx.stroke(); });
+      T.box(-0.01, -0.01, 0.82, 1.22, 0.52, 0.02, RG.mirror); T.box(0.15, 0.12, 0.84, 0.36, 0.24, 0.015, RG.gold);
+      T.box(0.88, 0.2, 0.84, 0.1, 0.1, 0.08, RG.white); T.line([0.93, 0.25, 0.92], [0.95, 0.24, 1.2], '#4E7A3A', 1.2); [[0, -2], [5, 1], [-4, 3], [2, 6]].forEach(([dx, dy]) => { const [fx, fy] = T.P(0.95, 0.24, 1.14); ell(fx + dx, fy + dy, 3, 2.2, '#FFFFFF', '#E6C4D8'); circle(fx + dx, fy + dy, 0.8, '#C2417A'); }); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A black toilet with a gold flush plate.
+    regency: (T, o) => {
+      T.box(0.04, 0, 0.36, 0.34, 0.16, 0.38, RG.black); T.box(0.02, -0.01, 0.74, 0.38, 0.18, 0.03, RG.black); T.poly([[0.15, 0.161, 0.58], [0.27, 0.161, 0.58], [0.27, 0.161, 0.66], [0.15, 0.161, 0.66]], RG.gold);
+      T.box(0.09, 0.16, 0, 0.24, 0.26, 0.32, RG.black); const [bx, by] = T.P(0.21, 0.42, 0.3); ell(bx, by, 7.5, 6, RG.black, '#000000');
+      const [sx, sy] = T.P(0.21, 0.4, 0.385); ell(sx, sy, 7, 4, '#2A2A2E'); ell(sx, sy, 5, 2.8, '#C8D2D8');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // Black lacquer on gold legs, a white marble top, a gold tap, and a blush hand towel on a gold ring.
+    regency: (T, o) => { const c = cl(o);
+      [[0.05, 0.05], [0.95, 0.05], [0.05, 0.45], [0.95, 0.45]].forEach(([x, y]) => T.line([x, y, 0], [x, y, 0.32], RG.gold, 2.4));
+      T.box(0, 0, 0.32, 1.0, 0.5, 0.46, RG.black); T.line([0.5, 0.501, 0.34], [0.5, 0.501, 0.76], 'rgba(255,255,255,.15)', 1); [0.44, 0.56].forEach((x) => { const [kx, ky] = T.P(x, 0.502, 0.55); circle(kx, ky, 1.8, RG.gold); });
+      T.box(-0.02, -0.02, 0.78, 1.04, 0.54, 0.04, RG.marble); T.line([0.1, 0.0, 0.821], [0.5, 0.5, 0.821], 'rgba(120,110,100,.3)', 0.8);
+      const [vx, vy] = T.P(0.5, 0.27, 0.821); ell(vx, vy, 9, 4.5, '#FFFFFF', 'rgba(0,0,0,.15)'); T.line([0.5, 0.05, 0.82], [0.5, 0.05, 1.0], RG.gold, 2.2); T.line([0.5, 0.05, 1.0], [0.5, 0.18, 0.97], RG.gold, 2.2);
+      const [tx, ty] = T.P(1.0, 0.25, 0.7); ctx.strokeStyle = RG.gold; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(tx, ty, 4, 0, Math.PI * 2); ctx.stroke(); T.poly([[1.002, 0.17, 0.66], [1.002, 0.33, 0.66], [1.002, 0.33, 0.4], [1.002, 0.17, 0.4]], c); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // Black subway tile with white grout, gold fixtures and a gold-framed glass door, on a white floor with black dots.
+    regency: (o) => [F(0, 0, 1.18, 1.18, (T) => {
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, RG.white); for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) { const [dx, dy] = T.P(0.07 + i * 0.13, 0.07 + j * 0.13, 0.061); ell(dx, dy, 1.6, 0.9, RG.black); }
+        T.box(0, 0, 0.06, 1.18, 0.06, 2.04, RG.black); for (let z = 0.06, r = 0; z < 2.1; z += 0.1, r++) { T.line([0, 0.061, z], [1.18, 0.061, z], 'rgba(255,255,255,.4)', 0.7); for (let u = (r % 2) * 0.1; u < 1.18; u += 0.2) T.line([u, 0.061, z], [u, 0.061, Math.min(2.1, z + 0.1)], 'rgba(255,255,255,.4)', 0.7); }
+        T.line([0.6, 0.06, 2.08], [0.6, 0.45, 2.08], RG.gold, 2.4); const [hx, hy] = T.P(0.6, 0.5, 2.06); ell(hx, hy, 9, 4.5, RG.gold, shade(RG.gold, -0.3)); [[0.48, 1.05], [0.72, 1.05]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.062, z); circle(kx, ky, 2.4, RG.gold); });
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.5); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
+      }, { name: 'tray' }),
+      F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [0, 1.18, 2.06]], 'rgba(200,226,232,.2)', RG.gold, 1.8); T.line([0.59, 1.18, 0.06], [0.59, 1.18, 2.06], RG.gold, 1.4); T.line([0.5, 1.18, 1.0], [0.5, 1.18, 1.3], RG.gold, 2.2); T.line([0.2, 1.18, 1.9], [0.45, 1.18, 1.4], 'rgba(255,255,255,.5)', 2); }),
+      F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [1.18, 0, 2.06]], 'rgba(200,226,232,.18)', RG.gold, 1.8); })],
+  });
+
+  // Alpine Chalet: honey logs, knotty pine, buffalo check, sheepskin, river stone and black iron.
+  const AL = { log: '#B07A45', logDark: '#8A5A30', logEnd: '#D9B07A', pine: '#C89A62', iron: '#2A2826', red: '#B3262E', cream: '#F2EADB', stone: '#9A948A', stoneDark: '#7E786E', sheep: '#F5F0E6' };
+  // A round log seen side-on along x or y: a box with rounded shading, and its end grain where it shows.
+  const logEnd = (T, x, y, z, r) => { const [ex, ey] = T.P(x, y, z); circle(ex, ey, r, AL.logEnd, AL.logDark); circle(ex, ey, r * 0.55, null, 'rgba(120,80,40,.5)'); };
+  const check = (T, x0, x1, y0, y1, z, base) => { T.poly([[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]], base); for (let x = x0; x < x1 - 0.01; x += 0.16) T.poly([[x, y0, z + 0.001], [Math.min(x1, x + 0.08), y0, z + 0.001], [Math.min(x1, x + 0.08), y1, z + 0.001], [x, y1, z + 0.001]], 'rgba(20,10,10,.32)'); for (let y = y0; y < y1 - 0.01; y += 0.16) T.poly([[x0, y, z + 0.002], [x1, y, z + 0.002], [x1, Math.min(y1, y + 0.08), z + 0.002], [x0, Math.min(y1, y + 0.08), z + 0.002]], 'rgba(20,10,10,.32)'); };
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A log bed: thick round posts, a headboard of stacked logs, a buffalo-check blanket in the piece's colour, a sheepskin
+    // over the foot, and flannel pillows.
+    chalet: (o) => { const c = cl(o); return [
+      F(0, 0, 0.18, 1.6, (T) => { for (let k = 0; k < 6; k++) { const z = 0.25 + k * 0.17; T.box(0.03, 0.08, z, 0.12, 1.44, 0.15, k % 2 ? AL.log : shade(AL.log, -0.06)); logEnd(T, 0.09, 1.52, z + 0.075, 4); }
+        [0.06, 1.54].forEach((y) => { T.box(0.02, y - 0.07, 0, 0.14, 0.14, 1.35, AL.logDark); logEnd(T, 0.09, y, 1.36, 5.5); }); }),
+      F(0.18, 0, 2.5, 1.6, (T) => [0.06, 1.54].forEach((y) => { T.box(2.36, y - 0.07, 0, 0.14, 0.14, 0.7, AL.logDark); logEnd(T, 2.43, y, 0.71, 5.5); }), { onTop: true }),
+      B(0.16, 0.02, 0.1, 2.24, 1.56, 0.2, AL.log), B(0.18, 0.05, 0.3, 2.2, 1.5, 0.2, AL.cream, { name: 'mattress' }),
+      pillowsOn([0.18, 0.05, 0.3, 2.2, 1.5], [[0.2, 0.06, 0.5, 0.4, 0.72, 0.14, shade(c, 0.35)], [0.2, 0.82, 0.5, 0.4, 0.72, 0.14, shade(c, 0.35)]]),
+      B(0.86, 0.03, 0.5, 1.5, 1.54, 0.05, c), B(0.86, 0.03, 0.55, 1.5, 1.54, 0.01, c, { cover: true }),
+      F(0.86, 0, 2.36, 1.6, (T) => { check(T, 0.86, 2.36, 0.03, 1.57, 0.561, c); T.poly([[0.86, 1.57, 0.56], [2.36, 1.57, 0.56], [2.36, 1.57, 0.34], [0.86, 1.57, 0.34]], shade(c, -0.12));
+        // A cream cable-knit throw folded across the foot, hanging over the near side.
+        T.poly([[1.98, 0.03, 0.575], [2.3, 0.03, 0.575], [2.3, 1.58, 0.575], [1.98, 1.58, 0.575]], AL.sheep, 'rgba(0,0,0,.1)', 0.8); T.poly([[1.98, 1.58, 0.575], [2.3, 1.58, 0.575], [2.3, 1.58, 0.32], [1.98, 1.58, 0.32]], shade(AL.sheep, -0.06));
+        [2.06, 2.14, 2.22].forEach((x) => { for (let y = 0.05; y < 1.56; y += 0.08) T.line([x - 0.02, y, 0.576], [x + 0.02, y + 0.04, 0.576], 'rgba(150,135,110,.45)', 0.8); }); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A tree-stump side table with bark and rings, and a black iron lantern with a candle glow.
+    chalet: (T, o) => { const lit = isLit(o.id);
+      const [bx, by] = T.P(0.22, 0.22, 0), [tx, ty] = T.P(0.22, 0.22, 0.5); ctx.fillStyle = AL.logDark; ctx.fillRect(bx - 13, ty, 26, by - ty); ctx.strokeStyle = 'rgba(40,20,5,.35)'; ctx.lineWidth = 1; for (let k = -10; k <= 10; k += 5) { ctx.beginPath(); ctx.moveTo(bx + k, ty + 3); ctx.lineTo(bx + k + 1, by - 2); ctx.stroke(); }
+      ell(bx, by, 13, 6.5, AL.logDark); ell(tx, ty, 13, 6.5, AL.logEnd, AL.logDark); [9, 6, 3].forEach((r) => ell(tx, ty, r, r / 2, null, 'rgba(120,80,40,.45)'));
+      T.box(0.14, 0.14, 0.5, 0.14, 0.14, 0.2, 'rgba(40,38,36,.35)'); T.line([0.14, 0.14, 0.5], [0.14, 0.14, 0.7], AL.iron, 1.4); T.line([0.28, 0.28, 0.5], [0.28, 0.28, 0.7], AL.iron, 1.4); T.box(0.13, 0.13, 0.7, 0.16, 0.16, 0.03, AL.iron);
+      const [lx, ly] = T.P(0.21, 0.21, 0.6); if (lit) { circle(lx, ly, 14, 'rgba(255,190,110,.28)'); circle(lx, ly, 3, '#FFD27A'); } else circle(lx, ly, 2, '#E8DCC4'); const [hx, hy] = T.P(0.21, 0.21, 0.76); ctx.strokeStyle = AL.iron; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(hx, hy, 3, Math.PI, 0); ctx.stroke(); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A rough-hewn pine chest with black iron strap hinges and ring pulls, a candle and a bowl of pinecones.
+    chalet: (T, o) => { const c = cl(o);
+      T.box(0, 0, 0, 1.2, 0.5, 0.82, c); for (let k = 0; k < 6; k++) T.line([0.01 + k * 0.2, 0.501, 0.02], [0.01 + k * 0.2, 0.501, 0.8], 'rgba(60,35,10,.22)', 0.8); [[0.25, 0.3], [0.85, 0.6]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.501, z); ell(kx, ky, 2.4, 1.4, 'rgba(90,55,20,.45)'); });
+      [0.3, 0.56].forEach((z) => T.line([0.01, 0.501, z], [1.19, 0.501, z], 'rgba(40,20,5,.4)', 1.2));
+      [0.17, 0.43, 0.69].forEach((z) => { [0.04, 1.02].forEach((x) => T.poly([[x, 0.502, z - 0.03], [x + 0.14, 0.502, z - 0.03], [x + 0.14, 0.502, z + 0.03], [x, 0.502, z + 0.03]], AL.iron)); const [rx, ry] = T.P(0.6, 0.503, z); ctx.strokeStyle = AL.iron; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(rx, ry + 1.5, 2, 0, Math.PI * 2); ctx.stroke(); });
+      T.box(-0.03, -0.03, 0.82, 1.26, 0.56, 0.06, shade(c, -0.08));
+      T.box(0.2, 0.2, 0.88, 0.08, 0.08, 0.12, AL.cream); const [fx, fy] = T.P(0.24, 0.24, 1.03); circle(fx, fy, 3, 'rgba(255,200,120,.35)'); ell(fx, fy, 1.2, 2.2, '#FFC861');
+      const [px, py] = T.P(0.85, 0.25, 0.9); ell(px, py, 9, 4, AL.logDark); [[-4, -3], [3, -3], [0, -6], [-1, -1]].forEach(([dx, dy]) => ell(px + dx, py + dy, 2.6, 3.2, '#6E4A28', '#4A3018')); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A white toilet with a knotty pine seat and a pine-boxed tank.
+    chalet: (T, o) => {
+      T.box(0.04, 0, 0.36, 0.34, 0.16, 0.42, AL.pine); for (let k = 1; k < 4; k++) T.line([0.04 + k * 0.085, 0.161, 0.37], [0.04 + k * 0.085, 0.161, 0.77], 'rgba(60,35,10,.3)', 0.8); T.line([0.06, 0.161, 0.7], [0.13, 0.161, 0.7], AL.iron, 1.6);
+      T.box(0.09, 0.16, 0, 0.24, 0.26, 0.32, '#FFFFFF'); const [bx, by] = T.P(0.21, 0.42, 0.3); ell(bx, by, 7.5, 6, '#FFFFFF', 'rgba(0,0,0,.12)');
+      const [sx, sy] = T.P(0.21, 0.4, 0.385); ell(sx, sy, 7, 4, AL.pine); ell(sx, sy, 5, 2.8, '#E8EEF0');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A hammered copper basin on a thick pine plank over a log-legged stand, a black iron tap and a wool towel.
+    chalet: (T, o) => { const c = cl(o);
+      [[0.08, 0.08], [0.92, 0.08], [0.08, 0.42], [0.92, 0.42]].forEach(([x, y]) => { T.box(x - 0.05, y - 0.05, 0, 0.1, 0.1, 0.74, AL.logDark); });
+      T.box(0.06, 0.06, 0.2, 0.88, 0.38, 0.04, AL.pine); T.box(0.15, 0.12, 0.24, 0.3, 0.24, 0.12, AL.red); T.box(0.55, 0.12, 0.24, 0.28, 0.24, 0.1, AL.cream);
+      T.box(-0.03, -0.02, 0.74, 1.06, 0.54, 0.08, c); const [vx, vy] = T.P(0.5, 0.27, 0.82); ell(vx, vy + 3, 11, 6, '#9A5A30'); ell(vx, vy, 11, 5.5, '#C27A45', '#8A4A20'); ell(vx, vy, 8, 3.8, '#A8653A');
+      T.line([0.5, 0.04, 0.82], [0.5, 0.04, 1.0], AL.iron, 2.2); T.line([0.5, 0.04, 1.0], [0.5, 0.16, 0.98], AL.iron, 2.2); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // River-stone walls, a cedar slat floor, black iron pipes to a big rain head, and a frosted glass door.
+    chalet: (o) => [F(0, 0, 1.18, 1.18, (T) => {
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, AL.logDark); for (let k = 0; k < 9; k++) T.box(0.04 + k * 0.125, 0.06, 0.06, 0.1, 1.06, 0.02, k % 2 ? AL.pine : shade(AL.pine, -0.06));
+        T.box(0, 0, 0.06, 1.18, 0.08, 2.04, AL.stone); for (let k = 0; k < 60; k++) { const u = 0.04 + ((k * 0.618) % 1) * 1.1, z = 0.12 + ((k * 0.382) % 1) * 1.92, [rx, ry] = T.P(u, 0.081, z); ell(rx, ry, 4 + (k % 3), 2.6 + (k % 2), [AL.stoneDark, '#B0AA9E', '#8C867C', '#A39C90'][k % 4], 'rgba(0,0,0,.18)'); }
+        T.line([0.6, 0.08, 0.9], [0.6, 0.08, 2.08], AL.iron, 2.2); T.line([0.6, 0.08, 2.08], [0.6, 0.45, 2.08], AL.iron, 2.2); const [hx, hy] = T.P(0.6, 0.5, 2.05); ell(hx, hy, 10, 5, AL.iron); [[0.48, 1.0], [0.72, 1.0]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.082, z); circle(kx, ky, 2.6, AL.iron); });
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.5); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
+      }, { name: 'tray' }),
+      // A frosted glass enclosure in black iron frames: the door on the front, a fixed pane on the open side, and a header
+      // rail round the top tying both to the stone wall.
+      F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.04], [0, 1.18, 2.04]], 'rgba(235,240,240,.5)', AL.iron, 1.6); T.line([0.59, 1.18, 0.06], [0.59, 1.18, 2.04], AL.iron, 1.2); T.line([0.5, 1.18, 1.0], [0.5, 1.18, 1.3], AL.iron, 2.2); T.line([0, 1.18, 2.04], [1.18, 1.18, 2.04], AL.iron, 2.6); }),
+      F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0.08, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.04], [1.18, 0.08, 2.04]], 'rgba(235,240,240,.45)', AL.iron, 1.6); T.line([1.18, 0.08, 2.04], [1.18, 1.18, 2.04], AL.iron, 2.6); T.line([1.18, 0.6, 0.06], [1.18, 0.6, 2.04], AL.iron, 1); }, { onTop: true })],
+  });
+
+  // Victorian Boudoir: carved mahogany, rose damask, velvet, lace, brass and blue-and-white china.
+  const VI = { mahog: '#5A2A1E', mahogLite: '#7A3E2C', mahogDark: '#3E1C14', brass: '#C9A24A', lace: '#FBF6EE', rose: '#C98A94', marble: '#EEE8E2', china: '#2E4C9A' };
+  const lacePillow = (x, y) => [x, y, 0.5, 0.4, 0.72, 0.14, VI.lace];
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A carved mahogany four-poster with a canopy and valance in the piece's colour, velvet drapes tied back at the foot
+    // posts, lace pillows and a damask coverlet.
+    victorian: (o) => { const c = cl(o), post = (T, x, y) => { T.box(x - 0.05, y - 0.05, 0, 0.1, 0.1, 2.2, VI.mahog); const [kx, ky] = T.P(x, y, 2.24); circle(kx, ky, 3.4, VI.mahogLite, VI.mahogDark); };
+      // A valance along one top rail, from a to b: a band in the piece's colour with a gold-swagged hem.
+      const valance = (T, a, b) => { const q = (p, z) => [p[0], p[1], z]; T.poly([q(a, 2.18), q(b, 2.18), q(b, 1.98), q(a, 1.98)], c, 'rgba(0,0,0,.2)', 0.6);
+        const n = Math.max(2, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.2)); for (let k = 0; k < n; k++) { const f0 = k / n, f1 = (k + 1) / n; const p0 = [a[0] + (b[0] - a[0]) * f0, a[1] + (b[1] - a[1]) * f0], p1 = [a[0] + (b[0] - a[0]) * f1, a[1] + (b[1] - a[1]) * f1];
+          for (let m = 0; m < 6; m++) { const g0 = m / 6, g1 = (m + 1) / 6; T.line([p0[0] + (p1[0] - p0[0]) * g0, p0[1] + (p1[1] - p0[1]) * g0, 1.98 - Math.sin(g0 * Math.PI) * 0.06], [p0[0] + (p1[0] - p0[0]) * g1, p0[1] + (p1[1] - p0[1]) * g1, 1.98 - Math.sin(g1 * Math.PI) * 0.06], VI.brass, 1.2); } } };
+      // A drape hanging from the canopy beside a post, gathered and tied back halfway down with a gold tassel.
+      const drape = (T, x, y, dy) => { const top = (f) => [x, y + dy * f, 2.0]; T.poly([top(0), top(1), [x, y + dy * 0.35, 1.15], [x, y + dy * 0.55, 0.05], [x, y, 0.05]], shade(c, -0.05), 'rgba(0,0,0,.25)', 0.6);
+        T.line([x, y + dy * 0.5, 1.95], [x, y + dy * 0.2, 1.18], 'rgba(0,0,0,.18)', 0.8); T.line([x, y + dy * 0.8, 1.95], [x, y + dy * 0.3, 1.16], 'rgba(0,0,0,.18)', 0.8); const [tx, ty] = T.P(x, y + dy * 0.2, 1.15); circle(tx, ty, 2.4, VI.brass); limb(tx, ty, tx, ty + 7, VI.brass, 1.2); };
+      return [
+      F(0, 0, 0.16, 1.6, (T) => { post(T, 0.06, 0.06); post(T, 0.06, 1.54); T.box(0.02, 0.1, 0.3, 0.1, 1.4, 1.0, VI.mahog);
+        const arch = (y) => 1.3 + 0.18 * Math.sin(Math.PI * (y - 0.1) / 1.4); const pts = []; for (let k = 0; k <= 14; k++) { const y = 0.1 + 1.4 * k / 14; pts.push([0.121, y, arch(y)]); } T.poly([[0.121, 0.1, 1.3], ...pts, [0.121, 1.5, 1.3]], VI.mahog, VI.mahogDark, 1);
+        T.poly([[0.122, 0.3, 0.55], [0.122, 1.3, 0.55], [0.122, 1.3, 1.15], [0.122, 0.3, 1.15]], c, VI.brass, 1);
+        T.line([0.06, 0.06, 2.18], [0.06, 1.54, 2.18], VI.mahog, 3); T.line([0.06, 0.06, 2.18], [2.44, 0.06, 2.18], VI.mahog, 3); valance(T, [0.06, 0.06], [0.06, 1.54]); valance(T, [0.06, 0.06], [2.44, 0.06]); }),
+      B(0.12, 0.04, 0.12, 2.32, 1.52, 0.2, VI.mahog), B(0.16, 0.06, 0.32, 2.26, 1.48, 0.2, VI.lace, { name: 'mattress' }),
+      pillowsOn([0.16, 0.06, 0.32, 2.26, 1.48], [lacePillow(0.18, 0.06), lacePillow(0.18, 0.82), [0.38, 0.4, 0.5, 0.16, 0.8, 0.14, c]]),
+      B(0.86, 0.04, 0.52, 1.58, 1.52, 0.05, c), B(0.86, 0.04, 0.57, 1.58, 1.52, 0.01, c, { cover: true }),
+      F(0.86, 0, 2.5, 1.6, (T) => { for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { const [dx, dy] = T.P(1.05 + i * 0.4, 0.22 + j * 0.38, 0.581); ell(dx, dy, 4, 2.2, null, shade(c, 0.25)); circle(dx, dy, 1, shade(c, 0.25)); }
+        T.poly([[0.86, 1.56, 0.57], [2.44, 1.56, 0.57], [2.44, 1.56, 0.3], [0.86, 1.56, 0.3]], shade(c, -0.12)); for (let x = 0.9; x < 2.44; x += 0.08) { const [hx, hy] = T.P(x, 1.56, 0.3); circle(hx, hy, 1.2, VI.lace); } }, { onTop: true }),
+      // The foot posts, the near rails with their valances, and drapes tied back at the foot posts.
+      F(0, 0, 2.5, 1.6, (T) => { post(T, 2.44, 0.06); post(T, 2.44, 1.54);
+        T.line([0.06, 1.54, 2.18], [2.44, 1.54, 2.18], VI.mahog, 3); T.line([2.44, 0.06, 2.18], [2.44, 1.54, 2.18], VI.mahog, 3);
+        drape(T, 2.46, 1.54, -1); drape(T, 2.46, 0.06, 1); drape(T, 2.44, 1.56, 0); valance(T, [0.06, 1.55], [2.45, 1.55]); valance(T, [2.45, 0.06], [2.45, 1.55]);
+        [[2.3, 1.56], [0.2, 1.56]].forEach(([x, y]) => { T.poly([[x, y, 2.0], [x + (x > 1 ? 0.14 : -0.14), y, 2.0], [x + (x > 1 ? 0.06 : -0.06), y, 1.15], [x + (x > 1 ? 0.1 : -0.1), y, 0.05], [x, y, 0.05]], shade(c, -0.05), 'rgba(0,0,0,.25)', 0.6); const [tx, ty] = T.P(x + (x > 1 ? 0.06 : -0.06), y, 1.15); circle(tx, ty, 2.4, VI.brass); }); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A mahogany bedside table on cabriole legs with a marble top, and a lamp under a fringed rose shade.
+    victorian: (T, o) => { const lit = isLit(o.id);
+      [[0.06, 0.06, -1, -1], [0.39, 0.06, 1, -1], [0.06, 0.39, -1, 1], [0.39, 0.39, 1, 1]].forEach(([x, y, dx, dy]) => { const [ax, ay] = T.P(x, y, 0.3), [bx, by] = T.P(x + dx * 0.03, y + dy * 0.03, 0); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo(ax + dx * 4, (ay + by) / 2, bx, by); ctx.strokeStyle = VI.mahog; ctx.lineWidth = 2.6; ctx.stroke(); });
+      T.box(0.03, 0.03, 0.3, 0.39, 0.39, 0.2, VI.mahog); const [kx, ky] = T.P(0.22, 0.421, 0.4); circle(kx, ky, 1.6, VI.brass); T.box(0, 0, 0.5, 0.45, 0.45, 0.03, VI.marble);
+      T.box(0.13, 0.13, 0.53, 0.08, 0.08, 0.14, VI.brass); const [sx, sy] = T.P(0.17, 0.17, 0.78); if (lit) ell(sx, sy + 6, 14, 8, 'rgba(255,200,170,.32)');
+      ctx.beginPath(); ctx.moveTo(sx - 5, sy - 6); ctx.lineTo(sx + 5, sy - 6); ctx.lineTo(sx + 9, sy + 4); ctx.lineTo(sx - 9, sy + 4); ctx.closePath(); ctx.fillStyle = lit ? '#F6C9CF' : VI.rose; ctx.fill(); for (let k = -8; k <= 8; k += 2) limb(sx + k, sy + 4, sx + k, sy + 7, VI.brass, 0.8); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A mahogany chest with brass escutcheons on carved feet, a tall oval mirror in a carved frame, a lace runner and
+    // cut-glass perfume bottles.
+    victorian: (T, o) => { const c = cl(o);
+      [[0.06, 0.06], [1.14, 0.06], [0.06, 0.44], [1.14, 0.44]].forEach(([x, y]) => { const [fx, fy] = T.P(x, y, 0.04); ell(fx, fy, 3.4, 2.4, VI.mahogDark); });
+      T.box(0, 0, 0.06, 1.2, 0.5, 0.76, c); [0.3, 0.55].forEach((z) => T.line([0.02, 0.501, z], [1.18, 0.501, z], 'rgba(0,0,0,.35)', 1));
+      [[0.3, 0.18], [0.9, 0.18], [0.3, 0.43], [0.9, 0.43], [0.3, 0.68], [0.9, 0.68]].forEach(([x, z]) => { const [ex, ey] = T.P(x, 0.502, z); ell(ex, ey, 3.4, 2.2, VI.brass); circle(ex, ey, 0.8, VI.mahogDark); });
+      T.box(-0.02, -0.02, 0.82, 1.24, 0.54, 0.04, VI.mahogLite); T.poly([[0.1, 0.06, 0.861], [1.1, 0.06, 0.861], [1.1, 0.44, 0.861], [0.1, 0.44, 0.861]], VI.lace, 'rgba(0,0,0,.08)', 0.6);
+      T.line([0.35, 0.06, 0.86], [0.35, 0.06, 1.05], c, 3); T.line([0.85, 0.06, 0.86], [0.85, 0.06, 1.05], c, 3);
+      const [mx, my] = T.P(0.6, 0.06, 1.35); ctx.save(); ctx.translate(mx, my); ctx.scale(1, 1.25); ell(0, 0, 16, 16, c, VI.mahogDark); ell(0, 0, 13, 13, '#D8E2EA', VI.brass); ctx.restore(); limb(mx - 6, my - 10, mx + 2, my + 8, 'rgba(255,255,255,.6)', 1.2);
+      [[0.25, '#C98A94'], [0.33, '#9DB7D5'], [0.95, '#E8C468']].forEach(([x, col]) => { T.box(x, 0.24, 0.86, 0.05, 0.05, 0.09, col); const [bx, by] = T.P(x + 0.025, 0.265, 0.97); circle(bx, by, 1.6, VI.brass); }); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A blue-and-white china bowl with a mahogany seat, under a mahogany high tank with a brass pull chain.
+    victorian: (T, o) => {
+      T.box(0.04, 0, 1.45, 0.34, 0.14, 0.22, VI.mahog); T.line([0.21, 0.07, 1.45], [0.21, 0.07, 0.4], VI.brass, 1.6); T.line([0.34, 0.14, 1.5], [0.34, 0.16, 1.05], VI.brass, 0.8); const [hx, hy] = T.P(0.34, 0.16, 1.03); circle(hx, hy, 2, VI.lace);
+      T.box(0.09, 0.08, 0, 0.24, 0.3, 0.34, '#FFFFFF'); for (let k = 0; k < 5; k++) { const [px, py] = T.P(0.1 + k * 0.05, 0.381, 0.12 + (k % 2) * 0.08); circle(px, py, 1.6, VI.china); limb(px, py, px + 3, py + 2, VI.china, 0.6); }
+      const [bx, by] = T.P(0.21, 0.4, 0.3); ell(bx, by, 7.5, 6, '#FFFFFF', 'rgba(0,0,0,.12)'); const [sx, sy] = T.P(0.21, 0.38, 0.385); ell(sx, sy, 7, 4, VI.mahog); ell(sx, sy, 5, 2.8, '#E8EEF0');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A marble-topped mahogany washstand with a china basin and jug, a brass tap and a lace-edged towel on the rail.
+    victorian: (T, o) => { const c = cl(o);
+      T.box(0.02, 0.02, 0, 0.96, 0.46, 0.78, c); [0.04, 0.52].forEach((x) => T.poly([[x + 0.03, 0.481, 0.08], [x + 0.39, 0.481, 0.08], [x + 0.39, 0.481, 0.7], [x + 0.03, 0.481, 0.7]], null, VI.mahogLite, 1.2)); [0.44, 0.56].forEach((x) => { const [kx, ky] = T.P(x, 0.482, 0.42); circle(kx, ky, 1.6, VI.brass); });
+      T.box(-0.02, -0.02, 0.78, 1.04, 0.54, 0.05, VI.marble); T.box(-0.02, -0.02, 0.83, 1.04, 0.06, 0.2, VI.marble);
+      const [vx, vy] = T.P(0.45, 0.27, 0.83); ell(vx, vy, 10, 5, '#FFFFFF', VI.china); ell(vx, vy, 7, 3.4, '#DCE6EE'); T.line([0.45, 0.06, 0.83], [0.45, 0.06, 0.98], VI.brass, 2); T.line([0.45, 0.06, 0.98], [0.45, 0.16, 0.95], VI.brass, 2);
+      T.box(0.78, 0.2, 0.83, 0.1, 0.1, 0.17, '#FFFFFF'); const [jx, jy] = T.P(0.83, 0.25, 0.9); circle(jx, jy, 1.8, VI.china); circle(jx + 3, jy + 1, 1.2, VI.china);
+      T.line([1.0, 0.1, 0.65], [1.0, 0.4, 0.65], VI.brass, 1.4); T.poly([[1.002, 0.14, 0.65], [1.002, 0.36, 0.65], [1.002, 0.36, 0.42], [1.002, 0.14, 0.42]], VI.lace, 'rgba(0,0,0,.1)', 0.6); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // A rose and cream mosaic floor, green tile below a damask wall, a brass riser to a big rose head, and a lace curtain
+    // round a brass ring rail.
+    victorian: (o) => [F(0, 0, 1.18, 1.18, (T, ob) => { const c = cl(ob);
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, '#F2EADF'); for (let i = 0; i < 12; i++) for (let j = 0; j < 12; j++) if ((i * 3 + j * 5) % 7 < 2) { const [px, py] = T.P(0.05 + i * 0.09, 0.05 + j * 0.09, 0.061); ell(px, py, 2, 1.1, (i + j) % 2 ? VI.rose : '#7A9A7A'); }
+        T.box(0, 0, 0.06, 1.18, 0.06, 1.0, '#4E7A5E'); for (let z = 0.16; z < 1.06; z += 0.1) T.line([0, 0.061, z], [1.18, 0.061, z], 'rgba(255,255,255,.35)', 0.7); T.box(0, 0, 1.06, 1.18, 0.06, 1.04, '#E9D3D0'); T.line([0, 0.061, 1.06], [1.18, 0.061, 1.06], VI.mahog, 2.4);
+        T.line([0.6, 0.07, 0.4], [0.6, 0.07, 2.0], VI.brass, 2.4); T.line([0.6, 0.07, 2.0], [0.6, 0.35, 2.0], VI.brass, 2.4); const [hx, hy] = T.P(0.6, 0.4, 1.98); ell(hx, hy, 9, 4.5, VI.brass, shade(VI.brass, -0.3)); [[0.5, 1.0], [0.7, 1.0]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.07, z); circle(kx, ky, 2.6, VI.brass); circle(kx, ky, 0.9, '#FFFFFF'); });
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.4); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.9, 1); }
+      }, { name: 'tray' }),
+      F(0, 1.14, 1.18, 1.2, (T) => { const open = usingSlot(T.o.id + ':s') ? 0.45 : 0.95; T.line([0, 1.17, 2.06], [1.18, 1.17, 2.06], VI.brass, 1.8);
+        for (let k = 0; k < 10; k++) { const y0 = k * open / 10 * 1.18, y1 = (k + 1) * open / 10 * 1.18; T.poly([[y0, 1.17 + (k % 2) * 0.02, 0.15], [y1, 1.17 + ((k + 1) % 2) * 0.02, 0.15], [y1, 1.17 + ((k + 1) % 2) * 0.02, 2.04], [y0, 1.17 + (k % 2) * 0.02, 2.04]], 'rgba(251,246,238,.78)', 'rgba(200,190,175,.4)', 0.5); }
+        for (let y = 0.02; y < open * 1.18; y += 0.06) { const [lx, ly] = T.P(y, 1.19, 0.15); circle(lx, ly, 1.1, VI.lace); } }),
+      F(1.14, 0, 1.2, 1.18, (T) => { T.line([1.17, 0, 2.06], [1.17, 1.18, 2.06], VI.brass, 1.8); for (let k = 0; k < 8; k++) { const y0 = 0.1 + k * 0.135, y1 = y0 + 0.135; T.poly([[1.17 + (k % 2) * 0.02, y0, 0.15], [1.17 + ((k + 1) % 2) * 0.02, y1, 0.15], [1.17 + ((k + 1) % 2) * 0.02, y1, 2.04], [1.17 + (k % 2) * 0.02, y0, 2.04]], 'rgba(251,246,238,.7)', 'rgba(200,190,175,.4)', 0.5); } }, { onTop: true })],
+  });
+
+  // Wabi-Sabi Ryokan: pale hinoki, tatami, clay plaster, river stone, indigo and paper.
+  const RY = { hinoki: '#E2C99E', hinokiDark: '#C9AC7E', tatami: '#C9C48E', tatamiEdge: '#2B2B30', clay: '#B7A184', stone: '#8E8A84', stoneLite: '#B4AFA6', indigo: '#2E3F66', paper: '#F7F1E3', iron: '#2A2826', moss: '#6E8A4E' };
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A futon on a low hinoki dais edged in tatami: a thin mattress, a buckwheat pillow, and a quilt in the piece's colour
+    // folded back at the top, with a paper screen behind.
+    ryokan: (o) => { const c = cl(o); return [
+      F(0, 0, 0.1, 1.6, (T) => { T.box(0.02, 0, 0, 0.06, 1.6, 1.1, RY.hinokiDark); T.poly([[0.081, 0.04, 0.1], [0.081, 1.56, 0.1], [0.081, 1.56, 1.06], [0.081, 0.04, 1.06]], RY.paper); for (let k = 1; k < 6; k++) T.line([0.082, 1.6 * k / 6, 0.1], [0.082, 1.6 * k / 6, 1.06], RY.hinokiDark, 1.2); for (let z = 0.3; z < 1.06; z += 0.24) T.line([0.082, 0.04, z], [0.082, 1.56, z], RY.hinokiDark, 1.2); }),
+      B(0.1, 0, 0, 2.4, 1.6, 0.14, RY.hinoki), F(0.1, 0, 2.5, 1.6, (T) => { T.poly([[0.1, 0, 0.141], [2.5, 0, 0.141], [2.5, 1.6, 0.141], [0.1, 1.6, 0.141]], RY.tatamiEdge); T.poly([[0.14, 0.04, 0.142], [2.46, 0.04, 0.142], [2.46, 1.56, 0.142], [0.14, 1.56, 0.142]], RY.tatami); for (let x = 0.2; x < 2.46; x += 0.06) T.line([x, 0.04, 0.143], [x, 1.56, 0.143], 'rgba(90,85,40,.18)', 0.6); }, { decal: false }),
+      B(0.2, 0.15, 0.142, 2.2, 1.3, 0.1, RY.paper, { name: 'mattress' }),
+      pillowsOn([0.2, 0.15, 0.142, 2.2, 1.3], [[0.24, 0.55, 0.242, 0.32, 0.5, 0.08, '#D9CBB0']]),
+      B(0.7, 0.13, 0.242, 1.72, 1.34, 0.05, c), B(0.7, 0.13, 0.292, 1.72, 1.34, 0.01, c, { cover: true }),
+      F(0.7, 0.1, 2.44, 1.5, (T) => { T.poly([[0.7, 0.13, 0.303], [0.95, 0.13, 0.303], [0.95, 1.47, 0.303], [0.7, 1.47, 0.303]], shade(c, 0.35)); for (let y = 0.2; y < 1.45; y += 0.24) T.line([0.98, y, 0.303], [2.4, y, 0.303], shade(c, -0.15), 0.8); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A low hinoki box with a paper andon lantern and a single branch in a stoneware vase.
+    ryokan: (T, o) => { const lit = isLit(o.id);
+      T.box(0.04, 0.04, 0, 0.37, 0.37, 0.24, RY.hinoki); T.line([0.04, 0.411, 0.12], [0.41, 0.411, 0.12], RY.hinokiDark, 1);
+      T.box(0.08, 0.08, 0.24, 0.16, 0.16, 0.34, lit ? '#FFF4DC' : RY.paper); [0.08, 0.24].forEach((x) => [0.08, 0.24].forEach((y) => T.line([x, y, 0.24], [x, y, 0.58], RY.iron, 1.2))); T.line([0.08, 0.241, 0.41], [0.24, 0.241, 0.41], RY.iron, 0.8);
+      if (lit) { const [lx, ly] = T.P(0.16, 0.16, 0.42); circle(lx, ly, 16, 'rgba(255,226,170,.28)'); }
+      T.box(0.29, 0.27, 0.24, 0.07, 0.07, 0.1, '#5A5450'); const [bx, by] = T.P(0.325, 0.305, 0.34); limb(bx, by, bx - 6, by - 16, '#4A3A2A', 1); limb(bx - 4, by - 10, bx + 2, by - 14, '#4A3A2A', 0.8); [[-6, -16], [2, -14], [-3, -12]].forEach(([dx, dy]) => circle(bx + dx, by + dy, 1.4, '#E8B4C0')); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A dark kiri tansu: stepped drawers with black iron pulls and corner plates, and a tea set on a tray.
+    ryokan: (T, o) => { const c = cl(o);
+      T.box(0, 0, 0, 1.2, 0.5, 0.84, c); [0.28, 0.56].forEach((z) => T.line([0.01, 0.501, z], [1.19, 0.501, z], 'rgba(0,0,0,.4)', 1)); T.line([0.6, 0.501, 0.56], [0.6, 0.501, 0.84], 'rgba(0,0,0,.4)', 1);
+      [[0.6, 0.14], [0.6, 0.42], [0.3, 0.7], [0.9, 0.7]].forEach(([x, z]) => { const [px, py] = T.P(x, 0.502, z); rr(px - 4, py - 2, 8, 4, 1, RY.iron); ctx.strokeStyle = RY.iron; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(px, py + 2, 3, 0, Math.PI); ctx.stroke(); });
+      // Small iron L-plates on the front corners.
+      [[0.03, 0.03, 1, 1], [1.17, 0.81, -1, -1], [0.03, 0.81, 1, -1], [1.17, 0.03, -1, 1]].forEach(([x, z, sx, sz]) => { T.line([x, 0.502, z], [x + sx * 0.08, 0.502, z], RY.iron, 1.8); T.line([x, 0.502, z], [x, 0.502, z + sz * 0.08], RY.iron, 1.8); });
+      T.box(0.15, 0.12, 0.84, 0.4, 0.26, 0.02, RY.hinokiDark); T.box(0.22, 0.18, 0.86, 0.1, 0.1, 0.08, '#6E6A64'); [0.38, 0.46].forEach((x) => T.box(x, 0.2, 0.86, 0.05, 0.05, 0.05, '#9A948A')); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A plain white toilet with a hinoki seat, and a river-stone shelf behind with a tiny bonsai.
+    ryokan: (T, o) => {
+      T.box(0, 0, 0.66, 0.42, 0.14, 0.05, RY.stone); T.box(0.24, 0.03, 0.71, 0.08, 0.08, 0.05, '#5A5450'); const [bx2, by2] = T.P(0.28, 0.07, 0.8); ell(bx2, by2, 5, 3, RY.moss); limb(bx2, by2 + 3, bx2 + 1, by2 - 1, '#4A3A2A', 1);
+      T.box(0.06, 0, 0, 0.3, 0.16, 0.62, '#FFFFFF'); T.box(0.09, 0.14, 0, 0.24, 0.3, 0.3, '#FFFFFF');
+      const [bx, by] = T.P(0.21, 0.4, 0.3); ell(bx, by, 7.5, 6, '#FFFFFF', 'rgba(0,0,0,.12)'); const [sx, sy] = T.P(0.21, 0.38, 0.385); ell(sx, sy, 7, 4, RY.hinoki); ell(sx, sy, 5, 2.8, '#E8EEF0');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A hinoki counter with a river-stone vessel basin and a bamboo spout, a folded indigo tenugui underneath.
+    ryokan: (T, o) => { const c = cl(o);
+      T.box(0.02, 0.04, 0.5, 0.96, 0.42, 0.28, c); T.box(0.06, 0.08, 0, 0.06, 0.34, 0.5, RY.hinokiDark); T.box(0.88, 0.08, 0, 0.06, 0.34, 0.5, RY.hinokiDark); T.box(0.12, 0.08, 0.1, 0.76, 0.34, 0.03, RY.hinokiDark); T.box(0.3, 0.14, 0.13, 0.36, 0.22, 0.05, RY.indigo);
+      T.box(-0.02, 0, 0.78, 1.04, 0.5, 0.04, RY.hinoki);
+      const [vx, vy] = T.P(0.5, 0.26, 0.82); ell(vx, vy + 3, 11, 6, RY.stone); ell(vx, vy, 11, 5.5, RY.stoneLite, '#6E6A64'); ell(vx, vy, 8, 3.6, '#7E8A8C');
+      T.line([0.5, 0.03, 0.82], [0.5, 0.03, 1.02], '#7FA06A', 3); T.line([0.5, 0.03, 1.02], [0.5, 0.18, 0.99], '#7FA06A', 3); const [nx, ny] = T.P(0.5, 0.03, 0.92); limb(nx - 2, ny, nx + 2, ny, '#5E7E4E', 1); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // A wet room of hinoki: slatted walls and floor, a stone back wall, a bamboo rain spout, a wooden stool and bucket, and an
+    // indigo noren hanging at the open front.
+    ryokan: (o) => [F(0, 0, 1.18, 1.18, (T, ob) => { const c = cl(ob);
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, RY.hinokiDark); for (let k = 0; k < 10; k++) T.box(0.02 + k * 0.116, 0.02, 0.06, 0.09, 1.14, 0.015, RY.hinoki);
+        T.box(0, 0, 0.06, 1.18, 0.08, 2.04, RY.stone); for (let k = 0; k < 40; k++) { const u = 0.04 + ((k * 0.618) % 1) * 1.1, z = 0.12 + ((k * 0.382) % 1) * 1.92, [rx, ry] = T.P(u, 0.081, z); ell(rx, ry, 5, 3, [RY.stoneLite, '#9A948A', '#A39C90'][k % 3], 'rgba(0,0,0,.15)'); }
+        T.line([0.6, 0.08, 2.0], [0.6, 0.5, 2.0], '#7FA06A', 4); const [sx, sy] = T.P(0.6, 0.52, 1.98); ell(sx, sy, 3, 2, '#5E7E4E');
+        T.box(0.15, 0.6, 0.075, 0.24, 0.24, 0.22, RY.hinoki); T.box(0.82, 0.25, 0.075, 0.2, 0.2, 0.16, RY.hinokiDark); T.line([0.82, 0.25, 0.2], [1.02, 0.45, 0.2], RY.iron, 1.2);
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.52); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.9, 1); }
+      }, { name: 'tray' }),
+      F(1.14, 0, 1.2, 1.18, (T) => { T.box(1.14, 0.08, 0.06, 0.04, 1.1, 2.04, RY.hinokiDark); for (let k = 0; k < 12; k++) T.line([1.181, 0.1 + k * 0.09, 0.08], [1.181, 0.1 + k * 0.09, 2.08], RY.hinoki, 3); }, { onTop: true }),
+      F(0, 1.14, 1.18, 1.2, (T, ob) => { const c = cl(ob); T.line([0, 1.17, 2.06], [1.18, 1.17, 2.06], RY.hinokiDark, 2.4); const parts = 3, gap = 0.012;
+        for (let k = 0; k < parts; k++) { const y0 = k * 1.18 / parts + gap, y1 = (k + 1) * 1.18 / parts - gap; T.poly([[y0, 1.18, 2.06], [y1, 1.18, 2.06], [y1, 1.18, 1.4], [y0, 1.18, 1.4]], c, 'rgba(0,0,0,.2)', 0.6); }
+        const [mx, my] = T.P(0.59, 1.181, 1.75); circle(mx, my, 6, null, '#F2EBDD'); ctx.strokeStyle = '#F2EBDD'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(mx, my, 6, 0, Math.PI * 2); ctx.stroke(); }, { onTop: true })],
+  });
+
+  // Celestial Dream: pearl white, moon gold, night navy and lavender, opal glass and stars.
+  const CE = { pearl: '#F4F1F8', pearlShade: '#DCD6E8', gold: '#E2C46A', navy: '#1F2550', lav: '#B9A9DE', opal: 'rgba(200,220,255,.55)' };
+  const star4 = (x, y, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.28, y - r * 0.28); ctx.lineTo(x + r, y); ctx.lineTo(x + r * 0.28, y + r * 0.28); ctx.lineTo(x, y + r); ctx.lineTo(x - r * 0.28, y + r * 0.28); ctx.lineTo(x - r, y); ctx.lineTo(x - r * 0.28, y - r * 0.28); ctx.closePath(); ctx.fill(); };
+  const opalTint = (k) => ['rgba(214,228,255,.9)', 'rgba(232,214,250,.9)', 'rgba(214,246,240,.9)', 'rgba(250,226,238,.9)'][k % 4];
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A cloud-white upholstered bed under a great gold crescent moon, puffy white pillows, and a duvet in the piece's colour
+    // scattered with gold stars.
+    celestial: (o) => { const c = cl(o); return [
+      F(0, 0, 0.16, 1.6, (T) => { T.box(0, 0.05, 0, 0.14, 1.5, 0.9, CE.pearl); for (let k = 1; k < 6; k++) T.line([0.141, 0.05 + k * 0.25, 0.1], [0.141, 0.05 + k * 0.25, 0.85], CE.pearlShade, 1);
+        // The crescent rises from the headboard: both horns rest on its top edge.
+        const pts = [], inner = []; for (let k = 0; k <= 16; k++) { const a = Math.PI * k / 16; pts.push([0.07, 0.8 - Math.cos(a) * 0.72, 0.9 + Math.sin(a) * 0.72]); inner.push([0.07, 0.92 - Math.cos(a) * 0.6, 0.9 + Math.sin(a) * 0.5]); }
+        T.poly([...pts, ...inner.reverse()], CE.gold, shade(CE.gold, -0.25), 1); [[0.07, 0.3, 1.55], [0.07, 1.35, 1.5], [0.07, 0.9, 1.75]].forEach((p, k) => { const [sx, sy] = T.P(...p); star4(sx, sy, 3 + k, CE.gold); }); }),
+      B(0.14, 0.04, 0.08, 2.32, 1.52, 0.24, CE.pearl), B(0.16, 0.06, 0.32, 2.28, 1.48, 0.2, '#FFFFFF', { name: 'mattress' }),
+      pillowsOn([0.16, 0.06, 0.32, 2.28, 1.48], [[0.18, 0.06, 0.52, 0.42, 0.72, 0.16, CE.pearl], [0.18, 0.82, 0.52, 0.42, 0.72, 0.16, CE.pearl], [0.4, 0.5, 0.52, 0.18, 0.6, 0.12, CE.lav]]),
+      B(0.84, 0.03, 0.52, 1.62, 1.54, 0.06, c), B(0.84, 0.03, 0.58, 1.62, 1.54, 0.01, c, { cover: true }),
+      F(0.84, 0, 2.46, 1.6, (T) => { for (let k = 0; k < 22; k++) { const [sx, sy] = T.P(0.9 + ((k * 0.618) % 1) * 1.5, 0.1 + ((k * 0.382) % 1) * 1.4, 0.591); star4(sx, sy, 1.2 + (k % 3) * 0.6, CE.gold); } T.poly([[0.84, 1.57, 0.58], [2.46, 1.57, 0.58], [2.46, 1.57, 0.34], [0.84, 1.57, 0.34]], shade(c, -0.12)); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A round pearl side table on a gold stem, and a moon lamp: a cratered sphere that glows when on.
+    celestial: (T, o) => { const lit = isLit(o.id);
+      const [bx, by] = T.P(0.22, 0.22, 0); ell(bx, by, 10, 5, CE.gold); T.line([0.22, 0.22, 0], [0.22, 0.22, 0.48], CE.gold, 2.6); const [tx, ty] = T.P(0.22, 0.22, 0.5); ell(tx, ty + 2, 14, 7, CE.pearlShade); ell(tx, ty, 14, 7, CE.pearl, CE.pearlShade);
+      const [mx, my] = T.P(0.22, 0.22, 0.66); if (lit) circle(mx, my, 18, 'rgba(255,244,214,.3)'); circle(mx, my, 9, lit ? '#FFF6E2' : '#E8E4DA', 'rgba(0,0,0,.12)'); [[-3, -2, 2], [3, 2, 1.6], [2, -4, 1.1]].forEach(([dx, dy, r]) => circle(mx + dx, my + dy, r, lit ? 'rgba(210,190,150,.5)' : 'rgba(150,145,135,.45)')); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A dresser in the piece's colour with moon-phase knobs waxing across the drawers, and an amethyst geode and a star lamp on top.
+    celestial: (T, o) => { const c = cl(o);
+      T.box(0.03, 0.03, 0, 1.14, 0.44, 0.08, CE.gold); T.box(0, 0, 0.08, 1.2, 0.5, 0.74, c); [0.33, 0.58].forEach((z) => T.line([0.02, 0.501, z], [1.18, 0.501, z], 'rgba(0,0,0,.18)', 1));
+      [0.2, 0.45, 0.7].forEach((z) => [0.2, 0.4, 0.6, 0.8, 1.0].forEach((x, k) => { const [kx, ky] = T.P(x, 0.502, z); circle(kx, ky, 2.4, CE.gold); if (k < 4) { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(kx + (k - 1.5) * 0.8, ky, 2.4 * (1 - k / 4), 2.4, 0, 0, Math.PI * 2); ctx.fill(); } }));
+      T.box(-0.02, -0.02, 0.82, 1.24, 0.54, 0.03, CE.pearl);
+      const [gx, gy] = T.P(0.3, 0.25, 0.86); ell(gx, gy, 8, 5, '#6E6A7A'); ell(gx, gy - 2, 6, 3.4, '#9A6FD0'); [[-2, -3], [1, -4], [3, -2]].forEach(([dx, dy]) => star4(gx + dx, gy + dy, 1.4, '#E8DCFF'));
+      const [sx, sy] = T.P(0.9, 0.25, 1.05); T.line([0.9, 0.25, 0.85], [0.9, 0.25, 1.0], CE.gold, 1.4); star4(sx, sy, 7, '#FFF0B8'); circle(sx, sy, 10, 'rgba(255,240,184,.25)'); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A pearl toilet with a lavender seat and a little gold star on the tank.
+    celestial: (T, o) => {
+      T.box(0.04, 0, 0.36, 0.34, 0.16, 0.38, CE.pearl); T.box(0.02, -0.01, 0.74, 0.38, 0.18, 0.03, CE.pearlShade); const [gx, gy] = T.P(0.21, 0.161, 0.58); star4(gx, gy, 3, CE.gold);
+      T.box(0.09, 0.16, 0, 0.24, 0.26, 0.32, CE.pearl); const [bx, by] = T.P(0.21, 0.42, 0.3); ell(bx, by, 7.5, 6, CE.pearl, 'rgba(0,0,0,.12)');
+      const [sx, sy] = T.P(0.21, 0.4, 0.385); ell(sx, sy, 7, 4, CE.lav); ell(sx, sy, 5, 2.8, '#E8EEF8');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A lavender vanity on a gold plinth: two framed doors with gold star knobs, a pearl top with an opal shell basin and a gold tap.
+    celestial: (T, o) => { const c = cl(o);
+      T.box(0.02, 0.02, 0, 0.96, 0.46, 0.06, CE.gold); T.box(0, 0, 0.06, 1.0, 0.5, 0.74, c);
+      [0.03, 0.51].forEach((x) => T.poly([[x + 0.03, 0.501, 0.12], [x + 0.43, 0.501, 0.12], [x + 0.43, 0.501, 0.74], [x + 0.03, 0.501, 0.74]], shade(c, 0.08), CE.gold, 1.1));
+      [0.42, 0.58].forEach((x) => { const [kx, ky] = T.P(x, 0.502, 0.48); star4(kx, ky, 3, CE.gold); });
+      T.box(-0.02, -0.02, 0.8, 1.04, 0.54, 0.04, CE.pearl); T.line([-0.02, 0.521, 0.8], [1.02, 0.521, 0.8], CE.gold, 1); const [vx, vy] = T.P(0.5, 0.27, 0.841);
+      ctx.beginPath(); ctx.moveTo(vx - 11, vy + 1); for (let k = 0; k <= 8; k++) { const a = Math.PI + Math.PI * k / 8; ctx.lineTo(vx + Math.cos(a) * 11, vy + Math.sin(a) * 6 - (k % 2 ? 1 : 0)); } ctx.closePath(); ctx.fillStyle = opalTint(1); ctx.fill(); ctx.strokeStyle = CE.pearlShade; ctx.lineWidth = 0.8; ctx.stroke(); ell(vx, vy, 8, 3.4, opalTint(0));
+      T.line([0.5, 0.05, 0.84], [0.5, 0.05, 1.0], CE.gold, 2); T.line([0.5, 0.05, 1.0], [0.5, 0.17, 0.97], CE.gold, 2); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // Opal glass tile shimmering in four tints, a gold star head, and glass frosted with a scatter of stars on all open sides.
+    celestial: (o) => [F(0, 0, 1.18, 1.18, (T) => {
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, CE.pearl); for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) T.poly([[i * 0.1475, j * 0.1475, 0.061], [(i + 1) * 0.1475, j * 0.1475, 0.061], [(i + 1) * 0.1475, (j + 1) * 0.1475, 0.061], [i * 0.1475, (j + 1) * 0.1475, 0.061]], opalTint(i + j * 3), 'rgba(255,255,255,.6)', 0.5);
+        T.box(0, 0, 0.06, 1.18, 0.06, 2.04, CE.pearl); for (let i = 0; i < 8; i++) for (let k = 0; k < 14; k++) T.poly([[i * 0.1475, 0.061, 0.06 + k * 0.146], [(i + 1) * 0.1475, 0.061, 0.06 + k * 0.146], [(i + 1) * 0.1475, 0.061, 0.06 + (k + 1) * 0.146], [i * 0.1475, 0.061, 0.06 + (k + 1) * 0.146]], opalTint(i * 2 + k), 'rgba(255,255,255,.6)', 0.5);
+        T.box(0, 0.06, 0.06, 0.06, 1.12, 2.04, CE.pearl); for (let j = 0; j < 8; j++) for (let k = 0; k < 14; k++) T.poly([[0.061, 0.06 + j * 0.14, 0.06 + k * 0.146], [0.061, 0.06 + (j + 1) * 0.14, 0.06 + k * 0.146], [0.061, 0.06 + (j + 1) * 0.14, 0.06 + (k + 1) * 0.146], [0.061, 0.06 + j * 0.14, 0.06 + (k + 1) * 0.146]], opalTint(j * 3 + k + 1), 'rgba(255,255,255,.6)', 0.5);
+        T.line([0, 0.061, 2.1], [1.18, 0.061, 2.1], CE.gold, 1.6); T.line([0.061, 0, 2.1], [0.061, 1.18, 2.1], CE.gold, 1.6);
+        T.line([0.6, 0.06, 2.06], [0.6, 0.4, 2.06], CE.gold, 2.2); const [hx, hy] = T.P(0.6, 0.45, 2.04); star4(hx, hy, 5, CE.gold); [[0.48, 1.05], [0.72, 1.05]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.062, z); circle(kx, ky, 2.4, CE.gold); });
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.45); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.9, 1); }
+      }, { name: 'tray' }),
+      F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [0, 1.18, 2.06]], 'rgba(220,230,255,.22)', CE.gold, 1.4); T.line([0.59, 1.18, 0.06], [0.59, 1.18, 2.06], CE.gold, 1.2); for (let k = 0; k < 14; k++) { const [sx, sy] = T.P(0.05 + ((k * 0.618) % 1) * 1.1, 1.181, 0.2 + ((k * 0.382) % 1) * 1.8); star4(sx, sy, 1.6, 'rgba(255,255,255,.85)'); } }),
+      F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0.06, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [1.18, 0.06, 2.06]], 'rgba(220,230,255,.2)', CE.gold, 1.4); for (let k = 0; k < 12; k++) { const [sx, sy] = T.P(1.181, 0.1 + ((k * 0.618) % 1) * 1.0, 0.2 + ((k * 0.382) % 1) * 1.8); star4(sx, sy, 1.6, 'rgba(255,255,255,.85)'); } }, { onTop: true })],
+  });
   const diningLife = () => F(0, 0.74, 1.3, 1.74, (T, o) => {
     ['c1', 'c2'].forEach((s, i) => { const sid = o.id + ':' + s, who = reserved[sid]; if (who && who.task && who.task.slot === sid && (doing(who, 'eat') || doing(who, 'eatOut') || doing(who, 'sip'))) { const [px, py] = T.P(0.65, i ? 1.5 : 0.98, 0.775); if (doing(who, 'eatOut')) { rr(px - 5, py - 7, 10, 7, 1.5, '#F2EEE8'); } else if (doing(who, 'sip')) { rr(px - 3, py - 6, 6, 6, 1.2, '#F2EEE8'); } else { ell(px, py, 10, 5, '#F5F2EC', 'rgba(0,0,0,.15)'); ell(px, py - 1, 6, 2.8, who.mealFresh ? '#7FB069' : '#D9822B'); circle(px + 3, py - 2, 1.8, '#4F9460'); } } });
     for (let i = 0; i < Math.min(dishes, 4); i++) { const [px, py] = T.P(1.05, 1.5, 0.775); ell(px, py - i * 2.2, 8, 4, '#EDE8E1', 'rgba(0,0,0,.2)'); ell(px + 1, py - i * 2.2 - 0.5, 4, 1.6, 'rgba(150,100,60,.45)'); }
@@ -1795,7 +2506,7 @@ export function createHouseArt(ctx0, opts = {}) {
           B(0, 0, 0, 0.2, 1.0, 0.62, C.sofa), B(2.2, 0, 0, 0.2, 1.0, 0.62, C.sofa), B(0.26, 0.34, 0.48, 0.42, 0.14, 0.32, '#E0A43A')]; },
        },
     bed: {    
-      parts: () => { const lux = has('bed'), z = lux ? 0.56 : 0.5; return [B(0, 0, 0, 0.14, 1.6, lux ? 1.3 : 1.0, lux ? '#6E4A5E' : C.dark), B(0.14, 0, 0, 2.36, 1.6, 0.32, lux ? '#5A3E4C' : C.wood), B(0.18, 0.04, 0.32, 2.28, 1.52, lux ? 0.24 : 0.18, '#F1ECE4', { name: 'mattress' }),
+      parts: (o) => { if (LOOK_DRAWERS.bed[skinId(o)]) return LOOK_DRAWERS.bed[skinId(o)](o); const lux = has('bed'), z = lux ? 0.56 : 0.5; return [B(0, 0, 0, 0.14, 1.6, lux ? 1.3 : 1.0, lux ? '#6E4A5E' : C.dark), B(0.14, 0, 0, 2.36, 1.6, 0.32, lux ? '#5A3E4C' : C.wood), B(0.18, 0.04, 0.32, 2.28, 1.52, lux ? 0.24 : 0.18, '#F1ECE4', { name: 'mattress' }),
         B(0.23, 0.12, z, 0.5, 0.58, 0.12, '#FFFFFF'), B(0.23, 0.9, z, 0.5, 0.58, 0.12, '#FFFFFF'), B(0.95, 0, z, 1.55, 1.6, 0.07, lux ? '#C9A24A' : '#3D6B73', { cover: true }), B(0.95, 0, z + 0.07, 0.2, 1.6, 0.02, lux ? '#E0C26E' : '#5E8A92', { cover: true })]; },
        },
     // The single beds two friends sleep in: the same bed, one pillow wide.
@@ -1944,9 +2655,9 @@ export function createHouseArt(ctx0, opts = {}) {
         }, { onTop: true })]; },
     },
     dresser: {    
-      parts: () => [F(0, 0, 1.2, 0.5, (T) => { T.box(0, 0, 0, 1.2, 0.5, 0.85, '#B98A6A'); [0.28, 0.55].forEach(z => T.line([0.03, 0.501, z], [1.17, 0.501, z], 'rgba(0,0,0,.25)', 1)); [0.3, 0.9].forEach(x => { const [sx, sy] = T.P(x, 0.502, 0.42); circle(sx, sy, 1.5, '#5A3E2E'); }); T.box(0.15, 0.15, 0.85, 0.18, 0.18, 0.22, '#F2EEE8'); })] },
+      parts: () => [F(0, 0, 1.2, 0.5, (T, o) => { if (LOOK_DRAWERS.dresser[skinId(o)]) { LOOK_DRAWERS.dresser[skinId(o)](T, o); return; } T.box(0, 0, 0, 1.2, 0.5, 0.85, '#B98A6A'); [0.28, 0.55].forEach(z => T.line([0.03, 0.501, z], [1.17, 0.501, z], 'rgba(0,0,0,.25)', 1)); [0.3, 0.9].forEach(x => { const [sx, sy] = T.P(x, 0.502, 0.42); circle(sx, sy, 1.5, '#5A3E2E'); }); T.box(0.15, 0.15, 0.85, 0.18, 0.18, 0.22, '#F2EEE8'); })] },
     nightstand: {    
-      parts: () => [F(0, 0, 0.45, 0.45, (T, o) => { T.box(0, 0, 0, 0.45, 0.45, 0.5, '#B98A6A'); T.box(0.14, 0.14, 0.5, 0.16, 0.16, 0.04, '#3A3340'); T.line([0.22, 0.22, 0.54], [0.22, 0.22, 0.72], '#3A3340', 1.5); T.box(0.1, 0.1, 0.7, 0.24, 0.24, 0.14, isLit(o.id) ? '#FFE2A8' : '#EFD9B4'); })],  },
+      parts: () => [F(0, 0, 0.45, 0.45, (T, o) => { if (LOOK_DRAWERS.nightstand[skinId(o)]) { LOOK_DRAWERS.nightstand[skinId(o)](T, o); return; } T.box(0, 0, 0, 0.45, 0.45, 0.5, '#B98A6A'); T.box(0.14, 0.14, 0.5, 0.16, 0.16, 0.04, '#3A3340'); T.line([0.22, 0.22, 0.54], [0.22, 0.22, 0.72], '#3A3340', 1.5); T.box(0.1, 0.1, 0.7, 0.24, 0.24, 0.14, isLit(o.id) ? '#FFE2A8' : '#EFD9B4'); })],  },
     // ---- built-ins ----
     counter: {    
       parts: () => [F(0, 0, 2.8, 0.84, (T, o, t) => {
@@ -2038,13 +2749,13 @@ export function createHouseArt(ctx0, opts = {}) {
     tvunit: {    
       parts: () => [F(0, 0, 1.6, 0.45, (T) => { T.box(0, 0, 0, 1.6, 0.45, 0.42, '#3A3340'); T.line([0.8, 0.45, 0.06], [0.8, 0.45, 0.36], 'rgba(255,255,255,.12)', 1); if (!has('bigtv')) { T.box(0.1, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); T.box(1.32, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); } })] },
     shower: {    
-      parts: () => [F(0, 0, 1.18, 1.18, (T) => { T.box(0, 0, 0, 1.18, 1.18, 0.1, '#E6ECEE'); const [dx, dy] = T.P(0.6, 0.58, 0.1); ell(dx, dy, 3, 1.5, '#9AA3A8'); T.line([0.57, 0, 2.15], [0.57, 0.2, 2.15], '#9AA3A8', 2.5); const [hx, hy] = T.P(0.57, 0.22, 2.1); ell(hx, hy, 5, 2.5, '#9AA3A8'); if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.57, 0.22); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
+      parts: (o) => LOOK_DRAWERS.shower[skinId(o)] ? LOOK_DRAWERS.shower[skinId(o)](o) : [F(0, 0, 1.18, 1.18, (T) => { T.box(0, 0, 0, 1.18, 1.18, 0.1, '#E6ECEE'); const [dx, dy] = T.P(0.6, 0.58, 0.1); ell(dx, dy, 3, 1.5, '#9AA3A8'); T.line([0.57, 0, 2.15], [0.57, 0.2, 2.15], '#9AA3A8', 2.5); const [hx, hy] = T.P(0.57, 0.22, 2.1); ell(hx, hy, 5, 2.5, '#9AA3A8'); if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.57, 0.22); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
           T.poly([[0, 0, 0.1], [0, 1.18, 0.1], [0, 1.18, 2.1], [0, 0, 2.1]], 'rgba(186,222,232,.22)', 'rgba(140,180,195,.7)', 1); }, { name: 'tray' }),
         F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.1], [1.18, 1.18, 0.1], [1.18, 1.18, 2.1], [0, 1.18, 2.1]], 'rgba(186,222,232,.26)', 'rgba(140,180,195,.7)', 1); T.line([0.2, 1.18, 1.9], [0.65, 1.18, 1.2], 'rgba(255,255,255,.55)', 2); }),
         F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0, 0.1], [1.18, 1.18, 0.1], [1.18, 1.18, 2.1], [1.18, 0, 2.1]], 'rgba(186,222,232,.22)', 'rgba(140,180,195,.7)', 1); })],
        },
-    toilet: {     parts: () => [F(0, 0, 0.42, 0.62, (T) => { T.box(0.03, 0, 0.3, 0.36, 0.16, 0.42, '#F2EEE8'); T.box(0.06, 0.14, 0, 0.3, 0.42, 0.36, '#F2EEE8'); const [sx, sy] = T.P(0.21, 0.38, 0.37); ell(sx, sy, 6, 3.5, '#E1DCD5'); if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } })] },
-    vanity: {     parts: () => [F(0, 0, 1.0, 0.5, (T) => { T.box(0, 0, 0, 1.0, 0.5, 0.8, '#7A5236'); T.box(-0.02, -0.02, 0.8, 1.04, 0.54, 0.05, '#E4DDD2'); const [sx, sy] = T.P(0.5, 0.25, 0.86); ell(sx, sy, 8, 4, '#B9C3C8'); T.line([0.5, 0.03, 0.85], [0.5, 0.03, 1.0], '#AEB6BB', 2); })] },
+    toilet: {     parts: () => [F(0, 0, 0.42, 0.62, (T, o) => { if (LOOK_DRAWERS.toilet[skinId(o)]) { LOOK_DRAWERS.toilet[skinId(o)](T, o); return; } T.box(0.03, 0, 0.3, 0.36, 0.16, 0.42, '#F2EEE8'); T.box(0.06, 0.14, 0, 0.3, 0.42, 0.36, '#F2EEE8'); const [sx, sy] = T.P(0.21, 0.38, 0.37); ell(sx, sy, 6, 3.5, '#E1DCD5'); if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } })] },
+    vanity: {     parts: () => [F(0, 0, 1.0, 0.5, (T, o) => { if (LOOK_DRAWERS.vanity[skinId(o)]) { LOOK_DRAWERS.vanity[skinId(o)](T, o); return; } T.box(0, 0, 0, 1.0, 0.5, 0.8, '#7A5236'); T.box(-0.02, -0.02, 0.8, 1.04, 0.54, 0.05, '#E4DDD2'); const [sx, sy] = T.P(0.5, 0.25, 0.86); ell(sx, sy, 8, 4, '#B9C3C8'); T.line([0.5, 0.03, 0.85], [0.5, 0.03, 1.0], '#AEB6BB', 2); })] },
     flightY: {     parts: () => flightParts('y') },
     flightX: {     parts: () => flightParts('x') },
     holeY: {     parts: () => holeParts('y') },
@@ -2605,6 +3316,164 @@ export function createHouseArt(ctx0, opts = {}) {
           T.poly([[0.28, 0.601, 0.2], [0.44, 0.601, 0.2], [0.44, 0.601, 0.34], [0.28, 0.601, 0.34]], AR.ink, AR.chrome, 1);
         }, { onTop: true })]; },
        },
+    starprojector: {
+      // A little dome of a star projector, pierced with stars. Switched on it glows violet, turns slowly, and throws drifting
+      // constellations across the back walls while the room dims (see drawStarfield). Small, so it sits on a table; on the
+      // floor it has a pearl stand of its own.
+      parts: (o) => [F(0, 0, 0.3, 0.3, (T, ob, t) => { const c = cl(o), on = isLit(ob.id), z0 = ob.on ? 0 : 0.5;
+        if (!ob.on) { const [sx, sy] = T.P(0.15, 0.15, 0); ell(sx, sy, 8, 4, CE.pearlShade); T.line([0.15, 0.15, 0], [0.15, 0.15, z0], CE.gold, 2); T.box(0.04, 0.04, z0 - 0.02, 0.22, 0.22, 0.02, CE.pearl); }
+        T.box(0.06, 0.06, z0, 0.18, 0.18, 0.06, c); const [dx, dy] = T.P(0.15, 0.15, z0 + 0.06);
+        if (on) circle(dx, dy - 6, 16, 'rgba(170,150,255,.22)');
+        ctx.beginPath(); ctx.ellipse(dx, dy, 9, 4.5, 0, Math.PI, 0); ctx.bezierCurveTo(dx + 9, dy - 13, dx - 9, dy - 13, dx - 9, dy); ctx.fillStyle = on ? '#3A2E7A' : CE.navy; ctx.fill();
+        for (let k = 0; k < 6; k++) { const a = k * 1.05 + (on ? t * 0.6 : 0); const px = dx + Math.cos(a) * 6, py = dy - 5 + Math.sin(a) * 2.5 - Math.abs(Math.cos(a)) * 2; if (Math.sin(a) > -0.3) star4(px, py, 1.4, on ? '#FFF6C8' : '#8A86B0'); }
+      })],
+    },
+    shishiodoshi: {
+      // A shishi-odoshi on a bed of river pebbles: water runs from a bamboo spout into a pivoting bamboo arm, which fills,
+      // tips, spills into a stone basin and knocks back against a rock with a "tok".
+      parts: (o) => [F(0, 0, 0.9, 0.7, (T, ob, t) => { const CYC = 4, ph = ((t + (ob.x * 7 % 3)) % CYC) / CYC, tip = ph > 0.86 ? Math.sin((ph - 0.86) / 0.14 * Math.PI) : 0, fill = Math.min(1, ph / 0.86);
+        T.poly([[0, 0, 0.01], [0.9, 0, 0.01], [0.9, 0.7, 0.01], [0, 0.7, 0.01]], '#C9C2B4', 'rgba(0,0,0,.1)', 0.6); for (let k = 0; k < 30; k++) { const [px, py] = T.P(0.05 + ((k * 0.618) % 1) * 0.8, 0.05 + ((k * 0.382) % 1) * 0.6, 0.012); ell(px, py, 2.2, 1.3, ['#9A948A', '#B4AFA6', '#7E786E'][k % 3]); }
+        const [rx, ry] = T.P(0.2, 0.3, 0.1); ell(rx, ry, 9, 6, '#8E8A84', '#6E6A64'); const [mx, my] = T.P(0.2, 0.3, 0.17); ell(mx, my, 5, 2.4, RY.moss);
+        const [px, py] = T.P(0.65, 0.4, 0.05); ell(px, py, 14, 7, '#7E786E'); ell(px, py - 2, 11, 5, '#5E6A70'); ell(px - 2, py - 3, 4, 1.4, 'rgba(255,255,255,.35)');
+        T.line([0.85, 0.15, 0.0], [0.85, 0.15, 0.7], '#7FA06A', 4); T.line([0.85, 0.15, 0.7], [0.62, 0.3, 0.62], '#7FA06A', 3);
+        const [wx, wy] = T.P(0.62, 0.3, 0.6); limb(wx, wy, wx - 1, wy + 8, 'rgba(160,200,220,.85)', 1.2);
+        // The rocking arm: pivot posts, then the tube tilted by how far the cycle has gone.
+        [0.38, 0.48].forEach((y) => T.line([0.45, y, 0], [0.45, y, 0.32], '#6E8F5A', 2.4)); const piv = T.P(0.45, 0.43, 0.3), a = -0.35 + fill * 0.15 + tip * 0.85;
+        const L = 20, ex = piv[0] + Math.cos(Math.PI + a) * L, ey = piv[1] + Math.sin(Math.PI + a) * L * 0.7 - 6, bx = piv[0] - Math.cos(Math.PI + a) * L * 0.6, by = piv[1] - Math.sin(Math.PI + a) * L * 0.42;
+        limb(bx, by, ex, ey, '#8DB06E', 4); limb(bx, by, ex, ey, '#A9C88A', 1.6); ell(ex, ey, 2.6, 2.2, '#5E7E4E');
+        if (tip > 0.2) { for (let k = 0; k < 4; k++) circle(ex + k * 2, ey + 4 + k * 3, 1.2, 'rgba(160,200,220,.85)'); }
+        if (ph < 0.12) { ctx.save(); ctx.globalAlpha = 1 - ph / 0.12; ctx.font = '700 9px Inter, system-ui, sans-serif'; ctx.fillStyle = '#4A3A2A'; ctx.textAlign = 'center'; ctx.fillText('tok', bx, by - 10 - ph * 60); ctx.restore(); }
+      }, { onTop: true })],
+    },
+    tallcandelabra: {
+      // A tall brass candelabra with five candles on scrolled arms. Lit or snuffed one candle after another.
+      parts: (o) => [F(0, 0, 0.45, 0.45, (T, ob, t) => { const n = candlesLitCount(ob.id, t);
+        const [bx, by] = T.P(0.225, 0.225, 0); ell(bx, by, 9, 4.5, VI.brass, shade(VI.brass, -0.3)); T.line([0.225, 0.225, 0.02], [0.225, 0.225, 1.45], VI.brass, 3); [0.5, 1.0].forEach((z) => { const [kx, ky] = T.P(0.225, 0.225, z); ell(kx, ky, 4, 2.4, VI.brass); });
+        const arms = [[0.225, -0.18], [0.225, -0.09], [0.225, 0], [0.225, 0.09], [0.225, 0.18]];
+        arms.forEach(([x, dy], k) => { const y = 0.225 + dy, z = 1.45 + (k === 2 ? 0.12 : Math.abs(k - 2) === 1 ? 0.05 : 0);
+          if (k !== 2) { const [ax, ay] = T.P(0.225, 0.225, 1.4), [cx2, cy2] = T.P(x, y, z); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo((ax + cx2) / 2, ay + 6, cx2, cy2); ctx.strokeStyle = VI.brass; ctx.lineWidth = 1.8; ctx.stroke(); }
+          const [cx, cy] = T.P(x, y, z); ell(cx, cy, 3, 1.4, VI.brass); rr(cx - 1.4, cy - 9, 2.8, 9, 0.8, '#F6EEDC');
+          const lit = [2, 1, 3, 0, 4].indexOf(k) < n;
+          if (lit) { circle(cx, cy - 11, 6, 'rgba(255,200,120,.25)'); ell(cx, cy - 11 + Math.sin(t * 8 + k) * 0.4, 1.3, 2.6, '#FFC861'); }
+          else { limb(cx, cy - 9, cx, cy - 10, '#2A2224', 0.8); if (candleSmoke(ob.id, t, k)) { ctx.save(); ctx.globalAlpha = 0.4; limb(cx, cy - 11, cx + Math.sin(t * 3 + k) * 2, cy - 18, '#BBB4AC', 1); ctx.restore(); } } });
+      })],
+    },
+    woodstove: {
+      // A black cast-iron stove on stone hearth tiles, a glass door, a flue pipe up to the ceiling and a log basket.
+      // Lit, flames dance behind the glass, embers glow, sparks rise from the flue collar and the room warms orange.
+      parts: (o) => [F(0, 0, 0.9, 0.8, (T, ob, t) => { const lit = isLit(ob.id), fl = Math.sin(t * 9) * 0.5 + Math.sin(t * 13.7) * 0.3;
+        T.box(0, 0, 0, 0.9, 0.8, 0.05, AL.stoneDark); for (let k = 1; k < 3; k++) T.line([k * 0.3, 0, 0.051], [k * 0.3, 0.8, 0.051], 'rgba(0,0,0,.25)', 0.8);
+        [[0.18, 0.2], [0.62, 0.2], [0.18, 0.5], [0.62, 0.5]].forEach(([x, y]) => T.box(x, y, 0.05, 0.05, 0.05, 0.12, AL.iron));
+        T.box(0.16, 0.18, 0.17, 0.52, 0.38, 0.5, AL.iron); T.box(0.14, 0.16, 0.67, 0.56, 0.42, 0.04, '#3A3634');
+        T.poly([[0.24, 0.561, 0.24], [0.6, 0.561, 0.24], [0.6, 0.561, 0.58], [0.24, 0.561, 0.58]], lit ? '#3A1A0A' : '#1A1816', '#5A5450', 1.6);
+        // The fire stays behind the glass: everything is clipped to the door.
+        if (lit) { const door = [[0.24, 0.562, 0.24], [0.6, 0.562, 0.24], [0.6, 0.562, 0.58], [0.24, 0.562, 0.58]].map((p) => T.P(...p)), [fx, fy] = T.P(0.42, 0.562, 0.28);
+          ctx.save(); ctx.beginPath(); door.forEach(([px, py], k) => (k ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath(); ctx.clip();
+          ell(fx, fy + 1, 9, 3, '#C2410C'); ctx.globalAlpha = 0.9; ell(fx, fy - 5 - fl * 1.5, 5, 6 + fl * 1.5, '#F28C28'); ell(fx - 3, fy - 3, 3, 4, '#FFC861'); ell(fx + 3, fy - 2 + fl, 2.4, 3.5, '#FFD98A'); ctx.restore();
+          if ((t * 3) % 1 < 0.5) { const [sx, sy] = T.P(0.42, 0.37, 0.75 + ((t * 0.8) % 1) * 0.4); circle(sx + Math.sin(t * 7) * 3, sy, 1, '#FFB347'); } }
+        T.line([0.42, 0.37, 0.71], [0.42, 0.37, 2.6], AL.iron, 5); T.line([0.42, 0.37, 0.95], [0.42, 0.37, 0.98], '#4A4644', 7);
+        const [bx, by] = T.P(0.8, 0.65, 0); ell(bx, by - 4, 9, 4, '#7A5A3A'); [[-4, -8], [2, -9], [-1, -12]].forEach(([dx, dy]) => { limb(bx + dx - 4, by + dy, bx + dx + 5, by + dy - 3, AL.logDark, 3.5); circle(bx + dx + 5, by + dy - 3, 1.8, AL.logEnd); });
+      })],
+    },
+    glamtable: {
+      // A Hollywood dressing table: a blush-skirted table with a gold-legged stool, a tall mirror ringed with round bulbs.
+      // Tapped, the bulbs light one after another until all are on; getting glam, they blaze and sparkles flash round it.
+      parts: (o) => [F(0, 0, 1.1, 0.5, (T, ob, t) => { const c = cl(o), on = isLit(ob.id), glam = usingSlot(ob.id + ':g'), chase = live(ob.id);
+        T.box(0.02, 0.02, 0, 1.06, 0.44, 0.72, c); for (let k = 0; k <= 14; k++) T.line([0.04 + k * 0.073, 0.461, 0.02], [0.04 + k * 0.073, 0.461, 0.7], 'rgba(255,255,255,.3)', 1); T.box(0, 0, 0.72, 1.1, 0.48, 0.04, RG.white); T.line([0, 0.481, 0.74], [1.1, 0.481, 0.74], RG.gold, 1.4);
+        T.box(0.2, 0.06, 0.76, 0.7, 0.06, 0.95, RG.white); T.poly([[0.27, 0.121, 0.83], [0.83, 0.121, 0.83], [0.83, 0.121, 1.64], [0.27, 0.121, 1.64]], RG.mirror, RG.mirrorDark, 1); T.line([0.35, 0.122, 0.95], [0.5, 0.122, 1.5], 'rgba(255,255,255,.75)', 1.6);
+        const bulbs = []; for (let k = 0; k <= 4; k++) bulbs.push([0.23, 0.83 + k * 0.2], [0.87, 0.83 + k * 0.2]); for (let k = 1; k < 4; k++) bulbs.push([0.23 + k * 0.16, 1.68]);
+        const lit = chase ? Math.floor((t * 6) % (bulbs.length + 4)) : on || glam ? bulbs.length : 0;
+        bulbs.forEach(([x, z], k) => { const [bx, by] = T.P(x, 0.125, z), b = k < lit; if (b) circle(bx, by, glam ? 7 : 5, 'rgba(255,236,190,.35)'); circle(bx, by, 2.6, b ? '#FFF7E0' : '#E8E2D6', b ? null : 'rgba(0,0,0,.2)'); });
+        T.box(0.3, 0.3, 0.76, 0.1, 0.08, 0.06, RG.gold); T.box(0.75, 0.25, 0.76, 0.06, 0.06, 0.1, '#F2C4CE'); const [px, py] = T.P(0.6, 0.3, 0.77); ell(px, py, 4, 2, RG.gold);
+        if (glam) for (let k = 0; k < 5; k++) { const a = (t * 1.5 + k * 1.3) % 6.28, [sx, sy] = T.P(0.55 + Math.cos(a) * 0.45, 0.4, 1.2 + Math.sin(a * 1.3) * 0.4); ctx.fillStyle = '#FFF7C8'; ctx.beginPath(); ctx.moveTo(sx, sy - 4); ctx.lineTo(sx + 1, sy - 1); ctx.lineTo(sx + 4, sy); ctx.lineTo(sx + 1, sy + 1); ctx.lineTo(sx, sy + 4); ctx.lineTo(sx - 1, sy + 1); ctx.lineTo(sx - 4, sy); ctx.lineTo(sx - 1, sy - 1); ctx.closePath(); ctx.fill(); }
+      }),
+      F(0.35, 0.55, 0.75, 0.9, (T, ob) => { const c = cl(o); [[0.42, 0.62], [0.68, 0.62], [0.42, 0.84], [0.68, 0.84]].forEach(([x, y]) => T.line([x, y, 0], [x, y, 0.42], RG.gold, 1.8)); const [sx, sy] = T.P(0.55, 0.73, 0.46); ell(sx, sy, 11, 6, shade(c, -0.08), 'rgba(0,0,0,.15)'); ell(sx, sy - 1, 9, 4.5, c); })],
+    },
+    hificonsole: {
+      // A long walnut hi-fi on splayed legs: woven speaker grilles either end, a turntable under a smoked lid in the middle.
+      // Playing, the lid lifts, the record spins, notes rise, and its amber light comes on and fills the room.
+      parts: (o) => [F(0, 0, 1.8, 0.5, (T, ob, t) => { const c = cl(o), playing = usingSlot(ob.id + ':r') || live(ob.id);
+        if (playing && objectLights.get(ob.id) !== true) objectLights.set(ob.id, true);
+        taperLegs(T, [[0.1, 0.08, -0.04, -0.04], [1.7, 0.08, 0.04, -0.04], [0.1, 0.42, -0.04, 0.04], [1.7, 0.42, 0.04, 0.04]], 0.18, MC.walnutDark);
+        T.box(0, 0, 0.18, 1.8, 0.5, 0.5, c);
+        [[0.04, 0.5], [1.3, 1.76]].forEach(([a, b]) => { T.poly([[a, 0.501, 0.22], [b, 0.501, 0.22], [b, 0.501, 0.64], [a, 0.501, 0.64]], MC.cane); for (let x = a + 0.03; x < b; x += 0.04) T.line([x, 0.502, 0.22], [x, 0.502, 0.64], 'rgba(120,80,30,.3)', 0.7); });
+        T.poly([[0.55, 0.501, 0.3], [1.25, 0.501, 0.3], [1.25, 0.501, 0.6], [0.55, 0.501, 0.6]], shade(c, -0.15)); [0.75, 0.9, 1.05].forEach((x) => { const [kx, ky] = T.P(x, 0.502, 0.45); circle(kx, ky, 2.4, MC.chrome); });
+        T.box(-0.01, -0.01, 0.68, 1.82, 0.52, 0.02, MC.walnutLite);
+        const [px, py] = T.P(0.9, 0.25, 0.71), spin = playing ? t * 4 : 0; ell(px, py, 13, 6, '#1B1A1F'); ell(px, py, 4, 2, MC.orange); limb(px + Math.cos(spin) * 9, py + Math.sin(spin) * 4, px + Math.cos(spin) * 5, py + Math.sin(spin) * 2, 'rgba(255,255,255,.35)', 1);
+        const [ax, ay] = T.P(1.15, 0.1, 0.72); limb(ax, ay, px + 6, py - 2, MC.chrome, 1.4);
+        const lid = playing ? 0.28 : 0.06; T.poly([[0.6, 0.02, 0.7], [1.2, 0.02, 0.7], [1.2, 0.02 + (0.46 - lid * 1.4), 0.7 + lid], [0.6, 0.02 + (0.46 - lid * 1.4), 0.7 + lid]], 'rgba(60,50,45,.28)', 'rgba(60,50,45,.5)', 0.8);
+        if (playing) { ctx.save(); ctx.font = '700 9px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; for (let k = 0; k < 3; k++) { const u = (t * 0.6 + k / 3) % 1; ctx.globalAlpha = Math.sin(u * Math.PI); ctx.fillStyle = [MC.mustard, MC.orange, MC.teal][k]; ctx.fillText(k % 2 ? '♫' : '♪', px - 8 + k * 8, py - 10 - u * 24); } ctx.restore(); }
+      })],
+    },
+    musicbox: {
+      // A painted music box; wound or tapped, the lid opens, a little dancer turns and notes float up. Small, so it sits on a
+      // table; on the floor it has a painted stand of its own.
+      parts: (o) => [F(0, 0, 0.32, 0.26, (T, ob, t) => { const c = cl(o), z0 = ob.on ? 0 : 0.6, playing = live(ob.id) || usingSlot(ob.id + ':m');
+        if (!ob.on) { [[0.05, 0.04], [0.27, 0.04], [0.05, 0.22], [0.27, 0.22]].forEach(([x, y]) => T.line([x, y, 0], [x, y, z0], CO.cream, 2)); T.box(0.02, 0.02, z0 - 0.03, 0.28, 0.22, 0.03, CO.cream); }
+        T.box(0.04, 0.03, z0, 0.24, 0.2, 0.1, c); T.line([0.04, 0.231, z0 + 0.05], [0.28, 0.231, z0 + 0.05], '#C9A24A', 1);
+        ditsy(T, 0.06, 0.26, 0.232, z0 + 0.02, z0 + 0.09, 6);
+        if (playing) { T.poly([[0.04, 0.03, z0 + 0.1], [0.28, 0.03, z0 + 0.1], [0.28, 0.03, z0 + 0.3], [0.04, 0.03, z0 + 0.3]], shade(c, -0.1), 'rgba(0,0,0,.2)', 0.8); T.poly([[0.07, 0.035, z0 + 0.12], [0.25, 0.035, z0 + 0.12], [0.25, 0.035, z0 + 0.28], [0.07, 0.035, z0 + 0.28]], '#DCE6EC');
+          const [dx, dy] = T.P(0.16, 0.13, z0 + 0.1), sp = t * 3, w = Math.cos(sp); limb(dx, dy, dx, dy - 11, '#F6E0D8', 1.6); ell(dx, dy - 6, 6 * Math.abs(w) + 1.5, 2.4, CO.rose); circle(dx, dy - 13, 2.3, '#F6E0D8'); limb(dx, dy - 10, dx + 4.5 * w, dy - 15, '#F6E0D8', 1.1); limb(dx, dy - 10, dx - 4.5 * w, dy - 15, '#F6E0D8', 1.1);
+          ctx.save(); ctx.font = '600 9px system-ui, sans-serif'; ctx.textAlign = 'center'; for (let k = 0; k < 3; k++) { const a = ((t * 0.5 + k / 3) % 1); ctx.globalAlpha = Math.sin(a * Math.PI); ctx.fillStyle = PATCH[k]; ctx.fillText(k % 2 ? '♫' : '♪', dx + Math.sin(a * 6 + k) * 8, dy - 14 - a * 26); } ctx.restore(); }
+        else T.box(0.04, 0.03, z0 + 0.1, 0.24, 0.2, 0.025, shade(c, 0.08));
+      })],
+    },
+    servicebell: {
+      // A brass hotel desk bell on a walnut block; it jumps when rung. Small, so it sits on a table; on the floor it has a brass pedestal.
+      parts: (o) => [F(0, 0, 0.3, 0.3, (T, ob, t) => { const z0 = ob.on ? 0 : 0.85, ring = live(ob.id), hop = ring ? Math.abs(Math.sin(t * 22)) * 0.02 : 0;
+        if (!ob.on) { const [bx, by] = T.P(0.15, 0.15, 0); ell(bx, by, 9, 4.5, HO.black); T.line([0.15, 0.15, 0.02], [0.15, 0.15, z0 - 0.02], HO.brass, 3); T.box(0.03, 0.03, z0 - 0.03, 0.24, 0.24, 0.03, HO.brass); }
+        T.box(0.05, 0.05, z0, 0.2, 0.2, 0.04, HO.walnut);
+        const [dx, dy] = T.P(0.15, 0.15, z0 + 0.04 + hop); ctx.beginPath(); ctx.ellipse(dx, dy, 8, 4, 0, Math.PI, 0); ctx.lineTo(dx + 8, dy); ctx.closePath();
+        ctx.beginPath(); ctx.moveTo(dx - 8, dy); ctx.bezierCurveTo(dx - 8, dy - 11, dx + 8, dy - 11, dx + 8, dy); ctx.closePath(); ctx.fillStyle = HO.brass; ctx.fill(); ctx.strokeStyle = shade(HO.brass, -0.35); ctx.lineWidth = 0.8; ctx.stroke();
+        ell(dx - 2, dy - 5, 3, 1.6, HO.brassLite); circle(dx, dy - 9, 1.5, HO.brass);
+        if (ring) { ctx.strokeStyle = 'rgba(224,194,110,.8)'; ctx.lineWidth = 1.2; [10, 15].forEach((r) => { ctx.beginPath(); ctx.arc(dx, dy - 6, r + (t * 30) % 5, -2.4, -0.7); ctx.stroke(); }); }
+      })],
+    },
+    diffuser: {
+      // A stone cone on a teak base; it glows when on, and mist curls up from the top while it runs or someone breathes it in.
+      // On a table it sits on the top; on the floor it stands on a slim teak stand of its own.
+      parts: (o) => [F(0, 0, 0.35, 0.35, (T, ob, t) => { const c = cl(o), on = isLit(ob.id), busy = usingSlot(ob.id + ':d') || live(ob.id), z0 = ob.on ? 0 : 0.5;
+        if (!ob.on) { T.box(0.08, 0.08, 0, 0.19, 0.19, 0.03, '#7A5236'); [[0.1, 0.1], [0.25, 0.1], [0.1, 0.25], [0.25, 0.25]].forEach(([x, y]) => T.line([x, y, 0.03], [x, y, z0 - 0.03], '#7A5236', 1.8)); T.box(0.02, 0.02, z0 - 0.03, 0.31, 0.31, 0.03, '#9C6B45'); }
+        T.box(0.05, 0.05, z0, 0.25, 0.25, 0.06, '#9C6B45');
+        const [bx, by] = T.P(0.175, 0.175, z0 + 0.06), [tx, ty] = T.P(0.175, 0.175, z0 + 0.42);
+        ctx.beginPath(); ctx.moveTo(bx - 10, by); ctx.quadraticCurveTo(bx - 9, (by + ty) / 2, tx - 3, ty); ctx.lineTo(tx + 3, ty); ctx.quadraticCurveTo(bx + 9, (by + ty) / 2, bx + 10, by); ctx.closePath(); ctx.fillStyle = c; ctx.fill(); ctx.strokeStyle = shade(c, -0.2); ctx.lineWidth = 0.8; ctx.stroke();
+        if (on) { ctx.save(); ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 1.2); circle(bx, by - 6, 9, '#CFEBDD'); ctx.restore(); }
+        ell(tx, ty, 3, 1.4, '#6E6A64');
+        if (on || busy) steamAt(T, 0.175, 0.175, z0 + 0.44, t, busy ? 5 : 2, busy ? 0.9 : 0.5);
+      })],
+    },
+    overseer: {
+      // A concrete plinth, a jointed arm and a capsule head with one red lens that follows whoever is nearest, and glows
+      // harder while it talks.
+      parts: (o) => [F(0, 0, 0.6, 0.6, (T, ob, t) => { const c = cl(o); const talking = speechNow(ob.id, t) != null;
+        const [sx, sy] = T.P(0.3, 0.3, 0); ell(sx, sy, 20, 9, 'rgba(0,0,0,.22)');
+        T.box(0.08, 0.08, 0, 0.44, 0.44, 0.14, '#8E939A'); T.box(0.18, 0.18, 0.14, 0.24, 0.24, 0.06, '#6E737A');
+        const sway = Math.sin(t * 0.7) * 0.03, j1 = [0.3, 0.3, 1.1], hd = [0.3 + sway, 0.42, 1.6];
+        T.line([0.3, 0.3, 0.2], j1, c, 7); T.line([0.3, 0.3, 0.2], j1, shade(c, 0.25), 2);
+        T.line(j1, [0.3 + sway, 0.4, 1.5], c, 6);
+        const [jx, jy] = T.P(...j1); circle(jx, jy, 5, shade(c, -0.2)); circle(jx, jy, 2.2, '#C9CED6');
+        T.line([0.42, 0.3, 0.2], [0.4, 0.34, 1.05], '#1B1A1F', 1.2);
+        // The cage it is kept in, bolted to the top of the stand: the bars behind the head go first, the front ones last.
+        const k0 = 0, k1 = 0.6, z0 = 1.2, z1 = 2.02, bar = '#3A3D44', N = 3;
+        const ring = (z, col, w) => { T.line([k0, k0, z], [k1, k0, z], col, w); T.line([k0, k0, z], [k0, k1, z], col, w); T.line([k1, k0, z], [k1, k1, z], col, w); T.line([k0, k1, z], [k1, k1, z], col, w); };
+        T.poly([[k0, k0, z0], [k1, k0, z0], [k1, k1, z0], [k0, k1, z0]], '#5A5E66', '#2B2B30', 1);
+        for (let i = 0; i <= N; i++) { const u = k0 + (k1 - k0) * i / N; T.line([u, k0, z0], [u, k0, z1], bar, 1.6); T.line([k0, u, z0], [k0, u, z1], bar, 1.6); }
+        const [ex, ey] = T.P(...hd);
+        ell(ex, ey, 14, 11, '#E8EAEC', shade(c, -0.2)); ell(ex - 2, ey - 3, 8, 4.5, 'rgba(255,255,255,.55)');
+        ctx.strokeStyle = shade('#E8EAEC', -0.25); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ex - 13, ey + 2); ctx.lineTo(ex + 13, ey + 2); ctx.stroke();
+        ell(ex + 1, ey + 2, 8, 6.5, '#1B1A1F');
+        const [wx, wy] = T.W(...hd.slice(0, 2)); let best = null, bd = 1e9;
+        [jordan, maya].forEach(p => { if (!p || p.level !== ob.level || p.hidden) return; const d = Math.hypot(p.x - wx, p.y - wy); if (d < bd) { bd = d; best = p; } });
+        let dx = 0, dy = 0; if (best && bd < 8) { const [px, py] = iso(best.x, best.y, 1.2); const L = Math.hypot(px - ex, py - ey) || 1; dx = (px - ex) / L * 3.5; dy = (py - ey) / L * 2.5; }
+        const lx = ex + 1 + dx, ly = ey + 2 + dy, pulse = talking ? 0.6 + 0.4 * Math.abs(Math.sin(t * 9)) : 0.55 + 0.25 * Math.sin(t * 1.5);
+        ctx.save(); ctx.globalAlpha = pulse * 0.55; circle(lx, ly, 8, '#FF2A2A'); ctx.restore();
+        circle(lx, ly, 4.5, '#D01818'); circle(lx - 1, ly - 1, 1.8, `rgba(255,${talking ? 230 : 170},${talking ? 210 : 140},1)`);
+        for (let i = 0; i <= N; i++) { const u = k0 + (k1 - k0) * i / N; T.line([u, k1, z0], [u, k1, z1], bar, 1.5); T.line([k1, u, z0], [k1, u, z1], bar, 1.5); }
+        ring(z0 + 0.02, '#2B2B30', 2.4); ring(z1, '#2B2B30', 2.4);
+        T.poly([[k0, k0, z1], [k1, k0, z1], [k1, k1, z1], [k0, k1, z1]], 'rgba(58,61,68,.6)', '#2B2B30', 1);
+        const [hx, hy] = T.P(0.3, 0.3, z1); ctx.strokeStyle = '#2B2B30'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(hx, hy - 5, 4, Math.PI * 0.15, Math.PI * 0.85, true); ctx.stroke();
+      }, { onTop: true })],
+    },
     jukebox: {      
       parts: (o) => [F(0, 0, 0.8, 0.5, (T, ob, t) => { const c = cl(o); T.box(0, 0, 0, 0.8, 0.5, 1.05, '#5A3E2E'); const pts = []; for (let k = 0; k <= 12; k++) { const a = Math.PI * k / 12; pts.push([0.4 - Math.cos(a) * 0.4, 0.501, 1.05 + Math.sin(a) * 0.38]); } T.poly([[0, 0.501, 1.05]].concat(pts, [[0.8, 0.501, 1.05]]), c); for (let k = 0; k < 5; k++) { const h2 = (t * 60 + k * 50) % 360; T.line([0.1 + k * 0.15, 0.502, 0.12], [0.1 + k * 0.15, 0.502, 1.0], power ? `hsl(${h2},80%,62%)` : '#4A4450', 2.2); } T.poly([[0.15, 0.503, 0.55], [0.65, 0.503, 0.55], [0.65, 0.503, 0.9], [0.15, 0.503, 0.9]], '#F2EEE8'); })],
         },
@@ -2719,6 +3588,20 @@ export function createHouseArt(ctx0, opts = {}) {
     else if (pat === 'scallop') { for (let z = 0.45, r = 0; z < WH; z += 0.24, r++) for (let u = (r % 2) * 0.2; u < len - 0.05; u += 0.4) { const pts = []; for (let k = 0; k <= 8; k++) { const a = Math.PI * k / 8; pts.push([Math.min(len, u + 0.2 - Math.cos(a) * 0.2), z - Math.sin(a) * 0.15]); } path(pts, ink, 1.1); } }
     else if (pat === 'damask') { for (let z = 0.55, r = 0; z < WH - 0.1; z += 0.6, r++) for (let u = 0.3 + (r % 2) * 0.35; u < len - 0.1; u += 0.7) { poly([P(u, z - 0.22), P(u + 0.12, z), P(u, z + 0.22), P(u - 0.12, z)], ink); const [sx, sy] = iso(...P(u, z)); ell(sx - 6, sy, 2.5, 5, ink, null, 0.5); ell(sx + 6, sy, 2.5, 5, ink, null, -0.5); circle(sx, sy - 11, 1.6, ink); circle(sx, sy + 11, 1.6, ink); } }
     else if (pat === 'starburst') { for (let z = 0.55, r = 0; z < WH - 0.05; z += 0.55, r++) for (let u = 0.3 + (r % 2) * 0.3; u < len - 0.05; u += 0.6) { const [sx, sy] = iso(...P(u, z)); for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, l = k % 2 ? 4 : 7; limb(sx - Math.cos(a) * 1.5, sy - Math.sin(a) * 1.5, sx + Math.cos(a) * l, sy + Math.sin(a) * l, ink, 1.1); } circle(sx, sy, 1.2, S.ink2 || ink); } }
+    // A star map: scattered stars, a few bright gold ones joined into constellations, and a crescent here and there.
+    else if (pat === 'starmap') { const br = []; for (let k = 0; k < len * 12; k++) { const u = 0.05 + ((k * 0.618 * 3.1) % (len - 0.1)), z = 0.3 + ((k * 0.414 * 2.3) % (WH - 0.4)), [sx, sy] = iso(...P(u, z)); if (k % 11 === 0) { star4(sx, sy, 2.6, S.ink2); br.push([sx, sy]); } else circle(sx, sy, 0.7 + (k % 3) * 0.3, ink); }
+      ctx.strokeStyle = 'rgba(226,196,106,.45)'; ctx.lineWidth = 0.7; for (let k = 0; k + 2 < br.length; k += 3) { ctx.beginPath(); ctx.moveTo(...br[k]); ctx.lineTo(...br[k + 1]); ctx.lineTo(...br[k + 2]); ctx.stroke(); }
+      for (let u = 0.6; u < len; u += 2.2) { const [mx, my] = iso(...P(u, WH - 0.5)); circle(mx, my, 5, S.ink2); circle(mx + 2, my - 1, 4.4, S.base); } }
+    // Knotty pine: tongue-and-groove boards with a knot here and there.
+    else if (pat === 'knotty') { for (let u = 0.16; u < len; u += 0.16) line3(P(u, 0.14), P(u, WH), ink, 1); for (let k = 0; k < len * 3; k++) { const u = 0.08 + ((k * 0.618 * 4.1) % (len - 0.16)), z = 0.4 + ((k * 0.414 * 3.3) % (WH - 0.6)), [sx, sy] = iso(...P(u, z)); ell(sx, sy, 2.4, 1.8, S.ink2); ell(sx, sy, 1, 0.8, 'rgba(70,40,15,.6)'); } }
+    // Ditsy floral: tiny four-petal flowers in a scatter of colours, with a leaf beside each.
+    else if (pat === 'ditsy') { const pal = S.pal || [ink]; for (let z = 0.35, r = 0; z < WH - 0.05; z += 0.28, r++) for (let u = 0.12 + (r % 2) * 0.14; u < len - 0.05; u += 0.28) { const [sx, sy] = iso(...P(u, z)), col = pal[(r * 3 + Math.round(u * 7)) % pal.length]; [[-1.6, 0], [1.6, 0], [0, -1.6], [0, 1.6]].forEach(([dx, dy]) => circle(sx + dx, sy + dy, 1.3, col)); circle(sx, sy, 0.9, '#FFF6D8'); ell(sx + 3, sy + 2, 1.8, 0.8, 'rgba(110,143,90,.7)', null, 0.6); } }
+    // Hotel pinstripe: pairs of fine gold lines.
+    else if (pat === 'pinstripe2') { for (let u = 0.2; u < len; u += 0.45) { line3(P(u, 0.14), P(u, WH), ink, 0.9); if (u + 0.05 < len) line3(P(u + 0.05, 0.14), P(u + 0.05, WH), ink, 0.9); } }
+    // Limewash: soft clouds of darker and lighter wash, brushed across the wall.
+    else if (pat === 'limewash') { for (let k = 0; k < len * 3; k++) { const u = (k * 0.618 * 3.7) % len, z = 0.2 + ((k * 0.414 * 2.9) % (WH - 0.6)), w = 0.5 + (k % 3) * 0.3; rect(u, Math.min(len, u + w), z, Math.min(WH, z + 0.35 + (k % 2) * 0.25), k % 3 ? ink : S.ink2); } }
+    // Board-formed concrete: the seams of the formwork boards, and a grid of tie holes.
+    else if (pat === 'formwork') { for (let z = 0.34; z < WH; z += 0.26) line3(P(0, z), P(len, z), ink, 0.9); for (let z = 0.6; z < WH - 0.1; z += 0.78) for (let u = 0.3; u < len - 0.1; u += 0.6) { const [sx, sy] = iso(...P(u, z)); circle(sx, sy, 1.3, S.ink2); } }
     else if (pat === 'cloudnine') { for (let z = 0.5, r = 0; z < WH - 0.1; z += 0.6, r++) for (let u = 0.3 + (r % 2) * 0.4; u < len - 0.1; u += 0.8) { const [sx, sy] = iso(...P(u, z)); cloudPuff(sx, sy, 1.15); circle(sx + 13, sy - 9, 1.3, '#F6E06B'); if (r % 2) circle(sx - 12, sy + 6, 1.1, '#F9C6DA'); } }
     else if (pat === 'shiplap') { for (let z = 0.34; z < WH; z += 0.2) line3(P(0, z), P(len, z), ink, 1); }
     else if (pat === 'wainscot') { rect(0, len, 0.14, 1.0, ink); rect(0, len, 0.97, 1.04, shade(ink, -0.12)); for (let u = 0.12; u < len - 0.3; u += 0.6) rect(u, Math.min(len - 0.05, u + 0.48), 0.28, 0.86, null, 'rgba(0,0,0,.16)', 1); }
@@ -3744,6 +4627,79 @@ export function createHouseArt(ctx0, opts = {}) {
     }
     ctx.restore();
   }
+  // A star projector that is on dims its floor and throws constellations across the back walls, drifting slowly along.
+  function drawStarfield(level, t) {
+    if (!OBJS.some((o) => o.level === level && o.type === 'starprojector' && isLit(o.id))) return;
+    ctx.save(); ctx.fillStyle = 'rgba(20,18,60,.32)'; ctx.fillRect(-4000, -4000, 8000, 8000);
+    const plane = { L: (u, z) => [0.02, u, z], B: (u, z) => [u, 0.02, z], R: (u, z) => [WX - 0.02, u, z], F: (u, z) => [u, WY - 0.02, z] }, len = { L: WY, R: WY, B: WX, F: WX };
+    for (const p of BACK[VR]) {
+      const L = len[p], drift = t * 0.05, pts = [];
+      for (let k = 0; k < L * 7; k++) { const u = ((k * 0.618 * 5.3 + drift) % L + L) % L, z = 0.35 + ((k * 0.414 * 3.7) % (WH - 0.5)), [sx, sy] = iso(...plane[p](u, z)), tw = 0.6 + 0.4 * Math.sin(t * 2 + k);
+        ctx.globalAlpha = tw; star4(sx, sy, k % 9 === 0 ? 3 : 1.2, k % 5 === 0 ? '#FFF2B8' : '#E8E6FF'); if (k % 9 === 0) pts.push([sx, sy]); }
+      // Constellations: each bright star joined to its nearest bright neighbour, and only when it is close.
+      ctx.globalAlpha = 0.4; ctx.strokeStyle = '#D8D4FF'; ctx.lineWidth = 0.8; pts.forEach((a, i) => { let best = null, bd = 70; pts.forEach((b, j) => { if (j !== i) { const d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (d < bd) { bd = d; best = b; } } }); if (best) { ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...best); ctx.stroke(); } });
+    }
+    ctx.restore();
+  }
+  // Candles that catch or go out one after another: when the change started, and which way. With no change, the
+  // piece's light decides (all lit or none).
+  const candleFx = new Map(), CANDLE_STEP = 0.5;
+  function candlesLitCount(id, t) { const fx = candleFx.get(id); if (!fx) return isLit(id) ? 5 : 0; const k = Math.floor((t - fx.at) / CANDLE_STEP); return fx.on ? Math.min(5, k + 1) : Math.max(0, 5 - k - 1); }
+  const candleSmoke = (id, t, k) => { const fx = candleFx.get(id); return !!fx && !fx.on && t - fx.at < (5 - [2, 1, 3, 0, 4].indexOf(k)) * CANDLE_STEP + 2; };
+  // Room service: a breakfast cart that rolls along a path to the bed, waits there, and rolls back out.
+  let cart = null;
+  const CART_SPEED = 1.1, CART_WAIT = 25;
+  const pathLen = (pts) => pts.slice(1).reduce((s, p, k) => s + Math.hypot(p[0] - pts[k][0], p[1] - pts[k][1]), 0);
+  function along(pts, d) { for (let k = 1; k < pts.length; k++) { const [a, b] = [pts[k - 1], pts[k]], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (d <= L || k === pts.length - 1) { const f = L ? Math.min(1, d / L) : 1; return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, [b[0] - a[0], b[1] - a[1]]]; } d -= L; } return [pts[0][0], pts[0][1], [1, 0]]; }
+  function cartAt(t) {
+    if (!cart) return null;
+    const L = pathLen(cart.pts), go = L / CART_SPEED, e = t - cart.at;
+    if (e < 0) return null;
+    if (e > go * 2 + CART_WAIT) { cart = null; return null; }
+    const d = e < go ? e * CART_SPEED : e < go + CART_WAIT ? L : L - (e - go - CART_WAIT) * CART_SPEED;
+    const [x, y, dir] = along(cart.pts, d);
+    return { x, y, dir, parked: e >= go && e < go + CART_WAIT, lifted: e >= go + 2 };
+  }
+  // The cart: a trolley on brass legs and casters with a lower shelf, a white cloth skirt to the shelf, and on top a
+  // silver cloche (lifted once it has arrived), a coffee pot, juice and a rose. Solid boxes, so nothing shows through.
+  function drawCart(c, t) {
+    const X = c.x, Y = c.y, [gx, gy] = iso(X, Y, 0);
+    ell(gx, gy, 20, 9, 'rgba(0,0,0,.2)');
+    [[-0.32, -0.2], [0.32, -0.2], [-0.32, 0.2], [0.32, 0.2]].forEach(([dx, dy]) => { line3([X + dx, Y + dy, 0.04], [X + dx, Y + dy, 0.72], HO.brass, 1.6); const [wx, wy] = iso(X + dx, Y + dy, 0.03); circle(wx, wy, 2.2, '#3A3A40'); });
+    box(X - 0.34, Y - 0.22, 0.12, 0.68, 0.44, 0.03, '#C9CED6');
+    box(X - 0.37, Y - 0.25, 0.4, 0.74, 0.5, 0.33, '#F4F1EA');
+    box(X - 0.37, Y - 0.25, 0.73, 0.74, 0.5, 0.02, '#FFFFFF');
+    const [cx, cy] = iso(X - 0.08, Y, 0.75); ctx.beginPath(); ctx.moveTo(cx - 9, cy); ctx.bezierCurveTo(cx - 9, cy - (c.lifted ? 4 : 12), cx + 9, cy - (c.lifted ? 4 : 12), cx + 9, cy); ctx.closePath(); ctx.fillStyle = '#D5DAE0'; ctx.fill(); ctx.strokeStyle = '#9AA3A8'; ctx.lineWidth = 0.8; ctx.stroke();
+    if (c.lifted) { ell(cx, cy - 1, 7, 3, '#F2C14E'); circle(cx - 2, cy - 2, 2, '#FFF6D8'); } else circle(cx, cy - 12, 1.6, '#9AA3A8');
+    box(X + 0.15, Y - 0.14, 0.75, 0.08, 0.08, 0.16, '#C9CED6'); box(X + 0.18, Y + 0.08, 0.75, 0.06, 0.06, 0.12, '#F4A93B');
+    const [fx, fy] = iso(X + 0.06, Y + 0.16, 0.75); limb(fx, fy, fx, fy - 8, '#3F6B3A', 1); circle(fx, fy - 9, 2.2, '#B5243A');
+    if (c.parked) PFX.emit('cart:coffee', 'steam', c.level, X + 0.19, Y - 0.1, 0.92, 0.4);
+  }
+  // What the talking pieces are saying: their lines and when they started. One line at a time, each held for its length.
+  const speech = new Map();
+  const lineSecs = (s) => 1.6 + s.length * 0.055;
+  function speechNow(id, t) {
+    const sp = speech.get(id); if (!sp) return null;
+    let at = sp.at;
+    for (const line of sp.lines) { const d = lineSecs(line); if (t < at + d) return t >= at ? { line, age: t - at, d } : null; at += d; }
+    speech.delete(id); return null;
+  }
+  function drawObjectSpeech(level, t) {
+    for (const id of [...speech.keys()]) {
+      const o = OBJS.find(ob => ob.id === id); if (!o) { speech.delete(id); continue; }
+      const now = speechNow(id, t); if (!now || o.level !== level) continue;
+      const W2 = TYPES[o.type]?.W ?? 0.6, D2 = TYPES[o.type]?.D ?? 0.6, [fx, fy] = iso(o.x + W2 / 2, o.y + D2 / 2, 2.1);
+      ctx.save(); ctx.globalAlpha = Math.min(1, now.age * 6, (now.d - now.age) * 4); ctx.font = '600 9px Inter, system-ui, sans-serif'; ctx.textAlign = 'center';
+      const words = now.line.split(' '), lines = [''];
+      for (const w of words) { const cur = lines[lines.length - 1]; if (ctx.measureText(cur + ' ' + w).width > 150 && cur) lines.push(w); else lines[lines.length - 1] = (cur ? cur + ' ' : '') + w; }
+      const bw = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 14, bh = lines.length * 11 + 8, bx = fx - bw / 2, by = fy - 14 - bh;
+      ctx.fillStyle = 'rgba(24,22,26,.94)'; ctx.strokeStyle = 'rgba(255,60,60,.8)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 4) : ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(fx - 3, by + bh); ctx.lineTo(fx, by + bh + 5); ctx.lineTo(fx + 3, by + bh); ctx.fill();
+      ctx.fillStyle = '#F2EEE8'; lines.forEach((l, i) => ctx.fillText(l, fx, by + 12 + i * 11));
+      ctx.restore();
+    }
+  }
   function drawBubble(c, t) {
     const age = t - c.bubble.at;
     if (c.bubble.text === '!') { drawAlert(c, age); return; }
@@ -4294,7 +5250,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const deferred = !!(G && opts.deferredLights && opts.deferredLights()) && tier() !== 'low';
     if (deferred) { G.begin(W, H, Math.min((cv.width / W) * (tier() === 'high' ? 0.75 : 0.5), 1600 / W)); ctx = G.wrap(ctx0); gOn = true; }
     try {
-    drawWalls(lv); drawFloor(lv); decals(lv, t); drawFloorDirt(lv);
+    drawWalls(lv); drawFloor(lv); decals(lv, t); drawFloorDirt(lv); drawStarfield(lv, t);
     const items = [];
     wallItemsFull(lv, items);
     OBJS.forEach(o => { if (o.level === lv && TYPES[o.type] && !(arr.hold && arr.hold === o)) objItems(o, items, t); });
@@ -4317,13 +5273,14 @@ export function createHouseArt(ctx0, opts = {}) {
       const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && isOutdoor(lv)) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); if (pit) { const W = TYPES[pit.type].W, D = TYPES[pit.type].D, P = [iso(pit.x, pit.y, 0), iso(pit.x + W, pit.y, 0), iso(pit.x + W, pit.y + D, 0), iso(pit.x, pit.y + D, 0)], lo = P.slice().sort((a, b) => a[0] - b[0]), bot = P.reduce((m, q) => (q[1] > m[1] ? q : m)); ctx.save(); ctx.beginPath(); ctx.moveTo(lo[0][0], lo[0][1]); ctx.lineTo(bot[0], bot[1]); ctx.lineTo(lo[3][0], lo[3][1]); ctx.lineTo(lo[3][0], -2000); ctx.lineTo(lo[0][0], -2000); ctx.closePath(); ctx.clip(); }
         drawPerson(c, t); if (c.carrying) drawCarried(c); if (gOn) G.clearBase(); if (c.npc && c.name) drawNameTag(c); if (c.bubble) drawBubble(c, t);
         if (pit) ctx.restore(); } }); });
+    { const c = cartAt(t); if (c && cart.level === lv) { const r = 0.3; items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + 0.0004, d: () => drawCart(Object.assign(c, { level: cart.level }), t) }); } }
     (s.pets || []).forEach(p => {
       if (p.level !== lv || p.hidden) return;
       const r = p.z > 0.05 ? 0.04 : 0.14;
       items.push({ x1: p.x - r, y1: p.y - r, x2: p.x + r, y2: p.y + r, key: vs(p.x, p.y) + 0.0005 + (p.z > 0.05 ? 0.3 : 0), d: () => { if (gOn) G.billboard(iso(p.x, p.y, 0)[1], ZH * 0.5, MATERIAL.body); drawPet(p, t); if (gOn) G.clearBase(); } });
     });
     depthSort(items).forEach(it => it.d());
-    drawFrontWalls(lv); drawProjector(lv);
+    drawFrontWalls(lv); drawProjector(lv); drawObjectSpeech(lv, t);
     if (arrState) drawArrangeOverlay(arrState, lv);
     drawGuides(lv, t);
     drawPoofs(lv);
@@ -4519,6 +5476,16 @@ export function createHouseArt(ctx0, opts = {}) {
   function poke(o, part = '') {
     const run = (secs, msg) => { liveUntil.set(o.id + ':' + part, animT + secs); return msg; };
     switch (o.type) {
+      case 'overseer': return 'The eye turns toward you.';
+      case 'starprojector': { const on = toggleObjectLight(o.id); return on ? 'The room dims and the stars come out.' : 'The stars fade from the walls.'; }
+      case 'shishiodoshi': return 'Water trickles in. The bamboo tips, spills, and knocks: tok.';
+      case 'tallcandelabra': return isLit(o.id) ? 'The candle flames waver.' : 'Five fresh candles, waiting for a match.';
+      case 'woodstove': { const on = toggleObjectLight(o.id); return on ? 'The kindling catches and the stove roars into life.' : 'The fire in the stove settles down to embers and goes out.'; }
+      case 'glamtable': return run(4, 'The bulbs light up one after another round the mirror.');
+      case 'hificonsole': return run(40, 'The lid lifts, the needle drops, and the room goes amber.');
+      case 'musicbox': return run(30, 'The lid opens and a tinkly little tune starts to play.');
+      case 'servicebell': return run(1.2, 'Ding!');
+      case 'diffuser': return run(20, 'The diffuser hums and puffs out eucalyptus.');
       case 'tvunit': tvOn = !tvOn; return tvOn ? 'The TV flickers on.' : 'TV off.';
       case 'fireplace': if (fireOut.has(o.id)) { fireOut.delete(o.id); return 'The fire crackles back to life.'; } fireOut.add(o.id); return 'The fire dies down.';
       case 'laundry': return run(12, 'The washer churns into a spin cycle.');
@@ -4544,5 +5511,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
 }

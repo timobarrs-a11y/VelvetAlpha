@@ -21,6 +21,8 @@ import { createLifeSim } from './systems/lifeSim';
 import { createDeliveries } from './systems/deliveries';
 import { createConcerns } from './systems/concerns';
 import { createPets } from './systems/pets';
+import { createOverseer } from './systems/overseer';
+import { createRoomService } from './systems/roomService';
 import { createDevMoney } from './systems/devMoney';
 import { createUnlocks } from './systems/unlocks';
 import { createCelebrate } from './ui/celebrate';
@@ -69,6 +71,8 @@ function boot(attract: boolean): void {
   Object.assign(g, createLifeSim(g));
   Object.assign(g, createDeliveries(g));
   Object.assign(g, createPets(g));
+  Object.assign(g, createOverseer(g));
+  Object.assign(g, createRoomService(g));
   Object.assign(g, createScripts(g));
   if (!attract) createCodeQueue(g);
   if (!attract) installDevHooks(g);

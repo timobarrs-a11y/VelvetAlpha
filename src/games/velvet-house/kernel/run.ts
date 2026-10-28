@@ -81,7 +81,7 @@ export function startGameLoop(g: Game): void {
 
       // Goals tick (throttled)
       goalsTimer -= dt;
-      if (goalsTimer <= 0) { goalsTimer = 0.25; g.goalsTick(); g.outfitTick(); }
+      if (goalsTimer <= 0) { goalsTimer = 0.25; g.goalsTick(); g.outfitTick(); g.overseerTick(); g.roomServiceTick(); g.candlesTick(); }
     },
     (alpha, frameDt) => {
       const prevSim = simCache;

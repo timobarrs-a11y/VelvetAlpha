@@ -163,6 +163,14 @@ export interface HouseArt {
   poke(o: { id: string; type: string }, part?: string): string | null;
   /** Sets whether the partner's mouth animates (talking). */
   setTalking(v: boolean): void;
+  /** A piece that talks (the Overseer): its lines, one after another in a bubble over it. */
+  objectSay(id: string, lines: string[]): void;
+  /** Room service: a breakfast cart rolls along these points (world x, y) on a floor, waits, and rolls back. */
+  roomService(level: number, pts: [number, number][]): void;
+  roomServiceBusy(): boolean;
+  /** The Victorian candelabra: light or snuff its candles one after another. */
+  candles(id: string, on: boolean): void;
+  candlesOn(id: string): boolean;
   /** Sets the partner's mood, 0-1, for facial expression. */
   setMood(v: number): void;
   TYPES: Record<string, unknown>;
