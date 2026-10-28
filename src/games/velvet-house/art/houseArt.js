@@ -3,6 +3,7 @@
 import { MATERIAL } from '../engine/gbuffer';
 import { sunLight, gradeTint } from '../engine/deferredLights';
 import { createParticles } from '../engine/particles';
+import { drawWallLamp } from './wallLamps.js';
 import { poseRig, idleRig, walkRig, seatLegs, legIK, gaitFoot, headTarget, turnHead, idleGlance, treeLeg, quadGait, limbIK, QUAD, FOOT, GAIT } from './poseAnim.js';
 import { headFrameFor } from '../state/headSprites';
 import { handImage, HAND_SPRITE } from '../state/bodySprites';
@@ -2535,10 +2536,35 @@ export function createHouseArt(ctx0, opts = {}) {
       if (L.level !== level || (L.need && !has(L.need)) || !BACK[VR].includes(L.p) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return;
       const on = wallLightOverrides.get(i) === true || (wallLightOverrides.get(i) !== false && isLit('w' + i)), um = (L.u[0] + L.u[1]) / 2, P = (u, z, off = 0) => iso(...(L.p === 'B' ? [u, off, z] : [off, u, z]));
       if (gOn && on && L.k !== 'under') G.emissive(L.z);
-      if (L.k === 'sconce') { const [bx, by] = P(um, L.z - 0.12); rr(bx - 2.5, by - 6, 5, 9, 1.5, '#5A4A40'); const [sx, sy] = P(um, L.z + 0.06, 0.12); ctx.beginPath(); ctx.moveTo(sx - 7, sy + 4); ctx.lineTo(sx - 4, sy - 7); ctx.lineTo(sx + 4, sy - 7); ctx.lineTo(sx + 7, sy + 4); ctx.closePath(); ctx.fillStyle = on ? '#FFF0C4' : '#E7DCC8'; ctx.fill(); ctx.strokeStyle = 'rgba(60,40,30,.35)'; ctx.lineWidth = 0.8; ctx.stroke(); }
-      else if (L.k === 'strip' || L.k === 'bar') { const a = P(L.u[0], L.z, 0.04), b = P(L.u[1], L.z, 0.04); limb(a[0], a[1], b[0], b[1], '#5A4A40', 5); limb(a[0], a[1] + 0.5, b[0], b[1] + 0.5, on ? '#FFF6D8' : '#D8D2C8', 2.4); }
+      const frame = () => {
+        const W = (u, o, z) => (L.p === 'B' ? [u, o, z] : [o, u, z]);
+        return {
+          um, z: L.z, ctx, ell, circle, shade, W,
+          sp: (u, o, z) => iso(...W(u, o, z)),
+          wb: (u, o, z, du, dof, dz, c) => (L.p === 'B' ? box(u, o, z, du, dof, dz, c) : box(o, u, z, dof, du, dz, c)),
+          wp: (pts, fill, stroke, lw) => poly(pts.map(([u, o, z]) => W(u, o, z)), fill, stroke, lw),
+          wl: (a, b, c, w) => line3(W(...a), W(...b), c, w),
+        };
+      };
+      if (L.k === 'sconce') drawWallLamp(frame(), L.style, on);
+      else if (L.k === 'strip' || L.k === 'bar') {
+        const h = frame(), [u0, u1] = L.u, bar = L.k === 'bar';
+        h.wp([[u0 + 0.03, 0.004, L.z - 0.07], [u1 + 0.03, 0.004, L.z - 0.07], [u1 + 0.03, 0.004, L.z - 0.2], [u0 + 0.03, 0.004, L.z - 0.2]], 'rgba(30,15,10,.15)');
+        h.wb(u0, 0, L.z - 0.06, u1 - u0, 0.1, 0.12, '#5A4A40');
+        h.wb(u0 + 0.03, 0.1, L.z - 0.045, u1 - u0 - 0.06, 0.015, 0.09, on ? '#FFF6D8' : '#E2DDD3');
+        if (bar) [u0, u1].forEach(u => h.wb(u - 0.02, 0, L.z - 0.08, 0.04, 0.12, 0.16, '#8E939A'));
+        if (on) h.wp([[u0, 0.004, L.z - 0.06], [u1, 0.004, L.z - 0.06], [u1 + 0.1, 0.004, L.z - 0.5], [u0 - 0.1, 0.004, L.z - 0.5]], 'rgba(255,230,170,.16)');
+      }
       else if (L.k === 'string') { let prev = null; for (let k = 0; k <= 16; k++) { const u = L.u[0] + (L.u[1] - L.u[0]) * k / 16, sag = Math.sin(Math.PI * ((k % 8) / 8)) * 0.12, q = P(u, L.z - sag, 0.02); if (prev) limb(prev[0], prev[1], q[0], q[1], '#3A3340', 0.8); if (k % 2) circle(q[0], q[1] + 2, 2, on ? ['#FFD27A', '#FF9EC2', '#9EE0FF'][k % 3] : '#B9B0A6'); prev = q; } }
-      else if (L.k === 'bulb') { const [bx, by] = P(um, L.z + 0.08, 0.02); circle(bx, by, 3, '#E9E4DD'); const [gx, gy] = P(um, L.z - 0.06, 0.14); circle(gx, gy, 4.5, on ? '#FFF6D0' : '#D8D2C8'); limb(gx + 3, gy, gx + 3, gy + 16, 'rgba(160,150,140,.8)', 0.7); circle(gx + 3, gy + 17, 1.2, '#B9B0A6'); }
+      else if (L.k === 'bulb') {
+        const h = frame();
+        h.wp([[um - 0.04, 0.004, L.z - 0.08], [um + 0.08, 0.004, L.z - 0.08], [um + 0.08, 0.004, L.z - 0.24], [um - 0.04, 0.004, L.z - 0.24]], 'rgba(30,15,10,.14)');
+        h.wb(um - 0.05, 0, L.z - 0.05, 0.1, 0.03, 0.1, '#8E939A');
+        h.wb(um - 0.03, 0.03, L.z - 0.03, 0.06, 0.07, 0.06, '#E9E4DD');
+        const [gx, gy] = h.sp(um, 0.15, L.z - 0.02);
+        if (on) { h.ell(gx, gy, 16, 13, 'rgba(255,230,170,.22)'); }
+        circle(gx, gy, 5, on ? '#FFF6D0' : '#D8D2C8'); h.ell(gx - 1.6, gy - 1.8, 1.8, 1.2, 'rgba(255,255,255,.7)');
+      }
       else if (L.k === 'under') {
         if (on) poly([[L.u[0], 0.002, 0.93], [L.u[1], 0.002, 0.93], [L.u[1], 0.002, 1.55], [L.u[0], 0.002, 1.55]], 'rgba(255,226,160,.45)');
         box(L.u[0], 0, 1.55, L.u[1] - L.u[0], 0.36, 0.68, '#E4DDD2');
