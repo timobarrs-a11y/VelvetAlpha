@@ -144,6 +144,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-circuit', 'Circuit', 'circuit', 110, ['bold', 'modern', 'industrial']),
   wallpaper('paper-sprinkles', 'Sprinkles', 'sprinkles', 90, ['soft', 'playful', 'warm']),
   wallpaper('paper-clouds-sky', 'Clouds and rainbows', 'clouds-sky', 90, ['soft', 'playful', 'cozy']),
+  wallpaper('paper-clay-plaster', 'Clay plaster', 'clay-plaster', 90, ['minimal', 'natural', 'cool']),
   wallpaper('paper-damask-rose', 'Rose damask', 'damask-rose', 120, ['luxe', 'cozy', 'vintage']),
   wallpaper('paper-knotty-pine', 'Knotty pine paneling', 'knotty-pine', 100, ['cozy', 'warm', 'natural']),
   wallpaper('paper-banana-leaf', 'Banana leaf', 'banana-leaf', 120, ['luxe', 'bold', 'playful']),
@@ -246,6 +247,9 @@ export const CATALOG: CatalogEntry[] = [
   bundle('set-victorian', 'Victorian Boudoir bedroom and bath', 'Carved mahogany, rose damask, velvet and lace: the canopied four-poster, a cabriole bedside table, a mahogany chest with an oval mirror, a china toilet with a high tank, a marble washstand, a tiled shower with a lace curtain, rose damask walls, mahogany herringbone floors, and a brass candelabra whose candles go out one by one at bedtime.',
     ['look-bed-victorian', 'look-nightstand-victorian', 'look-dresser-victorian', 'look-toilet-victorian', 'look-vanity-victorian', 'look-shower-victorian', 'paper-damask-rose', 'floor-mahoganyherring', 'tallcandelabra'], ['luxe', 'cozy', 'vintage']),
 
+  bundle('set-ryokan', 'Wabi-Sabi Ryokan bedroom and bath', 'Pale hinoki, tatami, clay plaster and river stone: a futon on a tatami dais, a paper lantern, a kiri tansu, a hinoki-seat toilet, a stone vessel basin, a hinoki wet room with a noren, clay plaster walls, hinoki boards, and a bamboo water fountain to meditate beside.',
+    ['look-bed-ryokan', 'look-nightstand-ryokan', 'look-dresser-ryokan', 'look-toilet-ryokan', 'look-vanity-ryokan', 'look-shower-ryokan', 'paper-clay-plaster', 'floor-hinokiboards', 'shishiodoshi'], ['minimal', 'natural', 'cool']),
+
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
 
@@ -298,6 +302,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-grate', 'Lit grate', 'grate', 170, ['bold', 'modern', 'industrial']),
   floor('floor-checkpink', 'Pink check', 'checkpink', 140, ['soft', 'playful', 'warm']),
   floor('floor-skycheck', 'Sky check', 'skycheck', 140, ['soft', 'playful', 'cozy']),
+  floor('floor-hinokiboards', 'Hinoki boards', 'hinokiboards', 150, ['minimal', 'natural', 'cool']),
   floor('floor-mahoganyherring', 'Mahogany herringbone', 'mahoganyherring', 180, ['luxe', 'cozy', 'vintage']),
   floor('floor-riverslate', 'River slate', 'riverslate', 160, ['cozy', 'warm', 'natural']),
   floor('floor-whiteherring', 'White herringbone', 'whiteherring', 170, ['luxe', 'bold', 'playful']),
@@ -550,6 +555,13 @@ export const CATALOG: CatalogEntry[] = [
   look('look-vanity-victorian', 'vanity', 'victorian', 'Marble-topped washstand', 'A mahogany washstand under marble, a china basin and jug, a brass tap and a lace-edged towel.', 420, ['luxe', 'cozy', 'vintage'], ['#5A2A1E', '#7A3E2C', '#3E1C14']),
   look('look-shower-victorian', 'shower', 'victorian', 'Tiled shower with a lace curtain', 'A rose and cream mosaic floor, green tile under a damask wall, a brass rose head and a lace curtain on a brass rail.', 560, ['luxe', 'cozy', 'vintage'], ['#C98A94', '#4E7A5E', '#FBF6EE']),
 
+  look('look-bed-ryokan', 'bed', 'ryokan', 'Futon on a tatami dais', 'A thin futon on a low hinoki dais edged in tatami, a buckwheat pillow, a quilt in indigo, moss or persimmon folded back at the top, and a paper screen behind.', 520, ['minimal', 'natural', 'cool'], ['#2E3F66', '#8A9A7A', '#B5533C']),
+  look('look-nightstand-ryokan', 'nightstand', 'ryokan', 'Hinoki box with a paper lantern', 'A low hinoki box with a paper andon lantern and a single blossoming branch in a stoneware vase.', 150, ['minimal', 'natural', 'cool'], ['#E2C99E', '#C9AC7E', '#B7A184']),
+  look('look-dresser-ryokan', 'dresser', 'ryokan', 'Kiri tansu chest', 'A dark tansu with black iron pulls and corner plates, and a tea set on a tray.', 460, ['minimal', 'natural', 'cool'], ['#5A4636', '#3E3028', '#7A6450']),
+  look('look-toilet-ryokan', 'toilet', 'ryokan', 'Toilet with a hinoki seat', 'A plain white toilet with a hinoki seat, and a river-stone shelf behind with a tiny bonsai.', 220, ['minimal', 'natural', 'cool'], ['#FFFFFF', '#E2C99E', '#8E8A84']),
+  look('look-vanity-ryokan', 'vanity', 'ryokan', 'Stone vessel on hinoki', 'A river-stone vessel basin on a hinoki counter, a bamboo spout, and a folded indigo tenugui underneath.', 340, ['minimal', 'natural', 'cool'], ['#E2C99E', '#C9AC7E', '#B7A184']),
+  look('look-shower-ryokan', 'shower', 'ryokan', 'Hinoki wet room with a noren', 'Slatted hinoki floor and side screen, a river-stone wall, a bamboo rain spout, a wooden stool and bucket, and a noren at the front.', 500, ['minimal', 'natural', 'cool'], ['#2E3F66', '#8A9A7A', '#B5533C']),
+
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
   wallItem('wobj-landscape', 'Landscape canvas', 80, ['natural', 'vintage'], ['#9EC1F5', '#F2B48A', '#C9B8E8', '#2B3A5E']),
@@ -610,6 +622,7 @@ export const CATALOG: CatalogEntry[] = [
   hobby('gym', 'gym', 'Weights and mat', 180, ['cool', 'bold', 'minimal']),
   hobby('yogamat', 'yogamat', 'Yoga mat', 30, ['natural', 'soft', 'minimal'], ['#8E5468', '#7FB069', '#4A88B8', '#E0A43A', '#2B2B30']),
   hobby('massage', 'massage', 'Massage chair', 350, ['luxe', 'modern', 'cozy'], ['#2B2B30', '#E8DCC8', '#6E3C50']),
+  hobby('shishiodoshi', 'shishiodoshi', 'Bamboo water fountain', 260, ['minimal', 'natural', 'cool'], ['#7FA06A', '#8E8A84', '#C9C2B4']),
   hobby('tallcandelabra', 'tallcandelabra', 'Brass candelabra', 180, ['luxe', 'cozy', 'vintage'], ['#C9A24A', '#8E6E2A', '#E0C26E']),
   hobby('woodstove', 'woodstove', 'Wood stove', 420, ['cozy', 'warm', 'natural'], ['#2A2826', '#3A3634', '#5A1E1E']),
   hobby('glamtable', 'glamtable', 'Hollywood dressing table', 360, ['luxe', 'bold', 'playful'], ['#F2C4CE', '#1F6B52', '#151517']),

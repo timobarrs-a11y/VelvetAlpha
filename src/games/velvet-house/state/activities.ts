@@ -65,6 +65,7 @@ export const ACTIVITIES: Record<string, ActivityMeta> = {
   eatOut: { pose: 'eatOut', dur: 20, gives: { food: 70, energy: 4 }, verb: 'Eating takeout' },
   records: { pose: 'listen', dur: 30, gives: { fun: 35, comfort: 10 }, verb: 'Playing records' },
   arcade: { pose: 'arcade', dur: 30, gives: { fun: 50, energy: -3 }, verb: 'Playing arcade' },
+  zen: { pose: 'meditate', dur: 25, gives: { comfort: 40, energy: 5 }, verb: 'Meditating by the fountain', appeal: 4 },
   glam: { pose: 'stand', dur: 25, gives: { fun: 25, social: 10, comfort: 10 }, verb: 'Getting glam at the mirror', appeal: 4 },
   musicbox: { pose: 'listen', dur: 20, gives: { comfort: 25, fun: 15 }, verb: 'Listening to the music box' },
   diffuse: { pose: 'stand', dur: 15, gives: { comfort: 35, fun: 5 }, verb: 'Breathing in eucalyptus' },

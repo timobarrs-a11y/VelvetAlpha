@@ -186,6 +186,7 @@ export function createHouseArt(ctx0, opts = {}) {
     grate: { kind: 'tile', a: '#1A1C24', b: '#171920', line: 'rgba(25,230,240,.35)' },
     checkpink: { kind: 'check', a: '#FFF8F0', b: '#F6B7CC', line: 'rgba(0,0,0,.05)' },
     skycheck: { kind: 'check', a: '#F7FAFE', b: '#DCEEFA', line: 'rgba(0,0,0,.04)' },
+    hinokiboards: { kind: 'plank', a: '#E3CDA6', b: '#D9C29A', line: 'rgba(120,95,55,.22)' },
     mahoganyherring: { kind: 'herring', a: '#5E3A28', b: '#523222', line: 'rgba(20,8,4,.35)' },
     riverslate: { kind: 'stone', a: '#6E6A64', b: '#62605A', line: 'rgba(0,0,0,.28)' },
     whiteherring: { kind: 'herring', a: '#F1EDE6', b: '#E3DCD1', line: 'rgba(120,105,90,.22)' },
@@ -224,6 +225,7 @@ export function createHouseArt(ctx0, opts = {}) {
     circuit: { pat: 'circuit', base: '#111118', ink: 'rgba(25,230,240,.6)', ink2: 'rgba(255,46,154,.75)' },
     sprinkles: { pat: 'sprinkles', base: '#FFF8F0', ink: 'rgba(224,74,106,.9)', pal: ['#E04A6A', '#BFE0F5', '#FBE7A6', '#D6C4F0', '#BFE8D6'] },
     'clouds-sky': { pat: 'clouds', base: '#C9E6F8', ink: 'rgba(255,255,255,.95)' },
+    'clay-plaster': { pat: 'limewash', base: '#C8B496', ink: 'rgba(120,95,60,.07)', ink2: 'rgba(255,245,225,.1)' },
     'damask-rose': { pat: 'damask', base: '#E9D3D0', ink: 'rgba(140,60,70,.32)' },
     'knotty-pine': { pat: 'knotty', base: '#D2A770', ink: 'rgba(110,70,30,.3)', ink2: 'rgba(110,65,25,.55)' },
     'banana-leaf': { pat: 'monstera', base: '#F7F1EC', ink: 'rgba(63,140,92,.85)', ink2: 'rgba(38,104,66,.85)' },
@@ -1148,6 +1150,68 @@ export function createHouseArt(ctx0, opts = {}) {
         for (let k = 0; k < 10; k++) { const y0 = k * open / 10 * 1.18, y1 = (k + 1) * open / 10 * 1.18; T.poly([[y0, 1.17 + (k % 2) * 0.02, 0.15], [y1, 1.17 + ((k + 1) % 2) * 0.02, 0.15], [y1, 1.17 + ((k + 1) % 2) * 0.02, 2.04], [y0, 1.17 + (k % 2) * 0.02, 2.04]], 'rgba(251,246,238,.78)', 'rgba(200,190,175,.4)', 0.5); }
         for (let y = 0.02; y < open * 1.18; y += 0.06) { const [lx, ly] = T.P(y, 1.19, 0.15); circle(lx, ly, 1.1, VI.lace); } }),
       F(1.14, 0, 1.2, 1.18, (T) => { T.line([1.17, 0, 2.06], [1.17, 1.18, 2.06], VI.brass, 1.8); for (let k = 0; k < 8; k++) { const y0 = 0.1 + k * 0.135, y1 = y0 + 0.135; T.poly([[1.17 + (k % 2) * 0.02, y0, 0.15], [1.17 + ((k + 1) % 2) * 0.02, y1, 0.15], [1.17 + ((k + 1) % 2) * 0.02, y1, 2.04], [1.17 + (k % 2) * 0.02, y0, 2.04]], 'rgba(251,246,238,.7)', 'rgba(200,190,175,.4)', 0.5); } }, { onTop: true })],
+  });
+
+  // Wabi-Sabi Ryokan: pale hinoki, tatami, clay plaster, river stone, indigo and paper.
+  const RY = { hinoki: '#E2C99E', hinokiDark: '#C9AC7E', tatami: '#C9C48E', tatamiEdge: '#2B2B30', clay: '#B7A184', stone: '#8E8A84', stoneLite: '#B4AFA6', indigo: '#2E3F66', paper: '#F7F1E3', iron: '#2A2826', moss: '#6E8A4E' };
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A futon on a low hinoki dais edged in tatami: a thin mattress, a buckwheat pillow, and a quilt in the piece's colour
+    // folded back at the top, with a paper screen behind.
+    ryokan: (o) => { const c = cl(o); return [
+      F(0, 0, 0.1, 1.6, (T) => { T.box(0.02, 0, 0, 0.06, 1.6, 1.1, RY.hinokiDark); T.poly([[0.081, 0.04, 0.1], [0.081, 1.56, 0.1], [0.081, 1.56, 1.06], [0.081, 0.04, 1.06]], RY.paper); for (let k = 1; k < 6; k++) T.line([0.082, 1.6 * k / 6, 0.1], [0.082, 1.6 * k / 6, 1.06], RY.hinokiDark, 1.2); for (let z = 0.3; z < 1.06; z += 0.24) T.line([0.082, 0.04, z], [0.082, 1.56, z], RY.hinokiDark, 1.2); }),
+      B(0.1, 0, 0, 2.4, 1.6, 0.14, RY.hinoki), F(0.1, 0, 2.5, 1.6, (T) => { T.poly([[0.1, 0, 0.141], [2.5, 0, 0.141], [2.5, 1.6, 0.141], [0.1, 1.6, 0.141]], RY.tatamiEdge); T.poly([[0.14, 0.04, 0.142], [2.46, 0.04, 0.142], [2.46, 1.56, 0.142], [0.14, 1.56, 0.142]], RY.tatami); for (let x = 0.2; x < 2.46; x += 0.06) T.line([x, 0.04, 0.143], [x, 1.56, 0.143], 'rgba(90,85,40,.18)', 0.6); }, { decal: false }),
+      B(0.2, 0.15, 0.142, 2.2, 1.3, 0.1, RY.paper, { name: 'mattress' }),
+      pillowsOn([0.2, 0.15, 0.142, 2.2, 1.3], [[0.24, 0.55, 0.242, 0.32, 0.5, 0.08, '#D9CBB0']]),
+      B(0.7, 0.13, 0.242, 1.72, 1.34, 0.05, c), B(0.7, 0.13, 0.292, 1.72, 1.34, 0.01, c, { cover: true }),
+      F(0.7, 0.1, 2.44, 1.5, (T) => { T.poly([[0.7, 0.13, 0.303], [0.95, 0.13, 0.303], [0.95, 1.47, 0.303], [0.7, 1.47, 0.303]], shade(c, 0.35)); for (let y = 0.2; y < 1.45; y += 0.24) T.line([0.98, y, 0.303], [2.4, y, 0.303], shade(c, -0.15), 0.8); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A low hinoki box with a paper andon lantern and a single branch in a stoneware vase.
+    ryokan: (T, o) => { const lit = isLit(o.id);
+      T.box(0.04, 0.04, 0, 0.37, 0.37, 0.24, RY.hinoki); T.line([0.04, 0.411, 0.12], [0.41, 0.411, 0.12], RY.hinokiDark, 1);
+      T.box(0.08, 0.08, 0.24, 0.16, 0.16, 0.34, lit ? '#FFF4DC' : RY.paper); [0.08, 0.24].forEach((x) => [0.08, 0.24].forEach((y) => T.line([x, y, 0.24], [x, y, 0.58], RY.iron, 1.2))); T.line([0.08, 0.241, 0.41], [0.24, 0.241, 0.41], RY.iron, 0.8);
+      if (lit) { const [lx, ly] = T.P(0.16, 0.16, 0.42); circle(lx, ly, 16, 'rgba(255,226,170,.28)'); }
+      T.box(0.29, 0.27, 0.24, 0.07, 0.07, 0.1, '#5A5450'); const [bx, by] = T.P(0.325, 0.305, 0.34); limb(bx, by, bx - 6, by - 16, '#4A3A2A', 1); limb(bx - 4, by - 10, bx + 2, by - 14, '#4A3A2A', 0.8); [[-6, -16], [2, -14], [-3, -12]].forEach(([dx, dy]) => circle(bx + dx, by + dy, 1.4, '#E8B4C0')); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A dark kiri tansu: stepped drawers with black iron pulls and corner plates, and a tea set on a tray.
+    ryokan: (T, o) => { const c = cl(o);
+      T.box(0, 0, 0, 1.2, 0.5, 0.84, c); [0.28, 0.56].forEach((z) => T.line([0.01, 0.501, z], [1.19, 0.501, z], 'rgba(0,0,0,.4)', 1)); T.line([0.6, 0.501, 0.56], [0.6, 0.501, 0.84], 'rgba(0,0,0,.4)', 1);
+      [[0.6, 0.14], [0.6, 0.42], [0.3, 0.7], [0.9, 0.7]].forEach(([x, z]) => { const [px, py] = T.P(x, 0.502, z); rr(px - 4, py - 2, 8, 4, 1, RY.iron); ctx.strokeStyle = RY.iron; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(px, py + 2, 3, 0, Math.PI); ctx.stroke(); });
+      // Small iron L-plates on the front corners.
+      [[0.03, 0.03, 1, 1], [1.17, 0.81, -1, -1], [0.03, 0.81, 1, -1], [1.17, 0.03, -1, 1]].forEach(([x, z, sx, sz]) => { T.line([x, 0.502, z], [x + sx * 0.08, 0.502, z], RY.iron, 1.8); T.line([x, 0.502, z], [x, 0.502, z + sz * 0.08], RY.iron, 1.8); });
+      T.box(0.15, 0.12, 0.84, 0.4, 0.26, 0.02, RY.hinokiDark); T.box(0.22, 0.18, 0.86, 0.1, 0.1, 0.08, '#6E6A64'); [0.38, 0.46].forEach((x) => T.box(x, 0.2, 0.86, 0.05, 0.05, 0.05, '#9A948A')); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A plain white toilet with a hinoki seat, and a river-stone shelf behind with a tiny bonsai.
+    ryokan: (T, o) => {
+      T.box(0, 0, 0.66, 0.42, 0.14, 0.05, RY.stone); T.box(0.24, 0.03, 0.71, 0.08, 0.08, 0.05, '#5A5450'); const [bx2, by2] = T.P(0.28, 0.07, 0.8); ell(bx2, by2, 5, 3, RY.moss); limb(bx2, by2 + 3, bx2 + 1, by2 - 1, '#4A3A2A', 1);
+      T.box(0.06, 0, 0, 0.3, 0.16, 0.62, '#FFFFFF'); T.box(0.09, 0.14, 0, 0.24, 0.3, 0.3, '#FFFFFF');
+      const [bx, by] = T.P(0.21, 0.4, 0.3); ell(bx, by, 7.5, 6, '#FFFFFF', 'rgba(0,0,0,.12)'); const [sx, sy] = T.P(0.21, 0.38, 0.385); ell(sx, sy, 7, 4, RY.hinoki); ell(sx, sy, 5, 2.8, '#E8EEF0');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A hinoki counter with a river-stone vessel basin and a bamboo spout, a folded indigo tenugui underneath.
+    ryokan: (T, o) => { const c = cl(o);
+      T.box(0.02, 0.04, 0.5, 0.96, 0.42, 0.28, c); T.box(0.06, 0.08, 0, 0.06, 0.34, 0.5, RY.hinokiDark); T.box(0.88, 0.08, 0, 0.06, 0.34, 0.5, RY.hinokiDark); T.box(0.12, 0.08, 0.1, 0.76, 0.34, 0.03, RY.hinokiDark); T.box(0.3, 0.14, 0.13, 0.36, 0.22, 0.05, RY.indigo);
+      T.box(-0.02, 0, 0.78, 1.04, 0.5, 0.04, RY.hinoki);
+      const [vx, vy] = T.P(0.5, 0.26, 0.82); ell(vx, vy + 3, 11, 6, RY.stone); ell(vx, vy, 11, 5.5, RY.stoneLite, '#6E6A64'); ell(vx, vy, 8, 3.6, '#7E8A8C');
+      T.line([0.5, 0.03, 0.82], [0.5, 0.03, 1.02], '#7FA06A', 3); T.line([0.5, 0.03, 1.02], [0.5, 0.18, 0.99], '#7FA06A', 3); const [nx, ny] = T.P(0.5, 0.03, 0.92); limb(nx - 2, ny, nx + 2, ny, '#5E7E4E', 1); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // A wet room of hinoki: slatted walls and floor, a stone back wall, a bamboo rain spout, a wooden stool and bucket, and an
+    // indigo noren hanging at the open front.
+    ryokan: (o) => [F(0, 0, 1.18, 1.18, (T, ob) => { const c = cl(ob);
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, RY.hinokiDark); for (let k = 0; k < 10; k++) T.box(0.02 + k * 0.116, 0.02, 0.06, 0.09, 1.14, 0.015, RY.hinoki);
+        T.box(0, 0, 0.06, 1.18, 0.08, 2.04, RY.stone); for (let k = 0; k < 40; k++) { const u = 0.04 + ((k * 0.618) % 1) * 1.1, z = 0.12 + ((k * 0.382) % 1) * 1.92, [rx, ry] = T.P(u, 0.081, z); ell(rx, ry, 5, 3, [RY.stoneLite, '#9A948A', '#A39C90'][k % 3], 'rgba(0,0,0,.15)'); }
+        T.line([0.6, 0.08, 2.0], [0.6, 0.5, 2.0], '#7FA06A', 4); const [sx, sy] = T.P(0.6, 0.52, 1.98); ell(sx, sy, 3, 2, '#5E7E4E');
+        T.box(0.15, 0.6, 0.075, 0.24, 0.24, 0.22, RY.hinoki); T.box(0.82, 0.25, 0.075, 0.2, 0.2, 0.16, RY.hinokiDark); T.line([0.82, 0.25, 0.2], [1.02, 0.45, 0.2], RY.iron, 1.2);
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.52); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.9, 1); }
+      }, { name: 'tray' }),
+      F(1.14, 0, 1.2, 1.18, (T) => { T.box(1.14, 0.08, 0.06, 0.04, 1.1, 2.04, RY.hinokiDark); for (let k = 0; k < 12; k++) T.line([1.181, 0.1 + k * 0.09, 0.08], [1.181, 0.1 + k * 0.09, 2.08], RY.hinoki, 3); }, { onTop: true }),
+      F(0, 1.14, 1.18, 1.2, (T, ob) => { const c = cl(ob); T.line([0, 1.17, 2.06], [1.18, 1.17, 2.06], RY.hinokiDark, 2.4); const parts = 3, gap = 0.012;
+        for (let k = 0; k < parts; k++) { const y0 = k * 1.18 / parts + gap, y1 = (k + 1) * 1.18 / parts - gap; T.poly([[y0, 1.18, 2.06], [y1, 1.18, 2.06], [y1, 1.18, 1.4], [y0, 1.18, 1.4]], c, 'rgba(0,0,0,.2)', 0.6); }
+        const [mx, my] = T.P(0.59, 1.181, 1.75); circle(mx, my, 6, null, '#F2EBDD'); ctx.strokeStyle = '#F2EBDD'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(mx, my, 6, 0, Math.PI * 2); ctx.stroke(); }, { onTop: true })],
   });
   const diningLife = () => F(0, 0.74, 1.3, 1.74, (T, o) => {
     ['c1', 'c2'].forEach((s, i) => { const sid = o.id + ':' + s, who = reserved[sid]; if (who && who.task && who.task.slot === sid && (doing(who, 'eat') || doing(who, 'eatOut') || doing(who, 'sip'))) { const [px, py] = T.P(0.65, i ? 1.5 : 0.98, 0.775); if (doing(who, 'eatOut')) { rr(px - 5, py - 7, 10, 7, 1.5, '#F2EEE8'); } else if (doing(who, 'sip')) { rr(px - 3, py - 6, 6, 6, 1.2, '#F2EEE8'); } else { ell(px, py, 10, 5, '#F5F2EC', 'rgba(0,0,0,.15)'); ell(px, py - 1, 6, 2.8, who.mealFresh ? '#7FB069' : '#D9822B'); circle(px + 3, py - 2, 1.8, '#4F9460'); } } });
@@ -2619,6 +2683,23 @@ export function createHouseArt(ctx0, opts = {}) {
           T.poly([[0.28, 0.601, 0.2], [0.44, 0.601, 0.2], [0.44, 0.601, 0.34], [0.28, 0.601, 0.34]], AR.ink, AR.chrome, 1);
         }, { onTop: true })]; },
        },
+    shishiodoshi: {
+      // A shishi-odoshi on a bed of river pebbles: water runs from a bamboo spout into a pivoting bamboo arm, which fills,
+      // tips, spills into a stone basin and knocks back against a rock with a "tok".
+      parts: (o) => [F(0, 0, 0.9, 0.7, (T, ob, t) => { const CYC = 4, ph = ((t + (ob.x * 7 % 3)) % CYC) / CYC, tip = ph > 0.86 ? Math.sin((ph - 0.86) / 0.14 * Math.PI) : 0, fill = Math.min(1, ph / 0.86);
+        T.poly([[0, 0, 0.01], [0.9, 0, 0.01], [0.9, 0.7, 0.01], [0, 0.7, 0.01]], '#C9C2B4', 'rgba(0,0,0,.1)', 0.6); for (let k = 0; k < 30; k++) { const [px, py] = T.P(0.05 + ((k * 0.618) % 1) * 0.8, 0.05 + ((k * 0.382) % 1) * 0.6, 0.012); ell(px, py, 2.2, 1.3, ['#9A948A', '#B4AFA6', '#7E786E'][k % 3]); }
+        const [rx, ry] = T.P(0.2, 0.3, 0.1); ell(rx, ry, 9, 6, '#8E8A84', '#6E6A64'); const [mx, my] = T.P(0.2, 0.3, 0.17); ell(mx, my, 5, 2.4, RY.moss);
+        const [px, py] = T.P(0.65, 0.4, 0.05); ell(px, py, 14, 7, '#7E786E'); ell(px, py - 2, 11, 5, '#5E6A70'); ell(px - 2, py - 3, 4, 1.4, 'rgba(255,255,255,.35)');
+        T.line([0.85, 0.15, 0.0], [0.85, 0.15, 0.7], '#7FA06A', 4); T.line([0.85, 0.15, 0.7], [0.62, 0.3, 0.62], '#7FA06A', 3);
+        const [wx, wy] = T.P(0.62, 0.3, 0.6); limb(wx, wy, wx - 1, wy + 8, 'rgba(160,200,220,.85)', 1.2);
+        // The rocking arm: pivot posts, then the tube tilted by how far the cycle has gone.
+        [0.38, 0.48].forEach((y) => T.line([0.45, y, 0], [0.45, y, 0.32], '#6E8F5A', 2.4)); const piv = T.P(0.45, 0.43, 0.3), a = -0.35 + fill * 0.15 + tip * 0.85;
+        const L = 20, ex = piv[0] + Math.cos(Math.PI + a) * L, ey = piv[1] + Math.sin(Math.PI + a) * L * 0.7 - 6, bx = piv[0] - Math.cos(Math.PI + a) * L * 0.6, by = piv[1] - Math.sin(Math.PI + a) * L * 0.42;
+        limb(bx, by, ex, ey, '#8DB06E', 4); limb(bx, by, ex, ey, '#A9C88A', 1.6); ell(ex, ey, 2.6, 2.2, '#5E7E4E');
+        if (tip > 0.2) { for (let k = 0; k < 4; k++) circle(ex + k * 2, ey + 4 + k * 3, 1.2, 'rgba(160,200,220,.85)'); }
+        if (ph < 0.12) { ctx.save(); ctx.globalAlpha = 1 - ph / 0.12; ctx.font = '700 9px Inter, system-ui, sans-serif'; ctx.fillStyle = '#4A3A2A'; ctx.textAlign = 'center'; ctx.fillText('tok', bx, by - 10 - ph * 60); ctx.restore(); }
+      }, { onTop: true })],
+    },
     tallcandelabra: {
       // A tall brass candelabra with five candles on scrolled arms. Lit or snuffed one candle after another.
       parts: (o) => [F(0, 0, 0.45, 0.45, (T, ob, t) => { const n = candlesLitCount(ob.id, t);
@@ -4573,6 +4654,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const run = (secs, msg) => { liveUntil.set(o.id + ':' + part, animT + secs); return msg; };
     switch (o.type) {
       case 'overseer': return 'The eye turns toward you.';
+      case 'shishiodoshi': return 'Water trickles in. The bamboo tips, spills, and knocks: tok.';
       case 'tallcandelabra': return isLit(o.id) ? 'The candle flames waver.' : 'Five fresh candles, waiting for a match.';
       case 'woodstove': { const on = toggleObjectLight(o.id); return on ? 'The kindling catches and the stove roars into life.' : 'The fire in the stove settles down to embers and goes out.'; }
       case 'glamtable': return run(4, 'The bulbs light up one after another round the mirror.');
