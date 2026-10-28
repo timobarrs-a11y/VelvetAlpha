@@ -24,6 +24,11 @@ const SETS: Record<string, string[]> = {
   candy: ['look-fridge-candy', 'look-counter-candy', 'look-dining-candy', 'look-sofa-candy', 'look-lamp-candy', 'look-plant-candy', 'paper-sprinkles', 'floor-checkpink'],
   cuddle: ['look-fridge-cuddle', 'look-counter-cuddle', 'look-dining-cuddle', 'look-sofa-cuddle', 'look-lamp-cuddle', 'look-plant-cuddle', 'paper-clouds-sky', 'floor-skycheck'],
   arcade: ['look-fridge-arcade', 'look-counter-arcade', 'look-dining-arcade', 'look-sofa-arcade', 'look-lamp-arcade', 'look-plant-arcade', 'paper-pixel-invaders', 'floor-arcadecarpet', 'clawmachine'],
+  cloud: ['look-fridge-cloud', 'look-counter-cloud', 'look-dining-cloud', 'look-sofa-cloud', 'look-lamp-cloud', 'look-plant-cloud', 'paper-cloudnine-sky', 'floor-confetti'],
+  spring: ['look-fridge-spring', 'look-counter-spring', 'look-dining-spring', 'look-sofa-spring', 'look-lamp-spring', 'look-plant-spring', 'paper-blossom-mint', 'floor-birch'],
+  summer: ['look-fridge-summer', 'look-counter-summer', 'look-dining-summer', 'look-sofa-summer', 'look-lamp-summer', 'look-plant-summer', 'paper-stripe-sun', 'floor-honey'],
+  fall: ['look-fridge-fall', 'look-counter-fall', 'look-dining-fall', 'look-sofa-fall', 'look-lamp-fall', 'look-plant-fall', 'paper-leaves', 'floor-chestnut'],
+  winter: ['look-fridge-winter', 'look-counter-winter', 'look-dining-winter', 'look-sofa-winter', 'look-lamp-winter', 'look-plant-winter', 'paper-snow', 'floor-frostpine'],
 };
 
 for (const [set, ids] of Object.entries(SETS)) {

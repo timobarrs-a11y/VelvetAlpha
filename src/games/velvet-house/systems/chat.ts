@@ -44,6 +44,8 @@ export function createChat(g: Game): Partial<Game> {
   }
 
   async function handleTalk(text: string): Promise<void> {
+    // The developer's money phrase and the unlock codes are never messages: not sent, not remembered.
+    if (g.tryDevMoney(text) || g.tryUnlock(text)) { dialogue.showInput(); return; }
     if (!g.s.sample) { dialogue.showInput(); return; }
     dialogue.busy(true);
     dialogue.showAI('...', true);

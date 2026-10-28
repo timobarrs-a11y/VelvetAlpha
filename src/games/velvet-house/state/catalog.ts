@@ -31,6 +31,8 @@ export interface CatalogEntry {
   buy?: string;
   /** A themed set sold as one bundle: the catalog ids it holds and the share taken off what is not owned yet. */
   set?: { items: string[]; off: number };
+  /** Not in the shop until the player has it: it comes from a code (state/unlockCodes.ts), never from the shelves. */
+  secret?: boolean;
 }
 
 export const TABS = [
@@ -70,6 +72,9 @@ export const look = (id: string, type: string, skin: string, name: string, desc:
 const bundle = (id: string, name: string, desc: string, items: string[], tags: string[], off = 0.2): CatalogEntry => ({
   id, name, desc, price: 0, icon: 'set', tab: 'Sets', tags, set: { items, off },
 });
+
+/** A secret entry: out of the shop until the player owns it. */
+const secret = (e: CatalogEntry): CatalogEntry => ({ ...e, secret: true });
 
 const hobby = (id: string, type: string, name: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
   id, name, price, icon: 'obj', tab: 'Hobbies', type, tags, cols, repeat: true,
@@ -130,6 +135,10 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-starburst-mint', 'Atomic mint', 'starburst-mint', 100, ['vintage', 'playful', 'bold']),
   wallpaper('paper-birch', 'Birch forest', 'birch', 90, ['soft', 'minimal', 'natural']),
   wallpaper('paper-brick-white', 'Painted brick', 'brick-white', 110, ['industrial', 'bold', 'cool']),
+  wallpaper('paper-blossom-mint', 'Mint blossom', 'blossom-mint', 100, ['soft', 'natural', 'playful']),
+  wallpaper('paper-stripe-sun', 'Sunshine stripes', 'stripe-sun', 90, ['playful', 'bold', 'warm']),
+  wallpaper('paper-leaves', 'Fallen leaves', 'leaves', 100, ['warm', 'cozy', 'natural']),
+  wallpaper('paper-snow', 'Snowfall', 'snow', 100, ['cozy', 'cool', 'soft']),
   wallpaper('paper-stripe-nautical', 'Nautical stripe', 'stripe-nautical', 90, ['cool', 'natural', 'playful']),
   wallpaper('paper-deco-emerald', 'Emerald deco', 'deco-emerald', 120, ['luxe', 'bold', 'vintage']),
   wallpaper('paper-shoji', 'Shoji screen', 'shoji', 90, ['minimal', 'natural', 'cool']),
@@ -143,7 +152,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-serape-adobe', 'Serape band', 'serape-adobe', 100, ['warm', 'natural', 'cozy']),
   wallpaper('paper-circuit', 'Circuit', 'circuit', 110, ['bold', 'modern', 'industrial']),
   wallpaper('paper-sprinkles', 'Sprinkles', 'sprinkles', 90, ['soft', 'playful', 'warm']),
-  wallpaper('paper-clouds-sky', 'Clouds and rainbows', 'clouds-sky', 90, ['soft', 'playful', 'cozy']),
+  secret(wallpaper('paper-clouds-sky', 'Clouds and rainbows', 'clouds-sky', 90, ['soft', 'playful', 'cozy'])),
   wallpaper('paper-pixel-invaders', 'Pixel invaders', 'pixel-invaders', 110, ['playful', 'bold', 'vintage']),
   wallpaper('paper-shiplap', 'Shiplap', 'shiplap', 80, ['natural', 'minimal', 'cozy']),
   wallpaper('paper-subway', 'Subway tile', 'subway', 80, ['modern', 'minimal', 'industrial']),
@@ -208,11 +217,23 @@ export const CATALOG: CatalogEntry[] = [
   bundle('set-candy', 'Candy kitchen and living room', 'Pastel pink, mint and lilac: the bow fridge, scalloped mint counter with a cupcake stand, scalloped table with heart-back chairs under a lollipop light, scalloped pink sofa, an ice cream cone lamp and a teacup planter, with sprinkles on the walls and a pink check underfoot.',
     ['look-fridge-candy', 'look-counter-candy', 'look-dining-candy', 'look-sofa-candy', 'look-lamp-candy', 'look-plant-candy', 'paper-sprinkles', 'floor-checkpink'], ['soft', 'playful', 'warm']),
 
-  bundle('set-cuddle', 'Cuddle Clouds kitchen and living room', 'Pastel bears, clouds and rainbows: the rainbow bear fridge, cloud counter with a heart basin and a bear plush, cloud table with bear-face chairs under a rainbow, a puffy cloud sofa, a cloud lamp with rainbow drops and a cloud pot, with clouds and rainbows on the walls and a sky check underfoot.',
-    ['look-fridge-cuddle', 'look-counter-cuddle', 'look-dining-cuddle', 'look-sofa-cuddle', 'look-lamp-cuddle', 'look-plant-cuddle', 'paper-clouds-sky', 'floor-skycheck'], ['soft', 'playful', 'cozy']),
+  secret(bundle('set-cuddle', 'Cuddle Clouds kitchen and living room', 'Pastel bears, clouds and rainbows: the rainbow bear fridge, cloud counter with a heart basin and a bear plush, cloud table with bear-face chairs under a rainbow, a puffy cloud sofa, a cloud lamp with rainbow drops and a cloud pot, with clouds and rainbows on the walls and a sky check underfoot.',
+    ['look-fridge-cuddle', 'look-counter-cuddle', 'look-dining-cuddle', 'look-sofa-cuddle', 'look-lamp-cuddle', 'look-plant-cuddle', 'paper-clouds-sky', 'floor-skycheck'], ['soft', 'playful', 'cozy'])),
 
   bundle('set-arcade', 'Arcade kitchen and living room', 'Black cabinets, marquee lights and neon: the cabinet fridge with a glowing screen, coin-op counter with a joystick at the end, a cocktail cabinet to eat off with red vinyl stools under a marquee, a vinyl sofa with chasing lights, a joystick lamp and a pixel pot, with pixel invaders on the walls and the arcade carpet underfoot. The claw machine in Hobbies goes with it.',
     ['look-fridge-arcade', 'look-counter-arcade', 'look-dining-arcade', 'look-sofa-arcade', 'look-lamp-arcade', 'look-plant-arcade', 'paper-pixel-invaders', 'floor-arcadecarpet'], ['playful', 'bold', 'vintage']),
+
+  bundle('set-spring', 'Spring kitchen and living room', 'The blossom icebox, potting-bench counter, garden table set, posy sofa, daisy lamp and tulip pot, with mint blossom walls and a sunlit birch floor.',
+    ['look-fridge-spring', 'look-counter-spring', 'look-dining-spring', 'look-sofa-spring', 'look-lamp-spring', 'look-plant-spring', 'paper-blossom-mint', 'floor-birch'], ['soft', 'natural', 'playful']),
+
+  bundle('set-summer', 'Summer kitchen and living room', 'The sunny icebox, lemonade-stand counter, patio table set, sunbed sofa, palm lamp and palm tub, with sunshine-striped walls and a honey pine floor.',
+    ['look-fridge-summer', 'look-counter-summer', 'look-dining-summer', 'look-sofa-summer', 'look-lamp-summer', 'look-plant-summer', 'paper-stripe-sun', 'floor-honey'], ['playful', 'bold', 'warm']),
+
+  bundle('set-fall', 'Fall kitchen and living room', 'The harvest icebox and counter, harvest table set, plaid-throw sofa, lantern lamp and mum pot, with fallen-leaf walls and a chestnut floor.',
+    ['look-fridge-fall', 'look-counter-fall', 'look-dining-fall', 'look-sofa-fall', 'look-lamp-fall', 'look-plant-fall', 'paper-leaves', 'floor-chestnut'], ['warm', 'cozy', 'natural']),
+
+  bundle('set-winter', 'Winter kitchen and living room', 'The frosted icebox, evergreen counter, lodge table set, knit-throw sofa, candle-glow lamp and frosted evergreen pot, with snowfall walls and a frosted pine floor.',
+    ['look-fridge-winter', 'look-counter-winter', 'look-dining-winter', 'look-sofa-winter', 'look-lamp-winter', 'look-plant-winter', 'paper-snow', 'floor-frostpine'], ['cozy', 'cool', 'soft']),
 
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
@@ -252,6 +273,10 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-linoleum', 'Diner linoleum', 'linoleum', 160, ['vintage', 'playful', 'bold']),
   floor('floor-nordic', 'Pale wide plank', 'nordic', 140, ['soft', 'minimal', 'natural']),
   floor('floor-poured', 'Poured concrete', 'poured', 170, ['industrial', 'bold', 'cool']),
+  floor('floor-birch', 'Sunlit birch plank', 'birchplank', 130, ['soft', 'natural', 'playful']),
+  floor('floor-honey', 'Honey pine plank', 'honey', 130, ['playful', 'bold', 'warm']),
+  floor('floor-chestnut', 'Chestnut plank', 'chestnut', 150, ['warm', 'cozy', 'natural']),
+  floor('floor-frostpine', 'Frosted pine plank', 'frostpine', 130, ['cozy', 'cool', 'soft']),
   floor('floor-driftwood', 'Bleached boards', 'driftwood', 140, ['cool', 'natural', 'playful']),
   floor('floor-ivorygold', 'Ivory marble, gold vein', 'ivorygold', 180, ['luxe', 'bold', 'vintage']),
   floor('floor-tatami', 'Tatami mat', 'tatami', 130, ['minimal', 'natural', 'cool']),
@@ -265,7 +290,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-saltillo', 'Saltillo tile', 'saltillo', 140, ['warm', 'natural', 'cozy']),
   floor('floor-grate', 'Lit grate', 'grate', 170, ['bold', 'modern', 'industrial']),
   floor('floor-checkpink', 'Pink check', 'checkpink', 140, ['soft', 'playful', 'warm']),
-  floor('floor-skycheck', 'Sky check', 'skycheck', 140, ['soft', 'playful', 'cozy']),
+  secret(floor('floor-skycheck', 'Sky check', 'skycheck', 140, ['soft', 'playful', 'cozy'])),
   floor('floor-arcadecarpet', 'Arcade carpet', 'arcadecarpet', 170, ['playful', 'bold', 'vintage']),
   floor('floor-checker', 'Checkerboard', 'checker', 180, ['bold', 'playful', 'vintage']),
   floor('floor-rose', 'Rose carpet', 'rose', 100, ['soft', 'warm', 'cozy']),
@@ -439,12 +464,12 @@ export const CATALOG: CatalogEntry[] = [
   look('look-lamp-candy', 'lamp', 'candy', 'Ice cream cone lamp', 'A waffle cone with a pink scoop that glows, sprinkles and a cherry on top.', 90, ['soft', 'playful', 'warm'], ['#F6B7CC', '#FBE7A6', '#FFF8F0']),
   look('look-plant-candy', 'plant', 'candy', 'Teacup planter', 'Your plant in a pink teacup with a handle, on a scalloped saucer.', 60, ['soft', 'playful', 'warm'], ['#F6B7CC', '#FFF8F0', '#BFE8D6', '#E04A6A']),
 
-  look('look-fridge-cuddle', 'fridge', 'cuddle', 'Rainbow bear fridge', 'Sky blue with a cloud cap, a rainbow between two clouds on the upper door, a pink bear face with a heart on the lower one, and heart handles.', 350, ['soft', 'playful', 'cozy'], ['#AEDDF7', '#FFFFFF', '#F6B7CC']),
-  look('look-counter-cuddle', 'counter', 'cuddle', 'Cloud counter', 'Cloud-white fronts with a rainbow band at the kick, hearts and stars for pulls, cloud puffs along the top edge, a sky top with stars, a pink heart basin and a blue bear plush at the end.', 420, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F6B7CC']),
-  look('look-dining-cuddle', 'dining', 'cuddle', 'Cloud table and bear chairs', 'A scalloped cloud top on a stack of puffs, chairs with bear-face backs in pink and blue, and a rainbow hanging from a cloud above.', 340, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F6B7CC', '#9CCBF2']),
-  look('look-sofa-cuddle', 'sofa', 'cuddle', 'Cloud sofa', 'A puffy white cloud sofa with a rainbow band along the base, sky-blue cushions with a heart and a star, and a yellow bear plush in the corner.', 380, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F6B7CC']),
-  look('look-lamp-cuddle', 'lamp', 'cuddle', 'Cloud lamp', 'A cloud shade on a sky-blue pole with a star on top and rainbow drops hanging under it.', 90, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F9E27A']),
-  look('look-plant-cuddle', 'plant', 'cuddle', 'Cloud pot', 'Your plant in a puffy white pot with cloud bumps round the rim, a rainbow on the front and a star on the side.', 60, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F9E27A', '#F6B7CC']),
+  secret(look('look-fridge-cuddle', 'fridge', 'cuddle', 'Rainbow bear fridge', 'Sky blue with a cloud cap, a rainbow between two clouds on the upper door, a pink bear face with a heart on the lower one, and heart handles.', 350, ['soft', 'playful', 'cozy'], ['#AEDDF7', '#FFFFFF', '#F6B7CC'])),
+  secret(look('look-counter-cuddle', 'counter', 'cuddle', 'Cloud counter', 'Cloud-white fronts with a rainbow band at the kick, hearts and stars for pulls, cloud puffs along the top edge, a sky top with stars, a pink heart basin and a blue bear plush at the end.', 420, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F6B7CC'])),
+  secret(look('look-dining-cuddle', 'dining', 'cuddle', 'Cloud table and bear chairs', 'A scalloped cloud top on a stack of puffs, chairs with bear-face backs in pink and blue, and a rainbow hanging from a cloud above.', 340, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F6B7CC', '#9CCBF2'])),
+  secret(look('look-sofa-cuddle', 'sofa', 'cuddle', 'Cloud sofa', 'A puffy white cloud sofa with a rainbow band along the base, sky-blue cushions with a heart and a star, and a yellow bear plush in the corner.', 380, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F6B7CC'])),
+  secret(look('look-lamp-cuddle', 'lamp', 'cuddle', 'Cloud lamp', 'A cloud shade on a sky-blue pole with a star on top and rainbow drops hanging under it.', 90, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F9E27A'])),
+  secret(look('look-plant-cuddle', 'plant', 'cuddle', 'Cloud pot', 'Your plant in a puffy white pot with cloud bumps round the rim, a rainbow on the front and a star on the side.', 60, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F9E27A', '#F6B7CC'])),
 
   look('look-fridge-arcade', 'fridge', 'arcade', 'Cabinet fridge', 'A black cabinet with a marquee of chasing bulbs on top, a screen glowing in the upper door, a row of buttons on the lower one and a joystick-ball handle.', 520, ['playful', 'bold', 'vintage'], ['#1E1A2E', '#F4C430', '#FF2E9A']),
   look('look-counter-arcade', 'counter', 'arcade', 'Coin-op counter', 'Black cabinet fronts with yellow coin slots and neon trim, a chaser strip under a cyan-edged top, a steel basin, and a joystick and buttons at the end.', 600, ['playful', 'bold', 'vintage'], ['#1E1A2E', '#F4C430', '#19E6F0']),
@@ -452,6 +477,50 @@ export const CATALOG: CatalogEntry[] = [
   look('look-sofa-arcade', 'sofa', 'arcade', 'Vinyl sofa with marquee lights', 'Black vinyl with yellow piping, red cushions with pixel hearts, a pixel invader on the back and a chaser strip along the base.', 560, ['playful', 'bold', 'vintage'], ['#1E1A2E', '#E63946', '#F4C430']),
   look('look-lamp-arcade', 'lamp', 'arcade', 'Joystick lamp', 'A joystick as tall as you: a red ball on a black stick that glows, on a base ringed with marquee bulbs.', 160, ['playful', 'bold', 'vintage'], ['#E63946', '#15121F', '#F4C430']),
   look('look-plant-arcade', 'plant', 'arcade', 'Pixel pot', 'Your plant in a black pot with a pixel invader on the front and a pixel coin on the side.', 110, ['playful', 'bold', 'vintage'], ['#15121F', '#19E6F0', '#39D353', '#F4C430']),
+
+  // Spring: a seasonal pack.
+  look('look-fridge-spring', 'fridge', 'spring', 'Blossom icebox', 'Pale blush with painted blossoms. It smells faintly of lemon, for some reason.', 340, ['soft', 'natural', 'playful'], ['#F3D6DC', '#CFE6D3', '#F6EBC0']),
+  look('look-counter-spring', 'counter', 'spring', 'Potting-bench counter', 'Sage cabinets, a pale wood top and two little herb pots by the sink.', 400, ['soft', 'natural', 'playful'], ['#CFE6D3', '#F3D6DC', '#F6EBC0']),
+  look('look-dining-spring', 'dining', 'spring', 'Garden table set', 'A light wood table with petals scattered on it, and chairs in pastel.', 330, ['soft', 'natural', 'playful'], ['#CFE6D3', '#F6EBC0', '#F3D6DC']),
+  look('look-sofa-spring', 'sofa', 'spring', 'Posy sofa', 'Soft green, with a cushion embroidered with one very optimistic flower.', 360, ['soft', 'natural', 'playful'], ['#CFE6D3', '#F3D6DC', '#E8DCC8']),
+  look('look-lamp-spring', 'lamp', 'spring', 'Daisy lamp', 'A green stem and a big white daisy that glows when you turn it on.', 80, ['soft', 'natural', 'playful'], ['#F2EEE8', '#F6EBC0', '#F3D6DC']),
+  look('look-plant-spring', 'plant', 'spring', 'Tulip pot', 'Your plant in a pastel pot, with tulips on top.', 40, ['soft', 'natural', 'playful'], ['#F3B6C8', '#F6EBC0', '#B9DCC4']),
+
+  // Summer: a seasonal pack.
+  look('look-fridge-summer', 'fridge', 'summer', 'Sunny icebox', 'Sunshine yellow, with a coral sun on the door and a teal stripe.', 340, ['playful', 'bold', 'warm'], ['#F6D56E', '#7FD1CF', '#F2A38A']),
+  look('look-counter-summer', 'counter', 'summer', 'Lemonade-stand counter', 'Teal cabinets, a honey bamboo top and a little basket of lemons.', 400, ['playful', 'bold', 'warm'], ['#7FD1CF', '#F6D56E', '#F2A38A']),
+  look('look-dining-summer', 'dining', 'summer', 'Patio table set', 'A slatted table with a striped runner, and chairs bright enough to eat lunch in.', 330, ['playful', 'bold', 'warm'], ['#F6D56E', '#7FD1CF', '#F2A38A']),
+  look('look-sofa-summer', 'sofa', 'summer', 'Sunbed sofa', 'Sunshine yellow, with a cushion striped like a beach towel.', 360, ['playful', 'bold', 'warm'], ['#F6D56E', '#7FD1CF', '#F2A38A']),
+  look('look-lamp-summer', 'lamp', 'summer', 'Palm lamp', 'A little palm on a stem, with a glowing sun in the middle.', 80, ['playful', 'bold', 'warm'], ['#4F9460', '#7FD1CF', '#F6D56E']),
+  look('look-plant-summer', 'plant', 'summer', 'Palm tub', 'Your plant in a bright glazed tub with a stripe around it.', 40, ['playful', 'bold', 'warm'], ['#7FD1CF', '#F6D56E', '#F2A38A']),
+
+  // Fall: a seasonal pack.
+  look('look-fridge-fall', 'fridge', 'fall', 'Harvest icebox', 'Rust red with wooden handles and three leaves blowing across the door.', 340, ['warm', 'cozy', 'natural'], ['#B5532F', '#D9A84A', '#8A5E3B']),
+  look('look-counter-fall', 'counter', 'fall', 'Harvest counter', 'Dark wood cabinets and two pumpkins that are never going to get carved.', 400, ['warm', 'cozy', 'natural'], ['#8A5E3B', '#B5532F', '#3F5B4C']),
+  look('look-dining-fall', 'dining', 'fall', 'Harvest table set', 'A deep walnut table with a plaid runner, and chairs the colour of cider.', 330, ['warm', 'cozy', 'natural'], ['#B5532F', '#D9A84A', '#3F5B4C']),
+  look('look-sofa-fall', 'sofa', 'fall', 'Plaid-throw sofa', 'A deep, warm sofa with a plaid blanket over the arm.', 360, ['warm', 'cozy', 'natural'], ['#B5532F', '#D9A84A', '#3F5B4C']),
+  look('look-lamp-fall', 'lamp', 'fall', 'Lantern lamp', 'A black stand with a lantern on top, glowing amber.', 80, ['warm', 'cozy', 'natural'], ['#2B2B30', '#8A5E3B', '#B5532F']),
+  look('look-plant-fall', 'plant', 'fall', 'Mum pot', 'Your plant in a rust pot, crowded with orange mums.', 40, ['warm', 'cozy', 'natural'], ['#B5532F', '#D9A84A', '#8A5E3B']),
+
+  // Winter: a seasonal pack.
+  look('look-fridge-winter', 'fridge', 'winter', 'Frosted icebox', 'Pale as a snowbank, with icicles along the top and red handles.', 340, ['cozy', 'cool', 'soft'], ['#E3EEF6', '#C8D9E6', '#F2EEE8']),
+  look('look-counter-winter', 'counter', 'winter', 'Evergreen counter', 'Forest-green cabinets, a white top and a sprig of fir by the sink.', 400, ['cozy', 'cool', 'soft'], ['#3F5B4C', '#8E1F2F', '#2E3B57']),
+  look('look-dining-winter', 'dining', 'winter', 'Lodge table set', 'A pine table with a white runner and two candles, and sturdy chairs.', 330, ['cozy', 'cool', 'soft'], ['#8A5E3B', '#3F5B4C', '#8E1F2F']),
+  look('look-sofa-winter', 'sofa', 'winter', 'Knit-throw sofa', 'A soft sofa with a chunky knit throw, for staying in.', 360, ['cozy', 'cool', 'soft'], ['#E8DCC8', '#B9C3C8', '#8E1F2F']),
+  look('look-lamp-winter', 'lamp', 'winter', 'Candle-glow lamp', 'A frosted globe on a white stem that glows like a candle in a window.', 80, ['cozy', 'cool', 'soft'], ['#F2EEE8', '#8E1F2F', '#3F5B4C']),
+  look('look-plant-winter', 'plant', 'winter', 'Frosted evergreen pot', 'Your plant with a dusting of snow and a few red berries.', 40, ['cozy', 'cool', 'soft'], ['#8E1F2F', '#F2EEE8', '#3F5B4C', '#2E3B57']),
+
+  // Cloud Nine: clouds, rainbows and stars. (Cuddle Clouds, the bear pack above, is the secret one.)
+  look('look-fridge-cloud', 'fridge', 'cloud', 'Cloud-nine icebox', 'A pale sky-blue icebox with a rainbow on the door and a cloud at each end.', 340, ['soft', 'playful', 'cozy'], ['#BFE3F5', '#F9C6DA', '#C9F0DC']),
+  look('look-counter-cloud', 'counter', 'cloud', 'Candy-cloud counter', 'Pastel cabinets, a fluffy scalloped top, heart pulls and a jar of rainbow sweets.', 400, ['soft', 'playful', 'cozy'], ['#F9C6DA', '#BFE3F5', '#FFF2B8']),
+  look('look-dining-cloud', 'dining', 'cloud', 'Tea-party table set', 'A white table set for tea, with chairs that have a heart in the back.', 330, ['soft', 'playful', 'cozy'], ['#F9C6DA', '#BFE3F5', '#E2D3F7']),
+  look('look-sofa-cloud', 'sofa', 'cloud', 'Puffy cloud-top sofa', 'A puffy, cloud-topped sofa with a heart cushion and a little yellow star.', 360, ['soft', 'playful', 'cozy'], ['#F6F1FA', '#F9C6DA', '#BFE3F5']),
+  look('look-lamp-cloud', 'lamp', 'cloud', 'Star lamp', 'A star on a stem that glows butter-yellow when you turn it on.', 80, ['soft', 'playful', 'cozy'], ['#F9C6DA', '#BFE3F5', '#E2D3F7']),
+  look('look-plant-cloud', 'plant', 'cloud', 'Rainbow pot', 'Your plant in a pot with a rainbow around it, and a few little flowers.', 40, ['soft', 'playful', 'cozy'], ['#F9C6DA', '#BFE3F5', '#FFF2B8', '#C9F0DC']),
+  wallpaper('paper-cloudnine-sky', 'Clouds and stars', 'cloudnine-sky', 100, ['soft', 'playful', 'cozy']),
+  floor('floor-confetti', 'Confetti carpet', 'confetti', 130, ['soft', 'playful', 'cozy']),
+  bundle('set-cloud', 'Cloud Nine kitchen and living room', 'The cloud-nine icebox, candy-cloud counter, tea-party table set, puffy cloud-top sofa, star lamp and rainbow pot, with clouds-and-stars walls and a confetti carpet.',
+    ['look-fridge-cloud', 'look-counter-cloud', 'look-dining-cloud', 'look-sofa-cloud', 'look-lamp-cloud', 'look-plant-cloud', 'paper-cloudnine-sky', 'floor-confetti'], ['soft', 'playful', 'cozy']),
 
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
@@ -557,6 +626,11 @@ export const ITAGS: Record<string, string> = Object.fromEntries(
 
 export function catalogById(id: string): CatalogEntry | undefined {
   return CATALOG.find(c => c.id === id);
+}
+
+/** What the shop shows: secret entries only once the player has them. */
+export function visibleItems(items: CatalogEntry[], owned: ReadonlySet<string>): CatalogEntry[] {
+  return items.filter((i) => !i.secret || owned.has(i.id));
 }
 
 export function itemsForTab(tab: string): CatalogEntry[] {

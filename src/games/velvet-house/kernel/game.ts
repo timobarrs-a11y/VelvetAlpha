@@ -147,6 +147,9 @@ export interface Game {
   selectObject(o: ObjectInstance | null): void;
   commitMove(o: ObjectInstance, verb?: string): void;
   rotateSelected(): void;
+  tryDevMoney(text: string): boolean;
+  tryUnlock(text: string): boolean;
+  celebrate(options: import('../ui/celebrate').CelebrateOptions): void;
   recolourHeld(): void;
   useLook(skin: string): void;
   cancelHold(): void;
@@ -203,7 +206,7 @@ export interface Game {
   handleOrder(chain: string): void;
   counterPartAt(obj: ObjectInstance, sx: number, sy: number): string;
   // shop, chat, save, drawer, goals
-  handleBuy(item: CatalogEntry, color?: string): void;
+  handleBuy(item: CatalogEntry, color?: string, fromSet?: boolean): void;
   handleBuyAvatarItem(id: string): void;
   openChat(): void;
   handleCloseChat(): void;
