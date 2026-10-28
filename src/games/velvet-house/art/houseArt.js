@@ -172,6 +172,8 @@ export function createHouseArt(ctx0, opts = {}) {
     linoleum: { kind: 'check', a: '#F4EAD0', b: '#8FCDBB', line: 'rgba(0,0,0,.08)' },
     nordic: { kind: 'plank', a: '#E8DFCF', b: '#E1D6C3', line: 'rgba(120,100,70,.14)' },
     poured: { kind: 'stone', a: '#6E7074', b: '#66686C', line: 'rgba(0,0,0,.08)' },
+    birchplank: { kind: 'plank', a: '#EBDDBF', b: '#E3D3B0', line: 'rgba(120,90,50,.16)' }, honey: { kind: 'plank', a: '#D9A85A', b: '#CF9C4E', line: 'rgba(90,55,15,.22)' },
+    chestnut: { kind: 'plank', a: '#8A5A3A', b: '#7F5233', line: 'rgba(0,0,0,.3)' }, frostpine: { kind: 'plank', a: '#D9DCDD', b: '#CFD3D5', line: 'rgba(60,70,80,.18)' },
     driftwood: { kind: 'plank', a: '#D9CFBE', b: '#CEC2AE', line: 'rgba(255,255,255,.4)' },
     rubber: { kind: 'speck', a: '#3A3A3F', b: '#3A3A3F', line: 'rgba(255,255,255,.04)', pal: ['#5A5A62', '#4C4C54', '#6E6E76', '#55555D'] }
   };
@@ -188,6 +190,7 @@ export function createHouseArt(ctx0, opts = {}) {
     'pin-slate': { pat: 'pin', base: '#4A5058', ink: 'rgba(235,238,240,.35)' },
     birch: { pat: 'birch', base: '#F3EFE6', ink: 'rgba(255,255,255,.9)', ink2: 'rgba(60,50,45,.5)' },
     'brick-white': { pat: 'brick', base: '#E9E3DB', ink: 'rgba(0,0,0,.2)', tones: ['#EDE8E1', '#E4DED6', '#F1ECE5', '#E8E2DA'] },
+    'blossom-mint': { pat: 'blossom', base: '#E4F1E6' }, 'stripe-sun': { pat: 'stripes', base: '#FFF4CC', ink: 'rgba(240,160,60,.5)' },
     'stripe-nautical': { pat: 'stripes', base: '#F6F3EC', ink: 'rgba(46,59,87,.75)' },
     'gingham-sage': { pat: 'gingham', base: '#F4F1E8', ink: 'rgba(110,150,115,.3)' },
     'starburst-mint': { pat: 'starburst', base: '#CFEBDD', ink: 'rgba(224,122,92,.75)', ink2: 'rgba(224,122,92,.9)' },
@@ -553,6 +556,87 @@ export function createHouseArt(ctx0, opts = {}) {
     if (style === 'woven') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.95], BE.rope, 1.6); ctx.beginPath(); ctx.ellipse(px, py - 2, 11, 9, 0, Math.PI, 0); ctx.fillStyle = BE.rattan; ctx.fill(); for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(px, py - 2, 11, 9, 0, Math.PI + k * 0.6, Math.PI + k * 0.6 + 0.3); ctx.strokeStyle = 'rgba(90,60,30,.35)'; ctx.lineWidth = 1; ctx.stroke(); } ell(px, py - 2, 11, 4, on ? '#FFF1C9' : '#B9A07A'); return; }
     T.line([0.65, 1.24, WH], [0.65, 1.24, 1.95], '#3A3340', 1.2); ctx.beginPath(); ctx.ellipse(px, py, 10, 9, 0, Math.PI, 0); ctx.fillStyle = '#2B2B30'; ctx.fill(); ell(px, py, 10, 3.8, on ? '#FFF1C9' : '#4A4450');
   }, { onTop: true });
+
+  // ---- The four seasonal packs (spring, summer, fall, winter): one block per piece, added to the registry above ----
+  // One palette per season (wood, legs, table top, trim, a pop colour and a leaf colour); each piece adds its own accent.
+  const SEAS = {
+    spring: { wood: '#E4C9A0', leg: '#F2EEE8', top: '#EAD3AD', trim: '#F7F3E8', pop: '#F3A6BE', leaf: '#6FB38A' },
+    summer: { wood: '#D9B87A', leg: '#C79B5B', top: '#E8C987', trim: '#FFF4CC', pop: '#F6D56E', leaf: '#4F9460' },
+    fall: { wood: '#8A5E3B', leg: '#4A3426', top: '#7A4E32', trim: '#F1E2C6', pop: '#E07A2B', leaf: '#B5532F' },
+    winter: { wood: '#B7A88F', leg: '#5A3E2E', top: '#B79B76', trim: '#F4F7FA', pop: '#C0392B', leaf: '#2F6B40' },
+  };
+  const petals = (T, x, y, z, col, mid = '#F6D56E', r = 2.6, pr = 1.9) => { const [fx, fy] = T.P(x, y, z); for (let i = 0; i < 5; i++) { const a = i * 1.2566; circle(fx + Math.cos(a) * r, fy + Math.sin(a) * r, pr, col); } circle(fx, fy, pr * 0.8, mid); };
+  const seasonFridge = (sk) => (T, o) => { const P = SEAS[sk], body = cl(o);
+    T.box(0, 0, 0, 0.9, 0.85, 0.1, P.wood); T.box(0, 0, 0.1, 0.9, 0.85, 1.78, body); T.box(0, 0, 1.88, 0.9, 0.85, 0.07, P.trim);
+    T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], 'rgba(60,50,40,.35)', 1.4);
+    [[0.7, 1.15], [1.42, 1.78]].forEach(([z0, z1]) => T.line([0.78, 0.855, z0], [0.78, 0.855, z1], sk === 'winter' ? '#8E1F2F' : sk === 'summer' ? '#C79B5B' : P.wood, 3.6));
+    if (sk === 'spring') [[0.16, 1.62], [0.34, 1.48], [0.5, 1.64]].forEach(([x, z], k) => petals(T, x, 0.853, z, k % 2 ? '#FFF3B0' : P.pop));
+    if (sk === 'summer') { T.poly([[0.04, 0.851, 1.52], [0.7, 0.851, 1.52], [0.7, 0.851, 1.6], [0.04, 0.851, 1.6]], '#F2EEE8'); T.poly([[0.04, 0.851, 1.44], [0.7, 0.851, 1.44], [0.7, 0.851, 1.5], [0.04, 0.851, 1.5]], '#3FA3A5'); const [sx, sy] = T.P(0.22, 0.853, 1.0); circle(sx, sy, 4.2, '#F2A38A'); circle(sx, sy, 2.6, '#FFF1B0'); }
+    if (sk === 'fall') [[0.18, 1.6, 0.5], [0.4, 1.46, -0.6], [0.52, 1.66, 0.2]].forEach(([x, z, r], k) => { const [lx, ly] = T.P(x, 0.853, z); ell(lx, ly, 2.6, 5, ['#E07A2B', '#D9A84A', '#B5532F'][k], null, r); });
+    if (sk === 'winter') for (let x = 0.06; x < 0.88; x += 0.1) T.line([x, 0.856, 1.88], [x, 0.856, 1.8 - ((x * 37) % 0.08)], '#BFE3F5', 2.2);
+    T.line([0.05, 0.851, 0.1], [0.85, 0.851, 0.1], 'rgba(60,40,20,.4)', 1);
+    return body; };
+  const seasonCounter = (sk) => (T, o) => { const P = SEAS[sk];
+    T.box(0, 0, 0, 2.8, 0.8, 0.86, cl(o));
+    [0.7, 1.4, 2.1].forEach(x => T.line([x, 0.801, 0.06], [x, 0.801, 0.8], 'rgba(0,0,0,.3)', 1.2));
+    [0.3, 1.0, 1.7, 2.4].forEach(x => T.line([x, 0.803, 0.64], [x + 0.2, 0.803, 0.64], sk === 'winter' ? '#E8ECEF' : P.trim, 2.6));
+    T.box(-0.05, -0.04, 0.86, 2.9, 0.88, 0.07, sk === 'winter' ? '#F1F3F4' : P.wood);
+    T.poly([[0.3, 0.13, 0.931], [1.0, 0.13, 0.931], [1.0, 0.6, 0.931], [0.3, 0.6, 0.931]], '#F4F2EC', 'rgba(0,0,0,.28)', 1.1);
+    T.line([0.65, 0.04, 0.93], [0.65, 0.04, 1.2], '#B9C3C8', 2.4); T.line([0.65, 0.04, 1.2], [0.65, 0.24, 1.14], '#B9C3C8', 2.4);
+    if (sk === 'spring') [[1.06, 0.18], [1.14, 0.42]].forEach(([x, y], k) => { T.box(x, y, 0.93, 0.1, 0.1, 0.09, '#C26B4A'); const [hx, hy] = T.P(x + 0.05, y + 0.05, 1.08); ell(hx - 2, hy - 2, 2, 5, P.leaf, null, -0.4); ell(hx + 2, hy - 3, 2, 5, k ? P.pop : '#6FB38A', null, 0.4); });
+    if (sk === 'summer') { T.box(1.04, 0.16, 0.93, 0.2, 0.2, 0.1, '#C79B5B'); [[1.1, 0.22], [1.18, 0.28]].forEach(([x, y]) => { const [lx, ly] = T.P(x, y, 1.06); circle(lx, ly, 2.6, P.pop); }); }
+    if (sk === 'fall') [[1.1, 0.2, 4.2], [1.19, 0.36, 3.2]].forEach(([x, y, r]) => { const [px, py] = T.P(x, y, 0.99); circle(px, py, r, P.pop); limb(px, py - r, px + 1, py - r - 2.4, '#4A3426', 1.4); });
+    if (sk === 'winter') { const [fx, fy] = T.P(1.12, 0.26, 0.98); [[-5, 3], [5, 3], [-3, -1], [3, -1], [0, -6]].forEach(([dx, dy], k) => { ell(fx + dx * 0.5, fy + dy, 5 - (k > 1 ? 1.6 : 0), 2.4, k % 2 ? '#2F6B40' : '#3F7D4E'); }); circle(fx, fy - 2, 1.5, '#C0392B'); } };
+  const seasonDining = (sk, light) => (o) => { const ps = [], P = SEAS[sk], seat = cl(o), leg = P.leg, z = 0.772;
+    [[0.39, 0.04], [0.83, 0.04], [0.39, 0.48], [0.83, 0.48]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.06, 0.06, 0.42, leg)));
+    ps.push(B(0.35, 0, 0.42, 0.6, 0.58, 0.07, seat, { name: 'seat1' }), B(0.35, 0, 0.49, 0.6, 0.07, 0.62, seat));
+    [[0.05, 0.79], [1.18, 0.79], [0.05, 1.64], [1.18, 1.64]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.07, 0.07, 0.7, leg)));
+    ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, P.top, { name: 'top' }));
+    ps.push(F(0, 0.74, 1.3, 1.74, (T) => {
+      const band = (x0, x1, col) => T.poly([[x0, 0.78, z], [x1, 0.78, z], [x1, 1.7, z], [x0, 1.7, z]], col);
+      if (sk === 'spring') for (let k = 0; k < 9; k++) { const [px, py] = T.P(0.12 + (k * 0.37) % 1.05, 0.84 + (k * 0.53) % 0.8, z); circle(px, py, 1.7, k % 2 ? '#F3A6BE' : '#FFF3B0'); }
+      if (sk === 'summer') { for (let y = 0.9; y < 1.74; y += 0.18) T.line([0.03, y, z], [1.27, y, z], 'rgba(150,100,40,.3)', 1); for (let i = 0; i < 5; i++) band(0.5 + i * 0.1, 0.55 + i * 0.1, i % 2 ? '#F2EEE8' : '#3FA3A5'); }
+      if (sk === 'fall') { band(0.48, 0.82, '#B5532F'); for (let y = 0.84; y < 1.7; y += 0.2) T.line([0.48, y, z + 0.001], [0.82, y, z + 0.001], '#1B1A1F', 1.2); T.line([0.58, 0.78, z + 0.001], [0.58, 1.7, z + 0.001], '#1B1A1F', 1.2); T.line([0.72, 0.78, z + 0.001], [0.72, 1.7, z + 0.001], '#1B1A1F', 1.2); }
+      if (sk === 'winter') { band(0.5, 0.8, '#F4F7FA'); [[0.5, 0.9], [0.8, 1.6]].forEach(([x, y]) => { T.box(x, y, 0.77, 0.06, 0.06, 0.12, '#F2EEE8'); const [cx, cy] = T.P(x + 0.03, y + 0.03, 0.9); ell(cx, cy - 1, 1.6, 3, isLit(o.id) ? '#FFD36B' : '#F6B34A'); }); }
+    }, { onTop: true }));
+    ps.push(B(0.35, 1.89, 0.42, 0.6, 0.58, 0.07, seat, { name: 'seat2' }), B(0.35, 2.4, 0.49, 0.6, 0.07, 0.62, seat));
+    [[0.39, 1.93], [0.83, 1.93], [0.39, 2.37], [0.83, 2.37]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.06, 0.06, 0.42, leg)));
+    ps.push(diningLife(), diningLight(light));
+    return ps; };
+  const seasonSofa = (sk) => (o, s1, s2) => { const P = SEAS[sk], v = cl(o), vc = shade(v, 0.14);
+    return [B(0, 0, 0.38, 2.4, 0.32, 0.6, v), B(0, 0, 0, 2.4, 1.0, 0.38, v, { name: 'base' }), B(0, 0, 0, 2.4, 1.0, 0.05, P.wood),
+      B(0.2, 0.32, 0.38 - s1 * 0.018, 1.0, 0.62, 0.1 - s1 * 0.035, vc), B(1.2, 0.32, 0.38 - s2 * 0.018, 1.0, 0.62, 0.1 - s2 * 0.035, vc),
+      B(0, 0, 0, 0.2, 1.0, 0.62, v), B(2.2, 0, 0, 0.2, 1.0, 0.62, v), B(0.26, 0.34, 0.48, 0.42, 0.14, 0.32, sk === 'winter' ? '#C0392B' : sk === 'fall' ? '#D9A84A' : sk === 'summer' ? '#3FA3A5' : '#FFF3B0'),
+      F(0, 0, 2.4, 1.0, (T) => {
+        if (sk === 'spring') petals(T, 0.47, 0.5, 0.62, P.pop, '#F6D56E', 3, 2);
+        if (sk === 'summer') for (let i = 0; i < 4; i++) T.line([0.3 + i * 0.1, 0.5, 0.5], [0.3 + i * 0.1, 0.5, 0.78], '#F2EEE8', 2);
+        if (sk === 'fall') { T.poly([[2.2, 1.001, 0.1], [2.4, 1.001, 0.1], [2.4, 1.001, 0.62], [2.2, 1.001, 0.62]], '#B5532F'); for (let z = 0.2; z < 0.62; z += 0.14) T.line([2.2, 1.002, z], [2.4, 1.002, z], '#1B1A1F', 1.2); T.line([2.3, 1.002, 0.1], [2.3, 1.002, 0.62], '#1B1A1F', 1.2); }
+        if (sk === 'winter') { T.poly([[2.2, 1.001, 0.1], [2.4, 1.001, 0.1], [2.4, 1.001, 0.62], [2.2, 1.001, 0.62]], '#F2EEE8'); for (let z = 0.14; z < 0.62; z += 0.1) T.line([2.2, 1.002, z], [2.4, 1.002, z + 0.05], 'rgba(120,110,100,.55)', 1.4); }
+      }, { onTop: true })]; };
+  const seasonLamp = (sk) => (T, o) => { const P = SEAS[sk], c = cl(o), lit = isLit(o.id);
+    T.box(0.07, 0.07, 0, 0.26, 0.26, 0.04, sk === 'spring' ? P.leaf : sk === 'fall' ? '#2B2B30' : P.wood);
+    T.line([0.2, 0.2, 0.04], [0.2, 0.2, sk === 'fall' ? 1.3 : 1.45], sk === 'spring' ? P.leaf : sk === 'summer' ? '#8A5E3B' : sk === 'fall' ? '#2B2B30' : '#E8ECEF', 2);
+    const [hx, hy] = T.P(0.2, 0.2, sk === 'fall' ? 1.5 : 1.6);
+    if (sk === 'spring') { for (let i = 0; i < 8; i++) { const a = i * 0.785; ell(hx + Math.cos(a) * 7, hy + Math.sin(a) * 4.5, 4.2, 2.2, c, null, a); } circle(hx, hy, 4, lit ? '#FFE2A8' : '#F6D56E'); }
+    if (sk === 'summer') { for (let i = 0; i < 6; i++) { const a = -2.7 + i * 0.55; ell(hx + Math.cos(a) * 9, hy + Math.sin(a) * 6, 8, 2.2, i % 2 ? '#3F7D4E' : P.leaf, null, a); } circle(hx, hy + 1, 3.6, lit ? '#FFE2A8' : '#F6D56E'); }
+    if (sk === 'fall') { T.box(0.08, 0.08, 1.3, 0.24, 0.24, 0.3, lit ? '#FFB45A' : '#7A4E32'); T.box(0.05, 0.05, 1.6, 0.3, 0.3, 0.05, '#2B2B30'); T.box(0.05, 0.05, 1.27, 0.3, 0.3, 0.04, '#2B2B30'); T.line([0.08, 0.321, 1.3], [0.08, 0.321, 1.6], '#2B2B30', 1.4); T.line([0.32, 0.321, 1.3], [0.32, 0.321, 1.6], '#2B2B30', 1.4); }
+    if (sk === 'winter') { circle(hx, hy, 9, lit ? '#FFF1C9' : '#E6EEF4'); circle(hx - 2, hy - 3, 2.4, 'rgba(255,255,255,.75)'); ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(hx, hy + 2, 9, 2.6, 0, 0, Math.PI); ctx.stroke(); } };
+  const seasonPlant = (sk) => (T, o) => { const P = SEAS[sk];
+    T.box(0, 0, 0, 0.5, 0.5, 0.42, cl(o)); T.box(-0.01, -0.01, 0.36, 0.52, 0.52, 0.06, sk === 'summer' ? '#F2EEE8' : shade(cl(o), 0.22));
+    if (sk === 'summer') { T.line([0.02, 0.511, 0.2], [0.48, 0.511, 0.2], '#3FA3A5', 3); T.line([0.02, 0.511, 0.12], [0.48, 0.511, 0.12], '#F6D56E', 2); }
+    if (sk === 'fall') T.line([0.02, 0.501, 0.2], [0.48, 0.501, 0.2], 'rgba(255,255,255,.2)', 1.2); };
+  // What goes on the leaves once they are drawn: blooms, palm tips, mums or a dusting of snow.
+  const SEASON_BLOOM = {
+    spring: (T, o, sx, sy) => { [[-9, -24, '#F3A6BE'], [8, -30, '#FFF3B0'], [-2, -36, '#F3A6BE'], [11, -17, '#FFB3C7']].forEach(([dx, dy, c]) => { circle(sx + dx, sy + dy, 3.2, c); circle(sx + dx, sy + dy, 1.2, '#F6D56E'); }); },
+    summer: (T, o, sx, sy) => { [[-6, -22], [7, -27], [0, -33]].forEach(([dx, dy]) => { ell(sx + dx, sy + dy, 2, 7, '#3F7D4E', null, dx * 0.1); }); },
+    fall: (T, o, sx, sy) => { [[-9, -20, '#E07A2B'], [7, -26, '#D9A84A'], [-1, -33, '#E07A2B'], [10, -15, '#B5532F']].forEach(([dx, dy, c]) => { circle(sx + dx, sy + dy, 3.6, c); circle(sx + dx, sy + dy, 1.4, '#7A4E32'); }); },
+    winter: (T, o, sx, sy) => { [[-10, -26], [9, -32], [-2, -38]].forEach(([dx, dy]) => ell(sx + dx, sy + dy, 4.2, 1.8, '#F4F7FA')); [[-4, -18], [5, -22]].forEach(([dx, dy]) => circle(sx + dx, sy + dy, 1.6, '#C0392B')); },
+  };
+  const SEASON_LIGHT = { spring: 'lantern', summer: 'dome', fall: 'cage', winter: 'dome' };
+  for (const sk of Object.keys(SEAS)) {
+    LOOK_DRAWERS.fridge[sk] = seasonFridge(sk); LOOK_DRAWERS.counter[sk] = seasonCounter(sk); LOOK_DRAWERS.dining[sk] = seasonDining(sk, SEASON_LIGHT[sk]);
+    LOOK_DRAWERS.sofa[sk] = seasonSofa(sk); LOOK_DRAWERS.lamp[sk] = seasonLamp(sk); LOOK_DRAWERS.plant[sk] = seasonPlant(sk);
+  }
   const DRAWN = {
     sofa: {    
       parts: (o) => { const s1 = usingSlot(o.id + ':s1') ? 1 : 0, s2 = usingSlot(o.id + ':s2') ? 1 : 0;
@@ -683,7 +767,8 @@ export function createHouseArt(ctx0, opts = {}) {
           T.line([0.02, 0.481, 0.2], [0.48, 0.481, 0.2], 'rgba(255,255,255,.12)', 1);
         } else T.box(0, 0, 0, 0.5, 0.5, 0.42, o.pot || '#C26B4A');
         T.poly([[0.05, 0.05, 0.421], [0.45, 0.05, 0.421], [0.45, 0.45, 0.421], [0.05, 0.45, 0.421]], skinId(o) === 'modern' ? '#B9B4AC' : '#4A3426'); const [sx, sy] = T.P(0.25, 0.25, 0.55), sway = Math.sin(t * 0.8 + o.x) * 0.04;
-        [[-10, -14, -0.7, '#3F7D4E'], [9, -16, 0.6, '#4F9460'], [-4, -26, -0.25, '#4F9460'], [5, -30, 0.3, '#3F7D4E'], [0, -20, 0, '#5BA36C']].forEach(([dx, dy, r, c]) => ell(sx + dx, sy + dy, 5, 13, c, null, r + sway)); })],
+        [[-10, -14, -0.7, '#3F7D4E'], [9, -16, 0.6, '#4F9460'], [-4, -26, -0.25, '#4F9460'], [5, -30, 0.3, '#3F7D4E'], [0, -20, 0, '#5BA36C']].forEach(([dx, dy, r, c]) => ell(sx + dx, sy + dy, 5, 13, c, null, r + sway));
+        if (SEASON_BLOOM[skinId(o)]) SEASON_BLOOM[skinId(o)](T, o, sx, sy); })],
        },
     bookshelf: {    
       parts: () => [F(0, 0, 1.4, 0.38, (T) => { T.box(0, 0, 0, 1.4, 0.38, 1.6, C.dark); const cols = ['#C2413A', '#3D6B73', '#E0A43A', '#4A5DA8', '#F2EEE8', '#7E4458', '#4F9460'];
