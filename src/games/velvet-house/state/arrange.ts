@@ -217,18 +217,16 @@ export function nextColour(o: ObjectInstance): string | null {
   return cols[(i + 1) % cols.length];
 }
 
-// Pieces too big (or too bolted down) to carry up and down the stairs.
-const HEAVY = new Set(['bed', 'bedA', 'bedB', 'dining', 'gym', 'tread', 'shelves', 'piano', 'aquarium', 'wardrobe', 'gclock']);
 const INDOOR_LEVELS = [0, 1, 2, 4];
 
 /**
- * The floors a piece can be carried to, other than the one it's on. Anything
- * you could reasonably lift (chairs, lamps, plants, a couch) can go between
- * the basement, main floor and upstairs; big furniture, appliances and
- * everything in the backyard stay on their own floor.
+ * The floors a piece can be carried to, other than the one it's on. Any piece
+ * can go to any floor inside the house (the carrying isn't shown, so nothing is
+ * "too heavy": the treadmill can live in the bedroom). Only the backyard is a
+ * different place: what belongs outside stays out, and the stairs stay put.
  */
 export function otherFloors(o: ObjectInstance): number[] {
-  if (!isMovable(o) || isFixed(o.type) || HEAVY.has(o.type) || TYPES[o.type].out) return [];
+  if (!isMovable(o) || TYPES[o.type].out) return [];
   if (!INDOOR_LEVELS.includes(o.level)) return [];
   return INDOOR_LEVELS.filter(lv => lv !== o.level);
 }
