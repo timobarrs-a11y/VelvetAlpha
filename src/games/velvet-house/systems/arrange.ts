@@ -1,5 +1,6 @@
 import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, surfaceUnder, putOn, takeOff, carryOnTop, fridgeUnder, type PlacementCheck, type Pose } from '../state/arrange';
-import { TYPES, footprint, type ObjectInstance } from '../state/objects';
+import { looksFor, changeLook } from '../state/skins';
+import { TYPES, footprint, displayName, type ObjectInstance } from '../state/objects';
 import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, WX, WY, roomName } from '../state/house';
 import { buildWorld } from '../state/agents';
 import { addFood } from '../state/vitals';
@@ -186,6 +187,13 @@ export function createArrange(g: Game): Partial<Game> {
     o.col = col;
     log(`Changed the ${nameOf(o)}'s colour.`);
   }
+  // Change the selected piece to one of the looks the player has (or its stock look, ''): free, as they own them.
+  function useLook(skin: string): void {
+    const o = selectedObj;
+    if (!o || !looksFor(o, g.owned).some((l) => l.id === skin)) return;
+    changeLook(o, skin);
+    log(`The ${nameOf(o)} is now the ${displayName(o).toLowerCase()}.`);
+  }
   // Put a dragged piece back where it was picked up.
   function cancelHold(): void {
     if (heldObj && heldOrig) {
@@ -275,19 +283,20 @@ export function createArrange(g: Game): Partial<Game> {
     const items = world.objs.filter(isMovable).map((o) => {
       const t = TYPES[o.type];
       const [fw, fd] = t.W && o.rot % 2 ? [t.D, t.W] : [t.W, t.D];
-      return { id: o.id, name: t.name ?? o.type, room: roomName(o.level, o.x + fw / 2, o.y + fd / 2), level: o.level, color: o.col };
+      return { id: o.id, name: displayName(o), room: roomName(o.level, o.x + fw / 2, o.y + fd / 2), level: o.level, color: o.col };
     }).sort((a, b) => a.name.localeCompare(b.name) || a.room.localeCompare(b.room));
     const o = selectedObj;
     return {
       floors: [...LEVEL_NAMES],
       order: FLOOR_ORDER.filter(l => l !== ATTIC || hasAttic()),
-      stored: storage.map(o => ({ id: o.id, name: TYPES[o.type]?.name ?? o.type, color: o.col })),
+      stored: storage.map(o => ({ id: o.id, name: displayName(o), color: o.col })),
       level: view.level,
       items,
       selected: o ? {
-        id: o.id, name: TYPES[o.type]?.name ?? o.type,
+        id: o.id, name: displayName(o),
         where: `${LEVEL_NAMES[o.level]} · ${items.find(i => i.id === o.id)?.room ?? ''}`,
         canColour: !!nextColour(o),
+        looks: looksFor(o, g.owned),
         canStore: canStore(o),
         moveTo: otherFloors(o).filter(l => l !== ATTIC || hasAttic()),
         loose: o === floating, fits: o === floating ? floatCheck.ok : true, reason: o === floating && !floatCheck.ok ? floatCheck.reason : undefined,
@@ -375,5 +384,5 @@ export function createArrange(g: Game): Partial<Game> {
     if (heldObj) { cancelHold(); heldCheck = { ok: true }; }
     dragCandidate = null;
   }
-  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, commitMove, rotateSelected, recolourHeld, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, setDown, putBack, putFoodAway, inHand, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
+  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, commitMove, rotateSelected, recolourHeld, useLook, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, setDown, putBack, putFoodAway, inHand, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
 }

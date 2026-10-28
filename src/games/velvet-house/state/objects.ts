@@ -19,6 +19,22 @@ export interface LightDef {
 
 export type BlockRect = [number, number, number, number];
 
+/** What a look is mostly made of, and the theme set it belongs to. */
+export type Material = 'wood' | 'metal' | 'laminate' | 'stone' | 'fabric' | 'glass';
+export type Theme = 'retro' | 'farmhouse' | 'modern' | 'scandi' | 'industrial';
+
+/**
+ * One look of a piece. A look only changes how the piece is drawn, named, priced and coloured; the footprint, height
+ * and spots always come from the type, so the household finds the fridge, the sink and the seats wherever they stand.
+ */
+export interface SkinDef {
+  name: string;
+  material: Material;
+  theme: Theme;
+  /** The colours this look comes in, if it comes in several (Arrange's Colour button cycles them). */
+  cols?: string[];
+}
+
 export interface ObjectTypeDef {
   W: number;
   D: number;
@@ -37,6 +53,8 @@ export interface ObjectTypeDef {
   small?: boolean;
   /** What can be put on this piece: the height of its top, and the part of it that is flat (local coordinates). */
   surface?: { z: number; rect: [number, number, number, number] };
+  /** The looks this piece has besides the stock one, by id. */
+  skins?: Record<string, SkinDef>;
 }
 
 export const TYPES: Record<string, ObjectTypeDef> = {
@@ -231,6 +249,8 @@ export interface ObjectInstance {
   y: number;
   rot: number;
   col?: string;
+  /** Which look of its type this piece wears (a key of TYPES[type].skins); none is the stock look. */
+  skin?: string;
   pot?: string;
   pet?: string;
   grow?: number;
@@ -308,6 +328,21 @@ export function isOutdoor(type: string): boolean {
 
 export function isStoreItem(type: string): boolean {
   return !!TYPES[type]?.store;
+}
+
+/** The look a piece wears, or undefined for the stock look (also when the save names a look the type no longer has). */
+export function skinOf(o: Pick<ObjectInstance, 'type' | 'skin'>): SkinDef | undefined {
+  return o.skin ? TYPES[o.type]?.skins?.[o.skin] : undefined;
+}
+
+/** What to call a piece: its look's name if it wears one, else the type's. */
+export function displayName(o: Pick<ObjectInstance, 'type' | 'skin'>): string {
+  return skinOf(o)?.name ?? TYPES[o.type]?.name ?? o.type;
+}
+
+/** The colours a piece comes in: its look's own, else the type's. */
+export function colsOf(o: Pick<ObjectInstance, 'type' | 'skin'>): string[] | undefined {
+  return skinOf(o)?.cols ?? TYPES[o.type]?.cols;
 }
 
 export function typeOf(type: string): ObjectTypeDef | undefined {

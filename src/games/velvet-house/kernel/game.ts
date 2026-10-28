@@ -146,6 +146,7 @@ export interface Game {
   commitMove(o: ObjectInstance, verb?: string): void;
   rotateSelected(): void;
   recolourHeld(): void;
+  useLook(skin: string): void;
   cancelHold(): void;
   carryTo(level: number): void;
   storeSelected(): void;
@@ -157,7 +158,7 @@ export interface Game {
   runRoutine(hourF: number): void;
   tickSideJob(gameMin: number): void;
   deliveriesTick(): void;
-  orderDelivery(o: { id: string; category: 'furniture' | 'decor'; type: string; name: string; col?: string }, afterMin: number): void;
+  orderDelivery(o: { id: string; category: 'furniture' | 'decor'; type: string; name: string; col?: string; skin?: string }, afterMin: number): void;
   dezDeliveries(): boolean;
   scripts: ScriptEngine;
   scriptUpdate(dt: number): void;

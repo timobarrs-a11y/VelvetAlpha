@@ -49,6 +49,8 @@ function boot(attract: boolean): void {
   Object.assign(g, createChat(g));
   Object.assign(g, createPersist(g));
   Object.assign(g, createHud(g));
+  // Before the vitals: the HUD asks for the partner's mood the moment it is drawn.
+  Object.assign(g, createConcerns(g));
   Object.assign(g, createVitals(g));
   Object.assign(g, createGoals(g));
   Object.assign(g, createAvatar(g));
@@ -56,7 +58,6 @@ function boot(attract: boolean): void {
   Object.assign(g, createStudio(g));
   Object.assign(g, createLifeSim(g));
   Object.assign(g, createDeliveries(g));
-  Object.assign(g, createConcerns(g));
   Object.assign(g, createScripts(g));
   if (!attract) installDevHooks(g);
   startGameLoop(g);
