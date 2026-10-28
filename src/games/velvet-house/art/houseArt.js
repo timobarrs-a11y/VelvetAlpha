@@ -277,6 +277,24 @@ export function createHouseArt(ctx0, opts = {}) {
       draw: (W, o) => { const c = o.col || '#19E6F0'; W.r(0, 0, 0.7, 0.7, '#15121F', 'rgba(255,255,255,.45)'); W.r(0.05, 0.05, 0.65, 0.65, '#1E1A2E', 'rgba(255,255,255,.25)'); const px = 0.05;
         INVADER.forEach((row, r) => { for (let k = 0; k < row.length; k++) if (row[k] === '1') W.r(0.175 + k * px, 0.55 - (r + 1) * px, 0.175 + (k + 1) * px, 0.55 - r * px, c); });
         PIXHEART.forEach((row, r) => { for (let k = 0; k < row.length; k++) if (row[k] === '1') W.r(0.5 + k * 0.03, 0.2 - (r + 1) * 0.03, 0.5 + (k + 1) * 0.03, 0.2 - r * 0.03, '#FF2E9A'); }); } },
+    rainbowarch: { name: 'Rainbow arch', w: 1.2, h: 0.7, cols: ['#F58A8A', '#AEDDF7'], tags: 'soft playful cozy',
+      // A rainbow between two clouds.
+      draw: (W) => { CC.bands.forEach((c, k) => { const r = 0.52 - k * 0.06, pts = []; for (let i = 0; i <= 16; i++) { const a = Math.PI * i / 16; pts.push([0.6 - Math.cos(a) * r, 0.1 + Math.sin(a) * r]); } W.pl(pts, c, 5); });
+        [[0.14, 0.12], [1.06, 0.12]].forEach(([u, z]) => { W.e(u, z, 0.13, 0.08, '#FFFFFF'); W.e(u - 0.08, z + 0.03, 0.07, 0.06, '#FFFFFF'); W.e(u + 0.08, z + 0.04, 0.07, 0.06, '#FFFFFF'); W.e(u, z + 0.08, 0.08, 0.07, '#FFFFFF'); }); } },
+    cloudlight: { name: 'Cloud night light', w: 0.7, h: 0.45, cols: ['#FFFFFF', '#F9E27A'], tags: 'soft playful cozy',
+      // A cloud that glows with the power on, with three stars that twinkle.
+      draw: (W, o, t) => { const on = power, c = on ? '#FFFDF2' : '#E4ECF6'; if (on) W.e(0.35, 0.2, 0.42, 0.3, 'rgba(255,241,201,.22)'); W.e(0.35, 0.16, 0.3, 0.12, c); W.e(0.2, 0.2, 0.14, 0.13, c); W.e(0.38, 0.26, 0.17, 0.16, c); W.e(0.54, 0.2, 0.13, 0.12, c);
+        [[0.08, 0.4, 0], [0.62, 0.42, 1], [0.1, 0.06, 2]].forEach(([u, z, k]) => { const tw = on ? 0.5 + Math.sin(t * 3 + k * 2) * 0.5 : 0; W.circ(u, z, 0.018 + tw * 0.01, on ? '#F9E27A' : '#C9D3E0'); }); } },
+    neonbolt: { name: 'Neon bolt', w: 0.6, h: 0.9, cols: ['#19E6F0', '#FF2E9A', '#FFB020'], tags: 'bold modern industrial',
+      // A lightning bolt in neon tube that flickers now and then while the power is on.
+      draw: (W, o, t) => { const c = o.col || '#19E6F0', on = power && Math.sin(t * 17) > -0.92, pts = [[0.38, 0.9], [0.14, 0.48], [0.3, 0.48], [0.2, 0.0], [0.5, 0.46], [0.34, 0.46]];
+        W.r(0.02, 0.02, 0.58, 0.88, 'rgba(0,0,0,.25)'); if (on) { W.p(pts, hexA(c, 0.18)); W.p(pts, null, hexA(c, 0.5)); } W.p(pts, on ? c : shade(c, -0.55), on ? 'rgba(255,255,255,.7)' : 'rgba(255,255,255,.15)'); } },
+    holoposter: { name: 'Holo poster', w: 0.8, h: 1.1, cols: ['#111118', '#19E6F0', '#FF2E9A'], tags: 'bold modern industrial',
+      // A dark panel of circuit lines and scanlines with a magenta ring and a cyan diamond; a scan bar rolls down it with the power on.
+      draw: (W, o, t) => { const on = power; W.r(0, 0, 0.8, 1.1, '#111118', NE.steel); for (let z = 0.08; z < 1.05; z += 0.08) W.l([0.04, z], [0.76, z], 'rgba(255,255,255,.05)', 1);
+        for (let u = 0.15; u < 0.8; u += 0.25) W.l([u, 0.05], [u, 1.05], on ? hexA(NE.cyan, 0.5) : 'rgba(25,230,240,.15)', 1); for (let z = 0.2; z < 1.05; z += 0.3) W.l([0.05, z], [0.75, z], on ? hexA(NE.cyan, 0.5) : 'rgba(25,230,240,.15)', 1);
+        if (on) { const yy = 0.15 + ((t * 0.15) % 0.8); W.r(0.04, yy, 0.76, yy + 0.04, 'rgba(25,230,240,.25)'); }
+        W.e(0.4, 0.6, 0.18, 0.18, null, on ? NE.magenta : shade(NE.magenta, -0.5)); W.e(0.4, 0.6, 0.1, 0.1, on ? hexA(NE.magenta, 0.5) : '#2A1A24'); W.p([[0.4, 0.35], [0.56, 0.6], [0.4, 0.85], [0.24, 0.6]], null, on ? NE.cyan : shade(NE.cyan, -0.5)); } },
     // ---- rotation and seasonal pieces (only in the daily shop) ----
     neon: { name: 'Neon heart', w: 0.9, h: 0.7, cols: ['#FF5FA2', '#5FE3FF', '#FFD25F'], tags: 'bold playful modern', rot: 'rare',
       draw: (W, o, t) => { const c = o.col || '#FF5FA2', pts = []; for (let k = 0; k <= 30; k++) { const a = k / 30 * Math.PI * 2, x = 16 * Math.pow(Math.sin(a), 3), y = 13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a); pts.push([0.45 + x * 0.025, 0.38 + y * 0.025]); } ctx.save(); ctx.shadowColor = c; ctx.shadowBlur = 10 + Math.sin(t * 3) * 2; W.pl(pts, c, 3); ctx.restore(); W.pl(pts, '#FFFFFF', 1); } },
@@ -2087,6 +2105,53 @@ export function createHouseArt(ctx0, opts = {}) {
           T.poly([[0.751, 0.3, 0.66], [0.751, 1.4, 0.66], [0.751, 1.4, 0.88], [0.751, 0.3, 0.88]], AR.magenta); const [ix, iy] = T.P(0.752, 0.85, 0.77); sprite(ix, iy, 1.8, INVADER, AR.yellow); T.line([0.752, 0.35, 0.72], [0.752, 1.35, 0.72], AR.cyan, 1); T.line([0.752, 0.35, 0.82], [0.752, 1.35, 0.82], AR.cyan, 1);
           T.poly([[0.751, 0.02, 1.0], [0.751, 0.2, 1.0], [0.751, 0.2, 1.7], [0.751, 0.02, 1.7]], AR.magenta); const [jx, jy] = T.P(0.752, 0.11, 1.35); sprite(jx, jy, 1.2, PIXHEART, AR.yellow);
         }, { onTop: true })]; } },
+    rugcloud: {
+      // A cloud-shaped rug with a rainbow band across it.
+      parts: (o) => [F(0, 0, 2.2, 1.6, (T) => { const c = cl(o); const blob = (x, y, rx, ry) => { const pts = []; for (let k = 0; k < 20; k++) { const a = k / 20 * Math.PI * 2; pts.push([x + Math.cos(a) * rx, y + Math.sin(a) * ry, 0.009]); } T.poly(pts, c); };
+        [[1.1, 0.9, 1.0, 0.5], [0.5, 0.6, 0.48, 0.42], [1.1, 0.42, 0.6, 0.42], [1.7, 0.62, 0.48, 0.4], [0.7, 1.15, 0.5, 0.4], [1.5, 1.18, 0.55, 0.38]].forEach(([x, y, rx, ry]) => blob(x, y, rx, ry));
+        CC.bands.forEach((col, k) => T.line([0.45, 0.78 + k * 0.07, 0.011], [1.75, 0.78 + k * 0.07, 0.011], col, 2.2)); }, { decal: true })] },
+    rugneon: {
+      // A black rug ruled in cyan and magenta, edged in neon that lights with the power.
+      parts: (o) => [F(0, 0, 2.4, 1.6, (T) => { const c = cl(o); T.poly([[0, 0, 0.008], [2.4, 0, 0.008], [2.4, 1.6, 0.008], [0, 1.6, 0.008]], c); for (let x = 0.3; x < 2.4; x += 0.3) T.line([x, 0.05, 0.009], [x, 1.55, 0.009], 'rgba(25,230,240,.35)', 1); for (let y = 0.3; y < 1.6; y += 0.3) T.line([0.05, y, 0.009], [2.35, y, 0.009], 'rgba(255,46,154,.35)', 1);
+        neon(T, [0.06, 0.06, 0.01], [2.34, 0.06, 0.01], NE.cyan, power); neon(T, [2.34, 0.06, 0.01], [2.34, 1.54, 0.01], NE.cyan, power); neon(T, [2.34, 1.54, 0.01], [0.06, 1.54, 0.01], NE.magenta, power); neon(T, [0.06, 1.54, 0.01], [0.06, 0.06, 0.01], NE.magenta, power); }, { decal: true })] },
+    plushpile: {
+      // A heap of three pastel bear plushies with a star on top.
+      parts: (o) => [B(0.1, 0.1, 0, 0.6, 0.5, 0.1, '#F6EEF2'), F(0.1, 0.1, 0.7, 0.6, (T) => { const c = cl(o); [[0.3, 0.45, CC.bearBlue, 0.3], [0.55, 0.45, CC.bearYellow, -0.3], [0.42, 0.25, c, 0]].forEach(([x, y, col, rot]) => { const [px, py] = T.P(x, y, 0.14); ell(px, py + 2, 8, 6, col); ell(px - 6, py + 3, 3, 4, col, null, rot); ell(px + 6, py + 3, 3, 4, col, null, -rot); bearFace(px, py - 7, 6, col); heart(px, py + 2, 0.7, CC.pinkDeep); }); const [sx, sy] = T.P(0.42, 0.5, 0.34); star5(sx, sy, 3, CC.yellow); }, { onTop: true })] },
+    serverstack: {
+      // A little black server tower whose rows of lights blink with the power on.
+      parts: (o) => [B(0.05, 0.05, 0, 0.35, 0.35, 0.42, cl(o)), F(0.05, 0.05, 0.4, 0.4, (T, ob, t) => { for (let z = 0.06; z < 0.4; z += 0.08) { T.line([0.06, 0.401, z], [0.39, 0.401, z], NE.steel, 1); for (let k = 0; k < 4; k++) { const [lx, ly] = T.P(0.1 + k * 0.08, 0.402, z + 0.03); const on = power && Math.floor(t * 7 + k * 3 + z * 50) % 4 !== 0; circle(lx, ly, 0.9, on ? (k % 2 ? NE.cyan : NE.magenta) : '#2A2F3A'); } } T.line([0.401, 0.06, 0.4], [0.401, 0.39, 0.4], NE.steel, 1); }, { onTop: true })] },
+    cloudswing: {
+      // A swing seat hanging from a cloud on a pole: the cloud bobs and glows as a lamp, hearts float up while someone swings.
+      parts: (o) => { const c = cl(o); return [B(0.45, 0.02, 0, 0.3, 0.26, 0.06, CC.sky), B(0.3, 0.3, 0.42, 0.6, 0.42, 0.08, c, { name: 'seat' }),
+        F(0.3, 0.3, 0.9, 0.72, (T, ob, t) => { const lit = isLit(ob.id), using = usingSlot(ob.id + ':s'), bob = Math.sin(t * 1.2) * 0.02;
+          T.line([0.6, 0.15, 0.06], [0.6, 0.15, 1.75], CC.sky, 3.4); T.line([0.6, 0.15, 1.75], [0.6, 0.5, 1.78], CC.sky, 3.4);
+          [[0.34, 0.34], [0.86, 0.34], [0.34, 0.68], [0.86, 0.68]].forEach(([x, y]) => T.line([x, y, 0.5], [0.6 + (x - 0.6) * 0.5, 0.5 + (y - 0.5) * 0.4, 1.74 + bob], CC.cloudShade, 1.2));
+          T.line([0.3, 0.721, 0.46], [0.9, 0.721, 0.46], CC.pinkDeep, 1.2);
+          const [cx, cy] = T.P(0.6, 0.5, 1.8 + bob); if (lit) ell(cx, cy + 4, 24, 12, 'rgba(255,241,201,.25)'); cloud(cx, cy, 20, lit ? '#FFFDF2' : CC.cloud); star5(cx, cy - 16, 4, lit ? CC.yellow : CC.cloudShade);
+          if (using) for (let k = 0; k < 3; k++) { const ph = (t * 0.6 + k / 3) % 1; const [hx, hy] = T.P(0.6 + Math.sin(ph * 6 + k) * 0.15, 0.5, 0.8 + ph * 0.8); heart(hx, hy, 0.6 + (1 - ph) * 0.3, `rgba(238,143,174,${(1 - ph).toFixed(2)})`); }
+        }, { onTop: true })]; } },
+    vrpod: {
+      // A reclined pod: a steel base ringed in light, a seat with armrests and a footrest, a shell with a screen panel that pulses, a headrest,
+      // and a visor on an arm. While someone is in it the visor lights and a holo cube spins above. Armrests and footrest are drawn in the
+      // detail part so their lights sit on top of them.
+      parts: (o) => { const c = cl(o); return [B(0.1, 0.1, 0, 0.8, 1.4, 0.2, NE.steel), B(0.15, 0.45, 0.2, 0.7, 0.75, 0.25, '#1E2230', { name: 'seat' }), B(0.1, 0.05, 0.2, 0.8, 0.42, 0.78, c),
+        F(0.15, 0.45, 0.85, 1.2, (T, ob, t) => { const using = usingSlot(ob.id + ':s') || live(ob.id), pulse = using ? 0.6 + Math.sin(t * 6) * 0.4 : 0;
+          // Ring lights round the base and along the shell's top edge.
+          neon(T, [0.1, 1.501, 0.19], [0.9, 1.501, 0.19], NE.cyan, power); neon(T, [0.901, 0.1, 0.19], [0.901, 1.5, 0.19], NE.cyan, power); neon(T, [0.1, 0.05, 0.98], [0.9, 0.05, 0.98], NE.magenta, power); neon(T, [0.9, 0.05, 0.98], [0.9, 0.47, 0.98], NE.magenta, power);
+          // The screen panel on the shell, facing the seat: a cyan frame, scanlines and a pulse of light while someone is in.
+          T.poly([[0.2, 0.471, 0.5], [0.8, 0.471, 0.5], [0.8, 0.471, 0.9], [0.2, 0.471, 0.9]], using && power ? hexA(NE.cyan, 0.25 + pulse * 0.2) : '#0E1016', power ? NE.cyan : NE.steel, 1); for (let z = 0.55; z < 0.9; z += 0.06) T.line([0.22, 0.472, z], [0.78, 0.472, z], 'rgba(255,255,255,.06)', 1);
+          if (power) { const [ax, ay] = T.P(0.5, 0.473, 0.7); circle(ax, ay, 4, null); ctx.beginPath(); ctx.ellipse(ax, ay, 6, 3, 0, 0, Math.PI * 2); ctx.strokeStyle = using ? NE.magenta : hexA(NE.magenta, 0.5); ctx.lineWidth = 1.2; ctx.stroke(); }
+          // Headrest, armrests with a glowing button each, and the footrest.
+          T.box(0.3, 0.1, 0.98, 0.4, 0.3, 0.12, '#1E2230'); T.line([0.3, 0.401, 1.04], [0.7, 0.401, 1.04], NE.steel, 1);
+          T.box(0.1, 0.45, 0.45, 0.1, 0.7, 0.12, c); T.box(0.8, 0.45, 0.45, 0.1, 0.7, 0.12, c); [[0.15, 1.0], [0.85, 1.0]].forEach(([x, y], k) => { const [bx, by] = T.P(x, y, 0.575); circle(bx, by, 1.8, power ? (k ? NE.magenta : NE.cyan) : '#2A2F3A'); if (power) circle(bx, by, 3.5, hexA(k ? NE.magenta : NE.cyan, 0.25)); });
+          T.box(0.25, 1.2, 0.2, 0.5, 0.25, 0.12, '#1E2230'); for (let x = 0.3; x < 0.75; x += 0.1) T.line([x, 1.451, 0.22], [x, 1.451, 0.3], NE.steel, 1);
+          // The visor on its arm over the seat.
+          T.line([0.5, 0.3, 1.1], [0.5, 0.72, 1.28], NE.steel, 2.6); const [vx, vy] = T.P(0.5, 0.75, 1.24); ell(vx, vy, 8, 4.5, '#111118', NE.steel); ell(vx, vy, 6, 2.4, using && power ? NE.cyan : '#2A2F3A'); if (using && power) ell(vx, vy + 6, 9, 4, hexA(NE.cyan, 0.2));
+          // Side vents on the shell.
+          for (let y = 0.12; y < 0.44; y += 0.08) T.line([0.901, y, 0.4], [0.901, y + 0.04, 0.72], 'rgba(255,255,255,.1)', 1.2);
+          // The holo cube.
+          if (using && power) { const [hx, hy] = T.P(0.5, 0.8, 1.75); circle(hx, hy, 14, hexA(NE.cyan, 0.12 + pulse * 0.1)); const a = t * 2, r = 7; [[0, NE.cyan], [-8, NE.magenta]].forEach(([dy, col]) => { ctx.beginPath(); for (let k = 0; k <= 4; k++) { const ang = a + k * Math.PI / 2; const x = hx + Math.cos(ang) * r, y = hy + dy + Math.sin(ang) * r * 0.5; k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.strokeStyle = col; ctx.lineWidth = 1.3; ctx.stroke(); }); for (let k = 0; k < 4; k++) { const ang = a + k * Math.PI / 2; limb(hx + Math.cos(ang) * r, hy + Math.sin(ang) * r * 0.5, hx + Math.cos(ang) * r, hy - 8 + Math.sin(ang) * r * 0.5, hexA(NE.cyan, 0.7), 1); } }
+        }, { onTop: true })]; } },
     clawmachine: {
       // A claw machine: a cabinet in the piece's colour, a glass case full of plushies, a marquee on top with chasing bulbs,
       // and a claw that swings out and drops while someone plays (or the player pokes it).
@@ -3869,6 +3934,8 @@ export function createHouseArt(ctx0, opts = {}) {
       case 'arcade': return run(6, 'The arcade lights up: INSERT COIN.');
       case 'clawmachine': return run(6, 'The claw swings out, drops, and comes up with a plush. Lucky.');
       case 'pinball': return run(8, 'The ball rockets off the plunger. Bumpers everywhere.');
+      case 'cloudswing': return run(6, 'The swing rocks and the cloud bobs along.');
+      case 'vrpod': return run(8, 'The pod lights up and a world loads.');
       case 'tread': return run(8, 'The treadmill belt whirs to life.');
       case 'shower': return run(8, 'The shower hisses on, then off.');
       case 'bathtub': return run(10, 'The tub fills with steaming water.');

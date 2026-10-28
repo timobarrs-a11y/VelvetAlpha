@@ -20,9 +20,9 @@ const SETS: Record<string, string[]> = {
   memphis: ['look-fridge-memphis', 'look-counter-memphis', 'look-dining-memphis', 'look-sofa-memphis', 'look-lamp-memphis', 'look-plant-memphis', 'paper-squiggle-pop', 'floor-terrazzopop'],
   provence: ['look-fridge-provence', 'look-counter-provence', 'look-dining-provence', 'look-sofa-provence', 'look-lamp-provence', 'look-plant-provence', 'paper-lavender-sprig', 'floor-limestone'],
   adobe: ['look-fridge-adobe', 'look-counter-adobe', 'look-dining-adobe', 'look-sofa-adobe', 'look-lamp-adobe', 'look-plant-adobe', 'paper-serape-adobe', 'floor-saltillo'],
-  neon: ['look-fridge-neon', 'look-counter-neon', 'look-dining-neon', 'look-sofa-neon', 'look-lamp-neon', 'look-plant-neon', 'paper-circuit', 'floor-grate'],
+  neon: ['look-fridge-neon', 'look-counter-neon', 'look-dining-neon', 'look-sofa-neon', 'look-lamp-neon', 'look-plant-neon', 'paper-circuit', 'floor-grate', 'touches-neon'],
   candy: ['look-fridge-candy', 'look-counter-candy', 'look-dining-candy', 'look-sofa-candy', 'look-lamp-candy', 'look-plant-candy', 'paper-sprinkles', 'floor-checkpink'],
-  cuddle: ['look-fridge-cuddle', 'look-counter-cuddle', 'look-dining-cuddle', 'look-sofa-cuddle', 'look-lamp-cuddle', 'look-plant-cuddle', 'paper-clouds-sky', 'floor-skycheck'],
+  cuddle: ['look-fridge-cuddle', 'look-counter-cuddle', 'look-dining-cuddle', 'look-sofa-cuddle', 'look-lamp-cuddle', 'look-plant-cuddle', 'paper-clouds-sky', 'floor-skycheck', 'touches-cuddle'],
   arcade: ['look-fridge-arcade', 'look-counter-arcade', 'look-dining-arcade', 'look-sofa-arcade', 'look-lamp-arcade', 'look-plant-arcade', 'paper-pixel-invaders', 'floor-arcadecarpet', 'clawmachine', 'touches-arcade'],
 };
 

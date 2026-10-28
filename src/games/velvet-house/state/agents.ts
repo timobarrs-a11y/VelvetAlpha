@@ -129,7 +129,7 @@ const ACT_TAGS: Record<string, string[]> = {
   cook: ['stove'], coffee: ['coffee'], shower: ['shower'], bath: ['tub'],
   read: ['seat'], phone: ['seat'], tv: ['seat'],
   workout: ['tread'], lift: ['lift'], stretch: ['stretch'],
-  records: ['records'], arcade: ['arcade'], claw: ['claw'], pinball: ['pinball'], plants: ['water'], window: ['window'],
+  records: ['records'], arcade: ['arcade'], claw: ['claw'], pinball: ['pinball'], swing: ['swing'], vr: ['vr'], plants: ['water'], window: ['window'],
   piano: ['piano'], easel: ['easel'], aquarium: ['aquarium'], guitar: ['guitar'],
   massage: ['massage'], hammock: ['hammock'], jukebox: ['jukebox'], bike: ['bike'],
   boxing: ['boxbag'], stargaze: ['stars'], fire: ['fireside'], swim: ['swim'],
@@ -144,7 +144,7 @@ const ACT_TAGS: Record<string, string[]> = {
 
 const CHOICES = [
   'sleep', 'nap', 'cookeat', 'coffee', 'shower', 'bath', 'read', 'phone', 'tv',
-  'workout', 'stretch', 'records', 'arcade', 'claw', 'pinball', 'plants', 'piano', 'easel', 'aquarium',
+  'workout', 'stretch', 'records', 'arcade', 'claw', 'pinball', 'swing', 'vr', 'plants', 'piano', 'easel', 'aquarium',
   'guitar', 'massage', 'hammock', 'jukebox', 'bike', 'boxing', 'stargaze', 'fire', 'swim',
   // Everyday life on every floor, chosen even when nothing is urgent.
   'newspaper', 'tend', 'rakeYard', 'yardWorkout', 'phonePace',
