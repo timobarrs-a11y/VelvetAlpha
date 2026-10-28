@@ -61,8 +61,9 @@ test('a code redeemed on the account in another house: this house has the packs 
     if (window.top === window) (window as unknown as { accountPromos: string[] }).accountPromos = ['rainbowhugs'];
   });
   const game = await openGame(page);
+  // Both packs are this house's as soon as it opens (the log line saying so is soon pushed out by the next one).
+  await expect.poll(() => inGame<boolean>(page, "v.owns('set-cuddle') && v.owns('touches-cuddle')")).toBe(true);
   await inGame(page, 'v.settle()');
-  await expect(game.locator('.vh-log')).toContainText('Cuddle Clouds is on your account', { timeout: 10000 });
   // Nothing was put on, no pop-up: it waits in Sets as an Apply.
   await expect(game.locator('.vh-celebrate')).toHaveCount(0);
   expect((await objects(page)).find((o) => o.id === 'fridge')!.skin).not.toBe('cuddle');
