@@ -1,3 +1,4 @@
+import { revivePet, type Pet } from '../state/pets';
 import { validateGarment } from '../state/garment';
 import { migrateSave, isCurrentContent } from '../state/saveMigration';
 import { INITIAL_OBJS, type ObjectInstance } from '../state/objects';
@@ -65,6 +66,10 @@ export interface World {
   save: Record<string, unknown> | null;
   household: HouseholdState;
   life: LifeState;
+  /** The pets, their food in the cupboard, and the counter their ids come from. */
+  pets: Pet[];
+  petFood: number;
+  petSeq: number;
 }
 
 /** How this page is running. `attract` is the title screen's living backdrop: a throwaway house that never saves. */
@@ -115,5 +120,8 @@ export function loadWorld(): World {
   household.bill = null;
   household.nextBillAt = null;
   const life = parseLife(save?.life, day);
-  return { day, minutes, objs, save, household, life };
+  const pets = Array.isArray(save?.pets) ? (save!.pets as unknown[]).map(revivePet).filter((p): p is Pet => !!p) : [];
+  const petFood = typeof save?.petFood === 'number' ? save!.petFood as number : 6;
+  const petSeq = Math.max(typeof save?.petSeq === 'number' ? save!.petSeq as number : 0, ...pets.map(p => Number((p.id.match(/\d+$/) || ['0'])[0])));
+  return { day, minutes, objs, save, household, life, pets, petFood, petSeq };
 }

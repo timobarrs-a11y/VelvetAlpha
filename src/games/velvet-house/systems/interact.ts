@@ -113,6 +113,12 @@ export function createInteract(g: Game): Partial<Game> {
       garden: 'tend', sprinkler: 'sprinkle', bowl: 'feedPet',
       petbed: 'petPet', litter: 'scoop', rummage: 'rummage', washer: 'laundry',
     };
+    if (tag === 'bowl' || tag === 'petbed' || tag === 'litter') {
+      const pet = world.pets.find(p => p.bowl === obj.id || p.bed === obj.id || p.litter === obj.id) ?? world.pets[0];
+      if (!pet) { log('No pet lives here yet. Adopt one in the shop (Pets).'); return; }
+      g.petOrder(tag === 'bowl' ? 'feedPet' : tag === 'petbed' ? 'petPet' : 'scoop', pet.id);
+      return;
+    }
     const chain = chainMap[tag];
     if (chain) handleOrder(chain);
   }
