@@ -181,6 +181,10 @@ export function createHouseArt(ctx0, opts = {}) {
     zellige: { kind: 'mosaic', a: '#F1EDE3', b: '#2E4C9A', line: 'rgba(255,255,255,.5)', pal: ['#2E4C9A', '#F1EDE3', '#C27A5A', '#F1EDE3'] },
     bamboo: { kind: 'plank', a: '#E3C98F', b: '#D9BE82', line: 'rgba(120,90,40,.25)' },
     terrazzopop: { kind: 'speck', a: '#F4F1EA', b: '#F4F1EA', line: 'rgba(0,0,0,.05)', pal: ['#E63946', '#F4C430', '#2E6BD6', '#1B1A1F'] },
+    limestone: { kind: 'stone', a: '#D9D2C2', b: '#D2CAB8', line: 'rgba(0,0,0,.08)' },
+    saltillo: { kind: 'tile', a: '#CF8A5C', b: '#C27F54', line: 'rgba(240,225,210,.5)' },
+    grate: { kind: 'tile', a: '#1A1C24', b: '#171920', line: 'rgba(25,230,240,.35)' },
+    checkpink: { kind: 'check', a: '#FFF8F0', b: '#F6B7CC', line: 'rgba(0,0,0,.05)' },
     rubber: { kind: 'speck', a: '#3A3A3F', b: '#3A3A3F', line: 'rgba(255,255,255,.04)', pal: ['#5A5A62', '#4C4C54', '#6E6E76', '#55555D'] }
   };
   // wallpapers: a pattern drawn over the paint, or with its own base color
@@ -205,6 +209,10 @@ export function createHouseArt(ctx0, opts = {}) {
     'zellige-cobalt': { pat: 'zellige', base: '#F3EEE4', ink: 'rgba(46,76,154,.9)', pal: ['#2E4C9A', '#F1EDE3', '#3D6B73', '#F1EDE3', '#C27A5A', '#F1EDE3'] },
     'monstera-night': { pat: 'monstera', base: '#17382B', ink: 'rgba(79,148,96,.95)', ink2: 'rgba(47,107,64,.95)' },
     'squiggle-pop': { pat: 'squiggle', base: '#F6F3EC', ink: 'rgba(27,26,31,.85)', pal: ['#E63946', '#F4C430', '#2E6BD6'] },
+    'lavender-sprig': { pat: 'sprig', base: '#F6F3EC', ink: 'rgba(142,124,195,.85)', ink2: 'rgba(157,179,165,.9)' },
+    'serape-adobe': { pat: 'serape', base: '#E7C9A4', ink: 'rgba(43,36,32,.8)', pal: ['#B5533C', '#F4ECD8', '#3FA7A0', '#F4ECD8', '#2B2420'] },
+    circuit: { pat: 'circuit', base: '#111118', ink: 'rgba(25,230,240,.6)', ink2: 'rgba(255,46,154,.75)' },
+    sprinkles: { pat: 'sprinkles', base: '#FFF8F0', ink: 'rgba(224,74,106,.9)', pal: ['#E04A6A', '#BFE0F5', '#FBE7A6', '#D6C4F0', '#BFE8D6'] },
     'gingham-sage': { pat: 'gingham', base: '#F4F1E8', ink: 'rgba(110,150,115,.3)' },
     'starburst-mint': { pat: 'starburst', base: '#CFEBDD', ink: 'rgba(224,122,92,.75)', ink2: 'rgba(224,122,92,.9)' },
     'wainscot-white': { pat: 'wainscot', ink: '#F4F1EA' }, 'wainscot-navy': { pat: 'wainscot', ink: '#2E3B57' }, subway: { pat: 'subway', base: '#F5F5F2', ink: 'rgba(0,0,0,.14)' },
@@ -574,6 +582,10 @@ export function createHouseArt(ctx0, opts = {}) {
     if (style === 'moroccan') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.98], GO.brass, 1); ctx.beginPath(); ctx.moveTo(px, py - 12); ctx.lineTo(px + 7, py - 4); ctx.lineTo(px + 7, py + 5); ctx.lineTo(px, py + 11); ctx.lineTo(px - 7, py + 5); ctx.lineTo(px - 7, py - 4); ctx.closePath(); ctx.fillStyle = RI.brass; ctx.fill(); for (let r = -3; r <= 3; r += 3) for (let c = -4; c <= 4; c += 4) circle(px + c, py + r, 1, on ? '#FFE9B8' : RI.cedarDark); circle(px, py - 12, 1.8, RI.brass); if (on) ell(px, py + 3, 15, 12, 'rgba(255,214,150,.16)'); return; }
     if (style === 'bamboo') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.96], TR.bambooDark, 1.4); ctx.beginPath(); ctx.moveTo(px - 14, py + 3); ctx.lineTo(px + 14, py + 3); ctx.lineTo(px, py - 12); ctx.closePath(); ctx.fillStyle = TR.rattan; ctx.fill(); for (let k = 1; k < 5; k++) { const yy = py + 3 - k * 3, hw = 14 * (1 - k / 5); limb(px - hw, yy, px + hw, yy, 'rgba(90,60,30,.35)', 1); } ell(px, py + 3, 14, 4.5, on ? '#FFF1C9' : '#B9A07A'); circle(px, py + 9, 2, TR.pink); if (on) ell(px, py + 7, 16, 6, 'rgba(255,226,168,.18)'); return; }
     if (style === 'sputnik') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.9], ME.black, 1.6); [[-12, -4, ME.red], [11, -6, ME.yellow], [6, 8, ME.blue], [-7, 7, ME.black]].forEach(([dx, dy, c]) => { limb(px, py, px + dx, py + dy, ME.black, 1.2); circle(px + dx, py + dy, 3.2, c); }); circle(px, py, 5, on ? '#FFF1C9' : ME.white, 'rgba(0,0,0,.2)'); if (on) circle(px, py, 11, 'rgba(255,226,168,.16)'); return; }
+    if (style === 'iron') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.98], PR.iron, 1.2); ctx.beginPath(); ctx.moveTo(px - 7, py - 10); ctx.lineTo(px + 7, py - 10); ctx.lineTo(px + 9, py + 6); ctx.lineTo(px - 9, py + 6); ctx.closePath(); ctx.fillStyle = on ? 'rgba(255,241,201,.85)' : 'rgba(230,236,240,.55)'; ctx.fill(); ctx.strokeStyle = PR.iron; ctx.lineWidth = 1.2; ctx.stroke(); limb(px, py - 10, px, py + 6, PR.iron, 1); limb(px - 8, py - 2, px + 8, py - 2, PR.iron, 1); ell(px, py - 10, 7, 2.4, PR.iron); ell(px, py + 6, 9, 3, PR.iron); circle(px, py - 13, 1.6, PR.iron); if (on) ell(px, py + 8, 15, 7, 'rgba(255,226,168,.16)'); return; }
+    if (style === 'tin') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.96], AD.black, 1.2); ctx.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? 6 : 13; ctx.lineTo(px + Math.cos(a) * r, py + Math.sin(a) * r); } ctx.closePath(); ctx.fillStyle = '#B9B4AC'; ctx.fill(); ctx.strokeStyle = AD.black; ctx.lineWidth = 0.8; ctx.stroke(); for (let k = 0; k < 5; k++) { const a = -Math.PI / 2 + k * Math.PI * 2 / 5; circle(px + Math.cos(a) * 7, py + Math.sin(a) * 7, 1.2, on ? '#FFE9B8' : AD.black); } circle(px, py, 2.4, on ? '#FFF1C9' : AD.black); if (on) ell(px, py + 5, 15, 7, 'rgba(255,214,150,.18)'); return; }
+    if (style === 'neonring') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.9], NE.steel, 1.4); if (on) ell(px, py, 16, 8, 'rgba(25,230,240,.16)'); ctx.beginPath(); ctx.ellipse(px, py, 13, 5.5, 0, 0, Math.PI * 2); ctx.strokeStyle = on ? NE.cyan : NE.steel; ctx.lineWidth = 2.4; ctx.stroke(); ctx.beginPath(); ctx.ellipse(px, py, 13, 5.5, 0, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 0.8; ctx.stroke(); circle(px, py - 4, 2, NE.steel); return; }
+    if (style === 'lollipop') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.92], CA.cream, 1.6); if (on) circle(px, py, 15, 'rgba(255,226,210,.22)'); circle(px, py, 10, on ? '#FFD9E4' : CA.pink, 'rgba(0,0,0,.08)'); ctx.beginPath(); for (let a = 0; a < Math.PI * 4; a += 0.2) { const r = a * 0.72; const x = px + Math.cos(a) * r, y = py + Math.sin(a) * r * 0.9; a ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.4; ctx.stroke(); ell(px - 3, py - 4, 2.5, 1.5, 'rgba(255,255,255,.7)'); return; }
     if (style === 'woven') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.95], BE.rope, 1.6); ctx.beginPath(); ctx.ellipse(px, py - 2, 11, 9, 0, Math.PI, 0); ctx.fillStyle = BE.rattan; ctx.fill(); for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(px, py - 2, 11, 9, 0, Math.PI + k * 0.6, Math.PI + k * 0.6 + 0.3); ctx.strokeStyle = 'rgba(90,60,30,.35)'; ctx.lineWidth = 1; ctx.stroke(); } ell(px, py - 2, 11, 4, on ? '#FFF1C9' : '#B9A07A'); return; }
     T.line([0.65, 1.24, WH], [0.65, 1.24, 1.95], '#3A3340', 1.2); ctx.beginPath(); ctx.ellipse(px, py, 10, 9, 0, Math.PI, 0); ctx.fillStyle = '#2B2B30'; ctx.fill(); ell(px, py, 10, 3.8, on ? '#FFF1C9' : '#4A4450');
   }, { onTop: true });
@@ -986,6 +998,219 @@ export function createHouseArt(ctx0, opts = {}) {
       const [rx, ry] = T.P(0.3, 0.851, 0.4); circle(rx, ry, 7, ME.red); const [tx, ty] = T.P(0.58, 0.851, 1.5); ctx.beginPath(); ctx.moveTo(tx - 7, ty + 5); ctx.lineTo(tx + 7, ty + 5); ctx.lineTo(tx, ty - 8); ctx.closePath(); ctx.fillStyle = ME.yellow; ctx.fill();
       for (let z = 0.62; z < 0.9; z += 0.07) { const [dx, dy] = T.P(0.6, 0.852, z); circle(dx, dy, 1.2, ME.black); }
       [[0.7, 1.15], [1.42, 1.78]].forEach(([z0, z1]) => T.line([0.78, 0.855, z0], [0.78, 0.855, z1], ME.blue, 3.6));
+      return body; },
+  });
+
+  // ---- Four more: Provence, Adobe, Neon and Candy ----
+  const PR = { pine: '#E8DCC4', pineDark: '#C9B690', lavender: '#8E7CC3', lavenderLight: '#C9B8E8', iron: '#3A3A40', linen: '#F4EFE3', limestone: '#D9D2C2', toile: '#2E4C9A', sage: '#9DB3A5', zinc: '#B9BEC3', copper: '#B5674A' };
+  const AD = { adobe: '#D9A47A', adobeDark: '#C08B62', turquoise: '#3FA7A0', rust: '#B5533C', sand: '#EFE2C8', pine: '#9C7046', pineDark: '#6E4B2E', black: '#2B2420', cream: '#F4ECD8', leather: '#8E4A33' };
+  const NE = { black: '#111118', steel: '#3A3F4A', mesh: '#2A2F3A', magenta: '#FF2E9A', cyan: '#19E6F0', violet: '#8A3CFF', amber: '#FFB020', glass: '#1E2230' };
+  const CA = { pink: '#F6B7CC', pinkDark: '#E89AB5', mint: '#BFE8D6', lilac: '#D6C4F0', butter: '#FBE7A6', cream: '#FFF8F0', choc: '#7A4B3A', cherry: '#E04A6A', sky: '#BFE0F5' };
+  /** A sprig of lavender in screen space: a stem with a cluster of dots at the top. */
+  const sprig = (sx, sy, h, col, stem = PR.sage) => { limb(sx, sy, sx, sy - h, stem, 1); for (let k = 0; k < 4; k++) { circle(sx - 1.2, sy - h + k * 2, 1.1, col); circle(sx + 1.2, sy - h + 1 + k * 2, 1.1, col); } };
+  /** A serape band along a face in the piece's frame: stripes of colour with a zigzag between. */
+  const serape = (T, from, to, pal, width, zig = 0.03) => { pal.forEach((c, k) => T.line([from[0], from[1], from[2] + k * width], [to[0], to[1], to[2] + k * width], c, 2.2)); const n = 12, pts = []; for (let k = 0; k <= n; k++) { const u = k / n; pts.push(T.P(from[0] + (to[0] - from[0]) * u, from[1] + (to[1] - from[1]) * u, from[2] + pal.length * width + (k % 2) * zig)); } ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.strokeStyle = AD.black; ctx.lineWidth = 1.2; ctx.stroke(); };
+  /** A neon strip along a line in the piece's frame: a glow, then the bright core. */
+  const neon = (T, a, b, col, on = true) => { if (on) T.line(a, b, hexA(col, 0.22), 5); T.line(a, b, on ? col : shade(col, -0.55), 1.6); if (on) T.line(a, b, 'rgba(255,255,255,.55)', 0.6); };
+  const hexA = (hex, a) => `rgba(${parseInt(hex.slice(1, 3), 16)},${parseInt(hex.slice(3, 5), 16)},${parseInt(hex.slice(5, 7), 16)},${a})`;
+  /** Scallops along a line in the piece's frame: half-circles hanging below it. */
+  const scallops = (T, from, to, n, r, col) => { for (let k = 0; k < n; k++) { const u = (k + 0.5) / n, [sx, sy] = T.P(from[0] + (to[0] - from[0]) * u, from[1] + (to[1] - from[1]) * u, from[2]); ctx.beginPath(); ctx.ellipse(sx, sy, r, r * 0.8, 0, 0, Math.PI); ctx.fillStyle = col; ctx.fill(); } };
+  /** Sprinkles in screen space: short dashes in a few sweet colours. */
+  const sprinkles = (sx, sy, w, h, n, seed = 0) => { for (let k = 0; k < n; k++) { const x = sx + ((k * 0.618 * 7.3 + seed) % 1) * w, y = sy + ((k * 0.414 * 5.1 + seed) % 1) * h, a = (k * 1.7) % Math.PI; limb(x - Math.cos(a) * 2, y - Math.sin(a) * 2, x + Math.cos(a) * 2, y + Math.sin(a) * 2, [CA.cherry, CA.sky, CA.butter, CA.lilac, CA.mint][k % 5], 1.4); } };
+  Object.assign(LOOK_DRAWERS.sofa, {
+    // Provence: a skirted linen sofa with blue toile cushions, a lavender bolster and a sprig on the back.
+    provence: (o, s1, s2) => { const l = cl(o), lc = shade(l, 0.03); return [
+      B(0, 0, 0, 2.4, 1.0, 0.38, l, { name: 'base' }), B(0, 0, 0.38, 2.4, 0.3, 0.54, l), B(0, 0, 0.38, 0.2, 1.0, 0.3, l), B(2.2, 0, 0.38, 0.2, 1.0, 0.3, l),
+      B(0.2, 0.3, 0.38 - s1 * 0.018, 1.0, 0.66, 0.1 - s1 * 0.035, lc), B(1.2, 0.3, 0.38 - s2 * 0.018, 1.0, 0.66, 0.1 - s2 * 0.035, lc),
+      B(0.3, 0.34, 0.48, 0.4, 0.14, 0.3, PR.linen), B(1.7, 0.34, 0.48, 0.4, 0.14, 0.3, PR.linen), B(0.98, 0.36, 0.48, 0.44, 0.16, 0.16, PR.lavenderLight),
+      F(0, 0, 2.4, 1.0, (T) => {
+        for (let x = 0.1; x < 2.4; x += 0.2) T.line([x, 1.001, 0.02], [x + 0.04, 1.001, 0.3], 'rgba(0,0,0,.08)', 1); T.line([0, 1.002, 0.3], [2.4, 1.002, 0.3], 'rgba(0,0,0,.12)', 1);
+        [[0.5, 0], [1.9, 0]].forEach(([x]) => { const [cx, cy] = T.P(x, 0.481, 0.64); ell(cx, cy, 3, 2, PR.toile); limb(cx - 5, cy + 4, cx + 5, cy + 4, PR.toile, 1); circle(cx + 4, cy - 3, 1.2, PR.toile); circle(cx - 4, cy - 3, 1.2, PR.toile); });
+        const [sx, sy] = T.P(1.2, 0.301, 0.6); sprig(sx - 6, sy + 6, 14, PR.lavender); sprig(sx + 6, sy + 6, 12, PR.lavender);
+      }, { onTop: true })]; },
+    // Adobe: rust leather on a pine frame with a serape blanket over the back and a turquoise cushion.
+    adobe: (o, s1, s2) => { const v = cl(o), vc = shade(v, 0.06); return [
+      B(0, 0, 0, 2.4, 1.0, 0.12, AD.pine), B(0, 0, 0.12, 2.4, 1.0, 0.26, v, { name: 'base' }), B(0, 0, 0.38, 2.4, 0.3, 0.54, v), B(0, 0, 0.38, 0.22, 1.0, 0.3, AD.pine), B(2.18, 0, 0.38, 0.22, 1.0, 0.3, AD.pine),
+      B(0.22, 0.3, 0.38 - s1 * 0.018, 0.98, 0.66, 0.1 - s1 * 0.035, vc), B(1.2, 0.3, 0.38 - s2 * 0.018, 0.98, 0.66, 0.1 - s2 * 0.035, vc),
+      B(1.3, 0, 0.92, 0.9, 0.3, 0.04, AD.cream), B(0.3, 0.34, 0.48, 0.42, 0.14, 0.3, AD.turquoise),
+      F(0, 0, 2.4, 1.0, (T) => {
+        serape(T, [1.32, 0.301, 0.5], [2.18, 0.301, 0.5], [AD.rust, AD.turquoise, AD.black, AD.cream], 0.07);
+        for (let x = 1.34; x < 2.2; x += 0.08) T.line([x, 0.302, 0.42], [x, 0.302, 0.5], AD.cream, 1);
+        T.line([0, 1.001, 0.12], [2.4, 1.001, 0.12], AD.pineDark, 1.2); [[0.11], [2.29]].forEach(([x]) => { for (let y = 0.1; y < 1.0; y += 0.3) { const [nx, ny] = T.P(x, y, 0.5); circle(nx, ny, 1.4, AD.black); } });
+      }, { onTop: true })]; },
+    // Neon: black leather with magenta piping, a cyan strip under the base and a violet cushion.
+    neon: (o, s1, s2) => { const v = cl(o), vc = shade(v, 0.08); return [
+      B(0.1, 0.1, 0, 2.2, 0.8, 0.08, NE.steel), B(0, 0, 0.08, 2.4, 1.0, 0.3, v, { name: 'base' }), B(0, 0, 0.38, 2.4, 0.3, 0.54, v), B(0, 0, 0.38, 0.22, 1.0, 0.3, v), B(2.18, 0, 0.38, 0.22, 1.0, 0.3, v),
+      B(0.22, 0.3, 0.38 - s1 * 0.018, 0.98, 0.66, 0.1 - s1 * 0.035, vc), B(1.2, 0.3, 0.38 - s2 * 0.018, 0.98, 0.66, 0.1 - s2 * 0.035, vc),
+      B(0.3, 0.34, 0.48, 0.42, 0.14, 0.3, NE.violet), B(1.7, 0.34, 0.48, 0.42, 0.14, 0.3, NE.mesh),
+      F(0, 0, 2.4, 1.0, (T) => {
+        neon(T, [0.1, 1.001, 0.08], [2.3, 1.001, 0.08], NE.cyan, power);
+        T.line([0, 1.002, 0.38], [2.4, 1.002, 0.38], NE.magenta, 1.2); T.line([0.22, 0.301, 0.9], [2.18, 0.301, 0.9], NE.magenta, 1.2);
+        for (let z = 0.5; z < 0.9; z += 0.12) T.line([0.3, 0.301, z], [2.1, 0.301, z], 'rgba(255,255,255,.08)', 1);
+        [[0.11, 0.68], [2.29, 0.68]].forEach(([x, z]) => T.line([x, 0.0, z], [x, 1.0, z], NE.magenta, 1));
+      }, { onTop: true })]; },
+    // Candy: a pink sofa with a scalloped skirt, mint and lilac cushions, a bow on one arm and sprinkles on the back.
+    candy: (o, s1, s2) => { const v = cl(o), vc = shade(v, 0.04); return [
+      B(0, 0, 0, 2.4, 1.0, 0.38, v, { name: 'base' }), B(0, 0, 0.38, 2.4, 0.3, 0.54, v), B(0, 0, 0.38, 0.22, 1.0, 0.32, v), B(2.18, 0, 0.38, 0.22, 1.0, 0.32, v),
+      B(0.22, 0.3, 0.38 - s1 * 0.018, 0.98, 0.66, 0.1 - s1 * 0.035, vc), B(1.2, 0.3, 0.38 - s2 * 0.018, 0.98, 0.66, 0.1 - s2 * 0.035, vc),
+      B(0.3, 0.34, 0.48, 0.42, 0.14, 0.3, CA.mint), B(1.7, 0.34, 0.48, 0.42, 0.14, 0.3, CA.lilac),
+      F(0, 0, 2.4, 1.0, (T) => {
+        scallops(T, [0.0, 1.001, 0.12], [2.4, 1.001, 0.12], 12, 4.5, CA.cream); T.line([0, 1.002, 0.12], [2.4, 1.002, 0.12], CA.cream, 1.2);
+        const [bx, by] = T.P(0.11, 0.5, 0.72); ell(bx - 4, by, 4, 2.4, CA.cherry, null, -0.4); ell(bx + 4, by, 4, 2.4, CA.cherry, null, 0.4); circle(bx, by, 1.8, CA.cherry);
+        const [sx, sy] = T.P(0.3, 0.301, 0.88); sprinkles(sx, sy, 50, 14, 16, 0.3);
+      }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.dining, {
+    // Provence: a whitewashed pine farm table on turned legs, ladder-back chairs with rush seats, and an iron lantern.
+    provence: (o) => { const ps = [], w = cl(o);
+      const chair = (y0, back) => { [[0.39, y0 + 0.04], [0.83, y0 + 0.04], [0.39, y0 + 0.48], [0.83, y0 + 0.48]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.05, 0.05, 0.42, w)));
+        ps.push(B(0.35, y0, 0.42, 0.6, 0.58, 0.07, PR.pineDark, { name: y0 === 0 ? 'seat1' : 'seat2' }), B(0.36, back, 0.49, 0.05, 0.06, 0.42, w), B(0.89, back, 0.49, 0.05, 0.06, 0.42, w));
+        ps.push(F(0.35, back - 0.02, 0.95, back + 0.08, (T) => { for (let z = 0.58; z < 0.9; z += 0.1) T.line([0.38, back + 0.03, z], [0.92, back + 0.03, z], w, 2.4); for (let x = 0.38; x < 0.92; x += 0.05) T.line([x, y0 + 0.02, 0.491], [x + 0.03, y0 + 0.56, 0.491], 'rgba(0,0,0,.12)', 1); }, { onTop: true })); };
+      chair(0, 0); chair(1.89, 2.42);
+      [[0.1, 0.84], [1.12, 0.84], [0.1, 1.56], [1.12, 1.56]].forEach(([x, y]) => { ps.push(B(x, y, 0, 0.08, 0.08, 0.7, w)); ps.push(B(x - 0.02, y - 0.02, 0.2, 0.12, 0.12, 0.06, w), B(x - 0.02, y - 0.02, 0.46, 0.12, 0.12, 0.06, w)); });
+      ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, w, { name: 'top' }));
+      ps.push(F(0, 0.74, 1.3, 1.74, (T) => { for (let y = 0.86; y < 1.74; y += 0.14) T.line([0.04, y, 0.772], [1.26, y + 0.01, 0.772], 'rgba(120,100,70,.16)', 1); const [jx, jy] = T.P(0.2, 0.9, 0.772); ell(jx, jy, 3.5, 2.2, PR.zinc); for (let k = -1; k <= 1; k++) sprig(jx + k * 3, jy - 1, 9 + Math.abs(k), PR.lavender); }, { onTop: true }));
+      ps.push(diningLife(), diningLight('iron'));
+      return ps; },
+    // Adobe: a carved pine table, turquoise-painted chairs with leather seats, and a punched-tin star above.
+    adobe: (o) => { const ps = [], w = cl(o);
+      const chair = (y0, back) => { [[0.39, y0 + 0.04], [0.83, y0 + 0.04], [0.39, y0 + 0.48], [0.83, y0 + 0.48]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.06, 0.06, 0.42, AD.turquoise)));
+        ps.push(B(0.35, y0, 0.42, 0.6, 0.58, 0.07, AD.leather, { name: y0 === 0 ? 'seat1' : 'seat2' }), B(0.35, back, 0.49, 0.6, 0.06, 0.4, AD.turquoise));
+        ps.push(F(0.35, back - 0.02, 0.95, back + 0.08, (T) => { const yb = back + 0.065; for (let x = 0.45; x < 0.9; x += 0.14) { const [dx, dy] = T.P(x, yb, 0.72); ctx.beginPath(); ctx.moveTo(dx, dy - 3); ctx.lineTo(dx + 3, dy); ctx.lineTo(dx, dy + 3); ctx.lineTo(dx - 3, dy); ctx.closePath(); ctx.fillStyle = AD.cream; ctx.fill(); } }, { onTop: true })); };
+      chair(0, 0); chair(1.89, 2.42);
+      [[0.1, 0.84], [1.12, 0.84], [0.1, 1.56], [1.12, 1.56]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.1, 0.1, 0.7, w)));
+      ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, w, { name: 'top' }));
+      ps.push(F(0, 0.74, 1.3, 1.74, (T) => { for (let x = 0.08; x < 1.3; x += 0.1) { const [nx, ny] = T.P(x, 1.741, 0.735); ctx.beginPath(); ctx.moveTo(nx, ny - 2.5); ctx.lineTo(nx + 2.5, ny); ctx.lineTo(nx, ny + 2.5); ctx.lineTo(nx - 2.5, ny); ctx.closePath(); ctx.fillStyle = AD.pineDark; ctx.fill(); } T.poly([[0.1, 0.84, 0.772], [1.2, 0.84, 0.772], [1.2, 1.64, 0.772], [0.1, 1.64, 0.772]], null, AD.pineDark, 1); serape(T, [0.15, 1.1, 0.772], [1.15, 1.1, 0.772], [AD.rust, AD.turquoise, AD.cream], 0.0, 0); }, { onTop: true }));
+      ps.push(diningLife(), diningLight('tin'));
+      return ps; },
+    // Neon: a black glass table lit from under, steel chairs with a cyan edge, and a neon ring above.
+    neon: (o) => { const ps = [], g = cl(o);
+      const chair = (y0, back) => { ps.push(B(0.52, y0 + 0.16, 0, 0.26, 0.26, 0.05, NE.steel), B(0.62, y0 + 0.26, 0.05, 0.06, 0.06, 0.37, NE.steel));
+        ps.push(B(0.35, y0, 0.42, 0.6, 0.58, 0.07, NE.black, { name: y0 === 0 ? 'seat1' : 'seat2' }), B(0.35, back, 0.49, 0.6, 0.06, 0.4, NE.black));
+        ps.push(F(0.35, back - 0.02, 0.95, back + 0.08, (T) => { neon(T, [0.36, y0 + (y0 === 0 ? 0.58 : 0.0), 0.49], [0.94, y0 + (y0 === 0 ? 0.58 : 0.0), 0.49], NE.cyan, power); neon(T, [0.37, back + 0.06, 0.88], [0.93, back + 0.06, 0.88], NE.magenta, power); }, { onTop: true })); };
+      chair(0, 0); chair(1.89, 2.42);
+      ps.push(B(0.45, 1.04, 0, 0.4, 0.4, 0.04, NE.steel), B(0.58, 1.17, 0.04, 0.14, 0.14, 0.66, NE.steel));
+      ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, g, { name: 'top' }));
+      ps.push(F(0, 0.74, 1.3, 1.74, (T) => { neon(T, [0, 0.74, 0.7], [1.3, 0.74, 0.7], NE.cyan, power); neon(T, [1.3, 0.74, 0.7], [1.3, 1.74, 0.7], NE.cyan, power); for (let y = 0.86; y < 1.74; y += 0.22) T.line([0.08, y, 0.772], [1.22, y, 0.772], 'rgba(255,255,255,.08)', 1); T.line([0.2, 0.8, 0.772], [1.1, 1.6, 0.772], 'rgba(255,255,255,.14)', 1); }, { onTop: true }));
+      ps.push(diningLife(), diningLight('neonring'));
+      return ps; },
+    // Candy: a pink top with a scalloped edge on a striped drum, lilac chairs with heart backs, and a lollipop light.
+    candy: (o) => { const ps = [], t = cl(o);
+      const chair = (y0, back) => { [[0.39, y0 + 0.04], [0.83, y0 + 0.04], [0.39, y0 + 0.48], [0.83, y0 + 0.48]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.05, 0.05, 0.42, CA.cream)));
+        ps.push(B(0.35, y0, 0.42, 0.6, 0.58, 0.07, CA.lilac, { name: y0 === 0 ? 'seat1' : 'seat2' }));
+        ps.push(F(0.35, back - 0.02, 0.95, back + 0.08, (T) => { const [cx, cy] = T.P(0.65, back + 0.03, 0.5); limb(cx - 8, cy + 8, cx - 8, cy, CA.cream, 2); limb(cx + 8, cy + 8, cx + 8, cy, CA.cream, 2); ctx.beginPath(); ctx.moveTo(cx, cy + 6); ctx.bezierCurveTo(cx - 14, cy - 4, cx - 6, cy - 14, cx, cy - 6); ctx.bezierCurveTo(cx + 6, cy - 14, cx + 14, cy - 4, cx, cy + 6); ctx.fillStyle = CA.lilac; ctx.fill(); ctx.strokeStyle = CA.cream; ctx.lineWidth = 1.4; ctx.stroke(); }, { onTop: true })); };
+      chair(0, 0); chair(1.89, 2.42);
+      ps.push(B(0.35, 0.94, 0, 0.6, 0.6, 0.7, CA.cream));
+      ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, t, { name: 'top' }));
+      ps.push(F(0, 0.74, 1.3, 1.74, (T) => { for (let x = 0.4; x < 0.95; x += 0.1) T.line([x, 1.541, 0.02], [x, 1.541, 0.68], CA.pink, 2); for (let y = 0.98; y < 1.54; y += 0.1) T.line([0.951, y, 0.02], [0.951, y, 0.68], CA.pink, 2); scallops(T, [0, 1.74, 0.7], [1.3, 1.74, 0.7], 8, 4, CA.cream); scallops(T, [1.3, 0.74, 0.7], [1.3, 1.74, 0.7], 6, 4, CA.cream); const [sx, sy] = T.P(0.2, 1.5, 0.772); sprinkles(sx, sy, 30, 12, 10, 0.6); }, { onTop: true }));
+      ps.push(diningLife(), diningLight('lollipop'));
+      return ps; },
+  });
+  Object.assign(LOOK_DRAWERS.lamp, {
+    // Provence: a wrought iron scroll stand with a linen drum shade and a sprig tucked in the band.
+    provence: (T, o) => { const lit = isLit(o.id), g = cl(o);
+      T.box(0.08, 0.08, 0, 0.24, 0.24, 0.03, g); T.line([0.2, 0.2, 0.03], [0.2, 0.2, 1.36], g, 2);
+      [[0.12, 0.6], [0.28, 0.6]].forEach(([x, z], k) => { const [ax, ay] = T.P(0.2, 0.2, z), [bx, by] = T.P(x, 0.2, z - 0.16); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo(bx + (k ? 4 : -4), ay - 2, bx, by); ctx.strokeStyle = g; ctx.lineWidth = 1.4; ctx.stroke(); circle(bx, by, 1.4, g); });
+      T.box(0.04, 0.04, 1.36, 0.32, 0.32, 0.3, lit ? '#FFF3DA' : PR.linen); T.line([0.04, 0.361, 1.4], [0.36, 0.361, 1.4], PR.lavender, 1.4); T.line([0.361, 0.04, 1.4], [0.361, 0.36, 1.4], PR.lavender, 1.4);
+      const [sx, sy] = T.P(0.3, 0.362, 1.42); sprig(sx, sy, 7, PR.lavender);
+      if (lit) { const [gx, gy] = T.P(0.2, 0.2, 1.36); ell(gx, gy + 4, 14, 7, 'rgba(255,226,168,.2)'); } },
+    // Adobe: a turquoise pottery base under a rawhide shade laced with leather.
+    adobe: (T, o) => { const lit = isLit(o.id), g = cl(o);
+      T.box(0.1, 0.1, 0, 0.2, 0.2, 0.04, AD.pineDark); T.box(0.06, 0.06, 0.04, 0.28, 0.28, 0.5, g); T.box(0.1, 0.1, 0.54, 0.2, 0.2, 0.3, g); T.line([0.2, 0.2, 0.84], [0.2, 0.2, 1.36], AD.black, 1.6);
+      for (let z = 0.14; z < 0.5; z += 0.12) { const pts = []; for (let x = 0.06; x <= 0.34; x += 0.04) pts.push(T.P(x, 0.341, z + ((Math.round(x * 100) % 8 < 4) ? 0.04 : 0))); ctx.beginPath(); pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.strokeStyle = AD.cream; ctx.lineWidth = 1.2; ctx.stroke(); }
+      T.box(0.02, 0.02, 1.36, 0.36, 0.36, 0.3, lit ? '#FFE9B8' : AD.sand); for (let z = 1.4; z < 1.66; z += 0.08) { const [ax, ay] = T.P(0.02, 0.381, z), [bx, by] = T.P(0.38, 0.381, z); limb(ax, ay, bx, by, 'rgba(120,80,40,.25)', 1); } for (let x = 0.06; x < 0.38; x += 0.06) { const [lx, ly] = T.P(x, 0.382, 1.64); limb(lx - 2, ly, lx + 2, ly - 3, AD.leather, 1.2); }
+      if (lit) { const [gx, gy] = T.P(0.2, 0.2, 1.36); ell(gx, gy + 4, 15, 7, 'rgba(255,214,150,.2)'); } },
+    // Neon: a magenta tube standing on a black base; the whole tube is the light.
+    neon: (T, o) => { const lit = isLit(o.id), g = cl(o);
+      T.box(0.06, 0.06, 0, 0.28, 0.28, 0.04, NE.black); T.box(0.12, 0.12, 0.04, 0.16, 0.16, 0.06, NE.steel);
+      const [ax, ay] = T.P(0.2, 0.2, 0.1), [bx, by] = T.P(0.2, 0.2, 1.6);
+      if (lit) { limb(ax, ay, bx, by, hexA(g, 0.18), 12); limb(ax, ay, bx, by, hexA(g, 0.35), 6); }
+      limb(ax, ay, bx, by, lit ? g : shade(g, -0.5), 2.6); if (lit) limb(ax, ay, bx, by, 'rgba(255,255,255,.7)', 0.9);
+      [0.5, 1.1].forEach(z => { const [kx, ky] = T.P(0.2, 0.2, z); ell(kx, ky, 3, 1.4, NE.steel); }); circle(bx, by, 2, NE.steel); },
+    // Candy: an ice cream cone lamp: a waffle cone base with a pink scoop that glows.
+    candy: (T, o) => { const lit = isLit(o.id), g = cl(o);
+      T.box(0.14, 0.14, 0, 0.12, 0.12, 0.04, CA.choc); const [ax, ay] = T.P(0.2, 0.2, 0.04), [bx, by] = T.P(0.2, 0.2, 1.2);
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx - 13, by); ctx.lineTo(bx + 13, by); ctx.closePath(); ctx.fillStyle = '#D9A066'; ctx.fill();
+      for (let k = 1; k < 7; k++) { const u = k / 7, y = ay + (by - ay) * u, hw = 13 * u; limb(bx - hw, y, bx + hw, y, 'rgba(120,70,20,.3)', 1); limb(bx - hw * 0.6, y - 6, bx + hw * 0.1, y + 6, 'rgba(120,70,20,.2)', 1); }
+      if (lit) circle(bx, by - 8, 20, 'rgba(255,226,210,.2)');
+      circle(bx, by - 6, 14, lit ? '#FFD9E4' : g, 'rgba(0,0,0,.08)'); circle(bx - 6, by - 10, 3, 'rgba(255,255,255,.6)'); circle(bx, by - 21, 3, CA.cherry); limb(bx, by - 21, bx + 2, by - 27, CA.choc, 1);
+      sprinkles(bx - 10, by - 14, 20, 12, 8, 0.2); },
+  });
+  Object.assign(LOOK_DRAWERS.plant, {
+    // Provence: an old zinc pot with a lavender band.
+    provence: (T, o) => { const g = cl(o); T.box(0.05, 0.05, 0, 0.4, 0.4, 0.42, g); T.box(0.03, 0.03, 0.36, 0.44, 0.44, 0.06, shade(g, -0.1)); for (let x = 0.1; x < 0.45; x += 0.1) { const [sx, sy] = T.P(x, 0.451, 0.14); sprig(sx, sy, 7, PR.lavender); } T.line([0.05, 0.451, 0.3], [0.45, 0.451, 0.3], 'rgba(0,0,0,.14)', 1); },
+    // Adobe: a painted clay pot with a cream band and a zigzag in turquoise and black.
+    adobe: (T, o) => { const g = cl(o); T.box(0.05, 0.05, 0, 0.4, 0.4, 0.42, g); T.box(0.04, 0.04, 0.2, 0.42, 0.42, 0.12, AD.cream); serape(T, [0.05, 0.461, 0.22], [0.45, 0.461, 0.22], [AD.turquoise], 0.0, 0.03); serape(T, [0.461, 0.05, 0.22], [0.461, 0.45, 0.22], [AD.turquoise], 0.0, 0.03); },
+    // Neon: a black hex pot with a cyan ring that lights up.
+    neon: (T, o) => { const g = cl(o); T.box(0.08, 0.08, 0, 0.34, 0.34, 0.06, NE.steel); T.box(0.05, 0.05, 0.06, 0.4, 0.4, 0.36, g); neon(T, [0.05, 0.451, 0.36], [0.45, 0.451, 0.36], NE.cyan, power); neon(T, [0.451, 0.05, 0.36], [0.451, 0.45, 0.36], NE.cyan, power); T.line([0.05, 0.452, 0.14], [0.45, 0.452, 0.14], NE.violet, 1); },
+    // Candy: a teacup planter with a handle and a scalloped saucer.
+    candy: (T, o) => { const g = cl(o); T.box(0.0, 0.0, 0, 0.5, 0.5, 0.03, CA.cream); scallops(T, [0.0, 0.5, 0.03], [0.5, 0.5, 0.03], 5, 3, CA.cream); T.box(0.07, 0.07, 0.03, 0.36, 0.36, 0.36, g); T.box(0.05, 0.05, 0.36, 0.4, 0.4, 0.05, CA.cream); const [hx, hy] = T.P(0.46, 0.25, 0.22); ctx.beginPath(); ctx.ellipse(hx + 3, hy, 5, 7, 0, -Math.PI / 2, Math.PI / 2); ctx.strokeStyle = g; ctx.lineWidth = 2.4; ctx.stroke(); for (let x = 0.12; x < 0.42; x += 0.1) { const [dx, dy] = T.P(x, 0.431, 0.2); circle(dx, dy, 1.6, CA.cream); } },
+  });
+  Object.assign(LOOK_DRAWERS.counter, {
+    // Provence: whitewashed pine fronts with iron pulls, a limestone top, an apron-front basin, a copper tap and a jug of lavender at the end.
+    provence: (T, o) => { const w = cl(o);
+      T.box(0, 0, 0, 2.8, 0.8, 0.86, w); for (let x = 0.1; x < 2.8; x += 0.06) T.line([x, 0.801, 0.04], [x, 0.801, 0.84], 'rgba(120,100,70,.08)', 1);
+      [0.7, 1.4, 2.1].forEach(x => T.line([x, 0.802, 0.04], [x, 0.802, 0.84], 'rgba(0,0,0,.2)', 1.2)); [0.35, 1.05, 1.75, 2.45].forEach(x => { T.poly([[x - 0.22, 0.803, 0.14], [x + 0.22, 0.803, 0.14], [x + 0.22, 0.803, 0.74], [x - 0.22, 0.803, 0.74]], null, 'rgba(0,0,0,.14)', 1); const [px, py] = T.P(x, 0.804, 0.46); circle(px, py, 1.6, PR.iron); });
+      T.box(-0.05, -0.04, 0.86, 2.9, 0.88, 0.07, PR.limestone); T.line([-0.05, 0.84, 0.86], [2.85, 0.84, 0.86], shade(PR.limestone, -0.18), 1.2);
+      T.box(0.3, 0.1, 0.86, 0.7, 0.72, 0.09, '#FBFBF8'); T.poly([[0.36, 0.17, 0.952], [0.94, 0.17, 0.952], [0.94, 0.56, 0.952], [0.36, 0.56, 0.952]], '#EEF2F2');
+      T.line([0.65, 0.04, 0.95], [0.65, 0.04, 1.2], PR.copper, 2.2); T.line([0.65, 0.04, 1.2], [0.65, 0.24, 1.14], PR.copper, 2.2);
+      T.box(0.1, 0.14, 0.93, 0.16, 0.16, 0.2, PR.zinc); const [jx, jy] = T.P(0.18, 0.22, 1.13); [-4, 0, 4].forEach((dx, k) => sprig(jx + dx, jy, 12 + (k % 2) * 3, PR.lavender)); },
+    // Adobe: adobe plaster with a pine shelf line, a saltillo tile top, a copper basin, a black tap and a cactus at the end.
+    adobe: (T, o) => { const a = cl(o);
+      T.box(0, 0, 0, 2.8, 0.8, 0.86, a); T.box(0, 0, 0.78, 2.8, 0.8, 0.04, AD.pine); [0.7, 1.4, 2.1].forEach(x => T.line([x, 0.802, 0.04], [x, 0.802, 0.78], 'rgba(0,0,0,.1)', 1.2));
+      for (let z = 0.12, r = 0; z < 0.7; z += 0.14, r++) for (let x = 0.06 + (r % 2) * 0.1; x < 2.76; x += 0.26) { const [dx, dy] = T.P(x, 0.801, z); ctx.beginPath(); ctx.moveTo(dx, dy - 2.5); ctx.lineTo(dx + 2.5, dy); ctx.lineTo(dx, dy + 2.5); ctx.lineTo(dx - 2.5, dy); ctx.closePath(); ctx.fillStyle = (r % 2) ? AD.turquoise : AD.rust; ctx.fill(); }
+      T.box(-0.05, -0.04, 0.86, 2.9, 0.88, 0.07, '#CF8A5C'); for (let x = -0.05; x < 2.85; x += 0.36) T.line([x, -0.04, 0.931], [x, 0.84, 0.931], 'rgba(240,225,210,.45)', 1); for (let y = 0.0; y < 0.84; y += 0.3) T.line([-0.05, y, 0.931], [2.85, y, 0.931], 'rgba(240,225,210,.45)', 1); T.line([-0.05, 0.84, 0.86], [2.85, 0.84, 0.86], AD.pineDark, 1.2);
+      T.poly([[0.3, 0.13, 0.932], [1.0, 0.13, 0.932], [1.0, 0.6, 0.932], [0.3, 0.6, 0.932]], PR.copper, 'rgba(0,0,0,.25)', 1); for (let x = 0.36; x < 1.0; x += 0.08) for (let y = 0.18; y < 0.6; y += 0.1) { const [hx, hy] = T.P(x, y, 0.933); circle(hx, hy, 1, 'rgba(255,255,255,.22)'); }
+      T.line([0.65, 0.04, 0.93], [0.65, 0.04, 1.18], AD.black, 2.2); T.line([0.65, 0.04, 1.18], [0.65, 0.24, 1.12], AD.black, 2.2);
+      T.box(0.08, 0.12, 0.93, 0.16, 0.16, 0.12, AD.adobeDark); const [cx, cy] = T.P(0.16, 0.2, 1.05); ell(cx, cy - 8, 3.5, 9, '#4F8A5A'); ell(cx - 5, cy - 9, 2, 5, '#4F8A5A', null, -0.4); ell(cx + 5, cy - 11, 2, 5, '#4F8A5A', null, 0.4); for (let k = 0; k < 4; k++) limb(cx - 1, cy - 3 - k * 4, cx + 1, cy - 3 - k * 4, '#F4ECD8', 0.8); circle(cx, cy - 17, 1.6, AD.rust); },
+    // Neon: black steel with mesh fronts, a cyan strip at the kick, a dark glass top edged in magenta, a steel basin and a holo panel at the end.
+    neon: (T, o) => { const b = cl(o);
+      T.box(0, 0, 0, 2.8, 0.8, 0.86, b); for (let x = 0.04; x < 2.8; x += 0.08) T.line([x, 0.801, 0.14], [x, 0.801, 0.76], 'rgba(255,255,255,.07)', 1); for (let z = 0.18; z < 0.76; z += 0.08) T.line([0, 0.801, z], [2.8, 0.801, z], 'rgba(255,255,255,.06)', 1);
+      [0.7, 1.4, 2.1].forEach(x => T.line([x, 0.802, 0.04], [x, 0.802, 0.84], NE.steel, 1.6)); neon(T, [0, 0.803, 0.08], [2.8, 0.803, 0.08], NE.cyan, power);
+      T.box(-0.05, -0.04, 0.86, 2.9, 0.88, 0.07, NE.glass); neon(T, [-0.05, 0.84, 0.93], [2.85, 0.84, 0.93], NE.magenta, power); T.line([-0.05, 0.84, 0.86], [2.85, 0.84, 0.86], NE.steel, 1);
+      T.poly([[0.3, 0.13, 0.932], [1.0, 0.13, 0.932], [1.0, 0.6, 0.932], [0.3, 0.6, 0.932]], NE.steel, 'rgba(255,255,255,.25)', 1); T.poly([[0.38, 0.2, 0.933], [0.92, 0.2, 0.933], [0.92, 0.53, 0.933], [0.38, 0.53, 0.933]], NE.mesh);
+      T.line([0.65, 0.04, 0.93], [0.65, 0.04, 1.2], '#9AA0A6', 2.4); T.line([0.65, 0.04, 1.2], [0.65, 0.26, 1.13], '#9AA0A6', 2.4);
+      T.box(0.1, 0.3, 0.93, 0.26, 0.02, 0.26, power ? NE.cyan : NE.steel); if (power) { T.poly([[0.1, 0.3, 0.93], [0.36, 0.3, 0.93], [0.36, 0.3, 1.19], [0.1, 0.3, 1.19]], hexA(NE.cyan, 0.3)); for (let z = 0.98; z < 1.18; z += 0.05) T.line([0.13, 0.29, z], [0.33 - (Math.round(z * 100) % 3) * 0.04, 0.29, z], NE.cyan, 1); } },
+    // Candy: mint fronts with a scalloped top edge, a cream top with sprinkles, a pink basin, a cherry tap and a cupcake stand at the end.
+    candy: (T, o) => { const m = cl(o);
+      T.box(0, 0, 0, 2.8, 0.8, 0.86, m); [0.7, 1.4, 2.1].forEach(x => T.line([x, 0.802, 0.04], [x, 0.802, 0.84], 'rgba(0,0,0,.08)', 1.2));
+      scallops(T, [0, 0.801, 0.86], [2.8, 0.801, 0.86], 14, 5, CA.cream); [0.35, 1.05, 1.75, 2.45].forEach(x => { const [px, py] = T.P(x, 0.803, 0.46); circle(px, py, 2.4, CA.cream); circle(px, py, 1.2, CA.cherry); });
+      T.box(-0.05, -0.04, 0.86, 2.9, 0.88, 0.07, CA.cream); const [tx, ty] = T.P(1.1, 0.0, 0.931); sprinkles(tx, ty, 50, 30, 26, 0.1); T.line([-0.05, 0.84, 0.86], [2.85, 0.84, 0.86], CA.pink, 1.4);
+      T.poly([[0.3, 0.13, 0.932], [1.0, 0.13, 0.932], [1.0, 0.6, 0.932], [0.3, 0.6, 0.932]], CA.pink, 'rgba(0,0,0,.12)', 1); T.poly([[0.38, 0.2, 0.933], [0.92, 0.2, 0.933], [0.92, 0.53, 0.933], [0.38, 0.53, 0.933]], CA.pinkDark);
+      T.line([0.65, 0.04, 0.93], [0.65, 0.04, 1.18], CA.cherry, 2.2); T.line([0.65, 0.04, 1.18], [0.65, 0.24, 1.12], CA.cherry, 2.2);
+      T.box(0.08, 0.12, 0.93, 0.2, 0.2, 0.02, CA.cream); T.line([0.18, 0.22, 0.95], [0.18, 0.22, 1.1], CA.cream, 2); T.box(0.08, 0.12, 1.1, 0.2, 0.2, 0.02, CA.cream); const [cx, cy] = T.P(0.18, 0.22, 1.12); ctx.beginPath(); ctx.moveTo(cx - 4, cy); ctx.lineTo(cx + 4, cy); ctx.lineTo(cx + 3, cy - 5); ctx.lineTo(cx - 3, cy - 5); ctx.closePath(); ctx.fillStyle = CA.butter; ctx.fill(); circle(cx, cy - 7, 3.5, CA.pink); circle(cx, cy - 10, 1.2, CA.cherry); },
+  });
+  Object.assign(LOOK_DRAWERS.fridge, {
+    // Provence: cream enamel with lavender sprigs on the door, a toile band and iron handles. Returns the open door's colour.
+    provence: (T, o) => { const body = cl(o);
+      T.box(0, 0, 0, 0.9, 0.85, 1.95, body); T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], 'rgba(0,0,0,.18)', 1.2);
+      [[0.2, 0.5], [0.42, 0.7], [0.62, 0.45], [0.3, 1.0], [0.55, 1.05]].forEach(([x, z], k) => { const [sx, sy] = T.P(x, 0.851, z); sprig(sx, sy, 10 + (k % 2) * 3, PR.lavender); });
+      T.line([0.06, 0.851, 1.48], [0.84, 0.851, 1.48], PR.toile, 1.2); T.line([0.06, 0.851, 1.74], [0.84, 0.851, 1.74], PR.toile, 1.2); const [bx, by] = T.P(0.4, 0.851, 1.61); ell(bx, by, 4, 2.6, PR.toile); limb(bx - 7, by + 4, bx + 7, by + 4, PR.toile, 1); circle(bx - 6, by - 3, 1.4, PR.toile); circle(bx + 6, by - 3, 1.4, PR.toile);
+      [[0.7, 1.15], [1.42, 1.78]].forEach(([z0, z1]) => T.line([0.78, 0.855, z0], [0.78, 0.855, z1], PR.iron, 3));
+      return body; },
+    // Adobe: a turquoise fridge with a serape band across the door, a rust handle and a cream cap. Returns the open door's colour.
+    adobe: (T, o) => { const body = cl(o);
+      T.box(0, 0, 0, 0.9, 0.85, 1.87, body); T.box(0, 0, 1.87, 0.9, 0.85, 0.08, AD.cream);
+      T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], 'rgba(0,0,0,.25)', 1.2);
+      serape(T, [0.06, 0.851, 0.5], [0.84, 0.851, 0.5], [AD.rust, AD.cream, AD.black, AD.cream, AD.rust], 0.08);
+      for (let x = 0.1; x < 0.84; x += 0.12) { const [dx, dy] = T.P(x, 0.851, 1.55); ctx.beginPath(); ctx.moveTo(dx, dy - 3); ctx.lineTo(dx + 3, dy); ctx.lineTo(dx, dy + 3); ctx.lineTo(dx - 3, dy); ctx.closePath(); ctx.fillStyle = AD.cream; ctx.fill(); }
+      [[0.7, 1.15], [1.42, 1.78]].forEach(([z0, z1]) => T.line([0.78, 0.855, z0], [0.78, 0.855, z1], AD.rust, 3.4));
+      return body; },
+    // Neon: a black body with a magenta strip down the door, a cyan holo panel and a glowing seam between the doors. Returns the open door's colour.
+    neon: (T, o) => { const body = cl(o);
+      T.box(0, 0, 0, 0.9, 0.85, 0.06, NE.steel); T.box(0, 0, 0.06, 0.9, 0.85, 1.89, body);
+      neon(T, [0, 0.851, 1.3], [0.9, 0.851, 1.3], NE.cyan, power);
+      neon(T, [0.14, 0.852, 0.14], [0.14, 0.852, 1.22], NE.magenta, power); neon(T, [0.14, 0.852, 1.38], [0.14, 0.852, 1.88], NE.magenta, power);
+      T.poly([[0.3, 0.851, 0.6], [0.66, 0.851, 0.6], [0.66, 0.851, 0.98], [0.3, 0.851, 0.98]], power ? hexA(NE.cyan, 0.22) : NE.mesh, power ? NE.cyan : NE.steel, 1); if (power) for (let z = 0.66; z < 0.96; z += 0.06) T.line([0.34, 0.852, z], [0.62 - (Math.round(z * 100) % 4) * 0.05, 0.852, z], NE.cyan, 1);
+      [[0.7, 1.15], [1.42, 1.78]].forEach(([z0, z1]) => T.line([0.78, 0.855, z0], [0.78, 0.855, z1], NE.steel, 3.2));
+      return body; },
+    // Candy: a pastel pink fridge with a bow on the upper door, sprinkles on the lower one and cream handles. Returns the open door's colour.
+    candy: (T, o) => { const body = cl(o);
+      T.box(0, 0, 0, 0.9, 0.85, 1.87, body); T.box(0, 0, 1.87, 0.9, 0.85, 0.08, CA.cream); scallops(T, [0, 0.851, 1.87], [0.9, 0.851, 1.87], 6, 4, CA.cream);
+      T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], 'rgba(0,0,0,.14)', 1.2);
+      const [bx, by] = T.P(0.4, 0.851, 1.6); ell(bx - 7, by, 6, 3.5, CA.cherry, null, -0.35); ell(bx + 7, by, 6, 3.5, CA.cherry, null, 0.35); circle(bx, by, 2.6, CA.cherry); limb(bx - 2, by + 2, bx - 5, by + 10, CA.cherry, 1.6); limb(bx + 2, by + 2, bx + 5, by + 10, CA.cherry, 1.6);
+      const [sx, sy] = T.P(0.08, 0.851, 1.2); sprinkles(sx, sy, 34, 40, 18, 0.4);
+      [[0.7, 1.15], [1.42, 1.78]].forEach(([z0, z1]) => T.line([0.78, 0.855, z0], [0.78, 0.855, z1], CA.cream, 3.4));
       return body; },
   });
 
@@ -1776,6 +2001,10 @@ export function createHouseArt(ctx0, opts = {}) {
     else if (pat === 'zellige') { for (let z = 0.14, r = 0; z < 1.1; z += 0.16, r++) for (let u = 0; u < len; u += 0.16) rect(u + 0.01, Math.min(len, u + 0.15), z + 0.01, z + 0.15, S.pal[(Math.round(u / 0.16) * 5 + r * 3) % S.pal.length]); line3(P(0, 1.12), P(len, 1.12), ink, 1.6); }
     else if (pat === 'monstera') { for (let z = 0.6, r = 0; z < WH; z += 0.75, r++) for (let u = 0.35 + (r % 2) * 0.4; u < len; u += 0.8) { const [sx, sy] = iso(...P(u, z)); monstera(sx, sy, 11, (r + Math.round(u)) % 2 ? ink : S.ink2, S.base, ((r * 3 + Math.round(u * 2)) % 5 - 2) * 0.25); if ((r + Math.round(u * 2)) % 3 === 0) circle(sx + 9, sy + 8, 2.2, '#F08AA0'); } }
     else if (pat === 'squiggle') { for (let z = 0.45, r = 0; z < WH - 0.1; z += 0.5, r++) for (let u = 0.15 + (r % 2) * 0.3; u < len - 0.3; u += 0.6) { const pts = []; for (let k = 0; k <= 8; k++) pts.push([u + k * 0.035, z + (k % 2 ? 0.04 : -0.04)]); path(pts, ink, 1.4); const [sx, sy] = iso(...P(u + 0.42, z + 0.12)); const c = S.pal[(r + Math.round(u * 3)) % 3]; if ((r + Math.round(u * 2)) % 3 === 0) circle(sx, sy, 2.4, c); else if ((r + Math.round(u * 2)) % 3 === 1) { ctx.beginPath(); ctx.moveTo(sx - 3, sy + 2.5); ctx.lineTo(sx + 3, sy + 2.5); ctx.lineTo(sx, sy - 3); ctx.closePath(); ctx.fillStyle = c; ctx.fill(); } else { ctx.fillStyle = c; ctx.fillRect(sx - 2.5, sy - 2.5, 5, 5); } } }
+    else if (pat === 'sprig') { for (let z = 0.55, r = 0; z < WH; z += 0.5, r++) for (let u = 0.25 + (r % 2) * 0.25; u < len; u += 0.5) { const [sx, sy] = iso(...P(u, z)); sprig(sx, sy + 6, 12, ink, S.ink2); } }
+    else if (pat === 'serape') { S.pal.forEach((c, k) => rect(0, len, 0.3 + k * 0.1, 0.4 + k * 0.1, c)); const pts = []; for (let u = 0, k = 0; u < len + 0.1; u += 0.12, k++) pts.push([Math.min(u, len), 0.86 + (k % 2) * 0.06]); path(pts, ink, 1.4); const pts2 = []; for (let u = 0, k = 0; u < len + 0.1; u += 0.12, k++) pts2.push([Math.min(u, len), 0.2 + (k % 2) * 0.06]); path(pts2, ink, 1.4); }
+    else if (pat === 'circuit') { for (let u = 0.3; u < len; u += 0.6) line3(P(u, 0.14), P(u, WH), ink, 0.8); for (let z = 0.5; z < WH; z += 0.6) line3(P(0, z), P(len, z), ink, 0.8); for (let z = 0.5, r = 0; z < WH; z += 0.6, r++) for (let u = 0.3; u < len; u += 0.6) { const [sx, sy] = iso(...P(u, z)); if ((r + Math.round(u * 3)) % 3 === 0) circle(sx, sy, 2, S.ink2); else { ctx.fillStyle = ink; ctx.fillRect(sx - 1.5, sy - 1.5, 3, 3); } } for (let u = 0.6; u < len - 0.3; u += 1.2) line3(P(u, 0.8), P(u + 0.3, 1.1), S.ink2, 1); }
+    else if (pat === 'sprinkles') { for (let k = 0; k < len * 22; k++) { const u = (k * 0.618 * 4.7) % len, z = 0.2 + ((k * 0.414 * 3.9) % (WH - 0.3)), [sx, sy] = iso(...P(u, z)), a = (k * 1.7) % Math.PI; limb(sx - Math.cos(a) * 2.6, sy - Math.sin(a) * 2.6, sx + Math.cos(a) * 2.6, sy + Math.sin(a) * 2.6, S.pal[k % 5], 1.8); } }
     else if (pat === 'cork') { for (let k = 0; k < len * 40; k++) { const u = (k * 0.618 * 3.7) % len, z = 0.16 + ((k * 0.414 * 2.3) % (WH - 0.2)); const [sx, sy] = iso(...P(u, z)); circle(sx, sy, 0.6 + (k % 2) * 0.5, ink); } }
   }
   function featPoly(f, inset = 0, dz = 0) { const P = (u, z) => wallPoint(f.p, u, z); return [P(f.u[0] + inset, f.z[0] + inset + dz), P(f.u[1] - inset, f.z[0] + inset + dz), P(f.u[1] - inset, f.z[1] - inset), P(f.u[0] + inset, f.z[1] - inset)]; }

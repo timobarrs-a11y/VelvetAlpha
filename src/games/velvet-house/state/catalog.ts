@@ -139,6 +139,10 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-zellige-cobalt', 'Cobalt zellige', 'zellige-cobalt', 110, ['warm', 'bold', 'natural']),
   wallpaper('paper-monstera-night', 'Monstera at night', 'monstera-night', 100, ['playful', 'natural', 'bold']),
   wallpaper('paper-squiggle-pop', 'Squiggle pop', 'squiggle-pop', 110, ['playful', 'bold', 'modern']),
+  wallpaper('paper-lavender-sprig', 'Lavender sprig', 'lavender-sprig', 90, ['soft', 'cozy', 'vintage']),
+  wallpaper('paper-serape-adobe', 'Serape band', 'serape-adobe', 100, ['warm', 'natural', 'cozy']),
+  wallpaper('paper-circuit', 'Circuit', 'circuit', 110, ['bold', 'modern', 'industrial']),
+  wallpaper('paper-sprinkles', 'Sprinkles', 'sprinkles', 90, ['soft', 'playful', 'warm']),
   wallpaper('paper-shiplap', 'Shiplap', 'shiplap', 80, ['natural', 'minimal', 'cozy']),
   wallpaper('paper-subway', 'Subway tile', 'subway', 80, ['modern', 'minimal', 'industrial']),
   wallpaper('paper-stars-night', 'Starry night', 'stars-night', 120, ['playful', 'cool', 'bold']),
@@ -190,6 +194,18 @@ export const CATALOG: CatalogEntry[] = [
   bundle('set-memphis', 'Memphis kitchen and living room', 'White laminate, black squiggles and primary blocks: the squiggle fridge, squiggle counter with a terrazzo top, totem dining set under a sputnik light, block sofa, totem lamp and a stacked planter, with squiggle pop on the walls and pop terrazzo underfoot.',
     ['look-fridge-memphis', 'look-counter-memphis', 'look-dining-memphis', 'look-sofa-memphis', 'look-lamp-memphis', 'look-plant-memphis', 'paper-squiggle-pop', 'floor-terrazzopop'], ['playful', 'bold', 'modern']),
 
+  bundle('set-provence', 'Provence kitchen and living room', 'Whitewashed pine, lavender and toile: the lavender enamel fridge, pine counter with a limestone top, farm table with ladder-back chairs under an iron lantern, skirted linen sofa with toile cushions, wrought iron lamp and a zinc pot, with lavender sprigs on the walls and limestone flags underfoot.',
+    ['look-fridge-provence', 'look-counter-provence', 'look-dining-provence', 'look-sofa-provence', 'look-lamp-provence', 'look-plant-provence', 'paper-lavender-sprig', 'floor-limestone'], ['soft', 'cozy', 'vintage']),
+
+  bundle('set-adobe', 'Adobe kitchen and living room', 'Plaster, turquoise and serape stripes: the turquoise fridge, adobe counter with a saltillo top and a cactus, carved pine table with turquoise chairs under a punched-tin star, rust leather sofa with a serape over the back, pottery lamp and a painted clay pot, with a serape band on the walls and saltillo tile underfoot.',
+    ['look-fridge-adobe', 'look-counter-adobe', 'look-dining-adobe', 'look-sofa-adobe', 'look-lamp-adobe', 'look-plant-adobe', 'paper-serape-adobe', 'floor-saltillo'], ['warm', 'natural', 'cozy']),
+
+  bundle('set-neon', 'Neon kitchen and living room', 'Black steel, magenta and cyan light: the holo fridge, mesh counter with a lit kick and a holo panel, underlit glass table with lit chairs under a neon ring, black leather sofa with neon piping, a neon tube lamp and a hex pot with a light ring, with circuit walls and a lit grate underfoot. The light comes on with the power.',
+    ['look-fridge-neon', 'look-counter-neon', 'look-dining-neon', 'look-sofa-neon', 'look-lamp-neon', 'look-plant-neon', 'paper-circuit', 'floor-grate'], ['bold', 'modern', 'industrial']),
+
+  bundle('set-candy', 'Candy kitchen and living room', 'Pastel pink, mint and lilac: the bow fridge, scalloped mint counter with a cupcake stand, scalloped table with heart-back chairs under a lollipop light, scalloped pink sofa, an ice cream cone lamp and a teacup planter, with sprinkles on the walls and a pink check underfoot.',
+    ['look-fridge-candy', 'look-counter-candy', 'look-dining-candy', 'look-sofa-candy', 'look-lamp-candy', 'look-plant-candy', 'paper-sprinkles', 'floor-checkpink'], ['soft', 'playful', 'warm']),
+
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
 
@@ -237,6 +253,10 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-zellige', 'Zellige mosaic', 'zellige', 160, ['warm', 'bold', 'natural']),
   floor('floor-bamboo', 'Bamboo plank', 'bamboo', 140, ['playful', 'natural', 'bold']),
   floor('floor-terrazzopop', 'Pop terrazzo', 'terrazzopop', 170, ['playful', 'bold', 'modern']),
+  floor('floor-limestone', 'Limestone flags', 'limestone', 150, ['soft', 'cozy', 'vintage']),
+  floor('floor-saltillo', 'Saltillo tile', 'saltillo', 140, ['warm', 'natural', 'cozy']),
+  floor('floor-grate', 'Lit grate', 'grate', 170, ['bold', 'modern', 'industrial']),
+  floor('floor-checkpink', 'Pink check', 'checkpink', 140, ['soft', 'playful', 'warm']),
   floor('floor-checker', 'Checkerboard', 'checker', 180, ['bold', 'playful', 'vintage']),
   floor('floor-rose', 'Rose carpet', 'rose', 100, ['soft', 'warm', 'cozy']),
   floor('floor-navy-carpet', 'Navy carpet', 'navy', 100, ['cool', 'modern', 'cozy']),
@@ -380,6 +400,34 @@ export const CATALOG: CatalogEntry[] = [
   look('look-sofa-memphis', 'sofa', 'memphis', 'Block sofa', 'A white block on a black plinth with a red drum arm, a yellow block arm, blue and mint cushions and a squiggle across the back.', 560, ['playful', 'bold', 'modern'], ['#F4F1EA', '#E63946', '#2E6BD6']),
   look('look-lamp-memphis', 'lamp', 'memphis', 'Totem lamp', 'A red stepped base, a yellow stem, a blue ball and a black-and-white striped drum.', 160, ['playful', 'bold', 'modern'], ['#F4C430', '#E63946', '#2E6BD6']),
   look('look-plant-memphis', 'plant', 'memphis', 'Stacked block planter', 'Your plant in a yellow block on a black cube, with a red triangle and blue dots.', 110, ['playful', 'bold', 'modern'], ['#F4C430', '#1B1A1F', '#E63946', '#2E6BD6']),
+
+  look('look-fridge-provence', 'fridge', 'provence', 'Lavender enamel fridge', 'Cream enamel with lavender sprigs on the door, a blue toile band and iron handles.', 350, ['soft', 'cozy', 'vintage'], ['#F4EFE3', '#8E7CC3', '#3A3A40']),
+  look('look-counter-provence', 'counter', 'provence', 'Whitewashed pine counter', 'Whitewashed pine panels with iron pulls, a limestone top, an apron-front basin, a copper tap and a jug of lavender at the end.', 420, ['soft', 'cozy', 'vintage'], ['#E8DCC4', '#D9D2C2', '#3A3A40']),
+  look('look-dining-provence', 'dining', 'provence', 'Farm table and ladder-backs', 'A whitewashed pine farm table on turned legs, ladder-back chairs with rush seats, a jug of lavender and an iron lantern above.', 340, ['soft', 'cozy', 'vintage'], ['#E8DCC4', '#C9B690', '#3A3A40']),
+  look('look-sofa-provence', 'sofa', 'provence', 'Skirted linen sofa', 'A skirted linen sofa with blue toile cushions, a lavender bolster and a sprig on the back.', 380, ['soft', 'cozy', 'vintage'], ['#F4EFE3', '#2E4C9A', '#C9B8E8']),
+  look('look-lamp-provence', 'lamp', 'provence', 'Wrought iron lamp', 'A wrought iron scroll stand under a linen drum shade with a sprig tucked in the band.', 90, ['soft', 'cozy', 'vintage'], ['#3A3A40', '#F4EFE3', '#8E7CC3']),
+  look('look-plant-provence', 'plant', 'provence', 'Zinc pot with lavender', 'Your plant in an old zinc pot with a band of lavender sprigs.', 60, ['soft', 'cozy', 'vintage'], ['#B9BEC3', '#8E7CC3', '#F4EFE3', '#9DB3A5']),
+
+  look('look-fridge-adobe', 'fridge', 'adobe', 'Turquoise serape fridge', 'Turquoise with a serape band across the door, cream diamonds, a rust handle and a cream cap.', 350, ['warm', 'natural', 'cozy'], ['#3FA7A0', '#B5533C', '#F4ECD8']),
+  look('look-counter-adobe', 'counter', 'adobe', 'Adobe and saltillo counter', 'Adobe plaster with a pine shelf line and painted diamonds, a saltillo tile top, a hammered copper basin and a cactus at the end.', 420, ['warm', 'natural', 'cozy'], ['#D9A47A', '#9C7046', '#3FA7A0']),
+  look('look-dining-adobe', 'dining', 'adobe', 'Carved pine dining set', 'A carved pine table with a serape runner, turquoise-painted chairs with leather seats and a punched-tin star above.', 340, ['warm', 'natural', 'cozy'], ['#9C7046', '#3FA7A0', '#B5533C']),
+  look('look-sofa-adobe', 'sofa', 'adobe', 'Rust leather sofa with a serape', 'Rust leather on a pine frame with a serape blanket over the back and a turquoise cushion.', 380, ['warm', 'natural', 'cozy'], ['#B5533C', '#3FA7A0', '#F4ECD8']),
+  look('look-lamp-adobe', 'lamp', 'adobe', 'Pottery and rawhide lamp', 'A turquoise pottery base under a rawhide shade laced with leather.', 90, ['warm', 'natural', 'cozy'], ['#3FA7A0', '#EFE2C8', '#9C7046']),
+  look('look-plant-adobe', 'plant', 'adobe', 'Painted clay pot', 'Your plant in a clay pot with a cream band and a turquoise zigzag.', 60, ['warm', 'natural', 'cozy'], ['#C08B62', '#3FA7A0', '#F4ECD8', '#2B2420']),
+
+  look('look-fridge-neon', 'fridge', 'neon', 'Holo fridge', 'A black body with a magenta strip down the door, a cyan holo panel and a glowing seam; the light comes on with the power.', 520, ['bold', 'modern', 'industrial'], ['#111118', '#FF2E9A', '#19E6F0']),
+  look('look-counter-neon', 'counter', 'neon', 'Steel mesh counter', 'Black steel with mesh fronts, a cyan strip at the kick, a dark glass top edged in magenta, a steel basin and a holo panel at the end.', 600, ['bold', 'modern', 'industrial'], ['#111118', '#19E6F0', '#3A3F4A']),
+  look('look-dining-neon', 'dining', 'neon', 'Underlit glass dining set', 'A black glass table lit from under on a steel pedestal, steel chairs with a cyan seat edge and magenta back, and a neon ring above.', 540, ['bold', 'modern', 'industrial'], ['#1E2230', '#19E6F0', '#FF2E9A']),
+  look('look-sofa-neon', 'sofa', 'neon', 'Black leather sofa with neon piping', 'Black leather with magenta piping, a cyan strip under the base and a violet cushion.', 560, ['bold', 'modern', 'industrial'], ['#111118', '#FF2E9A', '#19E6F0']),
+  look('look-lamp-neon', 'lamp', 'neon', 'Neon tube lamp', 'A magenta neon tube standing on a black base; the whole tube is the light.', 160, ['bold', 'modern', 'industrial'], ['#FF2E9A', '#111118', '#19E6F0']),
+  look('look-plant-neon', 'plant', 'neon', 'Hex pot with a light ring', 'Your plant in a black pot with a cyan ring that lights with the power.', 110, ['bold', 'modern', 'industrial'], ['#111118', '#19E6F0', '#8A3CFF', '#3A3F4A']),
+
+  look('look-fridge-candy', 'fridge', 'candy', 'Bow fridge', 'Pastel pink with a cherry bow on the upper door, sprinkles on the lower one, a scalloped cream cap and cream handles.', 350, ['soft', 'playful', 'warm'], ['#F6B7CC', '#FFF8F0', '#BFE8D6']),
+  look('look-counter-candy', 'counter', 'candy', 'Scalloped mint counter', 'Mint fronts under a scalloped edge, a cream top with sprinkles, a pink basin, a cherry tap and a cupcake stand at the end.', 420, ['soft', 'playful', 'warm'], ['#BFE8D6', '#FFF8F0', '#F6B7CC']),
+  look('look-dining-candy', 'dining', 'candy', 'Scalloped dining set', 'A pink top with a scalloped edge on a striped drum, lilac chairs with heart backs and a lollipop light above.', 340, ['soft', 'playful', 'warm'], ['#F6B7CC', '#D6C4F0', '#FFF8F0']),
+  look('look-sofa-candy', 'sofa', 'candy', 'Scalloped pink sofa', 'A pink sofa with a scalloped skirt, mint and lilac cushions, a cherry bow on one arm and sprinkles on the back.', 380, ['soft', 'playful', 'warm'], ['#F6B7CC', '#BFE8D6', '#D6C4F0']),
+  look('look-lamp-candy', 'lamp', 'candy', 'Ice cream cone lamp', 'A waffle cone with a pink scoop that glows, sprinkles and a cherry on top.', 90, ['soft', 'playful', 'warm'], ['#F6B7CC', '#FBE7A6', '#FFF8F0']),
+  look('look-plant-candy', 'plant', 'candy', 'Teacup planter', 'Your plant in a pink teacup with a handle, on a scalloped saucer.', 60, ['soft', 'playful', 'warm'], ['#F6B7CC', '#FFF8F0', '#BFE8D6', '#E04A6A']),
 
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
