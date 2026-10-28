@@ -55,18 +55,33 @@ test('a promo code said to Maya gives the promo pack, free, and is not a message
   expect(JSON.stringify((await savedGame(page)).turns ?? [])).not.toContain('rainbowhugs');
 });
 
-test('a promo code already used in another house on the account gives nothing here, and says why', async ({ page }) => {
+test('a code redeemed on the account in another house: this house has the packs too, without typing it', async ({ page }) => {
+  // The account redeemed rainbowhugs in another house; this one opens fresh.
+  await page.addInitScript(() => {
+    if (window.top === window) (window as unknown as { accountPromos: string[] }).accountPromos = ['rainbowhugs'];
+  });
   const game = await openGame(page);
   await inGame(page, 'v.settle()');
-  await page.evaluate(() => { (window as unknown as { promoUsed: Record<string, string> }).promoUsed.rainbowhugs = 'another-house'; });
-  await inGame(page, 'v.openChat()');
-  const input = game.locator('.vh-dialogue input');
-  await input.fill('rainbowhugs');
-  await input.press('Enter');
-  await expect(game.locator('.vh-log')).toContainText('already been used on your account', { timeout: 10000 });
-  expect(await page.evaluate(() => (window as unknown as { promoLog: string[] }).promoLog)).toEqual(['rainbowhugs']);
+  await expect(game.locator('.vh-log')).toContainText('Cuddle Clouds is on your account', { timeout: 10000 });
+  // Nothing was put on, no pop-up: it waits in Sets as an Apply.
   await expect(game.locator('.vh-celebrate')).toHaveCount(0);
   expect((await objects(page)).find((o) => o.id === 'fridge')!.skin).not.toBe('cuddle');
+  await game.locator('.vh-dock [data-open=shop]').click();
+  await game.locator('[data-tab=Sets]').click();
+  await expect(game.locator('[data-item=set-cuddle]')).not.toHaveClass(/vh-promo-locked/);
+  await expect(game.locator('[data-item=set-cuddle] [data-buy]')).toHaveText('Apply');
+  await game.locator('[data-item=set-cuddle] [data-buy]').click();
+  await expect.poll(async () => (await objects(page)).find((o) => o.id === 'fridge')!.skin).toBe('cuddle');
+});
+
+test('a code typed in the house is reported to the app for the account', async ({ page }) => {
+  const game = await openGame(page);
+  await inGame(page, 'v.settle()');
+  await inGame(page, 'v.openChat()');
+  const input = game.locator('.vh-dialogue input');
+  await input.fill('RainbowHugs');
+  await input.press('Enter');
+  await expect.poll(() => page.evaluate(() => (window as unknown as { promoLog: string[] }).promoLog)).toEqual(['rainbowhugs']);
 });
 
 test('the start menu has a Cheats screen that takes unlock codes and saves them for the house', async ({ page }) => {

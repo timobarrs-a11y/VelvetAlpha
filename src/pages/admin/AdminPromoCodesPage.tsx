@@ -24,7 +24,7 @@ export function AdminPromoCodesPage() {
     <>
       <PageHeader
         title="Promo codes"
-        subtitle="Codes for the Velvet Sims promo packs. Give one to a player: they say it to their companion in the game, or type it on the start menu's Cheats screen. Each code works once per account; there's no limit on how many accounts."
+        subtitle="Codes for the Velvet Sims promo packs. Give one to a player: they say it to their companion in the game, or type it on the start menu's Cheats screen. Once an account redeems a code, every house on that account has the packs. There's no limit on how many accounts use a code."
       />
       {error && <ErrorBanner message={error} />}
       {loading && !data ? <Spinner /> : (

@@ -120,34 +120,44 @@ describe('what a code does to the house', () => {
   });
 });
 
-describe('once per account, inside the app', () => {
+describe('a code is the account\'s, inside the app', () => {
   afterEach(() => { vi.useRealTimers(); });
-  const inApp = (answer: 'ok' | 'used') => {
+  const inApp = (owned: string[] = []) => {
     vi.useFakeTimers();
-    const logs: string[] = [], own = new Set<string>(), claimed: string[] = [];
+    const logs: string[] = [], own = new Set<string>(owned), recorded: string[] = [], shown: string[] = [];
+    let send: (codes: string[]) => void = () => {};
     const g = {
       view: { level: 1 }, owned: own, flags: {}, s: { settleDone: true, scriptMode: null },
       canvas: { toDataURL: () => 'data:image/jpeg;base64,AAAA' },
-      log: (m: string) => logs.push(m), refreshDrawer: () => {}, setLevel: () => {}, celebrate: () => {},
+      log: (m: string) => logs.push(m), refreshDrawer: () => {}, setLevel: () => {}, celebrate: (o: { title: string }) => shown.push(o.title),
       handleBuy: (m: { id: string }) => { own.add(m.id); },
     } as unknown as Game;
-    const { tryUnlock } = createUnlocks(g, async (code) => { claimed.push(code); return answer; });
-    return { own, logs, claimed, tryUnlock: tryUnlock! };
+    const { tryUnlock } = createUnlocks(g, { record: (c) => recorded.push(c), onAccountCodes: (cb) => { send = cb; } });
+    return { own, logs, recorded, shown, tryUnlock: tryUnlock!, fromAccount: (codes: string[]) => send(codes) };
   };
 
-  it('claims the code for the account, then gives the packs', async () => {
-    const { own, claimed, tryUnlock } = inApp('ok');
+  it('typed here, it works at once and is recorded for the account', () => {
+    const { own, recorded, tryUnlock } = inApp();
     expect(tryUnlock('RainbowHugs')).toBe(true);
-    expect(claimed).toEqual(['rainbowhugs']);
-    await vi.waitFor(() => expect(own.has('set-cuddle')).toBe(true));
+    expect(own.has('set-cuddle')).toBe(true);
     expect(own.has('touches-cuddle')).toBe(true);
+    expect(recorded).toEqual(['rainbowhugs']);
   });
 
-  it('used in another house: says so, and gives nothing', async () => {
-    const { own, logs, tryUnlock } = inApp('used');
-    expect(tryUnlock('rainbowhugs')).toBe(true);
-    await vi.waitFor(() => expect(logs.join(' ')).toMatch(/already been used on your account/));
-    expect(own.size).toBe(0);
+  it('redeemed in another house, this house has the packs too, waiting in Sets rather than put on', () => {
+    const { own, logs, shown, recorded, fromAccount } = inApp();
+    fromAccount(['rainbowhugs', 'not-a-code']);
+    for (const id of ['set-cuddle', 'touches-cuddle', ...catalogById('set-cuddle')!.set!.items, ...catalogById('touches-cuddle')!.set!.items]) expect(own.has(id), id).toBe(true);
+    expect(logs.join(' ')).toMatch(/Cuddle Clouds is on your account, so it is here too/);
+    vi.advanceTimersByTime(3000);
+    expect(shown).toEqual([]);
+    expect(recorded).toEqual([]);
+  });
+
+  it('says nothing when this house already has them', () => {
+    const { logs, fromAccount } = inApp(['set-cuddle', 'touches-cuddle']);
+    fromAccount(['rainbowhugs']);
+    expect(logs).toEqual([]);
   });
 });
 
