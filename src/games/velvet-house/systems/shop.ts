@@ -19,6 +19,8 @@ export function createShop(g: Game): Partial<Game> {
   function handleBuyAvatarItem(id: string): void {
     const item = simsShopItems().find(i => i.id === id);
     if (!item || ownsAvatarItem(id)) return;
+    // What the Salon sells stays with the player's account, so it only takes money they earned.
+    if (flags.cheated) { log('The salon only takes money you earned.'); return; }
     if (!g.spendOn(`Salon: ${itemLabel(item.id)}`, item.price)) { log('Not enough money.'); return; }
     buyAvatarItem(id);
     log(`Bought ${itemLabel(item.id)} for $${item.price}. It's yours in Velvet too.`);

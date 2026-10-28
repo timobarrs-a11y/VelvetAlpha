@@ -671,3 +671,20 @@
 .vh-pet-acts { display: flex; flex-wrap: wrap; gap: 6px; }
 .vh-pet-acts button { font: inherit; font-size: 11px; padding: 5px 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.08); color: inherit; cursor: pointer; }
 .vh-pet-acts button:hover { background: rgba(255,255,255,.14); }
+
+/* The cheat console: hidden until the backtick key (or five taps on the money chip). */
+.vh-cheat {
+  position: absolute; left: 50%; top: 64px; transform: translateX(-50%); z-index: 60;
+  width: min(420px, calc(100% - 24px)); padding: 10px; border-radius: 14px;
+  background: rgba(23,21,29,.96); border: 1px solid rgba(255,255,255,.14); box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  font: 400 13px/1.4 Inter, system-ui, sans-serif; color: #E9E4EC;
+}
+.vh-cheat[hidden] { display: none; }
+.vh-cheat form { display: flex; gap: 6px; }
+.vh-cheat input { flex: 1; min-width: 0; padding: 9px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #F2EEE8; font: 600 14px/1.2 ui-monospace, Menlo, monospace; outline: none; }
+.vh-cheat button { padding: 8px 12px; border: 0; border-radius: 10px; background: #E0A43A; color: #241B25; font: 700 12px/1 Inter, system-ui, sans-serif; cursor: pointer; }
+.vh-cheat .vh-cheat-x { background: rgba(255,255,255,.1); color: #F2EEE8; }
+.vh-cheat-out { margin: 8px 2px 0; white-space: pre-wrap; font: 400 12px/1.5 ui-monospace, Menlo, monospace; color: #A9E3B8; max-height: 40vh; overflow: auto; }
+.vh-cheat-out:empty { display: none; }
+/* The money chip takes taps (five in a row open the cheat console); the rest of the HUD lets them through. */
+.vh-hud .vh-money { pointer-events: auto; }

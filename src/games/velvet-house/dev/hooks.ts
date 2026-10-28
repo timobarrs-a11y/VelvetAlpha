@@ -29,6 +29,8 @@ export function installDevHooks(g: Game): void {
       objects: () => world.objs.map(o => ({ id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot, ...(o.on ? { on: o.on, z: o.z } : {}), ...(o.skin ? { skin: o.skin } : {}) })),
       moveObject: (id: string, x: number, y: number) => { const o = world.objs.find((q) => q.id === id); if (o) { o.x = x; o.y = y; } },
       storedCount: () => storage.length,
+      cheat: (code: string) => g.runCheat(code),
+      settle: () => { g.s.settleDone = true; },
       resetCamera: () => g.resetCamera(),
       personClientPos: (who: 'jordan' | 'maya'): [number, number] => {
         const a = who === 'maya' ? people[1] : people[0];
