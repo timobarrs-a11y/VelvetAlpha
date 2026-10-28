@@ -19,7 +19,7 @@ describe('unlock codes', () => {
 
 describe('a secret pack', () => {
   it('is not in the shop until the player has it, in any tab', () => {
-    const cloud = CATALOG.filter((c) => c.id.endsWith('-cloud') || c.id === 'paper-clouds-sky' || c.id === 'floor-confetti');
+    const cloud = CATALOG.filter((c) => c.id.endsWith('-cloud') || c.id === 'paper-cloudnine-sky' || c.id === 'floor-confetti');
     expect(cloud.length).toBe(9);
     for (const c of cloud) expect(c.secret, c.id).toBe(true);
     for (const tab of ['Today', 'Sets', 'Furniture', 'Wallpaper', 'Floors']) {
