@@ -144,6 +144,7 @@ export interface Game {
   commitMove(o: ObjectInstance, verb?: string): void;
   rotateSelected(): void;
   recolourHeld(): void;
+  useLook(skin: string): void;
   cancelHold(): void;
   carryTo(level: number): void;
   storeSelected(): void;

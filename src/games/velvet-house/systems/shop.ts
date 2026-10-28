@@ -42,9 +42,11 @@ export function createShop(g: Game): Partial<Game> {
     const target = item.icon === 'obj' ? skinTarget(world.objs, item) : null;
     const lookCol = item.skin ? skinColour(item, color) : undefined;
     if (target && target.skin === item.skin && (target.col ?? undefined) === lookCol) { log(`The ${displayName(target).toLowerCase()} already looks like that.`); return; }
-    if (!g.spendOn(`Shop: ${item.name}`, price)) { log('Not enough money.'); return; }
+    // A look already bought is the player's: putting it on again is free.
+    const free = !!(target && item.skin && owned.has(item.id));
+    if (!free && !g.spendOn(`Shop: ${item.name}`, price)) { log('Not enough money.'); return; }
     owned.add(item.id);
-    log(`Bought ${item.name} for $${price}.`);
+    log(free ? `Put the ${item.name} back on.` : `Bought ${item.name} for $${price}.`);
 
     if (item.icon === 'upgrade' && item.id === 'upgrade-attic') {
       world.objs.push(...ATTIC_STAIR_OBJS.map(o => ({ ...o })));

@@ -371,6 +371,11 @@
 .vh-arr-what { display: flex; flex-direction: column; min-width: 0; }
 .vh-arr-what strong { font-size: 14px; font-weight: 700; color: #F2EEE8; }
 .vh-arr-what small { font-size: 11px; color: #A9A1AE; }
+.vh-arr-top { display: flex; flex-direction: column; gap: 8px; }
+.vh-arr-looks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.vh-arr-looks span { font-size: 11px; color: #A9A1AE; }
+.vh-arr-bar [data-arr-look] { background: rgba(255,255,255,.1); color: #F2EEE8; }
+.vh-arr-bar [data-arr-look][aria-pressed="true"] { background: #F2EEE8; color: #241B25; }
 .vh-arr-acts, .vh-arr-floors { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .vh-arr-floors span { font-size: 11px; color: #A9A1AE; }
 .vh-arr-bar button {
@@ -446,24 +451,33 @@
   /* Floors and speed controls ride just above it. */
   .vh-controls { bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 8px) !important; }
   /* Arrange: a compact panel in the empty band above the house (below the clock chips), so the whole house
-     stays in view to drag around, and the floor and rotate buttons keep their usual place. */
+     stays in view to drag around, and the floor and rotate buttons keep their usual place. It never scrolls
+     as a whole: the action bar (Set it down, Rotate, Store) is always in full view, the rows under it scroll
+     sideways, and the camera frames the house in what is left. */
   .vh-drawer[data-open="arrange"] {
-    top: 46px; bottom: auto; left: 8px; right: 8px; width: auto; height: auto; max-height: 168px;
+    top: 46px; bottom: auto; left: 8px; right: 8px; width: auto; height: auto; max-height: none;
     border: 1px solid rgba(255,255,255,.1); border-radius: 14px;
   }
-  .vh-drawer[data-open="arrange"] .vh-drawer-head { padding: 4px 12px; }
+  .vh-drawer[data-open="arrange"] .vh-drawer-head { padding: 2px 8px 2px 12px; }
   .vh-drawer[data-open="arrange"] .vh-drawer-head strong { font-size: 13px; }
-  .vh-drawer[data-open="arrange"] .vh-drawer-body { padding: 6px 8px; }
-  .vh-arr { gap: 4px; }
-  .vh-arr-bar { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 6px 10px; padding: 4px 10px; }
-  .vh-arr-bar button { padding: 6px 12px; }
-  .vh-arr-item { padding: 5px 8px; }
-  .vh-arr-what { flex: 1 1 120px; }
-  .vh-arr-list { flex-direction: row; gap: 14px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .vh-drawer[data-open="arrange"] .vh-drawer-body { padding: 6px 8px; overflow: hidden; }
+  .vh-arr { gap: 6px; }
+  .vh-arr-bar { flex-direction: column; gap: 5px; padding: 6px 8px; position: sticky; top: 0; z-index: 2; background: #2A2320; }
+  .vh-arr-top { flex-direction: row; align-items: center; gap: 8px; }
+  .vh-arr-what { flex: 1 1 auto; min-width: 0; }
+  .vh-arr-what strong, .vh-arr-what small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vh-arr-acts { flex: 0 0 auto; flex-wrap: nowrap; gap: 5px; }
+  .vh-arr-bar button { padding: 6px 10px; min-height: 36px; white-space: nowrap; }
+  .vh-arr-floors, .vh-arr-looks { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 5px; }
+  .vh-arr-floors::-webkit-scrollbar, .vh-arr-looks::-webkit-scrollbar { display: none; }
+  .vh-arr-floors > *, .vh-arr-looks > * { flex: 0 0 auto; }
+  .vh-arr-bar [data-arr-floor], .vh-arr-bar [data-arr-look] { min-height: 30px; padding: 4px 10px; }
+  .vh-arr-why { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vh-arr-item { padding: 5px 8px; width: auto; flex: 0 0 auto; white-space: nowrap; }
+  .vh-arr-list { flex-direction: row; gap: 14px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
   .vh-arr-group { flex: 0 0 auto; display: flex; flex-direction: row; align-items: center; gap: 6px; }
   .vh-arr-group .vh-order-floor { margin: 0; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 9px; }
   .vh-arr-items { flex-direction: row; }
-  .vh-arr-item { width: auto; flex: 0 0 auto; white-space: nowrap; }
 }
 
 /* Design Studio */

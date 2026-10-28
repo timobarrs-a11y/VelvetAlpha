@@ -4,7 +4,7 @@ import { INITIAL_OBJS, TYPES, displayName, colsOf, skinOf, type ObjectInstance, 
 import { CATALOG, look, type CatalogEntry } from '../state/catalog';
 import { snapshot, type SaveContext } from '../state/save';
 import { nextColour } from '../state/arrange';
-import { skinTarget, skinColour, wearSkin, skinExists } from '../state/skins';
+import { skinTarget, skinColour, wearSkin, skinExists, looksFor, changeLook } from '../state/skins';
 import { createShop } from '../systems/shop';
 import type { Game } from '../kernel/game';
 
@@ -164,14 +164,14 @@ describe('buying a look', () => {
     expect(likes.length).toBeLessThanOrEqual(1);
   });
 
-  it('buying the look it already wears costs nothing; another colour of it is a recolour', () => {
+  it('buying the look it already wears costs nothing; another colour of an owned look is free too', () => {
     withFridgeLook();
     const { objs, spent, buy } = shopWith(1000);
     buy(entry());
     buy(entry());
     expect(spent).toEqual([340]);
     buy(entry(), '#9ED8C6');
-    expect(spent).toEqual([340, 340]);
+    expect(spent).toEqual([340]);
     expect(objs.find((o) => o.id === 'fridge')!.col).toBe('#9ED8C6');
   });
 
@@ -193,5 +193,37 @@ describe('buying a look', () => {
       expect(added.length).toBe(1);
       expect(added[0].skin).toBe('retro');
     } finally { delete TYPES.lamp.skins; }
+  });
+});
+
+describe('switching looks from Arrange', () => {
+  it('offers the stock look and every look of the type that is owned, and nothing when there is no choice', () => {
+    withFridgeLook();
+    const f = { type: 'fridge' } as ObjectInstance;
+    expect(looksFor(f, new Set())).toEqual([]);
+    expect(looksFor(f, new Set(['look-fridge-retro']))).toEqual([]); // the entry is not in the catalog here; only worn looks count
+    expect(looksFor({ ...f, skin: 'retro' }, new Set())).toEqual([
+      { id: '', name: 'Fridge', active: false }, { id: 'retro', name: 'Pastel icebox', active: true },
+    ]);
+    expect(looksFor({ type: 'bed' }, new Set())).toEqual([]);
+  });
+  it('a bought look can be put on from Arrange without paying, and the stock look comes back', () => {
+    withFridgeLook();
+    const e = look('look-fridge-retro', 'fridge', 'retro', 'Pastel icebox', 'x', 340, ['vintage'], RETRO.cols);
+    CATALOG.push(e);
+    try {
+      const o: ObjectInstance = { id: 'f', type: 'fridge', level: 1, x: 3, y: 0, rot: 0 };
+      expect(looksFor(o, new Set(['look-fridge-retro'])).map((l) => [l.id, l.active])).toEqual([['', true], ['retro', false]]);
+      expect(looksFor(o, new Set())).toEqual([]);
+    } finally { CATALOG.splice(CATALOG.indexOf(e), 1); }
+  });
+  it('changing back to the stock look drops the skin and its colour; changing to a look starts in its first colour', () => {
+    withFridgeLook();
+    const o: ObjectInstance = { id: 'f', type: 'fridge', level: 1, x: 3, y: 0, rot: 0, skin: 'retro', col: '#9ED8C6' };
+    changeLook(o, '');
+    expect(o.skin).toBeUndefined();
+    expect(o.col).toBeUndefined();
+    changeLook(o, 'retro');
+    expect(o).toMatchObject({ skin: 'retro', col: '#F3B6C4', x: 3, y: 0 });
   });
 });

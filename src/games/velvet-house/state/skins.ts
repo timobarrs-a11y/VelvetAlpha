@@ -2,8 +2,8 @@
  * Looks: the same piece drawn differently. A look never changes a footprint, a height or a spot, so buying one can only
  * ever restyle what is already standing; it never moves anything or changes where the household uses it.
  */
-import { TYPES, type ObjectInstance } from './objects';
-import type { CatalogEntry } from './catalog';
+import { TYPES, colsOf, type ObjectInstance } from './objects';
+import { CATALOG, type CatalogEntry } from './catalog';
 
 /** The floor of the house the one good spot of each piece is on. */
 export const MAIN_FLOOR = 1;
@@ -30,4 +30,28 @@ export function wearSkin(o: ObjectInstance, skin: string, col?: string): void {
 /** A catalog entry's skin must be one its type has. */
 export function skinExists(type: string | undefined, skin: string | undefined): boolean {
   return !!type && !!skin && !!TYPES[type]?.skins?.[skin];
+}
+
+export interface LookChoice { id: string; name: string; active: boolean }
+
+/**
+ * The looks a piece can wear right now, for the Arrange bar: its stock look always, plus every look of its type the player
+ * has bought. Empty when it has nothing to choose between.
+ */
+export function looksFor(o: Pick<ObjectInstance, 'type' | 'skin'>, owned: ReadonlySet<string>): LookChoice[] {
+  const skins = TYPES[o.type]?.skins;
+  if (!skins) return [];
+  const have = new Set(CATALOG.filter((c) => c.type === o.type && c.skin && owned.has(c.id)).map((c) => c.skin!));
+  if (o.skin) have.add(o.skin);
+  const mine = Object.keys(skins).filter((id) => have.has(id));
+  if (!mine.length) return [];
+  const active = o.skin && skins[o.skin] ? o.skin : '';
+  return [{ id: '', name: TYPES[o.type].name ?? o.type, active: active === '' }, ...mine.map((id) => ({ id, name: skins[id].name, active: active === id }))];
+}
+
+/** Change a piece to one of its looks ('' is the stock look). The colour stays if the new look has it, else starts at the new look's first. */
+export function changeLook(o: ObjectInstance, skin: string): void {
+  if (skin) o.skin = skin; else delete o.skin;
+  const cols = colsOf(o);
+  if (!cols) delete o.col; else if (!o.col || !cols.includes(o.col)) o.col = cols[0];
 }
