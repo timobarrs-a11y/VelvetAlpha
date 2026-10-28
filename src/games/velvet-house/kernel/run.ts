@@ -104,6 +104,8 @@ export function startGameLoop(g: Game): void {
         arrange: g.arrangeFrame(),
         ...g.lampFrame(),
         focus: conversationFocus(),
+        // The room the shop's paint and wallpaper go on, outlined while the shop is open.
+        roomHint: g.drawer.page() === 'shop' ? view.room : null,
         house: { power: world.household.power, dishes: world.household.dishes, laundryPile: world.household.laundryPile, fridge: world.household.fridge, parcel: world.household.parcel && world.household.parcel.ready !== false ? world.household.parcel : null, owned },
       });
       qualityManager.recordFrame(frameDt * 1000);

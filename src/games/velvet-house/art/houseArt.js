@@ -32,8 +32,11 @@ export function createHouseArt(ctx0, opts = {}) {
   // Things you've just tapped: 'objectId:part' -> animT until which it runs.
   const liveUntil = new Map();
   const live = (id, part = '') => (liveUntil.get(id + ':' + part) || 0) > animT;
-  // Switches you flip by tapping: the TV, and the fireplace (lit by default).
-  let tvOn = false;
+  // Switches you flip by tapping: each TV (by id), and the fireplace (lit by default). A TV is also on while someone on
+  // its floor watches.
+  const tvTapped = new Set();
+  let tvWatchLevel = -1;
+  const tvLit = (o) => (!power ? 0 : tvTapped.has(o.id) ? 1 : o.level === tvWatchLevel ? tvF : 0);
   const fireOut = new Set();
   let parcel = null, flags = {}, owned = new Set(), arranging = false, wallMode = 'cut', tapFocus = null;
   let OBJS = [];
@@ -2462,6 +2465,169 @@ export function createHouseArt(ctx0, opts = {}) {
   SEASON_BLOOM.cloud = (T, o, sx, sy) => { [[-9, -22, '#F9C6DA'], [8, -28, '#FFF2B8'], [0, -35, '#E2D3F7'], [11, -16, '#BFE3F5']].forEach(([dx, dy, c]) => { circle(sx + dx, sy + dy, 3, c); circle(sx + dx, sy + dy, 1.1, '#FFFFFF'); }); };
   // Nana: daisies in the leaves.
   SEASON_BLOOM.nana = (T, o, sx, sy) => { [[-9, -22], [8, -26], [0, -33], [11, -15]].forEach(([dx, dy]) => daisy(sx + dx, sy + dy, 3.2)); };
+
+  // ---- The chest freezer: the fridge's second model, low and wide, with its own looks ----
+  // One shape, drawn for every look: a foot (or feet), the body, and the lid, shut or standing up on its back hinge while
+  // someone is in it. A look gives its colours ({ foot, footH, lid, lidH, liner }) and what makes it that look: `feet`
+  // instead of the plain foot, `front` on the body, `top` on the shut lid, `handle` on the lid's front edge.
+  const CHEST = { W: 1.2, D: 0.75, Z: 0.78 };
+  const CF = CHEST.D + 0.004;
+  const CHEST_LOOKS = {
+    stock: (b) => ({ lid: shade(b, 0.05) }),
+    // Camp: a camping cooler grown up. Ribbed steel in forest green, a white lid, chrome corners, latches and a side handle.
+    camp: (b) => ({ foot: '#2B2B30', footH: 0.05, lid: '#F2EEE6', lidH: 0.14, liner: '#F2EEE6',
+      front: (T) => {
+        for (let z = 0.16; z < 0.66; z += 0.1) { T.line([0.04, CF, z], [CHEST.W - 0.04, CF, z], 'rgba(0,0,0,.2)', 1.4); T.line([0.04, CF + 0.001, z + 0.012], [CHEST.W - 0.04, CF + 0.001, z + 0.012], 'rgba(255,255,255,.14)', 1); }
+        [0, CHEST.W - 0.08].forEach((x) => T.box(x, CHEST.D - 0.08, 0.05, 0.08, 0.085, 0.1, '#C9CED6'));
+        T.poly([[0.42, CF + 0.002, 0.46], [0.78, CF + 0.002, 0.46], [0.78, CF + 0.002, 0.58], [0.42, CF + 0.002, 0.58]], '#F2EEE6', 'rgba(0,0,0,.25)', 1);
+        T.line([0.47, CF + 0.003, 0.52], [0.73, CF + 0.003, 0.52], '#B5332F', 2.4);
+        T.line([CHEST.W + 0.004, 0.22, CHEST.Z - 0.1], [CHEST.W + 0.05, 0.3, CHEST.Z - 0.04], '#C9CED6', 2.4);
+        T.line([CHEST.W + 0.05, 0.3, CHEST.Z - 0.04], [CHEST.W + 0.05, 0.45, CHEST.Z - 0.04], '#C9CED6', 2.4);
+        T.line([CHEST.W + 0.05, 0.45, CHEST.Z - 0.04], [CHEST.W + 0.004, 0.53, CHEST.Z - 0.1], '#C9CED6', 2.4);
+      },
+      top: (T, z) => { for (let k = 1; k < 5; k++) { const y = (CHEST.D * k) / 5; T.line([0.06, y, z], [CHEST.W - 0.06, y, z], 'rgba(0,0,0,.12)', 1.6); T.line([0.06, y + 0.015, z], [CHEST.W - 0.06, y + 0.015, z], 'rgba(255,255,255,.6)', 1); } },
+      handle: (T, Z, lh) => {
+        [0.16, CHEST.W - 0.24].forEach((x) => { T.box(x, CHEST.D, Z - 0.1, 0.08, 0.03, lh + 0.06, '#C9CED6'); T.line([x + 0.01, CF + 0.032, Z - 0.08], [x + 0.07, CF + 0.032, Z - 0.08], '#FFFFFF', 1); });
+      } }),
+  };
+  function chestFreezer(T, o) {
+    const { W, D, Z } = CHEST, sk = skinId(o), body = sk ? cl(o) : '#E9EEF0';
+    const L = (CHEST_LOOKS[sk] || CHEST_LOOKS.stock)(body);
+    const fh = L.footH ?? 0.06, lh = L.lidH ?? 0.12, open = live(o.id) || usingSlot(o.id + ':f');
+    if (L.feet) L.feet(T); else T.box(0.03, 0.03, 0, W - 0.06, D - 0.06, fh, L.foot ?? '#9AA3A8');
+    T.box(0, 0, fh, W, D, Z - fh, body);
+    for (let k = 0; k < 4; k++) T.line([W + 0.002, 0.2, fh + 0.08 + k * 0.05], [W + 0.002, 0.55, fh + 0.08 + k * 0.05], 'rgba(0,0,0,.22)', 1.2);
+    if (L.front) L.front(T, body);
+    // The light that says whether there is food in it, as on the fridge.
+    const n = fridge.basic + fridge.fresh, [ix, iy] = T.P(W - 0.1, CF + 0.001, Z - 0.07);
+    circle(ix, iy, 1.9, n === 0 ? '#C2413A' : '#E0A43A');
+    if (!open) {
+      T.box(-0.01, -0.01, Z, W + 0.02, D + 0.02, lh, L.lid);
+      T.line([-0.01, D + 0.012, Z], [W + 0.01, D + 0.012, Z], 'rgba(0,0,0,.28)', 1.2);
+      if (L.top) L.top(T, Z + lh);
+      if (L.handle) L.handle(T, Z, lh);
+      else T.line([0.42, CF + 0.016, Z + lh * 0.45], [0.78, CF + 0.016, Z + lh * 0.45], '#8E979C', 3);
+      return;
+    }
+    // Open: the lid stands up on its hinge behind, and the frosted inside shows, with the food in it.
+    const liner = L.liner ?? '#E3ECF0';
+    T.box(-0.01, -lh + 0.01, Z, W + 0.02, lh, D + 0.02, L.lid);
+    T.poly([[0.05, 0.012, Z + 0.05], [W - 0.05, 0.012, Z + 0.05], [W - 0.05, 0.012, Z + D - 0.05], [0.05, 0.012, Z + D - 0.05]], liner, 'rgba(0,0,0,.18)', 1);
+    const rim = [[0.07, 0.07], [W - 0.07, 0.07], [W - 0.07, D - 0.07], [0.07, D - 0.07]].map(([x, y]) => T.P(x, y, Z));
+    ctx.save(); ctx.beginPath(); rim.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.clip();
+    const deep = Z - 0.5;
+    T.poly([[0.07, 0.07, deep], [W - 0.07, 0.07, deep], [W - 0.07, D - 0.07, deep], [0.07, D - 0.07, deep]], '#CFE0E8');
+    T.poly([[0.07, 0.07, Z], [W - 0.07, 0.07, Z], [W - 0.07, 0.07, deep], [0.07, 0.07, deep]], shade(liner, -0.08));
+    T.poly([[0.07, 0.07, Z], [0.07, D - 0.07, Z], [0.07, D - 0.07, deep], [0.07, 0.07, deep]], shade(liner, -0.18));
+    const pal = ['#C2413A', '#7FB069', '#F2EEE8', '#E0A43A', '#4A88B8', '#D9822B'];
+    for (let i = 0; i < Math.min(n, 8); i++) { const [fx, fy] = T.P(0.22 + (i % 4) * 0.24, 0.24 + Math.floor(i / 4) * 0.26, deep + 0.06); rr(fx - 5, fy - 4, 10, 7, 1.5, pal[i % pal.length]); }
+    ctx.restore();
+    T.poly([[0.07, 0.07, Z + 0.001], [W - 0.07, 0.07, Z + 0.001], [W - 0.07, D - 0.07, Z + 0.001], [0.07, D - 0.07, Z + 0.001]], null, 'rgba(255,255,255,.6)', 1.2);
+    const [mx, my] = T.P(W / 2, D / 2, Z + 0.06), drift = Math.sin(animT * 2) * 2;
+    ell(mx - 8, my - 4 - drift, 16, 4, 'rgba(240,250,255,.32)'); ell(mx + 10, my - 9 + drift, 12, 3, 'rgba(240,250,255,.22)');
+  }
+
+  // ---- The media console: the TV unit's V2 model, long and low under the screen on the wall ----
+  const CON = { W: 2.0, D: 0.5 }, CONF = CON.D + 0.004;
+  function mediaConsole(T, o) {
+    const { W, D } = CON;
+    if (skinId(o) === 'midcentury') {
+      // Mid-century: a walnut credenza floating on splayed, tapered legs. Two slatted walnut doors between two coloured
+      // ones, brass pulls, and a little ceramic vase at one end.
+      const wal = '#6B4A35', panel = cl(o), z0 = 0.18;
+      [[0.12, 0.08, -1, -1], [W - 0.12, 0.08, 1, -1], [0.12, D - 0.08, -1, 1], [W - 0.12, D - 0.08, 1, 1]].forEach(([x, y, sx, sy]) => {
+        T.line([x, y, z0], [x + sx * 0.05, y + sy * 0.03, 0], '#3E2A1E', 3.2); T.line([x, y, z0], [x + sx * 0.05, y + sy * 0.03, 0], '#7A5640', 1.4);
+      });
+      T.box(0, 0, z0, W, D, 0.5 - z0, wal);
+      const doors = [0.03, 0.51, 1.0, 1.49, 1.97];
+      for (let k = 0; k < 4; k++) {
+        const x0 = doors[k] + 0.01, x1 = doors[k + 1] - 0.01, zb = z0 + 0.04, zt = 0.46;
+        if (k === 0 || k === 3) T.poly([[x0, CONF, zb], [x1, CONF, zb], [x1, CONF, zt], [x0, CONF, zt]], panel, 'rgba(0,0,0,.25)', 1);
+        else { T.poly([[x0, CONF, zb], [x1, CONF, zb], [x1, CONF, zt], [x0, CONF, zt]], shade(wal, -0.06), 'rgba(0,0,0,.3)', 1); for (let x = x0 + 0.05; x < x1 - 0.02; x += 0.06) T.line([x, CONF + 0.001, zb + 0.02], [x, CONF + 0.001, zt - 0.02], 'rgba(0,0,0,.28)', 1.2); }
+        const [px, py] = T.P(k < 2 ? x1 - 0.05 : x0 + 0.05, CONF + 0.002, 0.33); circle(px, py, 1.8, '#C9A24A'); circle(px - 0.5, py - 0.5, 0.7, '#F0DCA0');
+      }
+      for (let k = 1; k < 6; k++) T.line([0.02, (D * k) / 6, 0.5], [W - 0.02, (D * k) / 6 + 0.01, 0.5], 'rgba(255,255,255,.06)', 1.2);
+      T.box(1.8, 0.16, 0.5, 0.12, 0.12, 0.18, '#E8DCC8'); T.box(1.82, 0.18, 0.68, 0.08, 0.08, 0.06, '#E8DCC8');
+      const [vx, vy] = T.P(1.86, 0.22, 0.74); ell(vx, vy, 2.4, 1.1, '#8E8A84');
+    } else {
+      // Stock: pale oak on a dark plinth. Two drawers either side of an open shelf with the game console in it.
+      const oak = '#D8C7A8';
+      T.box(0.04, 0.04, 0, W - 0.08, D - 0.08, 0.06, '#2B2B30');
+      T.box(0, 0, 0.06, W, D, 0.44, oak);
+      T.poly([[0.68, CONF, 0.1], [1.32, CONF, 0.1], [1.32, CONF, 0.44], [0.68, CONF, 0.44]], '#3A3340');
+      T.box(0.78, D - 0.2, 0.1, 0.36, 0.18, 0.08, '#F2EEE8'); const [lx, ly] = T.P(1.08, CONF, 0.14); circle(lx, ly, 1.1, '#5BE3E6');
+      [[0.06, 0.64], [1.36, 1.94]].forEach(([x0, x1]) => {
+        [[0.1, 0.26], [0.28, 0.44]].forEach(([zb, zt]) => { T.poly([[x0, CONF, zb], [x1, CONF, zb], [x1, CONF, zt], [x0, CONF, zt]], shade(oak, 0.04), 'rgba(80,60,40,.35)', 1); const [kx, ky] = T.P((x0 + x1) / 2, CONF + 0.002, (zb + zt) / 2); circle(kx, ky, 1.6, '#2B2B30'); });
+      });
+    }
+  }
+
+  // ---- TVs: pieces of their own, on a wall or standing on something ----
+  // The picture on a flat screen (local corners: bottom left, bottom right, top right, top left): dark glass with a sheen
+  // when off; when on, a slow wash of colour with shapes drifting across it.
+  function tvPicture(T, q, lit) {
+    const at = (u, v) => [0, 1, 2].map((k) => q[0][k] + (q[1][k] - q[0][k]) * u + (q[3][k] - q[0][k]) * v);
+    if (lit < 0.05) { T.poly(q, '#2A2D35'); T.line(at(0.08, 0.82), at(0.3, 0.55), 'rgba(255,255,255,.08)', 3); return; }
+    const hue = (animT * 25) % 360;
+    T.poly(q, `hsl(${hue},55%,${28 + lit * 18}%)`);
+    for (let i = 0; i < 4; i++) {
+      const u = 0.05 + ((i * 0.37 + animT * 0.15) % 0.72), v = 0.08 + ((i * 0.23 + Math.sin(animT + i) * 0.1 + 0.3) % 0.66);
+      T.poly([at(u, v), at(u + 0.2, v), at(u + 0.2, v + 0.18), at(u, v + 0.18)], `hsla(${(hue + i * 70) % 360},80%,70%,${0.5 * lit})`);
+    }
+  }
+  const TV_DRAWERS = {
+    // On the wall: a slim black panel on a bracket.
+    walltv: (T, o) => {
+      const big = has('bigtv'), x0 = big ? -0.1 : 0, x1 = big ? 1.5 : 1.4, z0 = big ? 0.74 : 0.82, z1 = big ? 1.86 : 1.68;
+      T.box(0.55, -0.08, 1.1, 0.3, 0.09, 0.3, '#2B2B30');
+      T.box(x0, 0.01, z0, x1 - x0, 0.06, z1 - z0, '#1B1A1F');
+      tvPicture(T, [[x0 + 0.05, 0.072, z0 + 0.05], [x1 - 0.05, 0.072, z0 + 0.05], [x1 - 0.05, 0.072, z1 - 0.05], [x0 + 0.05, 0.072, z1 - 0.05]], tvLit(o));
+      const [lx, ly] = T.P(x1 - 0.08, 0.073, z0 + 0.025); circle(lx, ly, 0.9, tvLit(o) > 0.05 ? '#7FD36A' : '#C2413A');
+    },
+    // A flat screen on a foot, for a TV unit, a console or the entertainment center.
+    tvflat: (T, o) => {
+      T.box(0.3, 0.04, 0, 0.4, 0.18, 0.03, '#2B2B30'); T.box(0.47, 0.08, 0.03, 0.06, 0.05, 0.1, '#2B2B30');
+      T.box(0, 0.1, 0.12, 1.0, 0.05, 0.6, '#1B1A1F');
+      tvPicture(T, [[0.04, 0.152, 0.16], [0.96, 0.152, 0.16], [0.96, 0.152, 0.68], [0.04, 0.152, 0.68]], tvLit(o));
+    },
+    // A little screen in a coloured frame, for a desk or a dresser.
+    tvdesk: (T, o) => {
+      const c = cl(o);
+      T.box(0.16, 0.03, 0, 0.2, 0.14, 0.025, c); T.box(0.23, 0.07, 0.025, 0.06, 0.04, 0.06, shade(c, -0.15));
+      T.box(0, 0.08, 0.08, 0.52, 0.04, 0.36, c);
+      tvPicture(T, [[0.04, 0.122, 0.11], [0.48, 0.122, 0.11], [0.48, 0.122, 0.41], [0.04, 0.122, 0.41]], tvLit(o));
+    },
+    // A tube TV: a deep cabinet, knobs and a grille beside the screen, and rabbit ears.
+    tvtube: (T, o) => {
+      const c = cl(o);
+      T.box(0, 0, 0, 0.6, 0.4, 0.48, c);
+      T.poly([[0.03, 0.401, 0.05], [0.46, 0.401, 0.05], [0.46, 0.401, 0.44], [0.03, 0.401, 0.44]], '#1B1A1F');
+      tvPicture(T, [[0.06, 0.402, 0.09], [0.43, 0.402, 0.09], [0.43, 0.402, 0.4], [0.06, 0.402, 0.4]], tvLit(o));
+      [0.35, 0.24].forEach((z) => { const [kx, ky] = T.P(0.53, 0.402, z); circle(kx, ky, 2.4, '#2B2B30'); circle(kx - 0.6, ky - 0.6, 0.9, '#9AA0A6'); });
+      for (let z = 0.08; z < 0.17; z += 0.03) T.line([0.49, 0.402, z], [0.57, 0.402, z], 'rgba(0,0,0,.4)', 1);
+      const [bx, by] = T.P(0.3, 0.2, 0.48); ell(bx, by, 4, 2, '#2B2B30');
+      T.line([0.3, 0.2, 0.49], [0.12, 0.12, 0.84], '#9AA0A6', 1.3); T.line([0.3, 0.2, 0.49], [0.5, 0.26, 0.86], '#9AA0A6', 1.3);
+    },
+  };
+  // The entertainment center: two tall shelf towers, a cabinet and a bridge round a niche the TV stands in.
+  function entCenter(T, o) {
+    const c = cl(o), dk = shade(c, -0.35), W = 2.4, D = 0.55;
+    T.box(0.52, 0, 0, 1.36, D, 0.62, shade(c, -0.05));
+    T.poly([[0.52, 0.012, 0.62], [1.88, 0.012, 0.62], [1.88, 0.012, 1.6], [0.52, 0.012, 1.6]], dk);
+    [[0.52, 1.2], [1.2, 1.88]].forEach(([x0, x1]) => { T.poly([[x0 + 0.03, D + 0.001, 0.05], [x1 - 0.03, D + 0.001, 0.05], [x1 - 0.03, D + 0.001, 0.57], [x0 + 0.03, D + 0.001, 0.57]], null, 'rgba(0,0,0,.3)', 1); });
+    [1.14, 1.26].forEach((x) => { const [px, py] = T.P(x, D + 0.002, 0.34); circle(px, py, 1.6, '#C9A24A'); });
+    const books = ['#B5476E', '#3F5B4C', '#2E3B57', '#C9A24A', '#E8DCC8', '#7A4E32'];
+    [[0, 0.52], [1.88, 2.4]].forEach(([x0, x1], side) => {
+      T.box(x0, 0, 0, x1 - x0, D, 1.85, c);
+      [0.45, 0.9, 1.35].forEach((z, row) => {
+        T.poly([[x0 + 0.04, D + 0.001, z - 0.38], [x1 - 0.04, D + 0.001, z - 0.38], [x1 - 0.04, D + 0.001, z], [x0 + 0.04, D + 0.001, z]], dk);
+        for (let k = 0; k < 6; k++) { const x = x0 + 0.07 + k * 0.065, h = 0.22 + ((k * 7 + row * 3 + side) % 4) * 0.03; T.line([x, D + 0.002, z - 0.37], [x, D + 0.002, z - 0.37 + h], books[(k + row * 2 + side) % books.length], 2.6); }
+        T.line([x0 + 0.02, D + 0.002, z], [x1 - 0.02, D + 0.002, z], shade(c, 0.12), 1.6);
+      });
+    });
+    T.box(0.52, 0, 1.6, 1.36, D, 0.25, c);
+    T.box(-0.02, -0.02, 1.85, W + 0.04, D + 0.04, 0.08, shade(c, 0.1));
+  }
   const DRAWN = {
     sofa: {    
       parts: (o) => { const s1 = usingSlot(o.id + ':s1') ? 1 : 0, s2 = usingSlot(o.id + ':s2') ? 1 : 0;
@@ -2746,6 +2912,13 @@ export function createHouseArt(ctx0, opts = {}) {
         const n = fridge.basic + fridge.fresh; T.poly([[0.08, 0.851, 1.45], [0.32, 0.851, 1.45], [0.32, 0.851, 1.68], [0.08, 0.851, 1.68]], n === 0 ? '#C2413A' : '#E0A43A');
         if (live(T.o.id)) { T.poly([[0.04, 0.851, 0.05], [0.86, 0.851, 0.05], [0.86, 0.851, 1.25], [0.04, 0.851, 1.25]], 'rgba(255,248,220,.95)'); [0.4, 0.75].forEach(z => T.line([0.06, 0.852, z], [0.84, 0.852, z], 'rgba(150,160,170,.6)', 1)); [[0.2, 0.42, '#C2413A'], [0.5, 0.42, '#7FB069'], [0.3, 0.77, '#F2EEE8'], [0.62, 0.77, '#E0A43A']].forEach(([x, z, col]) => { const [cx, cy] = T.P(x, 0.853, z + 0.06); rr(cx - 3, cy - 5, 6, 6, 1, col); }); T.poly([[0.86, 0.851, 0.05], [0.86, 1.6, 0.05], [0.86, 1.6, 1.25], [0.86, 0.851, 1.25]], door, 'rgba(60,70,80,.3)', 1); } })],
        },
+    chestfreezer: { parts: () => [F(0, 0, 1.2, 0.75, (T) => chestFreezer(T, T.o))] },
+    mediaconsole: { parts: () => [F(0, 0, 2.0, 0.5, (T) => mediaConsole(T, T.o))] },
+    walltv: { parts: () => [F(0, 0, 1.4, 0.1, (T) => TV_DRAWERS.walltv(T, T.o))] },
+    tvflat: { parts: () => [F(0, 0, 1.0, 0.26, (T) => TV_DRAWERS.tvflat(T, T.o))] },
+    tvdesk: { parts: () => [F(0, 0, 0.52, 0.2, (T) => TV_DRAWERS.tvdesk(T, T.o))] },
+    tvtube: { parts: () => [F(0, 0, 0.62, 0.55, (T) => TV_DRAWERS.tvtube(T, T.o))] },
+    entcenter: { parts: () => [F(0, 0, 2.4, 0.55, (T) => entCenter(T, T.o))] },
     tvunit: {    
       parts: () => [F(0, 0, 1.6, 0.45, (T) => { T.box(0, 0, 0, 1.6, 0.45, 0.42, '#3A3340'); T.line([0.8, 0.45, 0.06], [0.8, 0.45, 0.36], 'rgba(255,255,255,.12)', 1); if (!has('bigtv')) { T.box(0.1, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); T.box(1.32, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); } })] },
     shower: {    
@@ -3676,13 +3849,6 @@ export function createHouseArt(ctx0, opts = {}) {
     else if (f.k === 'highwin') { poly(featPoly(f), '#E9E4DD', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.06), skyColor()); gMat = MATERIAL.matte; }
     else if (f.k === 'door') { poly([P(f.u[0] - 0.08, 0), P(f.u[1] + 0.08, 0), P(f.u[1] + 0.08, f.z[1] + 0.05), P(f.u[0] - 0.08, f.z[1] + 0.05)], '#EFE8DE', EDGE, 0.8); poly(featPoly(f), '#7A5236'); poly([P(f.u[0] + 0.1, 1.15), P(f.u[1] - 0.1, 1.15), P(f.u[1] - 0.1, 1.9), P(f.u[0] + 0.1, 1.9)], null, 'rgba(0,0,0,.25)', 1); poly([P(f.u[0] + 0.1, 0.2), P(f.u[1] - 0.1, 0.2), P(f.u[1] - 0.1, 0.95), P(f.u[0] + 0.1, 0.95)], null, 'rgba(0,0,0,.25)', 1); const [kx, ky] = iso(...P(f.u[0] + 0.15, 1.02)); circle(kx, ky, 2, '#E0B85A'); }
     else if (f.k === 'switch') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); const mid = (f.u[0] + f.u[1]) / 2; poly(party ? [P(mid - 0.03, 1.11), P(mid + 0.03, 1.11), P(mid + 0.03, 1.19), P(mid - 0.03, 1.19)] : [P(mid - 0.03, 1.03), P(mid + 0.03, 1.03), P(mid + 0.03, 1.11), P(mid - 0.03, 1.11)], party ? '#D24A7A' : '#9C9298'); }
-    else if (f.k === 'tv') {
-      const big = has('bigtv'), u0 = big ? f.u[0] - 0.15 : f.u[0], u1 = big ? f.u[1] + 0.15 : f.u[1], z0 = big ? 0.72 : f.z[0], z1 = big ? 1.9 : f.z[1];
-      poly([P(u0, z0), P(u1, z0), P(u1, z1), P(u0, z1)], '#1B1A1F');
-      const pts = [P(u0 + 0.06, z0 + 0.06), P(u1 - 0.06, z0 + 0.06), P(u1 - 0.06, z1 - 0.06), P(u0 + 0.06, z1 - 0.06)];
-      if (tvF < 0.05) poly(pts, '#2A2D35');
-      else { const t = animT, hue = (t * 25) % 360; poly(pts, `hsl(${hue},55%,${28 + tvF * 18}%)`); for (let i = 0; i < 4; i++) { const uu = u0 + 0.1 + ((i * 0.37 + t * 0.15) % (u1 - u0 - 0.35)), zz = z0 + 0.1 + ((i * 0.23 + Math.sin(t + i) * 0.1 + 0.3) % (z1 - z0 - 0.3)); poly([P(uu, zz), P(uu + 0.18, zz), P(uu + 0.18, zz + 0.12), P(uu, zz + 0.12)], `hsla(${(hue + i * 70) % 360},80%,70%,${0.5 * tvF})`); } }
-    }
     else if (f.k === 'art') {
       if (has('art')) { poly(featPoly(f), '#F2EEE8', EDGE, 0.8); poly(featPoly(f, 0.08), '#1F2A44'); poly([P(f.u[0] + 0.15, f.z[0] + 0.15), P(f.u[0] + 0.95, f.z[0] + 0.15), P(f.u[0] + 0.55, f.z[1] - 0.15)], '#E0A43A'); poly([P(f.u[0] + 0.75, f.z[0] + 0.15), P(f.u[1] - 0.12, f.z[0] + 0.15), P(f.u[1] - 0.45, f.z[1] - 0.25)], '#D24A7A'); }
       else { const g = { u: [f.u[0] + 0.2, f.u[1] - 0.2], z: [f.z[0] + 0.1, f.z[1] - 0.1], p: f.p }; poly(featPoly(g), '#2B2430'); poly(featPoly(g, 0.06), '#E8C9A0'); poly([P(g.u[0] + 0.2, g.z[0] + 0.1), P(g.u[0] + 0.8, g.z[0] + 0.1), P(g.u[0] + 0.5, g.z[1] - 0.1)], '#B5476E'); }
@@ -4223,7 +4389,14 @@ export function createHouseArt(ctx0, opts = {}) {
       ctx.globalCompositeOperation = 'source-over';
       drawMotes(lights);
     }
-    if (level === 1 && tvF > 0.02) { ctx.globalCompositeOperation = 'lighter'; const [tx, ty] = iso(6.8, 0.3, 1.25), hue = (animT * 25) % 360, g = ctx.createRadialGradient(tx, ty, 6, tx, ty, has('bigtv') ? 190 : 150); g.addColorStop(0, `hsla(${hue},70%,65%,${(0.12 + a * 0.5) * tvF})`); g.addColorStop(1, 'hsla(0,0%,0%,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
+    // Each TV that is on lights the room round it a little, in the colour of its picture.
+    for (const o of OBJS) {
+      const sc = STATE_TYPES[o.type]?.screen, lit = sc && o.level === level ? tvLit(o) : 0;
+      if (lit < 0.02) continue;
+      const [wx, wy] = xf(o, sc[0], sc[1]), [tx, ty] = iso(wx, wy, sc[2] + (o.z || 0)), hue = (animT * 25) % 360, g = ctx.createRadialGradient(tx, ty, 6, tx, ty, 60 + STATE_TYPES[o.type].W * 65);
+      g.addColorStop(0, `hsla(${hue},70%,65%,${(0.12 + a * 0.5) * lit})`); g.addColorStop(1, 'hsla(0,0%,0%,0)');
+      ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over';
+    }
     if (level === 1 && partyF > 0.02) {
       const t = animT, [rx1, ry1, rx2, ry2] = LEVELS[1].rug, cx = (rx1 + rx2) / 2, cy = (ry1 + ry2) / 2;
       ctx.fillStyle = `rgba(18,8,40,${0.45 * partyF})`; ctx.fillRect(0, 0, W, H);
@@ -5271,8 +5444,9 @@ export function createHouseArt(ctx0, opts = {}) {
     // The pets, so the bowls and litter boxes can show what is in them.
     PETS.length = 0; if (s.pets) for (const p of s.pets) PETS.push(p);
     const t = animT, lv = viewLevel;
-    const watching = [jordan, maya].some(c => c && c.task && c.task.phase === 'do' && (c.task.name === 'tv' || c.task.name === 'movie'));
-    tvF += ((power && (watching || tvOn) ? 1 : 0) - tvF) * Math.min(1, rdt * 4);
+    const watcher = [jordan, maya].find(c => c && c.task && c.task.phase === 'do' && (c.task.name === 'tv' || c.task.name === 'movie'));
+    if (watcher) tvWatchLevel = watcher.level;
+    tvF += ((power && watcher ? 1 : 0) - tvF) * Math.min(1, rdt * 4);
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     const lights = activeLights(lv);
@@ -5317,6 +5491,7 @@ export function createHouseArt(ctx0, opts = {}) {
     drawFrontWalls(lv); drawProjector(lv); drawObjectSpeech(lv, t);
     if (arrState) drawArrangeOverlay(arrState, lv);
     drawGuides(lv, t);
+    drawRoomHint(lv, s.roomHint, t);
     drawPoofs(lv);
     drawSparkles(lv);
     } finally { gOn = false; ctx = ctx0; gMat = MATERIAL.matte; }
@@ -5331,9 +5506,26 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.fillStyle = 'rgba(34,26,35,.55)'; ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillText(LEVEL_NAMES[lv].toUpperCase(), W - 14, H - 12); ctx.textAlign = 'start';
   }
 
-  function applyPaint(level, color) { if (LOOKS[level]) LOOKS[level].paint = color; }
-  function applyWallpaper(level, pattern) { if (LOOKS[level]) LOOKS[level].paper = pattern; }
-  function applyFloor(level, floor) { if (LOOKS[level]) LOOKS[level].floor = floor; }
+  // Paint, wallpaper and floors go on one room of a floor, or on the whole floor (`room` left out), which then puts every
+  // room of it back to the one look. Paint goes over wallpaper, so painting takes the paper down where it goes.
+  function restyle(level, room, set) {
+    if (!LOOKS[level]) return;
+    const rooms = ROOMLOOK[level];
+    if (room && LEVELS[level].rooms.some((r) => r.n === room)) {
+      rooms[room] = Object.assign(rooms[room] || {}, set);
+      return;
+    }
+    Object.assign(LOOKS[level], set);
+    for (const rn of Object.keys(rooms)) {
+      for (const k of Object.keys(set)) delete rooms[rn][k];
+      if (!Object.keys(rooms[rn]).length) delete rooms[rn];
+    }
+  }
+  function applyPaint(level, color, room) { restyle(level, room, { paint: color, paper: null }); }
+  function applyWallpaper(level, pattern, room) { restyle(level, room, { paper: pattern }); }
+  function applyFloor(level, floor, room) { restyle(level, room, { floor }); }
+  /** What a room (or, with no room, the whole floor) looks like: its paint, wallpaper and floor. */
+  const roomLook = (level, room) => Object.assign({}, lookAt(level, room));
   /** Drapes on the windows of a floor ('' takes them down); kept with the house's looks, so they survive a reload. */
   function applyDrapes(level, style) { if (LOOKS[level]) { if (style) LOOKS[level].drapes = style; else delete LOOKS[level].drapes; } }
   // Pictures that can hang as wallpaper: { id, base (a matching tone, used while loading), url | stops }.
@@ -5375,6 +5567,16 @@ export function createHouseArt(ctx0, opts = {}) {
     return toggleObjectLight(best.id);
   }
 
+  // The room the shop's paint, wallpaper and floors will go on: a soft tint and a dashed line round its floor.
+  function drawRoomHint(level, name, t) {
+    const rm = name && LEVELS[level]?.rooms.find((r) => r.n === name);
+    if (!rm) return;
+    const [x1, y1, x2, y2] = rm.r, pulse = 0.5 + 0.5 * Math.sin(t * 3), pts = [[x1, y1, 0.01], [x2, y1, 0.01], [x2, y2, 0.01], [x1, y2, 0.01]].map((p) => iso(...p));
+    ctx.save(); ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
+    ctx.fillStyle = `rgba(255,214,102,${0.08 + 0.06 * pulse})`; ctx.fill();
+    ctx.setLineDash([6, 4]); ctx.strokeStyle = `rgba(255,214,102,${0.6 + 0.3 * pulse})`; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+  }
+
   // Guides for scripts: a pulsing outline on the piece to tap, and a ghost of where a piece should go.
   let spotIds = [], ghost = null;
   function drawGuides(level, t) {
@@ -5400,7 +5602,8 @@ export function createHouseArt(ctx0, opts = {}) {
 
   // The outline of an object on screen: its footprint and its top, wrapped.
   function objHull(o) {
-    const [fw, fd] = fp(o), up = o.z || 0, h = (T_OF(o).h || 1) + up, pts = [];
+    // A piece on a table starts at its top; one hung on a wall at the height it hangs.
+    const [fw, fd] = fp(o), up = (o.z || 0) + (T_OF(o).mount ?? 0), h = (T_OF(o).h || 1) + (o.z || 0), pts = [];
     [[o.x, o.y], [o.x + fw, o.y], [o.x + fw, o.y + fd], [o.x, o.y + fd]].forEach(([x, y]) => { pts.push(iso(x, y, up)); pts.push(iso(x, y, h)); });
     pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
     const cross = (q, a, b) => (a[0] - q[0]) * (b[1] - q[1]) - (a[1] - q[1]) * (b[0] - q[0]);
@@ -5505,6 +5708,24 @@ export function createHouseArt(ctx0, opts = {}) {
     return best;
   }
 
+  function flipTv(tv) {
+    if (tvTapped.has(tv.id)) { tvTapped.delete(tv.id); return 'TV off.'; }
+    tvTapped.add(tv.id); return 'The TV flickers on.';
+  }
+  function tvFor(host) {
+    const on = OBJS.find((o) => o.on === host.id && STATE_TYPES[o.type]?.screen);
+    if (on) return on;
+    const [hw, hd] = fp(host), cx = host.x + hw / 2, cy = host.y + hd / 2;
+    let best = null, bd = 1.6;
+    for (const o of OBJS) {
+      const sc = STATE_TYPES[o.type]?.screen;
+      if (!sc || o.level !== host.level) continue;
+      const [x, y] = xf(o, sc[0], sc[1]), d = Math.hypot(x - cx, y - cy);
+      if (d < bd) { bd = d; best = o; }
+    }
+    return best;
+  }
+
   // Tapping an object brings it to life for a moment (or flips its switch).
   // Returns what happened, for the log, or null if it does nothing on a tap.
   function poke(o, part = '') {
@@ -5520,7 +5741,9 @@ export function createHouseArt(ctx0, opts = {}) {
       case 'musicbox': return run(30, 'The lid opens and a tinkly little tune starts to play.');
       case 'servicebell': return run(1.2, 'Ding!');
       case 'diffuser': return run(20, 'The diffuser hums and puffs out eucalyptus.');
-      case 'tvunit': tvOn = !tvOn; return tvOn ? 'The TV flickers on.' : 'TV off.';
+      case 'walltv': case 'tvflat': case 'tvdesk': case 'tvtube': return flipTv(o);
+      // A stand switches the TV on it, or the one on the wall above it.
+      case 'tvunit': case 'mediaconsole': case 'entcenter': { const tv = tvFor(o); return tv ? flipTv(tv) : null; }
       case 'fireplace': if (fireOut.has(o.id)) { fireOut.delete(o.id); return 'The fire crackles back to life.'; } fireOut.add(o.id); return 'The fire dies down.';
       case 'laundry': return run(12, 'The washer churns into a spin cycle.');
       case 'records': return run(14, 'The needle drops. A record starts spinning.');
@@ -5537,6 +5760,7 @@ export function createHouseArt(ctx0, opts = {}) {
       case 'bathtub': return run(10, 'The tub fills with steaming water.');
       case 'toilet': return run(3, 'Flush.');
       case 'fridge': return run(3, 'The fridge door swings open. Snacks.');
+      case 'chestfreezer': return run(3, 'The lid swings up on a breath of cold air.');
       case 'counter': {
         const msg = { sink: 'The faucet runs.', stove: 'Click, click, whoomph: the burner lights.', coffee: 'The coffee machine gurgles.' }[part];
         return msg ? run(part === 'stove' ? 8 : 5, msg) : null;
@@ -5545,5 +5769,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, roomLook, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
 }

@@ -1,5 +1,5 @@
-import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, surfaceUnder, putOn, takeOff, carryOnTop, fridgeUnder, type PlacementCheck, type Pose } from '../state/arrange';
-import { looksFor, changeLook } from '../state/skins';
+import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, surfaceUnder, putOn, takeOff, carryOnTop, fridgeUnder, swapModel, type PlacementCheck, type Pose } from '../state/arrange';
+import { looksFor, changeLook, parseLook } from '../state/skins';
 import { TYPES, footprint, displayName, type ObjectInstance } from '../state/objects';
 import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, WX, WY, roomName } from '../state/house';
 import { buildWorld } from '../state/agents';
@@ -192,9 +192,19 @@ export function createArrange(g: Game): Partial<Game> {
     log(`Changed the ${nameOf(o)}'s colour.`);
   }
   // Change the selected piece to one of the looks the player has (or its stock look, ''): free, as they own them.
-  function useLook(skin: string): void {
+  // Another model of the piece (a chest freezer for the fridge) takes its place if its size fits there.
+  function useLook(id: string): void {
     const o = selectedObj;
-    if (!o || !looksFor(o, g.owned).some((l) => l.id === skin)) return;
+    if (!o || !looksFor(o, g.owned).some((l) => l.id === id)) return;
+    const { type, skin } = parseLook(o, id);
+    if (type !== o.type) {
+      const was = nameOf(o);
+      if (!swapModel(world.objs, o, type, peopleOnFloor())) { log(`The ${(TYPES[type]?.name ?? type).toLowerCase()} won't fit where the ${was} is.`); return; }
+      changeLook(o, skin);
+      relearnLayout(o);
+      log(`The ${was} is now the ${displayName(o).toLowerCase()}.`);
+      return;
+    }
     changeLook(o, skin);
     log(`The ${nameOf(o)} is now the ${displayName(o).toLowerCase()}.`);
   }

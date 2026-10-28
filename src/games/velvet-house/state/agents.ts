@@ -1,7 +1,7 @@
 import type { Garment } from './garment';
 import type { HeadImages } from './headSprites';
 import type { BodyImages } from './bodySprites';
-import { TYPES, blocksOf, isRug, isWall, type ObjectInstance } from './objects';
+import { TYPES, blocksOf, isRug, isWall, isMount, type ObjectInstance } from './objects';
 import { ACTIVITIES, GAIN_OF, chainOf } from './activities';
 import { NEED_KEYS, tickNeeds, weight, type NeedKey } from './needs';
 import { buildGrid, planRoute, randomFree, type Block, type Grid, type RouteLeg } from './pathfinding';
@@ -97,6 +97,8 @@ const DEFAULT_SLEEP: SleepTimes = { nightStart: 22.5, wakeAt: 6 };
 export interface HouseWorld {
   slots: Slot[];
   grids: Grid[];
+  /** Where the TVs are: the middle of each picture, on its floor. */
+  screens: Array<{ level: number; x: number; y: number }>;
 }
 
 const WALK_SPEED = 1.5;
@@ -207,7 +209,7 @@ export function buildWorld(objs: ObjectInstance[]): HouseWorld {
     );
     for (const o of objs) {
       const t = TYPES[o.type];
-      if (o.level !== level || o.on || !t || isRug(o.type) || isWall(o.type)) continue;
+      if (o.level !== level || o.on || !t || isRug(o.type) || isWall(o.type) || isMount(o.type)) continue;
       const rects = blocksOf(o.type).length ? blocksOf(o.type) : [[0, 0, t.W, t.D] as [number, number, number, number]];
       for (const r of rects) {
         const a = xf(o, r[0], r[1]);
@@ -217,7 +219,11 @@ export function buildWorld(objs: ObjectInstance[]): HouseWorld {
     }
     return buildGrid(blocks, WX, WY);
   });
-  return { slots: buildSlots(objs), grids };
+  const screens = objs.filter((o) => !!TYPES[o.type]?.screen).map((o) => {
+    const [x, y] = xf(o, TYPES[o.type].screen![0], TYPES[o.type].screen![1]);
+    return { level: o.level, x, y };
+  });
+  return { slots: buildSlots(objs), grids, screens };
 }
 
 /** A visitor: spawned by a script, no needs, drawn like anyone else. */
@@ -262,13 +268,17 @@ export function createAgent(id: AgentId, name: string, needs: Partial<CharacterN
 function freeSlot(world: HouseWorld, ch: Agent, act: string, taken: Set<string>): Slot | null | undefined {
   const tags = tagsFor(act, ch.id);
   if (!tags.length) return undefined;
-  const lvReq = ACTIVITIES[act]?.level;
+  const lvReq = ACTIVITIES[act]?.level, screen = ACTIVITIES[act]?.screen;
   for (const tag of tags) {
     let best: Slot | null = null;
     let bd = Infinity;
     for (const s of world.slots) {
       if (s.tag !== tag || taken.has(s.id) || (lvReq !== undefined && s.level !== lvReq)) continue;
-      const d = Math.hypot(s.stand[0] - ch.x, s.stand[1] - ch.y) + Math.abs(s.level - ch.level) * 6;
+      // Watching TV: only on a floor with a TV, and a seat near one beats a seat nearer the person.
+      const tvs = screen ? world.screens.filter((v) => v.level === s.level) : [];
+      if (screen && !tvs.length) continue;
+      let d = Math.hypot(s.stand[0] - ch.x, s.stand[1] - ch.y) + Math.abs(s.level - ch.level) * 6;
+      if (screen) d += 2 * Math.min(...tvs.map((v) => Math.hypot(v.x - s.stand[0], v.y - s.stand[1])));
       if (d < bd) { bd = d; best = s; }
     }
     if (best) return best;

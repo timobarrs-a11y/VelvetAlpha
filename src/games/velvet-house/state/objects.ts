@@ -21,7 +21,7 @@ export type BlockRect = [number, number, number, number];
 
 /** What a look is mostly made of, and the theme set it belongs to. */
 export type Material = 'wood' | 'metal' | 'laminate' | 'stone' | 'fabric' | 'glass';
-export type Theme = 'retro' | 'farmhouse' | 'modern' | 'scandi' | 'industrial' | 'beach' | 'deco' | 'japandi' | 'boho' | 'space' | 'gothic' | 'riad' | 'tropical' | 'memphis' | 'provence' | 'adobe' | 'neon' | 'candy' | 'cuddle' | 'arcade' | 'spring' | 'summer' | 'fall' | 'winter' | 'cloud' | 'nana' | 'brutalist' | 'spa' | 'hotel' | 'cottage' | 'midcentury' | 'regency' | 'chalet' | 'victorian' | 'ryokan' | 'celestial';
+export type Theme = 'retro' | 'farmhouse' | 'modern' | 'scandi' | 'industrial' | 'beach' | 'deco' | 'japandi' | 'boho' | 'space' | 'gothic' | 'riad' | 'tropical' | 'memphis' | 'provence' | 'adobe' | 'neon' | 'candy' | 'cuddle' | 'arcade' | 'spring' | 'summer' | 'fall' | 'winter' | 'cloud' | 'nana' | 'brutalist' | 'spa' | 'hotel' | 'cottage' | 'midcentury' | 'regency' | 'chalet' | 'victorian' | 'ryokan' | 'celestial' | 'camp';
 
 /**
  * One look of a piece. A look only changes how the piece is drawn, named, priced and coloured; the footprint, height
@@ -55,6 +55,19 @@ export interface ObjectTypeDef {
   surface?: { z: number; rect: [number, number, number, number] };
   /** The looks this piece has besides the stock one, by id. */
   skins?: Record<string, SkinDef>;
+  /**
+   * The job this piece does, when it is another model of a piece the house has (a chest freezer is a fridge): its own
+   * size, height and spots, so it changes the room, while the household, the shop and the story treat it as that piece.
+   * Unset, the type is its own kind.
+   */
+  kind?: string;
+  /** A TV: where the middle of its picture is (local x, y and height), for its glow. People watch from seats on its floor. */
+  screen?: [number, number, number];
+  /**
+   * Hung on a wall this high off the floor: its back must be against one, it hangs over whatever stands below it, and
+   * nobody walks into it.
+   */
+  mount?: number;
 }
 
 export const TYPES: Record<string, ObjectTypeDef> = {
@@ -82,9 +95,9 @@ export const TYPES: Record<string, ObjectTypeDef> = {
     spots: { t: { stand: [-0.45, 0.31], pos: [0.6, 0.31, 0.18], dir: [1, 0], tag: 'tread', base: 'deck' } } },
   gym: { W: 1.45, D: 1.0, h: 0.6, name: 'Weights and mat', blocks: [[1.1, 0.1, 1.45, 0.9]],
     spots: { l: { stand: [0.55, 0.5], dir: [0, 1], tag: 'lift', group: 'mat' }, s: { stand: [0.55, 0.5], dir: [0, 1], tag: 'stretch', group: 'mat' } } },
-  desk: { W: 1.2, D: 1.25, h: 1.2, name: 'Desk', light: { at: [1.06, 0.18, 1.02], r: 95 },
+  desk: { W: 1.2, D: 1.25, h: 1.2, name: 'Desk', light: { at: [1.06, 0.18, 1.02], r: 95 }, surface: { z: 0.78, rect: [0.03, 0.3, 1.17, 0.58] },
     spots: { d: { stand: [0.6, 1.75], pos: [0.6, 0.98, 0.49], dir: [0, -1], tag: 'desk', base: 'seat' } } },
-  dresser: { W: 1.2, D: 0.5, h: 0.85, name: 'Dresser', skins: { brutalist: { name: 'Steel locker dresser', material: 'metal', theme: 'brutalist', cols: ['#4A4E55', '#6E7F8A', '#8E3B2E'] }, spa: { name: 'Slatted teak dresser', material: 'wood', theme: 'spa', cols: ['#9C6B45', '#B98A62', '#C9B8A6'] }, hotel: { name: 'Walnut lowboy with a marble top', material: 'wood', theme: 'hotel', cols: ['#4A3226', '#6B4A36', '#2A2224'] }, cottage: { name: 'Hand-painted flower chest', material: 'wood', theme: 'cottage', cols: ['#A9BFA0', '#F6EFDF', '#9DB7D5'] }, midcentury: { name: 'Long walnut lowboy', material: 'wood', theme: 'midcentury', cols: ['#7A4E2D', '#9A6A44', '#5E3A20'] }, regency: { name: 'Mirrored chest on gold legs', material: 'glass', theme: 'regency', cols: ['#DCE6EE', '#B9C8D4', '#F1EEE9'] }, chalet: { name: 'Rough-hewn pine chest', material: 'wood', theme: 'chalet', cols: ['#C89A62', '#A87A48', '#8A5A30'] }, victorian: { name: 'Mahogany chest with an oval mirror', material: 'wood', theme: 'victorian', cols: ['#5A2A1E', '#7A3E2C', '#3E1C14'] }, ryokan: { name: 'Kiri tansu chest', material: 'wood', theme: 'ryokan', cols: ['#5A4636', '#3E3028', '#7A6450'] }, celestial: { name: 'Moon-phase dresser', material: 'laminate', theme: 'celestial', cols: ['#B9A9DE', '#F4F1F8', '#1F2550'] } },
+  dresser: { W: 1.2, D: 0.5, h: 0.85, name: 'Dresser', surface: { z: 0.85, rect: [0.38, 0.03, 1.17, 0.47] }, skins: { brutalist: { name: 'Steel locker dresser', material: 'metal', theme: 'brutalist', cols: ['#4A4E55', '#6E7F8A', '#8E3B2E'] }, spa: { name: 'Slatted teak dresser', material: 'wood', theme: 'spa', cols: ['#9C6B45', '#B98A62', '#C9B8A6'] }, hotel: { name: 'Walnut lowboy with a marble top', material: 'wood', theme: 'hotel', cols: ['#4A3226', '#6B4A36', '#2A2224'] }, cottage: { name: 'Hand-painted flower chest', material: 'wood', theme: 'cottage', cols: ['#A9BFA0', '#F6EFDF', '#9DB7D5'] }, midcentury: { name: 'Long walnut lowboy', material: 'wood', theme: 'midcentury', cols: ['#7A4E2D', '#9A6A44', '#5E3A20'] }, regency: { name: 'Mirrored chest on gold legs', material: 'glass', theme: 'regency', cols: ['#DCE6EE', '#B9C8D4', '#F1EEE9'] }, chalet: { name: 'Rough-hewn pine chest', material: 'wood', theme: 'chalet', cols: ['#C89A62', '#A87A48', '#8A5A30'] }, victorian: { name: 'Mahogany chest with an oval mirror', material: 'wood', theme: 'victorian', cols: ['#5A2A1E', '#7A3E2C', '#3E1C14'] }, ryokan: { name: 'Kiri tansu chest', material: 'wood', theme: 'ryokan', cols: ['#5A4636', '#3E3028', '#7A6450'] }, celestial: { name: 'Moon-phase dresser', material: 'laminate', theme: 'celestial', cols: ['#B9A9DE', '#F4F1F8', '#1F2550'] } },
     spots: { f: { stand: [0.6, 0.95], dir: [0, -1], tag: 'dresser' } } },
   // The Nana pack's crown piece: a plush cloud lounger under a fairy-light canopy. Sit to read, scroll or watch; tap it for its twinkling lights.
   cloudnook: { W: 1.5, D: 1.1, h: 1.9, name: 'Cloud nook', store: true, cols: ['#FFF8F0', '#F8C8DC', '#D9C8F2'], light: { at: [0.75, 0.35, 1.6], r: 95, col: '255,220,235' },
@@ -94,7 +107,13 @@ export const TYPES: Record<string, ObjectTypeDef> = {
     spots: { sink: { stand: [0.65, 1.23], dir: [0, -1], tag: 'sink', group: 'counterL' }, window: { stand: [0.95, 1.23], dir: [0, -1], tag: 'window', group: 'counterL' }, stove: { stand: [1.65, 1.23], dir: [0, -1], tag: 'stove' }, coffee: { stand: [2.45, 1.23], dir: [0, -1], tag: 'coffee' } } },
   fridge: { W: 0.9, D: 0.85, h: 1.95, fixed: true, name: 'Fridge', skins: { nana: { name: 'Pastel pink fridge', material: 'metal', theme: 'nana', cols: ['#F8C8DC', '#FFF8F0', '#D9C8F2'] }, arcade: { name: 'Cabinet fridge', material: 'metal', theme: 'arcade', cols: ['#1E1A2E', '#F4C430', '#FF2E9A'] }, cuddle: { name: 'Rainbow bear fridge', material: 'metal', theme: 'cuddle', cols: ['#AEDDF7', '#FFFFFF', '#F6B7CC'] }, provence: { name: 'Lavender enamel fridge', material: 'metal', theme: 'provence', cols: ['#F4EFE3', '#8E7CC3', '#3A3A40'] }, adobe: { name: 'Turquoise serape fridge', material: 'metal', theme: 'adobe', cols: ['#3FA7A0', '#B5533C', '#F4ECD8'] }, neon: { name: 'Holo fridge', material: 'metal', theme: 'neon', cols: ['#111118', '#FF2E9A', '#19E6F0'] }, candy: { name: 'Bow fridge', material: 'metal', theme: 'candy', cols: ['#F6B7CC', '#FFF8F0', '#BFE8D6'] }, gothic: { name: 'Stained-glass icebox', material: 'metal', theme: 'gothic', cols: ['#2A2224', '#B08D57', '#5E1F2A'] }, riad: { name: 'Zellige fridge', material: 'metal', theme: 'riad', cols: ['#F3EEE4', '#2E4C9A', '#C9A24A'] }, tropical: { name: 'Palm fridge', material: 'metal', theme: 'tropical', cols: ['#2F6B40', '#F08AA0', '#D9BE82'] }, memphis: { name: 'Squiggle fridge', material: 'metal', theme: 'memphis', cols: ['#F4F1EA', '#1B1A1F', '#E63946'] }, deco: { name: 'Lacquered icebox', material: 'metal', theme: 'deco', cols: ['#1B1A1F', '#1F5E4A', '#6E2A3A'] }, japandi: { name: 'Paper-white fridge', material: 'metal', theme: 'japandi', cols: ['#F7F3EA', '#B9B4AC', '#7A8A6A'] }, boho: { name: 'Terracotta fridge', material: 'metal', theme: 'boho', cols: ['#C26B4A', '#D9A84A', '#3D6B73'] }, space: { name: 'Capsule fridge', material: 'metal', theme: 'space', cols: ['#F4F6F8', '#1B1A24', '#F26A2E'] }, scandi: { name: 'Ash-handled fridge', material: 'metal', theme: 'scandi', cols: ['#F4F2EC', '#DDE3DF', '#F1E6D8'] }, industrial: { name: 'Riveted steel fridge', material: 'metal', theme: 'industrial', cols: ['#5A5E66', '#2B2B30', '#7B4A3A'] }, beach: { name: 'Sea-glass fridge', material: 'metal', theme: 'beach', cols: ['#7FB8C9', '#F7F5EF', '#E8907A'] }, retro: { name: 'Pastel icebox', material: 'metal', theme: 'retro', cols: ['#9ED8C6', '#F3B6C4', '#F6E3A1'] }, farmhouse: { name: 'Cream enamel icebox', material: 'metal', theme: 'farmhouse', cols: ['#F1E8D2', '#B9CBB5', '#F2DFA0'] }, modern: { name: 'Brushed steel fridge', material: 'metal', theme: 'modern', cols: ['#B9BEC3', '#2B2B30', '#E8EAEC'] }, spring: { name: 'Blossom icebox', material: 'metal', theme: 'spring', cols: ['#F3D6DC', '#CFE6D3', '#F6EBC0'] }, summer: { name: 'Sunny icebox', material: 'metal', theme: 'summer', cols: ['#F6D56E', '#7FD1CF', '#F2A38A'] }, fall: { name: 'Harvest icebox', material: 'metal', theme: 'fall', cols: ['#B5532F', '#D9A84A', '#8A5E3B'] }, winter: { name: 'Frosted icebox', material: 'metal', theme: 'winter', cols: ['#E3EEF6', '#C8D9E6', '#F2EEE8'] }, cloud: { name: 'Cloud-nine icebox', material: 'metal', theme: 'cloud', cols: ['#BFE3F5', '#F9C6DA', '#C9F0DC'] } },
     spots: { f: { stand: [0.45, 1.45], dir: [0, -1], tag: 'fridge' } } },
-  tvunit: { W: 1.6, D: 0.45, h: 0.75, fixed: true, name: 'TV unit' },
+  // V2 models: the same jobs in new shapes, so a room can mix sizes. Each has its own looks, drawn for its shape.
+  // The fridge's: low and wide, and the lid lifts on its back hinge.
+  chestfreezer: { kind: 'fridge', W: 1.2, D: 0.75, h: 0.92, fixed: true, name: 'Chest freezer', skins: { camp: { name: 'Camp cooler chest', material: 'metal', theme: 'camp', cols: ['#2F5D43', '#B5532F', '#3F6E8C'] } },
+    spots: { f: { stand: [0.6, 1.3], dir: [0, -1], tag: 'fridge' } } },
+  tvunit: { W: 1.6, D: 0.45, h: 0.75, fixed: true, name: 'TV unit', surface: { z: 0.42, rect: [0.3, 0.02, 1.3, 0.44] } },
+  // The TV unit's: a long, low console under the screen on the wall.
+  mediaconsole: { kind: 'tvunit', W: 2.0, D: 0.5, h: 0.5, fixed: true, name: 'Media console', surface: { z: 0.5, rect: [0.04, 0.03, 1.96, 0.47] }, skins: { midcentury: { name: 'Walnut credenza', material: 'wood', theme: 'midcentury', cols: ['#D9A84A', '#3D6B73', '#C2603A'] } } },
   shower: { W: 1.18, D: 1.18, h: 2.1, fixed: true, name: 'Shower', skins: { brutalist: { name: 'Concrete walk-in shower', material: 'glass', theme: 'brutalist', cols: ['#A3A19C', '#2B2D31', '#BADEE8'] }, spa: { name: 'Rain shower on pebbles', material: 'stone', theme: 'spa', cols: ['#D8D0C2', '#9DB3A5', '#9C6B45'] }, hotel: { name: 'Marble shower with brass fittings', material: 'stone', theme: 'hotel', cols: ['#EFEBE4', '#C9A24A', '#1E1E22'] }, cottage: { name: 'Beadboard shower with a floral curtain', material: 'wood', theme: 'cottage', cols: ['#E8A0A8', '#9DB7D5', '#F2D98A'] }, midcentury: { name: 'Pastel tile shower with a reeded slider', material: 'stone', theme: 'midcentury', cols: ['#F3B6C4', '#9ED8C6', '#9DB7D5'] }, regency: { name: 'Black tile shower with gold fittings', material: 'glass', theme: 'regency', cols: ['#151517', '#D4AF37', '#FAF7F2'] }, chalet: { name: 'River-stone shower with a cedar floor', material: 'stone', theme: 'chalet', cols: ['#9A948A', '#C89A62', '#2A2826'] }, victorian: { name: 'Tiled shower with a lace curtain', material: 'fabric', theme: 'victorian', cols: ['#C98A94', '#4E7A5E', '#FBF6EE'] }, ryokan: { name: 'Hinoki wet room with a noren', material: 'wood', theme: 'ryokan', cols: ['#2E3F66', '#8A9A7A', '#B5533C'] }, celestial: { name: 'Opal glass shower', material: 'glass', theme: 'celestial', cols: ['#F4F1F8', '#E2C46A', '#B9A9DE'] } },
     spots: { s: { stand: [0.6, 1.7], pos: [0.6, 0.6, 0.1], dir: [0, 1], tag: 'shower', base: 'tray' } } },
   toilet: { W: 0.42, D: 0.62, h: 0.8, fixed: true, name: 'Toilet', skins: { brutalist: { name: 'Wall-hung black toilet', material: 'stone', theme: 'brutalist', cols: ['#A3A19C', '#2E2F33', '#8E939A'] }, spa: { name: 'Rimless toilet with a teak seat', material: 'stone', theme: 'spa', cols: ['#F6F4EE', '#D8D0C2', '#9DB3A5'] }, hotel: { name: 'Pedestal toilet with a brass lever', material: 'stone', theme: 'hotel', cols: ['#FAF8F4', '#1E1E22', '#C9A24A'] }, cottage: { name: 'High-cistern toilet with a pull chain', material: 'stone', theme: 'cottage', cols: ['#FFFFFF', '#C69C6D', '#F2F0EA'] }, midcentury: { name: 'Pastel toilet', material: 'stone', theme: 'midcentury', cols: ['#F3B6C4', '#9ED8C6', '#F6E3A1'] }, regency: { name: 'Black toilet with a gold plate', material: 'stone', theme: 'regency', cols: ['#151517', '#D4AF37', '#FAF7F2'] }, chalet: { name: 'Toilet with a pine-boxed tank', material: 'wood', theme: 'chalet', cols: ['#C89A62', '#FFFFFF', '#2A2826'] }, victorian: { name: 'China toilet with a high tank', material: 'stone', theme: 'victorian', cols: ['#FFFFFF', '#2E4C9A', '#5A2A1E'] }, ryokan: { name: 'Toilet with a hinoki seat', material: 'stone', theme: 'ryokan', cols: ['#FFFFFF', '#E2C99E', '#8E8A84'] }, celestial: { name: 'Pearl toilet with a lavender seat', material: 'stone', theme: 'celestial', cols: ['#F4F1F8', '#B9A9DE', '#E2C46A'] } } },
@@ -296,6 +315,13 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   floorcushion: { W: 1.1, D: 1.1, h: 0.25, name: 'Floor cushions', store: true, cols: ['#B5476E', '#4F6F74', '#C9A24A', '#E8DCC8', '#6E3C50'],
     spots: { s: { stand: [0.55, 1.7], pos: [0.55, 0.55, 0.16], dir: [0, 1], tag: 'seat', base: 'base' } } },
   crates: { W: 0.8, D: 0.5, h: 0.55, name: 'Book crates', store: true, cols: ['#B98A6A', '#3A2E2A', '#E4DDD2'] },
+  // TVs are pieces like any other: one hangs on a wall, the rest stand on a TV unit, a console, a desk or a dresser (or the
+  // floor). Whoever wants to watch sits on a seat on a floor that has one.
+  walltv: { W: 1.4, D: 0.1, h: 1.7, mount: 0.8, blocks: [], name: 'Wall-mounted TV', store: true, screen: [0.7, 0.1, 1.25] },
+  tvflat: { W: 1.0, D: 0.26, h: 0.72, small: true, name: 'Flat-screen TV', store: true, screen: [0.5, 0.15, 0.42] },
+  tvdesk: { W: 0.52, D: 0.2, h: 0.44, small: true, name: 'Desk TV', store: true, cols: ['#2B2B30', '#F2EEE8', '#C2413A'], screen: [0.26, 0.11, 0.27] },
+  tvtube: { W: 0.6, D: 0.4, h: 0.58, small: true, name: 'Tube TV', store: true, cols: ['#8A5E3B', '#E4DDD2', '#2B2B30'], screen: [0.25, 0.4, 0.27] },
+  entcenter: { wall: true, W: 2.4, D: 0.55, h: 2.0, name: 'Entertainment center', store: true, cols: ['#9C6B45', '#2B2B30', '#E4DDD2'], surface: { z: 0.62, rect: [0.56, 0.04, 1.84, 0.5] } },
 };
 
 export interface ObjectInstance {
@@ -324,6 +350,8 @@ export interface ObjectInstance {
 
 /** The house's own rugs. A house saved before they were pieces gets them once (see `kernel/config.ts`). */
 export const STARTER_RUG_IDS = ['rug1', 'rug2'];
+/** The TV on the living room wall. A house saved while it was part of the wall gets it as a piece, once. */
+export const STARTER_TV_IDS = ['walltv'];
 
 export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'stair01', type: 'flightY', level: 0, x: 9.0, y: 0, rot: 0 },
@@ -345,6 +373,7 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'fridge', type: 'fridge', level: 1, x: 3.35, y: 0.12, rot: 0 },
   { id: 'dining', type: 'dining', level: 1, x: 1.0, y: 1.9, rot: 1 },
   { id: 'tvunit', type: 'tvunit', level: 1, x: 6.0, y: 0.12, rot: 0 },
+  { id: 'walltv', type: 'walltv', level: 1, x: 6.1, y: 0.08, rot: 0 },
   { id: 'sofa', type: 'sofa', level: 1, x: 5.6, y: 3.3, rot: 2 },
   { id: 'plant1', type: 'plant', level: 1, x: 4.95, y: 0.15, rot: 0 },
   { id: 'lamp1', type: 'lamp', level: 1, x: 5.1, y: 3.4, rot: 0 },
@@ -372,12 +401,32 @@ export function footprint(o: ObjectInstance): [number, number] {
   return o.rot % 2 ? [t.D, t.W] : [t.W, t.D];
 }
 
+/** The job a piece does: its kind if it is another model of a piece (a chest freezer is a fridge), else its own type. */
+export function kindOf(type: string): string {
+  return TYPES[type]?.kind ?? type;
+}
+
+/** Every model of a kind, the kind's own type first. */
+export function modelsOf(kind: string): string[] {
+  return Object.keys(TYPES).filter((k) => kindOf(k) === kind).sort((a, b) => Number(b === kind) - Number(a === kind));
+}
+
 export function isFixed(type: string): boolean {
   return !!TYPES[type]?.fixed;
 }
 
 export function isRug(type: string): boolean {
   return !!TYPES[type]?.rug;
+}
+
+/** Hung on a wall (see `mount`). */
+export function isMount(type: string): boolean {
+  return TYPES[type]?.mount !== undefined;
+}
+
+/** A TV (see `screen`). */
+export function isScreen(type: string): boolean {
+  return !!TYPES[type]?.screen;
 }
 
 export function isWall(type: string): boolean {

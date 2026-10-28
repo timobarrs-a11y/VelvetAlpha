@@ -87,6 +87,8 @@ export interface HouseFrame {
   lampUi?: { id: string | null; held: boolean; valid: boolean } | null;
   /** A conversation: the point (in view coordinates) and reach that stay sharp while the rest of the frame softens. */
   focus?: { x: number; y: number; r: number } | null;
+  /** The room the shop's paint, wallpaper and floors go on, outlined on its floor. */
+  roomHint?: string | null;
 }
 
 export interface HouseArt {
@@ -137,10 +139,9 @@ export interface HouseArt {
   hitObject(level: number, sx: number, sy: number, ids?: string[]): ObjectInstance | null;
   /** Restores paint, wallpaper, floors, wall decor, yard and household details from an original save. */
   applySave(save: unknown): void;
-  /** Sets the paint color for a floor level. */
-  applyPaint(level: number, color: string): void;
-  /** Sets the wallpaper pattern for a floor level. */
-  applyWallpaper(level: number, pattern: string): void;
+  /** Paint, wallpaper and floor go on one room of the floor, or on the whole of it (no room), which resets its rooms. */
+  applyPaint(level: number, color: string, room?: string | null): void;
+  applyWallpaper(level: number, pattern: string, room?: string | null): void;
   /** Makes pictures (photos by url, or gradients by colour stops) available as wallpaper ids. */
   registerPictures(list: Array<{ id: string; base: string; url?: string; stops?: Array<[number, string]> }>): void;
   /** The paint, wallpaper and floor of each level, for saving. */
@@ -148,8 +149,9 @@ export interface HouseArt {
   getLooks(): Array<{ paint: string; paper: string | null; floor: string }>;
   /** The drawing recipe for a wallpaper or floor id, for shop thumbnails. */
   lookInfo(kind: 'paper' | 'floor', key: string): { pat?: string; kind?: string; base?: string; ink?: string; ink2?: string; a?: string; b?: string; line?: string; url?: string; stops?: Array<[number, string]> } | null;
-  /** Sets the floor type for a floor level. */
-  applyFloor(level: number, floor: string): void;
+  applyFloor(level: number, floor: string, room?: string | null): void;
+  /** A room's paint, wallpaper and floor (the floor's own where the room has none of its own); no room: the floor's. */
+  roomLook(level: number, room?: string | null): { paint: string; paper: string | null; floor: string };
   /** Drapes on the windows of a floor, by style; an empty style takes them down. */
   applyDrapes(level: number, style: string): void;
   toggleObjectLight(id: string): boolean;

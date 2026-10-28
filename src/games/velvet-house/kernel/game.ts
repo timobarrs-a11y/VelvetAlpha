@@ -41,6 +41,8 @@ export interface View {
   paused: boolean;
   t: number;
   follow: AgentId | null;
+  /** The room of this floor the shop's paint, wallpaper and floors go on; null is the whole floor. */
+  room: string | null;
 }
 
 /** Plain values that more than one module changes. Everything else on Game is set once. */
@@ -317,8 +319,9 @@ export function createGame(app: HTMLElement): Game | null {
   if (!closet.some(c => c.slot === 'bottom')) closet.push({ slot: 'bottom', style: 'pants', col: people[0].look.bottom, name: 'Old jeans', id: clothId('jeans') });
   // What the avatar wardrobe lets the player wear (sent by the host), and the avatar hat they have on.
   const flags: Record<string, unknown> = (save?.flags as Record<string, unknown>) ?? {};
-  // The house's rugs are pieces now (a new game starts with them; an older save was given them on load): never add them again.
+  // The house's rugs and its TV are pieces now (a new game starts with them; an older save was given them on load): never add them again.
   flags.rugObjects = true;
+  flags.tvObject = true;
   if (!flags.settleSeen) flags.settleSeen = [];
   if (!flags.styledSet) flags.styledSet = [];
   if (!flags.lifeStep) flags.lifeStep = 0;
@@ -388,6 +391,7 @@ export function createGame(app: HTMLElement): Game | null {
     paused: false,
     t: 0,
     follow: null as AgentId | null,
+    room: null as string | null,
   };
 
   // The attic exists once its stairs have been built.
