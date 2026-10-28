@@ -227,7 +227,7 @@ export const CATALOG: CatalogEntry[] = [
     ['rug-arcade', 'wobj-marquee', 'wobj-pixelprint', 'cartridges', 'pinball'], ['playful', 'bold', 'vintage']),
 
   bundle('touches-cuddle', 'Cuddle Clouds finishing touches', 'The rest of the clouds: a cloud-shaped rug with a rainbow across it, a rainbow arch for the wall, a cloud night light that glows, a pile of bear plushies and a swing seat hanging from a cloud that bobs and glows.',
-    ['rug-cloud', 'wobj-rainbowarch', 'wobj-cloudlight', 'plushpile', 'cloudswing'], ['soft', 'playful', 'cozy']),
+    ['rug-cuddle', 'wobj-rainbowarch', 'wobj-cloudlight', 'plushpile', 'cloudswing'], ['soft', 'playful', 'cozy']),
 
   bundle('touches-neon', 'Neon finishing touches', 'The rest of the neon: a black grid rug edged in light, a neon bolt that flickers, a holo poster with a rolling scan, a server stack with blinking lights and a VR pod with ring lights and a holo cube that spins while someone is in it.',
     ['rug-neon', 'wobj-neonbolt', 'wobj-holoposter', 'serverstack', 'vrpod'], ['bold', 'modern', 'industrial']),
@@ -341,7 +341,7 @@ export const CATALOG: CatalogEntry[] = [
   furn('rugrunner', 'rugrunner', 'Runner rug', 60, ['cozy', 'natural'], ['#A63A2C', '#4A5DA8', '#D8C9AE', '#3F5B4C']),
   furn('ruground', 'ruground', 'Round rug', 80, ['soft', 'playful', 'warm'], ['#E8DCC8', '#D24A7A', '#8E9C96', '#2B2B30', '#E0A43A']),
   furn('rug-arcade', 'rugarcade', 'Arcade rug', 110, ['playful', 'bold', 'vintage'], ['#2B2459', '#15121F', '#3A2E73']),
-  furn('rug-cloud', 'rugcloud', 'Cloud rug', 110, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F6EEF2', '#DCEEFA']),
+  furn('rug-cuddle', 'rugcloud', 'Cloud rug', 110, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F6EEF2', '#DCEEFA']),
   furn('rug-neon', 'rugneon', 'Grid rug', 110, ['bold', 'modern', 'industrial'], ['#111118', '#1E2230', '#2A2F3A']),
   furn('rug-gothic', 'ruggothic', 'Damask rug', 110, ['luxe', 'vintage', 'cozy'], ['#5E1F2A', '#2E3B57', '#3B2541']),
   furn('rug-candy', 'rugcandy', 'Lollipop rug', 110, ['soft', 'playful', 'warm'], ['#F6B7CC', '#BFE8D6', '#D6C4F0']),
