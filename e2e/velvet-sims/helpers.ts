@@ -125,3 +125,17 @@ export async function rotateTo(page: Page, id: string, rot: number): Promise<Obj
   await page.waitForTimeout(400);
   return where();
 }
+
+/**
+ * Plays the story the way a player would, one tap at a time: a line is tapped through, and a card is read and closed
+ * with Got it, leaving its objective in the bar at the top. Returns the objective the story is waiting on ('' if none).
+ */
+export async function storyTap(game: FrameLocator): Promise<string> {
+  if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click().catch(() => {});
+  if (await game.locator('.vh-scard:visible').count()) {
+    const title = await game.locator('.vh-scard strong').innerText().catch(() => '');
+    await game.locator('.vh-scard-go').click().catch(() => {});
+    return title;
+  }
+  return (await game.locator('.vh-objective:visible').count()) ? game.locator('.vh-objective strong').innerText().catch(() => '') : '';
+}

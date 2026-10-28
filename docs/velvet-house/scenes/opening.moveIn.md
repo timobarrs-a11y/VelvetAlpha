@@ -26,6 +26,39 @@ Sources read: `src/games/velvet-house/content/scripts.ts`, `content/lines.ts`, `
 | 8 | Line variants | Lines vary by humor style, communication style **and the companion's gender** (masculine and feminine versions of each). No separate roommate versions; wording is written without pet names so it fits a partner or a friend. |
 | 9 | Saves when the opening changes | New game for everyone (keep the `MIN_CONTENT_VERSION` bump). Reload safety within one version still has to work (§10). |
 
+Added 2026-10-28 (fifth round, after the director got stuck on "Carry it upstairs" with the dock locked): **the
+tutorial never locks the game while it waits.** The director's words:
+
+> "The tutorial system can pop up. It can tell you the different things, but after it tells you it goes away and it
+> assumes you just read it and it assumes you know what to do."
+
+> "We pull up the overlay. You can't interact with the UI while the overlay is there you tap it to confirm you read it
+> once the overlay goes away the objective at the very top is still there to sort of remind you what you need to be
+> doing but now it's on you to actually do it so if you don't do it, that's also fine."
+
+> "We can have objective set up to move them through different chapters and then completing the objectives triggers
+> the next script. But if they never actually want to do that, that's fine. They should still be able to do other
+> things."
+
+> "We certainly have to stop the the tutorial system from locking the user out the UI and we need a way to make sure
+> that once the tutorial overlay goes away after it shows you what he's trying to show you that you have full access
+> to the UI back."
+
+So, for every scene (implemented in `script/gameHost.ts`, `applyLock`):
+- **Telling locks; waiting never does.** While a line is on screen, a choice is asked, the drive-up plays, or a
+  cutscene moves people, only that can be used and the clock holds still (handheld-RPG rule). Once the story is
+  waiting on an objective, the whole game is the player's: the dock, Arrange, every piece, the keys and the clock.
+- **A card is an overlay, then an objective.** It comes up over the game with **Got it**; nothing under it can be
+  tapped. Got it folds it into the objective bar under the clock; tapping the bar shows the card again. The bar goes
+  when its objective is done.
+- **Objectives still end on the world** (couch in the outline, bed on the upstairs floor), never on a button, and the
+  next part of the story starts then. Doing something else in the meantime is fine, and nothing is undone by it.
+- A delivery ordered while an objective is open arrives then; the lesson steps aside and comes back from its last
+  mode step with its card and outline. A cutscene is never interrupted.
+- The spotlight and the outline stay as hints, not as the only things that work.
+
+This replaces the earlier "only the lesson object is tappable" rule (§3 A7, B2, B7; §11 item 6).
+
 Added 2026-10-27 (fourth round, after the director played it):
 - **Arrange sets nothing on letting go.** A dragged piece stays where it was dropped, loose, red or green. **Set it
   down** in the Arrange bar keeps it (and refuses with a reason if it does not fit); **Put it back** returns it;
@@ -56,7 +89,7 @@ driving, feel the box thud, and see the companion turn and react in real time.
 |---|---|---|---|
 | Brand-new save | Invariant | `world.save === null` | yes |
 | Starter sofa, plant and lamp absent | Invariant | removed in `gameHost.ts` for a new game | yes |
-| Clock day 1, 09:00, held during cutscene and guided steps | Invariant | `clock` step; `run.ts` holds the day | yes |
+| Clock day 1, 09:00, held while the story is telling something or a card is up; runs while an objective is open | Invariant | `clock` step; `run.ts` holds the day on `scriptMode === 'cutscene'` or `storyCard` | yes |
 | Main floor, walls down, camera wide | Required | `camera` step; `wallIdx` default | yes |
 | Host profile applied: names, humor, communication, gender, relationship | Invariant for lines | `hostBridge.ts` profile message | **race**: not awaited; `voice` not saved |
 | Plot known, or the fallback house | Flexible | `g.s.plot` | **race**: read once at start |
@@ -78,7 +111,7 @@ introduction; the companion's chat is not reachable until chapter 11.
 | A4 | Dez brushes it off (`dez.brushOff`, unchanged). | Required beat | line dismissed | `did.beat.A4` |
 | A5 | Dez checks the clipboard: "Now let's see here, your names were {player} and {partner}, right?" The player taps to confirm. | Required beat (one tap; no choice buttons) | line dismissed | `did.beat.A5` |
 | A6 | Dez: "Alright, here's your first box. I'll go grab some more." He walks out. | Required beat | Dez despawned | world: Dez not in `people` |
-| A7 | Lesson: open the box. Card "Tap the box to open it". Only the box is tappable. | Required beat (guided) | world: `box.couch.type === 'sofa'` | same predicate |
+| A7 | Lesson: open the box. Card "Tap the box to open it" (overlay, then the objective bar); the whole game is free meanwhile. | Required beat (guided) | world: `box.couch.type === 'sofa'` | same predicate |
 | A8 | Lesson: place the couch. The companion asks for it by the TV in her communication style (`couchPlace`). Outline at `living.couchTv`. Setting it down anywhere else: the companion says it is not where she wants it (`couchNotThere`, communication × gender) and the lesson continues. | Required beat (guided, loop) | world: sofa within tolerance of `living.couchTv`, facing the TV | same predicate |
 | A9 | Opening complete. Flags `opening.done`, `dez.deliveries`; control returns; the clock runs. | Invariant | flags set, script finished | idempotent |
 
@@ -87,12 +120,12 @@ introduction; the companion's chat is not reachable until chapter 11.
 | Beat | What happens | Tag | Exit condition | Resume-safe fallback |
 |---|---|---|---|---|
 | B1 | Dez comes in with a box, sets it down: "This one doesn't have a label!" and walks back out. Dialogue only once he has stopped. | Required beat | `box.lamp` exists; Dez despawned | world: `box.lamp` exists (box or lamp) |
-| B2 | Control returns. The player opens the box (tap). | Required beat (guided: only the box) | world: `box.lamp.type === 'lamp'` | same |
+| B2 | Control returns. The player opens the box (tap). | Required beat (guided; objective, nothing locked) | world: `box.lamp.type === 'lamp'` | same |
 | B3 | The moment it opens: `!` over the companion. **The camera moves or zooms out so both the lamp and the companion are on screen while the `!` shows.** After about a second she asks, in her communication style, for the lamp in the corner by the TV (`lampCorner`; the mark moves, §13). | Required beat; camera framing is Invariant for this beat | line dismissed | `did.beat.B3` |
 | B4 | Place the lamp in the corner outline (`living.lampCorner`). Elsewhere: `lampNotThere` loop as in A8. | Required beat (guided, loop) | world: lamp within tolerance of the corner mark | same |
 | B5 | `!` over the companion again (camera frames her), then she says she would rather have it by the couch to read at night (`lampByCouch`, humor × gender). | Required beat | line dismissed | `did.beat.B5` |
 | B6 | Move the lamp to the right-hand side of the couch (`living.lamp`, computed from where the couch actually is). Elsewhere: loop. | Required beat (guided, loop) | world: lamp within tolerance of the couch-side mark | same |
-| B7 | Card: lights can be switched on and off by tapping them. Waits for the lamp to be switched on. | Required beat (guided: only the lamp) | world: the lamp's light is on | same |
+| B7 | Card: lights can be switched on and off by tapping them. Waits for the lamp to be switched on. | Required beat (guided; objective, nothing locked) | world: the lamp's light is on | same |
 | B8 | The companion reacts to the light (`lampOn`); evening dim lifts; control returns; `tutorial.lamp` set. | Required beat | flag set | idempotent |
 
 Removed from today's chapter 7 because the director does not want them: the companion sitting to watch TV before
@@ -148,6 +181,7 @@ All lesson beats (A7, A8, B2, B4, B6, B7) end on a world predicate evaluated by 
 a one-shot event: the object's type, its distance and rotation relative to a mark, or its light state. Spoken
 beats end on the tap that dismisses the line, with a `did.beat.<id>` flag written so a reload does not require
 the tap again. The Set it down button snaps the piece when it is close and closes Arrange; it never ends a beat.
+A card's **Got it** only puts the card away (into the objective bar); it never ends a beat either.
 
 ## 7. State changes and events recorded
 
@@ -183,7 +217,8 @@ so Dez's lamp visit is not interrupted by free will. B8: the same release; the c
 | Reload during a lesson (A7, A8, B2, B4, B6, B7) | Resume at the lesson with its mode, card, outline and allow-list rebuilt; if the predicate is already true, move on at once. **Today: soft-lock after A7 or B2 (confirmed in play)** |
 | Skip | Not possible: there is no Skip (decided). The old Skip left two couches when used after A7 (confirmed in play before it was removed) |
 | Pause (Space) during a cutscene | Not possible, or scripted walkers keep walking |
-| Delivery interrupts chapter 7 | Cannot happen while the residents are held and the dock is disabled; if it does, resume rebuilds the lesson |
+| Delivery interrupts chapter 7 | Can happen while an objective is open (the dock works): the delivery plays, then the lesson resumes from its last mode step with its card and outline rebuilt. Never during a cutscene |
+| Player ignores the objective | Nothing is held up: the bar stays, the clock runs, the story waits for the world to be right |
 | Profile not yet applied | The new-game script waits up to 1.5 s for it; after that, defaults and the saved values |
 | Box cannot land | `give` relocates to the nearest free spot (today's behaviour) and the script frames the box so the player can find it |
 | Content version bumped | Everyone starts a new game (decision 9) |
@@ -197,7 +232,7 @@ S = source, A = automated, P = played on desktop **and** phone.
 3. The town name in Dez's welcome is bold and green; the mayor passage states mayor, mover, delivery. (A content; P)
 4. The companion's driving remark and both lamp remarks match her humor style and gender; the couch and corner asks match her communication style and gender; all 16 × 2 humor and 4 × 2 communication variants exist for every slot. (A content test)
 5. A5 is a plain tap, with no choice buttons anywhere in Parts A and B. (A e2e)
-6. Only the current lesson object is tappable; dock, keyboard shortcuts, other objects and the companion are not. (A e2e)
+6. A card holds the game only until Got it: under it nothing can be tapped and the clock holds; after it, the dock, Arrange, any piece and the clock all work, the objective is in the bar, and the bar brings the card back. Doing the objective later still moves the story on. (A e2e `story.spec.ts`; P)
 7. Pressing Set it down with the couch (or lamp) outside the outline shows the companion's "not there" line and the lesson stays open; inside the outline, the piece snaps and the beat ends. (A e2e; P)
 8. After A9 and after B8 the clock runs, the dock works and both residents act on their own. (A e2e)
 9. **Set it down is obvious**: the Arrange bar's green Set it down button, with Put it back beside it when a piece is loose. (P, both sizes)

@@ -64,8 +64,12 @@ export interface GameState {
   voice: { humor: string; communication: string; relationship: string; gender: string };
   /** Skipping ahead through the work day ("Skip to 5 PM"). */
   skipping: boolean;
+  /** 'cutscene' while the story is telling something (nothing else can be touched); 'beat' while a script runs and the
+   * game is the player's, an open objective included; null when no script is running. See script/gameHost.ts. */
   scriptMode: Mode | null;
   scriptAllow: UiTarget[];
+  /** A story card is up over the game, waiting for Got it: the clock holds still until it is read. */
+  storyCard: boolean;
   /** What the host page has sent since boot; a new game's opening waits for these (see ScriptDef.needs). */
   hostReady: { profile: boolean; plot: boolean };
 }
@@ -401,7 +405,7 @@ export function createGame(app: HTMLElement): Game | null {
     settleDone: typeof save?.settleDone === 'boolean' ? save!.settleDone : false,
     chatTurns: Array.isArray(save?.turns) ? [...save!.turns as ChatTurn[]] : [],
     sample: null as SampleFn | null,
-    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, plot: null, voice: voiceFrom(save?.voice), skipping: false, scriptMode: null, scriptAllow: [], hostReady: { profile: false, plot: false },
+    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, plot: null, voice: voiceFrom(save?.voice), skipping: false, scriptMode: null, scriptAllow: [], storyCard: false, hostReady: { profile: false, plot: false },
     saveRev: typeof (world.save as { rev?: unknown } | null)?.rev === 'number' ? (world.save as { rev: number }).rev : 0,
   };
 

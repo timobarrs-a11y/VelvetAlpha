@@ -19,6 +19,8 @@ export function installDevHooks(g: Game): void {
       // Send someone somewhere (a test for the stairs).
       goto: (who: 'jordan' | 'maya', level: number, x: number, y: number) => { const p = who === 'maya' ? people[1] : people[0]; p.scripted = true; startGoto(g.house, p, { level, x, y }); },
       setMinutes: (m: number) => { world.minutes = m; },
+      // The game clock, as minutes since day 0 (does it run, or hold still?).
+      minutes: () => world.day * 1440 + world.minutes,
       saveGame: g.doSave,
       get money() { return world.household.money; },
       set money(v: number) { world.household.money = v; },

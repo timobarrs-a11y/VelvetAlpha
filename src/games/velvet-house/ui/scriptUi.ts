@@ -3,6 +3,10 @@ import type { UiTarget } from '../script/types';
 /**
  * What a script puts on screen: letterbox bars, the speaker's line (tap to go on), choices, a card. Nothing skips a scene.
  * Plain DOM, added to the game stage; the engine talks to it through the script host.
+ *
+ * A card is told, then left to the player, like a handheld RPG: it comes up over the game (nothing else can be tapped
+ * while it is up), the player taps Got it, and it folds away into the objective bar at the top. The bar is only a
+ * reminder: the whole game is theirs again, and tapping the bar brings the card back to read.
  */
 export interface ScriptUi {
   setMode(mode: 'cutscene' | 'guided' | 'beat' | null): void;
@@ -13,12 +17,14 @@ export interface ScriptUi {
   choiceMade(): number | null;
   card(title: string, body: string, button?: string): void;
   cardDone(): boolean;
-  /** Folds the card down to its title bar (and its button, if it has one). */
-  minimizeCard(): void;
-  /** The button was pressed but the lesson is not done: the card stays in view until the world is right. */
-  reopenCard(): void;
+  /** Whether the card is up over the game, waiting for Got it. */
+  cardOpen(): boolean;
+  /** Folds the card into the objective bar, which reminds the player what it asked. */
+  showObjective(): void;
+  /** Takes the card and the objective bar away (the objective is done, or the scene moved on). */
   hideCard(): void;
-  onCardButton(fn: () => void): void;
+  /** Called when the player taps Got it (or the card's own button). */
+  onCardDismissed(fn: (ownButton: boolean) => void): void;
   /** Marks the buttons and panels a script has pointed at. */
   spotlight(targets: UiTarget[]): void;
 }
@@ -31,17 +37,19 @@ export function createScriptUi(stage: Element): ScriptUi {
   root.innerHTML = `
     <div class="vh-bar vh-bar-top"></div><div class="vh-bar vh-bar-bottom"></div>
     <div class="vh-speech" hidden role="dialog" aria-live="polite"><div class="vh-speech-name"></div><div class="vh-speech-text"></div><div class="vh-choices" hidden></div><div class="vh-speech-next" aria-hidden="true">&#9660;</div></div>
-    <div class="vh-scard" hidden><div class="vh-scard-head"><strong></strong><button type="button" class="vh-scard-min" aria-label="Minimize" aria-expanded="true">&#9662;</button></div><p></p><button type="button" class="vh-scard-go" hidden></button></div>`;
+    <div class="vh-scard-veil" hidden></div>
+    <div class="vh-scard" hidden role="dialog" aria-modal="true"><strong></strong><p></p><button type="button" class="vh-scard-go">Got it</button></div>
+    <button type="button" class="vh-objective" hidden aria-label="Objective: tap to read it again"><span>Objective</span><strong></strong></button>`;
   stage.appendChild(root);
   const speech = root.querySelector('.vh-speech') as HTMLElement;
   const nameEl = root.querySelector('.vh-speech-name') as HTMLElement;
   const textEl = root.querySelector('.vh-speech-text') as HTMLElement;
   const choices = root.querySelector('.vh-choices') as HTMLElement;
   const cardEl = root.querySelector('.vh-scard') as HTMLElement;
+  const veil = root.querySelector('.vh-scard-veil') as HTMLElement;
   const cardBtn = cardEl.querySelector('.vh-scard-go') as HTMLButtonElement;
-  const cardMin = cardEl.querySelector('.vh-scard-min') as HTMLButtonElement;
-  const setMin = (min: boolean) => { if (min) cardEl.dataset.min = '1'; else delete cardEl.dataset.min; cardMin.setAttribute('aria-expanded', String(!min)); };
-  cardMin.addEventListener('click', () => setMin(!cardEl.dataset.min));
+  const objective = root.querySelector('.vh-objective') as HTMLButtonElement;
+  const openCard = (open: boolean) => { cardEl.hidden = !open; veil.hidden = !open; };
 
   // A line is typed out; a tap finishes it, and the next tap goes on. `**words**` in a line are shown bold (the town's
   // name in green), typed out like the rest.
@@ -69,8 +77,12 @@ export function createScriptUi(stage: Element): ScriptUi {
   void full;
   let pick: number | null = null;
   let cardClosed = true;
-  let cardPress: () => void = () => {};
-  cardBtn.addEventListener('click', () => { cardClosed = true; cardEl.hidden = true; cardPress(); });
+  let hasButton = false;
+  let dismissed: (ownButton: boolean) => void = () => {};
+  // Got it: the card goes, and the game is the player's again. A card with its own button (Set it down) does that too.
+  cardBtn.addEventListener('click', () => { openCard(false); if (hasButton) cardClosed = true; dismissed(hasButton); });
+  // The objective bar brings the card back to read; Got it folds it away again.
+  objective.addEventListener('click', () => { objective.hidden = true; openCard(true); });
 
   const stageEl = stage as HTMLElement;
   let marked: Element[] = [];
@@ -78,7 +90,9 @@ export function createScriptUi(stage: Element): ScriptUi {
   return {
     setMode(mode) {
       if (mode) stageEl.dataset.script = mode; else delete stageEl.dataset.script;
-      if (!mode) { speech.hidden = true; choices.hidden = true; choices.innerHTML = ''; delete speech.dataset.choosing; cardEl.hidden = true; stopTyping(); lineDone = true; }
+      // The scene is over: its lines go. A card that only told something stays up until it is read (the host takes an
+      // objective's card away once its objective is done).
+      if (!mode) { speech.hidden = true; choices.hidden = true; choices.innerHTML = ''; delete speech.dataset.choosing; stopTyping(); lineDone = true; }
     },
     say(name, text) {
       nameEl.textContent = name;
@@ -115,18 +129,18 @@ export function createScriptUi(stage: Element): ScriptUi {
     card(title, body, button) {
       (cardEl.querySelector('strong') as HTMLElement).textContent = title;
       (cardEl.querySelector('p') as HTMLElement).innerHTML = esc(body).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-      cardBtn.hidden = !button;
-      cardBtn.textContent = button ?? '';
+      cardBtn.textContent = button ?? 'Got it';
+      hasButton = !!button;
       cardClosed = !button;
-      setMin(false);
-      cardEl.hidden = false;
+      (objective.querySelector('strong') as HTMLElement).textContent = title;
+      objective.hidden = true;
+      openCard(true);
     },
     cardDone: () => cardClosed,
-    hideCard() { cardEl.hidden = true; cardClosed = true; },
-    minimizeCard() { setMin(true); },
-    // The button counts as pressed (the script moves on to its wait on the world); the card just stays in view.
-    reopenCard() { cardEl.hidden = false; },
-    onCardButton(fn) { cardPress = fn; },
+    cardOpen: () => !cardEl.hidden,
+    showObjective() { openCard(false); objective.hidden = false; },
+    hideCard() { openCard(false); objective.hidden = true; cardClosed = true; },
+    onCardDismissed(fn) { dismissed = fn; },
     spotlight(targets) {
       marked.forEach((e) => e.classList.remove('vh-spot'));
       marked = [];

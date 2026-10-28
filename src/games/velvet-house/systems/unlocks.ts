@@ -59,7 +59,8 @@ export function createUnlocks(g: Game, host: HostPromo | null = createHostPromo(
     }, SHOT_DELAY_MS);
   }
 
-  const ready = (): boolean => g.s.settleDone && !g.s.scriptMode && !presenting;
+  // Not over the story while it is telling something; an open objective is fine (the player may never finish it).
+  const ready = (): boolean => g.s.settleDone && g.s.scriptMode !== 'cutscene' && !g.s.storyCard && !presenting;
 
   function codeForSet(id: string): UnlockCode | undefined {
     return Object.values(UNLOCK_CODES).find((c) => c.setIds.includes(id));

@@ -9,7 +9,7 @@ import { SCRIPTS } from '../content/scripts';
 import { LINE_BOOK } from '../content/lines';
 import { validateContent } from './validate';
 import { ScriptEngine } from './engine';
-import { NEW_RUNTIME, type Cond, type FlagValue, type GameEvent, type PlaceRef, type ScriptHost, type ScriptRuntime, type UiTarget, type WorldCond } from './types';
+import { NEW_RUNTIME, type Cond, type FlagValue, type Mode, type GameEvent, type PlaceRef, type ScriptHost, type ScriptRuntime, type UiTarget, type WorldCond } from './types';
 import { run } from '../kernel/config';
 import { createScriptUi } from '../ui/scriptUi';
 import { playArrival, type Arrival } from '../ui/arrivalIntro';
@@ -59,20 +59,21 @@ export function createScripts(g: Game): Partial<Game> {
   let arrival: Arrival | null = null;
   /** What the partner says if Set it down is pressed with the piece somewhere else (from the card step). */
   let misplacedLine: { who: string; text: string } | null = null;
+  /** The mode the script asked for, and the wait the card on screen asks the player to finish (see `applyLock`). */
+  let declared: Mode | null = null;
+  let cardWait: Cond | null = null;
   const host: ScriptHost = {
     flags: story,
     clock: () => ({ day: world.day, minutes: world.minutes }),
     names: () => ({ player: g.simName, partner: g.partnerName, town: g.townName, preset: g.companionCfg.preset, humor: g.s.voice.humor, communication: g.s.voice.communication, relationship: g.s.voice.relationship, gender: g.s.voice.gender }),
 
     setMode(mode, allow) {
-      g.s.scriptMode = mode;
+      declared = mode;
       g.s.scriptAllow = allow;
-      ui.setMode(mode);
       ui.spotlight([...spot, ...allow.filter((a) => !a.startsWith('obj'))]);
       art.spotlight(allow.filter((a) => a.startsWith('obj:')).map((a) => a.slice(4)));
-      // A lesson that ends because the piece is where it belongs closes Arrange too, not only the button.
-      if (mode !== 'guided' && g.isArranging()) g.drawer.close();
       if (!mode) { camFocus = null; }
+      applyLock();
     },
     spawn(npc, at, carrying) {
       const def = npcDef(npc);
@@ -151,12 +152,12 @@ export function createScripts(g: Game): Partial<Game> {
     choiceMade: () => ui.choiceMade(),
     showCard(title, body, spotlight, button, misplaced) {
       ui.card(title, body, button);
+      // What the card asks for: the wait that follows it. Once that is done, the card and its objective bar go.
+      cardWait = engine.upcomingWait();
       misplacedLine = misplaced ?? null;
       spot = spotlight && !spotlight.startsWith('obj') ? [spotlight] : [];
       ui.spotlight([...spot, ...(g.s.scriptAllow ?? []).filter((a) => !a.startsWith('obj'))]);
       if (spotlight?.startsWith('obj:')) art.spotlight([spotlight.slice(4)]);
-      // A card with no button goes away by itself after a while.
-      if (!button) setTimeout(() => { if (!engine.isActive() || ui.cardDone()) ui.minimizeCard(); }, 9000);
     },
     cardDone: () => ui.cardDone(),
     highlight(target) {
@@ -258,8 +259,41 @@ export function createScripts(g: Game): Partial<Game> {
   if (problems.length && import.meta.env.DEV) console.warn('Story content problems:\n' + problems.join('\n'));
 
   const engine = new ScriptEngine(host, SCRIPTS, LINE_BOOK, rt);
-  // The card's button (when a card has one) is the same as the Arrange bar's Set it down.
-  ui.onCardButton(() => { if (g.isArranging()) g.setDown(); });
+  const sameCond = (a: Cond | null, b: Cond | null): boolean => !!a && !!b && JSON.stringify(a) === JSON.stringify(b);
+  /** Whether the objective the card asked for is still open. */
+  const objectiveOpen = (): boolean => !!cardWait && sameCond(engine.waitingOn(), cardWait);
+  // Got it: the card folds into the objective bar while its objective is open. A card's own button (when a card has
+  // one) is the same as the Arrange bar's Set it down.
+  ui.onCardDismissed((own) => {
+    if (own && g.isArranging()) g.setDown();
+    if (objectiveOpen()) ui.showObjective();
+  });
+
+  /**
+   * The one rule for what the player can touch, like a handheld RPG: while the story is telling something (a line to
+   * tap through, a choice, the drive-up, or a cutscene moving people about) only that can be tapped and the clock holds
+   * still. The rest of the time, a lesson waiting on an objective included, the whole game is the player's: every
+   * button, every piece, the clock. Nothing waits on a button to be pressed; the objective moves the story on when it
+   * is done, and if it never is, nothing else is held up.
+   */
+  function applyLock(): void {
+    let mode: Mode | null = null;
+    if (engine.isActive() && declared) {
+      const k = engine.blockedOn();
+      const telling = k === 'choice' || k === 'intro' || (k === 'say' && !ui.sayDone()) || (declared === 'cutscene' && k !== 'until' && k !== 'card');
+      mode = telling ? 'cutscene' : 'beat';
+    }
+    if (mode !== g.s.scriptMode) {
+      // The story takes the stage: Arrange closes, and a card still up folds away (its bar stays while it is open).
+      if (mode === 'cutscene') {
+        if (g.isArranging()) g.drawer.close();
+        if (ui.cardOpen()) { if (objectiveOpen()) ui.showObjective(); else ui.hideCard(); }
+      }
+      g.s.scriptMode = mode;
+      ui.setMode(mode);
+    }
+    g.s.storyCard = ui.cardOpen();
+  }
 
   // A new game opens with the story. A save from before scripts existed never sees the move-in. A save in the middle of
   // a script picks up where it was.
@@ -280,19 +314,14 @@ export function createScripts(g: Game): Partial<Game> {
     else engine.markDone(['opening.', 'tutorial.']);
   } else engine.resume();
 
-  /** Whether a condition asks for a piece to be somewhere: the waits that Arrange stays open for. */
-  const asksForAPlace = (c: Cond): boolean => ('world' in c ? !!c.world.at : 'all' in c ? c.all.some(asksForAPlace) : 'any' in c ? c.any.some(asksForAPlace) : 'not' in c ? asksForAPlace(c.not) : false);
 
   function update(dt: number): void {
     // What they are to the player, for scripts that branch on it (a friend moving in is a roommate).
     story.rel = g.s.voice.relationship;
     engine.tick(dt);
-    // Arrange is open for a placement lesson only: once the piece is where it belongs and the scene has moved on to
-    // something else (tap the lamp, a line), it closes by itself, so the next tap reaches the house.
-    if (g.isArranging() && g.s.scriptMode === 'guided') {
-      const w = engine.pendingWait();
-      if (!w || !asksForAPlace(w)) g.drawer.close();
-    }
+    // The objective is done (or the scene stepped aside): its card and bar go. A card with its own button waits for it.
+    if (cardWait && engine.blockedOn() !== 'card' && !objectiveOpen()) { cardWait = null; ui.hideCard(); }
+    applyLock();
     if (arrival && !engine.isActive()) { arrival.cancel(); arrival = null; }
     if (camFocus) {
       const a = actor(camFocus.who);
