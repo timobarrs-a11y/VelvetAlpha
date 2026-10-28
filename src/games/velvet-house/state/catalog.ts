@@ -125,6 +125,10 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-scallop-peach', 'Peach scallop', 'scallop-peach', 100, ['soft', 'warm', 'playful']),
   wallpaper('paper-damask-plum', 'Plum damask', 'damask-plum', 120, ['luxe', 'bold', 'vintage']),
   wallpaper('paper-damask-cream', 'Cream damask', 'damask-cream', 120, ['luxe', 'soft', 'vintage']),
+  wallpaper('paper-blossom-mint', 'Mint blossom', 'blossom-mint', 100, ['soft', 'natural', 'playful']),
+  wallpaper('paper-stripe-awning', 'Awning stripes', 'stripe-awning', 90, ['playful', 'cool', 'natural']),
+  wallpaper('paper-leaves', 'Fallen leaves', 'leaves', 100, ['warm', 'cozy', 'natural']),
+  wallpaper('paper-snow', 'Snowfall', 'snow', 100, ['cozy', 'cool', 'soft']),
   wallpaper('paper-pin-slate', 'Slate pinstripe', 'pin-slate', 100, ['modern', 'minimal', 'cool']),
   wallpaper('paper-gingham-sage', 'Sage gingham', 'gingham-sage', 90, ['cozy', 'natural', 'warm']),
   wallpaper('paper-starburst-mint', 'Atomic mint', 'starburst-mint', 100, ['vintage', 'playful', 'bold']),
@@ -145,6 +149,18 @@ export const CATALOG: CatalogEntry[] = [
 
   bundle('set-modern', 'Modern kitchen and living room', 'The brushed steel fridge, slab counter, glass-top dining set, low-profile sofa, slim torchiere and slab planter, with slate pinstripe walls and a charcoal microcement floor.',
     ['look-fridge-modern', 'look-counter-modern', 'look-dining-modern', 'look-sofa-modern', 'look-lamp-modern', 'look-plant-modern', 'paper-pin-slate', 'floor-charcoal'], ['modern', 'minimal', 'cool']),
+
+  bundle('set-spring', 'Spring kitchen and living room', 'The blossom icebox, potting-bench counter, garden table set, posy sofa, daisy lamp and tulip pot, with mint blossom walls and a sunlit birch floor.',
+    ['look-fridge-spring', 'look-counter-spring', 'look-dining-spring', 'look-sofa-spring', 'look-lamp-spring', 'look-plant-spring', 'paper-blossom-mint', 'floor-birch'], ['soft', 'natural', 'playful']),
+
+  bundle('set-summer', 'Summer kitchen and living room', 'The seafoam icebox, beach-hut counter, rattan table set, cane sofa, palm lamp and wicker palm basket, with awning-striped walls and a driftwood floor.',
+    ['look-fridge-summer', 'look-counter-summer', 'look-dining-summer', 'look-sofa-summer', 'look-lamp-summer', 'look-plant-summer', 'paper-stripe-awning', 'floor-driftwood'], ['playful', 'cool', 'natural']),
+
+  bundle('set-fall', 'Fall kitchen and living room', 'The harvest icebox and counter, harvest table set, plaid-throw sofa, lantern lamp and mum pot, with fallen-leaf walls and a chestnut floor.',
+    ['look-fridge-fall', 'look-counter-fall', 'look-dining-fall', 'look-sofa-fall', 'look-lamp-fall', 'look-plant-fall', 'paper-leaves', 'floor-chestnut'], ['warm', 'cozy', 'natural']),
+
+  bundle('set-winter', 'Winter kitchen and living room', 'The frosted icebox, evergreen counter, lodge table set, knit-throw sofa, candle-glow lamp and frosted evergreen pot, with snowfall walls and a frosted pine floor.',
+    ['look-fridge-winter', 'look-counter-winter', 'look-dining-winter', 'look-sofa-winter', 'look-lamp-winter', 'look-plant-winter', 'paper-snow', 'floor-frostpine'], ['cozy', 'cool', 'soft']),
 
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
@@ -179,6 +195,10 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-hexsage', 'Sage hex', 'hexsage', 150, ['natural', 'cool', 'modern']),
   floor('floor-terracotta-tile', 'Terracotta tile', 'terracotta', 120, ['warm', 'natural', 'vintage']),
   floor('floor-slate', 'Slate stone', 'slate', 150, ['cool', 'industrial', 'modern']),
+  floor('floor-birch', 'Sunlit birch plank', 'birch', 130, ['soft', 'natural', 'playful']),
+  floor('floor-driftwood', 'Driftwood plank', 'driftwood', 130, ['playful', 'cool', 'natural']),
+  floor('floor-chestnut', 'Chestnut plank', 'chestnut', 150, ['warm', 'cozy', 'natural']),
+  floor('floor-frostpine', 'Frosted pine plank', 'frostpine', 130, ['cozy', 'cool', 'soft']),
   floor('floor-charcoal', 'Charcoal microcement', 'charcoal', 170, ['modern', 'minimal', 'cool']),
   floor('floor-barnwood', 'Barnwood plank', 'barnwood', 140, ['cozy', 'natural', 'warm']),
   floor('floor-linoleum', 'Diner linoleum', 'linoleum', 160, ['vintage', 'playful', 'bold']),
@@ -245,6 +265,38 @@ export const CATALOG: CatalogEntry[] = [
   look('look-sofa-modern', 'sofa', 'modern', 'Low-profile sofa', 'Tight cushions, square arms and a lot of floor showing underneath.', 520, ['modern', 'minimal', 'cool'], ['#5E646B', '#2B2B30', '#C9CED6']),
   look('look-lamp-modern', 'lamp', 'modern', 'Slim torchiere', 'A thin pole and a round white head that washes the ceiling.', 110, ['modern', 'minimal', 'cool'], ['#2B2B30', '#C9CED6', '#E8EAEC']),
   look('look-plant-modern', 'plant', 'modern', 'Slab planter', 'A square matte planter with pale gravel on top.', 70, ['modern', 'minimal', 'cool'], ['#2B2B30', '#E8EAEC', '#9AA0A6', '#C9B79C']),
+
+  // Spring: a seasonal pack.
+  look('look-fridge-spring', 'fridge', 'spring', 'Blossom icebox', 'Pale blush with painted blossoms. It smells faintly of lemon, for some reason.', 340, ['soft', 'natural', 'playful'], ['#F3D6DC', '#CFE6D3', '#F6EBC0']),
+  look('look-counter-spring', 'counter', 'spring', 'Potting-bench counter', 'Sage cabinets, a pale wood top and two little herb pots by the sink.', 400, ['soft', 'natural', 'playful'], ['#CFE6D3', '#F3D6DC', '#F6EBC0']),
+  look('look-dining-spring', 'dining', 'spring', 'Garden table set', 'A light wood table with petals scattered on it, and chairs in pastel.', 330, ['soft', 'natural', 'playful'], ['#CFE6D3', '#F6EBC0', '#F3D6DC']),
+  look('look-sofa-spring', 'sofa', 'spring', 'Posy sofa', 'Soft green, with a cushion embroidered with one very optimistic flower.', 360, ['soft', 'natural', 'playful'], ['#CFE6D3', '#F3D6DC', '#E8DCC8']),
+  look('look-lamp-spring', 'lamp', 'spring', 'Daisy lamp', 'A green stem and a big white daisy that glows when you turn it on.', 80, ['soft', 'natural', 'playful'], ['#F2EEE8', '#F6EBC0', '#F3D6DC']),
+  look('look-plant-spring', 'plant', 'spring', 'Tulip pot', 'Your plant in a pastel pot, with tulips on top.', 40, ['soft', 'natural', 'playful'], ['#F3B6C8', '#F6EBC0', '#B9DCC4']),
+
+  // Summer: a seasonal pack.
+  look('look-fridge-summer', 'fridge', 'summer', 'Seafoam icebox', 'Cool seafoam with a sun on the door and a stripe like an awning.', 340, ['playful', 'cool', 'natural'], ['#7FD1CF', '#F6E3A1', '#F2EEE8']),
+  look('look-counter-summer', 'counter', 'summer', 'Beach-hut counter', 'Whitewashed cabinets, a bamboo top and a basket of lemons.', 400, ['playful', 'cool', 'natural'], ['#F2EEE8', '#7FD1CF', '#F6E3A1']),
+  look('look-dining-summer', 'dining', 'summer', 'Rattan table set', 'A bamboo table with a striped runner, and chairs you can feel the sun in.', 330, ['playful', 'cool', 'natural'], ['#E0B872', '#7FD1CF', '#F2EEE8']),
+  look('look-sofa-summer', 'sofa', 'summer', 'Cane sofa', 'A pale cane frame and a cushion striped like a beach towel.', 360, ['playful', 'cool', 'natural'], ['#F2EEE8', '#7FD1CF', '#F6E3A1']),
+  look('look-lamp-summer', 'lamp', 'summer', 'Palm lamp', 'A little palm on a stem, with a glowing sun in the middle.', 80, ['playful', 'cool', 'natural'], ['#4F9460', '#7FD1CF', '#F6D56E']),
+  look('look-plant-summer', 'plant', 'summer', 'Wicker palm basket', 'Your plant in a wicker basket, as if it were on holiday.', 40, ['playful', 'cool', 'natural'], ['#C79B5B', '#F2EEE8', '#7FD1CF']),
+
+  // Fall: a seasonal pack.
+  look('look-fridge-fall', 'fridge', 'fall', 'Harvest icebox', 'Rust red with wooden handles and three leaves blowing across the door.', 340, ['warm', 'cozy', 'natural'], ['#B5532F', '#D9A84A', '#8A5E3B']),
+  look('look-counter-fall', 'counter', 'fall', 'Harvest counter', 'Dark wood cabinets and two pumpkins that are never going to get carved.', 400, ['warm', 'cozy', 'natural'], ['#8A5E3B', '#B5532F', '#3F5B4C']),
+  look('look-dining-fall', 'dining', 'fall', 'Harvest table set', 'A deep walnut table with a plaid runner, and chairs the colour of cider.', 330, ['warm', 'cozy', 'natural'], ['#B5532F', '#D9A84A', '#3F5B4C']),
+  look('look-sofa-fall', 'sofa', 'fall', 'Plaid-throw sofa', 'A deep, warm sofa with a plaid blanket over the arm.', 360, ['warm', 'cozy', 'natural'], ['#B5532F', '#D9A84A', '#3F5B4C']),
+  look('look-lamp-fall', 'lamp', 'fall', 'Lantern lamp', 'A black stand with a lantern on top, glowing amber.', 80, ['warm', 'cozy', 'natural'], ['#2B2B30', '#8A5E3B', '#B5532F']),
+  look('look-plant-fall', 'plant', 'fall', 'Mum pot', 'Your plant in a rust pot, crowded with orange mums.', 40, ['warm', 'cozy', 'natural'], ['#B5532F', '#D9A84A', '#8A5E3B']),
+
+  // Winter: a seasonal pack.
+  look('look-fridge-winter', 'fridge', 'winter', 'Frosted icebox', 'Pale as a snowbank, with icicles along the top and red handles.', 340, ['cozy', 'cool', 'soft'], ['#E3EEF6', '#C8D9E6', '#F2EEE8']),
+  look('look-counter-winter', 'counter', 'winter', 'Evergreen counter', 'Forest-green cabinets, a white top and a sprig of fir by the sink.', 400, ['cozy', 'cool', 'soft'], ['#3F5B4C', '#8E1F2F', '#2E3B57']),
+  look('look-dining-winter', 'dining', 'winter', 'Lodge table set', 'A pine table with a white runner and two candles, and sturdy chairs.', 330, ['cozy', 'cool', 'soft'], ['#8A5E3B', '#3F5B4C', '#8E1F2F']),
+  look('look-sofa-winter', 'sofa', 'winter', 'Knit-throw sofa', 'A soft sofa with a chunky knit throw, for staying in.', 360, ['cozy', 'cool', 'soft'], ['#E8DCC8', '#B9C3C8', '#8E1F2F']),
+  look('look-lamp-winter', 'lamp', 'winter', 'Candle-glow lamp', 'A frosted globe on a white stem that glows like a candle in a window.', 80, ['cozy', 'cool', 'soft'], ['#F2EEE8', '#8E1F2F', '#3F5B4C']),
+  look('look-plant-winter', 'plant', 'winter', 'Frosted evergreen pot', 'Your plant with a dusting of snow and a few red berries.', 40, ['cozy', 'cool', 'soft'], ['#8E1F2F', '#F2EEE8', '#3F5B4C', '#2E3B57']),
 
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),

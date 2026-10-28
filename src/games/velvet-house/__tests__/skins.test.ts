@@ -36,7 +36,7 @@ describe('looks on the type', () => {
       for (const [id, s] of Object.entries(def.skins ?? {})) {
         expect(s.name, `${type}.${id}`).toBeTruthy();
         expect(['wood', 'metal', 'laminate', 'stone', 'fabric', 'glass']).toContain(s.material);
-        expect(['retro', 'farmhouse', 'modern', 'scandi', 'industrial']).toContain(s.theme);
+        expect(['retro', 'farmhouse', 'modern', 'scandi', 'industrial', 'spring', 'summer', 'fall', 'winter']).toContain(s.theme);
       }
     }
   });

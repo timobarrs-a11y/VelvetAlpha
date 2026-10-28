@@ -167,6 +167,8 @@ export function createHouseArt(ctx0, opts = {}) {
     oatmeal: { kind: 'sisal', a: '#D8C9AE', b: '#D8C9AE', line: 'rgba(0,0,0,.04)' },
     sagecheck: { kind: 'check', a: '#EFEBE3', b: '#9DB3A5', line: 'rgba(0,0,0,.08)' },
     goldspeck: { kind: 'speck', a: '#EFE8DE', b: '#EFE8DE', line: 'rgba(0,0,0,.05)', pal: ['#C9A24A', '#E0B85A', '#2B2B30', '#C9A24A'] },
+    birch: { kind: 'plank', a: '#EBDDBF', b: '#E3D3B0', line: 'rgba(120,90,50,.16)' }, driftwood: { kind: 'plank', a: '#D8C3A0', b: '#CFB892', line: 'rgba(90,70,40,.2)' },
+    chestnut: { kind: 'plank', a: '#8A5A3A', b: '#7F5233', line: 'rgba(0,0,0,.3)' }, frostpine: { kind: 'plank', a: '#D9DCDD', b: '#CFD3D5', line: 'rgba(60,70,80,.18)' },
     charcoal: { kind: 'flat', a: '#4A4D52', b: '#4A4D52', line: 'rgba(255,255,255,.04)' },
     barnwood: { kind: 'plank', a: '#B58B5E', b: '#A8804F', line: 'rgba(60,35,15,.32)' },
     linoleum: { kind: 'check', a: '#F4EAD0', b: '#8FCDBB', line: 'rgba(0,0,0,.08)' },
@@ -182,6 +184,7 @@ export function createHouseArt(ctx0, opts = {}) {
     'chevron-mustard': { pat: 'chevron', base: '#F5EBD8', ink: 'rgba(217,163,58,.85)' }, 'chevron-slate': { pat: 'chevron', base: '#E8EAEC', ink: 'rgba(80,90,105,.55)' },
     'scallop-peach': { pat: 'scallop', base: '#F6D6C4', ink: 'rgba(255,255,255,.8)' }, 'damask-plum': { pat: 'damask', base: '#4A2D3D', ink: 'rgba(201,164,74,.55)' },
     'damask-cream': { pat: 'damask', base: '#EFE5D3', ink: 'rgba(150,118,84,.4)' }, shiplap: { pat: 'shiplap', base: '#F3F1EC', ink: 'rgba(0,0,0,.13)' },
+    'blossom-mint': { pat: 'blossom', base: '#E4F1E6' }, 'stripe-awning': { pat: 'stripes', base: '#F6F1E4', ink: 'rgba(63,163,165,.5)' },
     'pin-slate': { pat: 'pin', base: '#4A5058', ink: 'rgba(235,238,240,.35)' },
     'gingham-sage': { pat: 'gingham', base: '#F4F1E8', ink: 'rgba(110,150,115,.3)' },
     'starburst-mint': { pat: 'starburst', base: '#CFEBDD', ink: 'rgba(224,122,92,.75)', ink2: 'rgba(224,122,92,.9)' },
@@ -355,6 +358,13 @@ export function createHouseArt(ctx0, opts = {}) {
   const cl = (o) => o.col || (colsOf(o) || ['#8A6A50'])[0];
   // Which look a drawer branches on: the skin id, or undefined for the stock look (also for a skin the type does not have).
   const skinId = (o) => (skinOf(o) ? o.skin : undefined);
+  // The four seasonal packs share a palette per season (wood, legs, table top, a pop colour and a leaf colour); each piece adds its own accent.
+  const SEAS = {
+    spring: { wood: '#E4C9A0', leg: '#F2EEE8', top: '#EAD3AD', trim: '#F7F3E8', pop: '#F3A6BE', leaf: '#6FB38A' },
+    summer: { wood: '#D9B87A', leg: '#C79B5B', top: '#DCC08A', trim: '#F2EEE8', pop: '#F6D56E', leaf: '#4F9460' },
+    fall: { wood: '#8A5E3B', leg: '#4A3426', top: '#7A4E32', trim: '#F1E2C6', pop: '#E07A2B', leaf: '#B5532F' },
+    winter: { wood: '#B7A88F', leg: '#5A3E2E', top: '#B79B76', trim: '#F4F7FA', pop: '#C0392B', leaf: '#2F6B40' },
+  };
   function singleBed(cover, edge) {
     const lux = has('bed'), z = lux ? 0.56 : 0.5;
     return [B(0, 0, 0, 0.14, 0.9, lux ? 1.3 : 1.0, lux ? '#6E4A5E' : C.dark), B(0.14, 0, 0, 2.36, 0.9, 0.32, lux ? '#5A3E4C' : C.wood), B(0.18, 0.04, 0.32, 2.28, 0.82, lux ? 0.24 : 0.18, '#F1ECE4', { name: 'mattress' }),
@@ -373,6 +383,20 @@ export function createHouseArt(ctx0, opts = {}) {
             F(0, 0, 2.4, 1.0, (T) => {
               T.line([0, 1.0, 0.38], [2.4, 1.0, 0.38], '#E8ECEF', 2.2);
               for (let i = 0; i < 6; i++) { const [bx, by] = T.P(0.3 + i * 0.36, 0.33, 0.78); circle(bx, by, 1.5, shade(v, -0.35)); }
+            }, { onTop: true })];
+        }
+        // Seasonal: the pack's sofa, with a cushion or a throw for the season.
+        if (SEAS[skinId(o)]) {
+          const sk = skinId(o), P = SEAS[sk], v = cl(o), vc = shade(v, 0.14);
+          return [B(0, 0, 0.38, 2.4, 0.32, 0.6, v), B(0, 0, 0, 2.4, 1.0, 0.38, v, { name: 'base' }), B(0, 0, 0, 2.4, 1.0, 0.05, P.wood),
+            B(0.2, 0.32, 0.38 - s1 * 0.018, 1.0, 0.62, 0.1 - s1 * 0.035, vc),
+            B(1.2, 0.32, 0.38 - s2 * 0.018, 1.0, 0.62, 0.1 - s2 * 0.035, vc),
+            B(0, 0, 0, 0.2, 1.0, 0.62, v), B(2.2, 0, 0, 0.2, 1.0, 0.62, v), B(0.26, 0.34, 0.48, 0.42, 0.14, 0.32, sk === 'winter' ? '#C0392B' : sk === 'fall' ? '#D9A84A' : sk === 'summer' ? '#3FA3A5' : '#FFF3B0'),
+            F(0, 0, 2.4, 1.0, (T) => {
+              if (sk === 'spring') { const [fx, fy] = T.P(0.47, 0.5, 0.62); for (let i = 0; i < 5; i++) { const a = i * 1.2566; circle(fx + Math.cos(a) * 3, fy + Math.sin(a) * 3, 2, P.pop); } circle(fx, fy, 1.6, '#F6D56E'); }
+              if (sk === 'summer') for (let i = 0; i < 4; i++) T.line([0.3 + i * 0.1, 0.5, 0.5], [0.3 + i * 0.1, 0.5, 0.78], '#F2EEE8', 2);
+              if (sk === 'fall') { T.poly([[2.2, 1.001, 0.1], [2.4, 1.001, 0.1], [2.4, 1.001, 0.62], [2.2, 1.001, 0.62]], '#B5532F'); for (let z = 0.2; z < 0.62; z += 0.14) T.line([2.2, 1.002, z], [2.4, 1.002, z], '#1B1A1F', 1.2); T.line([2.3, 1.002, 0.1], [2.3, 1.002, 0.62], '#1B1A1F', 1.2); }
+              if (sk === 'winter') { T.poly([[2.2, 1.001, 0.1], [2.4, 1.001, 0.1], [2.4, 1.001, 0.62], [2.2, 1.001, 0.62]], '#F2EEE8'); for (let z = 0.14; z < 0.62; z += 0.1) T.line([2.2, 1.002, z], [2.4, 1.002, z + 0.05], 'rgba(120,110,100,.55)', 1.4); }
             }, { onTop: true })];
         }
         // Modern: a low sofa with tight flat cushions, slab arms and a thin dark plinth.
@@ -413,11 +437,19 @@ export function createHouseArt(ctx0, opts = {}) {
       parts: (o) => {
         const ps = [];
         // Retro: a boomerang-top laminate table on chrome legs, with vinyl chairs in the piece's colour.
-        const rt = skinId(o) === 'retro', fm = skinId(o) === 'farmhouse', md = skinId(o) === 'modern', leg = rt ? '#D5DAE0' : fm ? '#7A5236' : md ? '#1B1A1F' : C.dark, seat = rt || fm || md ? cl(o) : C.wood, topc = rt ? '#F4EAD0' : fm ? shade(cl(o), 0.05) : md ? '#D3E8EE' : C.wood;
+        const rt = skinId(o) === 'retro', fm = skinId(o) === 'farmhouse', md = skinId(o) === 'modern', sea = SEAS[skinId(o)], leg = rt ? '#D5DAE0' : fm ? '#7A5236' : md ? '#1B1A1F' : sea ? sea.leg : C.dark, seat = rt || fm || md || sea ? cl(o) : C.wood, topc = rt ? '#F4EAD0' : fm ? shade(cl(o), 0.05) : md ? '#D3E8EE' : sea ? sea.top : C.wood;
         [[0.39, 0.04], [0.83, 0.04], [0.39, 0.48], [0.83, 0.48]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.06, 0.06, 0.42, leg)));
         ps.push(B(0.35, 0, 0.42, 0.6, 0.58, 0.07, seat, { name: 'seat1' }), B(0.35, 0, 0.49, 0.6, 0.07, 0.62, seat));
         [[0.05, 0.79], [1.18, 0.79], [0.05, 1.64], [1.18, 1.64]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.07, 0.07, 0.7, leg)));
         ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, topc, { name: 'top' }));
+        // Seasonal: the pack's table with a season's touch laid on it: scattered petals, a striped runner, a plaid runner, or a white runner with candles.
+        if (sea) ps.push(F(0, 0.74, 1.3, 1.74, (T) => {
+          const sk = skinId(o), z = 0.772, band = (x0, x1, col) => T.poly([[x0, 0.78, z], [x1, 0.78, z], [x1, 1.7, z], [x0, 1.7, z]], col);
+          if (sk === 'spring') for (let k = 0; k < 9; k++) { const [px, py] = T.P(0.12 + (k * 0.37) % 1.05, 0.84 + (k * 0.53) % 0.8, z); circle(px, py, 1.7, k % 2 ? '#F3A6BE' : '#FFF3B0'); }
+          if (sk === 'summer') { for (let i = 0; i < 5; i++) band(0.5 + i * 0.1, 0.55 + i * 0.1, i % 2 ? '#F2EEE8' : '#3FA3A5'); }
+          if (sk === 'fall') { band(0.48, 0.82, '#B5532F'); for (let y = 0.84; y < 1.7; y += 0.2) T.line([0.48, y, z + 0.001], [0.82, y, z + 0.001], '#1B1A1F', 1.2); T.line([0.58, 0.78, z + 0.001], [0.58, 1.7, z + 0.001], '#1B1A1F', 1.2); T.line([0.72, 0.78, z + 0.001], [0.72, 1.7, z + 0.001], '#1B1A1F', 1.2); }
+          if (sk === 'winter') { band(0.5, 0.8, '#F4F7FA'); [[0.5, 0.9], [0.8, 1.6]].forEach(([x, y]) => { T.box(x, y, 0.77, 0.06, 0.06, 0.12, '#F2EEE8'); const [cx, cy] = T.P(x + 0.03, y + 0.03, 0.9); ell(cx, cy - 1, 1.6, 3, isLit(o.id) ? '#FFD36B' : '#F6B34A'); }); }
+        }, { onTop: true }));
         // Modern: a glass top on slim black legs, with a bright edge and reflections; sleek shell chairs.
         if (md) ps.push(F(0, 0.74, 1.3, 1.74, (T) => {
           T.line([0, 0.74, 0.7], [1.3, 0.74, 0.7], '#7FA7B3', 1.6); T.line([0, 1.74, 0.7], [1.3, 1.74, 0.7], '#7FA7B3', 1.6);
@@ -455,6 +487,18 @@ export function createHouseArt(ctx0, opts = {}) {
           [[0.05, 0.2, 1.52], [0.35, 0.2, 1.52], [0.2, 0.05, 1.52], [0.2, 0.35, 1.52], [0.2, 0.2, 1.72], [0.08, 0.08, 1.64], [0.32, 0.32, 1.64]].forEach(([x, y, z]) => { T.line([0.2, 0.2, 1.3], [x, y, z], arm, 1.4); const [bx, by] = T.P(x, y, z); circle(bx, by, 3.2, lit ? '#FFE2A8' : cl(o)); circle(bx - 0.8, by - 0.8, 1, 'rgba(255,255,255,.8)'); });
           return;
         }
+        // Seasonal: a daisy, a palm, a lantern or a candle-glow globe on a slim stem. The light stays where it was.
+        if (SEAS[skinId(o)]) {
+          const sk = skinId(o), P = SEAS[sk], c = cl(o), lit = isLit(o.id);
+          T.box(0.07, 0.07, 0, 0.26, 0.26, 0.04, sk === 'spring' ? P.leaf : sk === 'fall' ? '#2B2B30' : P.wood);
+          T.line([0.2, 0.2, 0.04], [0.2, 0.2, sk === 'fall' ? 1.3 : 1.45], sk === 'spring' ? P.leaf : sk === 'summer' ? '#8A5E3B' : sk === 'fall' ? '#2B2B30' : '#E8ECEF', 2);
+          const [hx, hy] = T.P(0.2, 0.2, sk === 'fall' ? 1.5 : 1.6);
+          if (sk === 'spring') { for (let i = 0; i < 8; i++) { const a = i * 0.785; ell(hx + Math.cos(a) * 7, hy + Math.sin(a) * 4.5, 4.2, 2.2, c, null, a); } circle(hx, hy, 4, lit ? '#FFE2A8' : '#F6D56E'); }
+          if (sk === 'summer') { for (let i = 0; i < 6; i++) { const a = -2.7 + i * 0.55; ell(hx + Math.cos(a) * 9, hy + Math.sin(a) * 6, 8, 2.2, i % 2 ? '#3F7D4E' : P.leaf, null, a); } circle(hx, hy + 1, 3.6, lit ? '#FFE2A8' : '#F6D56E'); }
+          if (sk === 'fall') { T.box(0.08, 0.08, 1.3, 0.24, 0.24, 0.3, lit ? '#FFB45A' : '#7A4E32'); T.box(0.05, 0.05, 1.6, 0.3, 0.3, 0.05, '#2B2B30'); T.box(0.05, 0.05, 1.27, 0.3, 0.3, 0.04, '#2B2B30'); T.line([0.08, 0.321, 1.3], [0.08, 0.321, 1.6], '#2B2B30', 1.4); T.line([0.32, 0.321, 1.3], [0.32, 0.321, 1.6], '#2B2B30', 1.4); }
+          if (sk === 'winter') { circle(hx, hy, 9, lit ? '#FFF1C9' : '#E6EEF4'); circle(hx - 2, hy - 3, 2.4, 'rgba(255,255,255,.75)'); ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(hx, hy + 2, 9, 2.6, 0, 0, Math.PI); ctx.stroke(); }
+          return;
+        }
         // Modern: a slim torchiere, a black pole with a round white head. The light stays where it was.
         if (skinId(o) === 'modern') {
           const c = cl(o), lit = isLit(o.id);
@@ -484,13 +528,26 @@ export function createHouseArt(ctx0, opts = {}) {
           [0.1, 0.2, 0.3, 0.4].forEach(x => T.line([x, 0.501, 0.02], [x, 0.501, 0.19], 'rgba(60,35,15,.4)', 1));
           T.line([0, 0.501, 0.1], [0.5, 0.501, 0.1], 'rgba(60,35,15,.4)', 1);
           T.box(0.06, 0.06, 0.2, 0.38, 0.38, 0.22, cl(o)); T.line([0.06, 0.441, 0.4], [0.44, 0.441, 0.4], 'rgba(255,255,255,.4)', 1.4);
+        } else if (SEAS[skinId(o)]) {
+          // Seasonal: a pot in the pack's colour with a rim (wicker for summer); blooms, mums or snow go on the leaves below.
+          const sk = skinId(o), P = SEAS[sk];
+          T.box(0, 0, 0, 0.5, 0.5, 0.42, cl(o)); T.box(-0.01, -0.01, 0.36, 0.52, 0.52, 0.06, sk === 'summer' ? '#C79B5B' : shade(cl(o), 0.22));
+          if (sk === 'summer') for (let z = 0.06; z < 0.34; z += 0.07) T.line([0.02, 0.501, z], [0.48, 0.501, z], 'rgba(90,60,25,.4)', 1);
+          if (sk === 'fall') T.line([0.02, 0.501, 0.2], [0.48, 0.501, 0.2], 'rgba(255,255,255,.2)', 1.2);
         } else if (skinId(o) === 'modern') {
           // Modern: a square matte planter with a pale gravel top.
           T.box(0.02, 0.02, 0, 0.46, 0.46, 0.4, cl(o)); T.box(0.02, 0.02, 0.4, 0.46, 0.46, 0.03, shade(cl(o), 0.18));
           T.line([0.02, 0.481, 0.2], [0.48, 0.481, 0.2], 'rgba(255,255,255,.12)', 1);
         } else T.box(0, 0, 0, 0.5, 0.5, 0.42, o.pot || '#C26B4A');
         T.poly([[0.05, 0.05, 0.421], [0.45, 0.05, 0.421], [0.45, 0.45, 0.421], [0.05, 0.45, 0.421]], skinId(o) === 'modern' ? '#B9B4AC' : '#4A3426'); const [sx, sy] = T.P(0.25, 0.25, 0.55), sway = Math.sin(t * 0.8 + o.x) * 0.04;
-        [[-10, -14, -0.7, '#3F7D4E'], [9, -16, 0.6, '#4F9460'], [-4, -26, -0.25, '#4F9460'], [5, -30, 0.3, '#3F7D4E'], [0, -20, 0, '#5BA36C']].forEach(([dx, dy, r, c]) => ell(sx + dx, sy + dy, 5, 13, c, null, r + sway)); })],
+        [[-10, -14, -0.7, '#3F7D4E'], [9, -16, 0.6, '#4F9460'], [-4, -26, -0.25, '#4F9460'], [5, -30, 0.3, '#3F7D4E'], [0, -20, 0, '#5BA36C']].forEach(([dx, dy, r, c]) => ell(sx + dx, sy + dy, 5, 13, c, null, r + sway));
+        const ps = SEAS[skinId(o)];
+        if (ps) { const sk = skinId(o);
+          if (sk === 'spring') [[-9, -24, '#F3A6BE'], [8, -30, '#FFF3B0'], [-2, -36, '#F3A6BE'], [11, -17, '#FFB3C7']].forEach(([dx, dy, c]) => { circle(sx + dx, sy + dy, 3.2, c); circle(sx + dx, sy + dy, 1.2, '#F6D56E'); });
+          if (sk === 'summer') [[-6, -22], [7, -27], [0, -33]].forEach(([dx, dy]) => { ell(sx + dx, sy + dy, 2, 7, '#3F7D4E', null, dx * 0.1); });
+          if (sk === 'fall') [[-9, -20, '#E07A2B'], [7, -26, '#D9A84A'], [-1, -33, '#E07A2B'], [10, -15, '#B5532F']].forEach(([dx, dy, c]) => { circle(sx + dx, sy + dy, 3.6, c); circle(sx + dx, sy + dy, 1.4, '#7A4E32'); });
+          if (sk === 'winter') { [[-10, -26], [9, -32], [-2, -38]].forEach(([dx, dy]) => ell(sx + dx, sy + dy, 4.2, 1.8, '#F4F7FA')); [[-4, -18], [5, -22]].forEach(([dx, dy]) => circle(sx + dx, sy + dy, 1.6, '#C0392B')); }
+        } })],
        },
     bookshelf: {    
       parts: () => [F(0, 0, 1.4, 0.38, (T) => { T.box(0, 0, 0, 1.4, 0.38, 1.6, C.dark); const cols = ['#C2413A', '#3D6B73', '#E0A43A', '#4A5DA8', '#F2EEE8', '#7E4458', '#4F9460'];
@@ -551,6 +608,19 @@ export function createHouseArt(ctx0, opts = {}) {
           T.poly([[0.3, 0.13, 0.911], [1.0, 0.13, 0.911], [1.0, 0.6, 0.911], [0.3, 0.6, 0.911]], '#B9BEC3', 'rgba(0,0,0,.35)', 1.2);
           T.poly([[0.36, 0.19, 0.912], [0.94, 0.19, 0.912], [0.94, 0.54, 0.912], [0.36, 0.54, 0.912]], '#9AA0A6', 'rgba(0,0,0,.25)', 1);
           T.line([0.65, 0.05, 0.91], [0.65, 0.05, 1.3], '#1B1A1F', 2.4); T.line([0.65, 0.05, 1.3], [0.65, 0.26, 1.26], '#1B1A1F', 2.4);
+        } else if (SEAS[skinId(o)]) {
+          // Seasonal: cabinets in the pack's colour, a warm or pale top and a white basin, with something of the season on the free stretch between sink and stove.
+          const sk = skinId(o), P = SEAS[sk];
+          T.box(0, 0, 0, 2.8, 0.8, 0.86, cl(o));
+          [0.7, 1.4, 2.1].forEach(x => T.line([x, 0.801, 0.06], [x, 0.801, 0.8], 'rgba(0,0,0,.3)', 1.2));
+          [0.3, 1.0, 1.7, 2.4].forEach(x => T.line([x, 0.803, 0.64], [x + 0.2, 0.803, 0.64], sk === 'winter' ? '#E8ECEF' : P.trim, 2.6));
+          T.box(-0.05, -0.04, 0.86, 2.9, 0.88, 0.07, sk === 'winter' ? '#F1F3F4' : P.wood);
+          T.poly([[0.3, 0.13, 0.931], [1.0, 0.13, 0.931], [1.0, 0.6, 0.931], [0.3, 0.6, 0.931]], '#F4F2EC', 'rgba(0,0,0,.28)', 1.1);
+          T.line([0.65, 0.04, 0.93], [0.65, 0.04, 1.2], '#B9C3C8', 2.4); T.line([0.65, 0.04, 1.2], [0.65, 0.24, 1.14], '#B9C3C8', 2.4);
+          if (sk === 'spring') [[1.06, 0.18], [1.14, 0.42]].forEach(([x, y], k) => { T.box(x, y, 0.93, 0.1, 0.1, 0.09, '#C26B4A'); const [hx, hy] = T.P(x + 0.05, y + 0.05, 1.08); ell(hx - 2, hy - 2, 2, 5, P.leaf, null, -0.4); ell(hx + 2, hy - 3, 2, 5, k ? P.pop : '#6FB38A', null, 0.4); });
+          if (sk === 'summer') { T.box(1.04, 0.16, 0.93, 0.2, 0.2, 0.1, '#C79B5B'); [[1.1, 0.22], [1.18, 0.28]].forEach(([x, y]) => { const [lx, ly] = T.P(x, y, 1.06); circle(lx, ly, 2.6, P.pop); }); }
+          if (sk === 'fall') [[1.1, 0.2, 4.2], [1.19, 0.36, 3.2]].forEach(([x, y, r]) => { const [px, py] = T.P(x, y, 0.99); circle(px, py, r, P.pop); limb(px, py - r, px + 1, py - r - 2.4, '#4A3426', 1.4); });
+          if (sk === 'winter') { const [fx, fy] = T.P(1.12, 0.26, 0.98); [[-5, 3], [5, 3], [-3, -1], [3, -1], [0, -6]].forEach(([dx, dy], k) => { ell(fx + dx * 0.5, fy + dy, 5 - (k > 1 ? 1.6 : 0), 2.4, k % 2 ? '#2F6B40' : '#3F7D4E'); }); circle(fx, fy - 2, 1.5, '#C0392B'); }
         } else {
         if (rt) T.box(0, 0, 0, 2.8, 0.8, 0.07, '#C9CED6');
         T.box(0, 0, rt ? 0.07 : 0, 2.8, 0.8, rt ? 0.79 : 0.86, rt ? cl(o) : '#E4DDD2');
@@ -594,6 +664,19 @@ export function createHouseArt(ctx0, opts = {}) {
           T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], 'rgba(90,70,40,.4)', 1.4);
           [[0.7, 1.15], [1.42, 1.78]].forEach(([z0, z1]) => { T.line([0.78, 0.855, z0], [0.78, 0.855, z1], '#2B2B30', 3.4); });
           T.line([0.05, 0.851, 0.1], [0.85, 0.851, 0.1], 'rgba(60,40,20,.45)', 1);
+        } else if (SEAS[skinId(T.o)]) {
+          // Seasonal: the same box in the pack's colour, a wooden foot, a pale cap and handles, and one accent for the season.
+          const sk = skinId(T.o), P = SEAS[sk], body = cl(T.o);
+          T.box(0, 0, 0, 0.9, 0.85, 0.1, P.wood);
+          T.box(0, 0, 0.1, 0.9, 0.85, 1.78, body);
+          T.box(0, 0, 1.88, 0.9, 0.85, 0.07, P.trim);
+          T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], 'rgba(60,50,40,.35)', 1.4);
+          [[0.7, 1.15], [1.42, 1.78]].forEach(([z0, z1]) => T.line([0.78, 0.855, z0], [0.78, 0.855, z1], sk === 'winter' ? '#8E1F2F' : sk === 'summer' ? '#C79B5B' : P.wood, 3.6));
+          if (sk === 'spring') [[0.16, 1.62], [0.34, 1.48], [0.5, 1.64]].forEach(([x, z], k) => { const [fx, fy] = T.P(x, 0.853, z); for (let i = 0; i < 5; i++) { const a = i * 1.2566; circle(fx + Math.cos(a) * 2.6, fy + Math.sin(a) * 2.6, 1.9, k % 2 ? '#FFF3B0' : P.pop); } circle(fx, fy, 1.5, '#F6D56E'); });
+          if (sk === 'summer') { T.poly([[0.04, 0.851, 1.52], [0.7, 0.851, 1.52], [0.7, 0.851, 1.6], [0.04, 0.851, 1.6]], '#F2EEE8'); T.poly([[0.04, 0.851, 1.44], [0.7, 0.851, 1.44], [0.7, 0.851, 1.5], [0.04, 0.851, 1.5]], '#3FA3A5'); const [sx, sy] = T.P(0.22, 0.853, 1.0); circle(sx, sy, 4.2, P.pop); }
+          if (sk === 'fall') [[0.18, 1.6, 0.5], [0.4, 1.46, -0.6], [0.52, 1.66, 0.2]].forEach(([x, z, r], k) => { const [lx, ly] = T.P(x, 0.853, z); ell(lx, ly, 2.6, 5, ['#E07A2B', '#D9A84A', '#B5532F'][k], null, r); });
+          if (sk === 'winter') for (let x = 0.06; x < 0.88; x += 0.1) T.line([x, 0.856, 1.88], [x, 0.856, 1.8 - ((x * 37) % 0.08)], '#BFE3F5', 2.2);
+          T.line([0.05, 0.851, 0.1], [0.85, 0.851, 0.1], 'rgba(60,40,20,.4)', 1);
         } else if (skinId(T.o) === 'modern') {
           // Modern: a flat slab of steel or matte black, one full-height bar handle and a small display. No rounded anything.
           const body = cl(T.o), dark = shade(body, -0.5) === body ? body : shade(body, -0.35);
@@ -606,7 +689,7 @@ export function createHouseArt(ctx0, opts = {}) {
         T.box(0, 0, 0, 0.9, 0.85, 1.95, '#DCE3E6'); T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], 'rgba(60,70,80,.3)', 1); T.line([0.78, 0.85, 0.7], [0.78, 0.85, 1.15], '#8E979C', 2); T.line([0.78, 0.85, 1.42], [0.78, 0.85, 1.75], '#8E979C', 2);
         }
         const n = fridge.basic + fridge.fresh; T.poly([[0.08, 0.851, 1.45], [0.32, 0.851, 1.45], [0.32, 0.851, 1.68], [0.08, 0.851, 1.68]], n === 0 ? '#C2413A' : '#E0A43A');
-        if (live(T.o.id)) { T.poly([[0.04, 0.851, 0.05], [0.86, 0.851, 0.05], [0.86, 0.851, 1.25], [0.04, 0.851, 1.25]], 'rgba(255,248,220,.95)'); [0.4, 0.75].forEach(z => T.line([0.06, 0.852, z], [0.84, 0.852, z], 'rgba(150,160,170,.6)', 1)); [[0.2, 0.42, '#C2413A'], [0.5, 0.42, '#7FB069'], [0.3, 0.77, '#F2EEE8'], [0.62, 0.77, '#E0A43A']].forEach(([x, z, col]) => { const [cx, cy] = T.P(x, 0.853, z + 0.06); rr(cx - 3, cy - 5, 6, 6, 1, col); }); T.poly([[0.86, 0.851, 0.05], [0.86, 1.6, 0.05], [0.86, 1.6, 1.25], [0.86, 0.851, 1.25]], ['retro', 'farmhouse', 'modern'].includes(skinId(T.o)) ? cl(T.o) : '#DCE3E6', 'rgba(60,70,80,.3)', 1); } })],
+        if (live(T.o.id)) { T.poly([[0.04, 0.851, 0.05], [0.86, 0.851, 0.05], [0.86, 0.851, 1.25], [0.04, 0.851, 1.25]], 'rgba(255,248,220,.95)'); [0.4, 0.75].forEach(z => T.line([0.06, 0.852, z], [0.84, 0.852, z], 'rgba(150,160,170,.6)', 1)); [[0.2, 0.42, '#C2413A'], [0.5, 0.42, '#7FB069'], [0.3, 0.77, '#F2EEE8'], [0.62, 0.77, '#E0A43A']].forEach(([x, z, col]) => { const [cx, cy] = T.P(x, 0.853, z + 0.06); rr(cx - 3, cy - 5, 6, 6, 1, col); }); T.poly([[0.86, 0.851, 0.05], [0.86, 1.6, 0.05], [0.86, 1.6, 1.25], [0.86, 0.851, 1.25]], ['retro', 'farmhouse', 'modern'].includes(skinId(T.o)) || SEAS[skinId(T.o)] ? cl(T.o) : '#DCE3E6', 'rgba(60,70,80,.3)', 1); } })],
        },
     tvunit: {    
       parts: () => [F(0, 0, 1.6, 0.45, (T) => { T.box(0, 0, 0, 1.6, 0.45, 0.42, '#3A3340'); T.line([0.8, 0.45, 0.06], [0.8, 0.45, 0.36], 'rgba(255,255,255,.12)', 1); if (!has('bigtv')) { T.box(0.1, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); T.box(1.32, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); } })] },

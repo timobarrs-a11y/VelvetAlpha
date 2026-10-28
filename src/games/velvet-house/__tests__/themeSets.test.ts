@@ -11,6 +11,10 @@ interface ThemeSpec { theme: Theme; tags: string[]; materials: Material[]; paper
 const THEMES: ThemeSpec[] = [
   { theme: 'farmhouse', tags: ['cozy', 'natural', 'warm'], materials: ['wood', 'stone', 'metal', 'fabric'], paper: { id: 'paper-gingham-sage', pattern: 'gingham-sage' }, floor: { id: 'floor-barnwood', floor: 'barnwood' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'modern', tags: ['modern', 'minimal', 'cool'], materials: ['metal', 'glass', 'stone', 'fabric'], paper: { id: 'paper-pin-slate', pattern: 'pin-slate' }, floor: { id: 'floor-charcoal', floor: 'charcoal' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [450, 700] },
+  { theme: 'spring', tags: ['soft', 'natural', 'playful'], materials: ['wood', 'stone', 'metal', 'fabric', 'glass'], paper: { id: 'paper-blossom-mint', pattern: 'blossom-mint' }, floor: { id: 'floor-birch', floor: 'birch' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
+  { theme: 'summer', tags: ['playful', 'cool', 'natural'], materials: ['wood', 'stone', 'metal', 'fabric', 'glass'], paper: { id: 'paper-stripe-awning', pattern: 'stripe-awning' }, floor: { id: 'floor-driftwood', floor: 'driftwood' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
+  { theme: 'fall', tags: ['warm', 'cozy', 'natural'], materials: ['wood', 'stone', 'metal', 'fabric', 'glass'], paper: { id: 'paper-leaves', pattern: 'leaves' }, floor: { id: 'floor-chestnut', floor: 'chestnut' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
+  { theme: 'winter', tags: ['cozy', 'cool', 'soft'], materials: ['wood', 'stone', 'metal', 'fabric', 'glass'], paper: { id: 'paper-snow', pattern: 'snow' }, floor: { id: 'floor-frostpine', floor: 'frostpine' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
 ];
 const PIECES = ['fridge', 'counter', 'dining', 'sofa', 'lamp', 'plant'];
 // What the household uses on each piece: a look must leave these where they are.

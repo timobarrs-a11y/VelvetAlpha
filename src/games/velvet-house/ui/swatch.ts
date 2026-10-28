@@ -24,6 +24,8 @@ export function paperCss(info: LookInfo | null, thumb?: string): string {
     case 'plaid': return `${stripes(info.ink2 ?? ink, '90deg', 18)}, ${stripes(ink, '0deg', 18)}, ${base}`;
     case 'chevron': case 'arches': case 'scallop': case 'damask': case 'hexes': case 'tuft':
       return `${stripes(ink, '45deg', 12)}, ${stripes(ink, '-45deg', 12)}, ${base}`;
+    case 'leaves': return `radial-gradient(circle, #C27A4A 0 2.5px, transparent 3px) 0 0 / 12px 12px, radial-gradient(circle, #D9A84A 0 2px, transparent 2.5px) 6px 6px / 12px 12px, ${base}`;
+    case 'snow': return `radial-gradient(circle, rgba(255,255,255,.95) 0 1.8px, transparent 2.2px) 0 0 / 11px 11px, radial-gradient(circle, rgba(255,255,255,.8) 0 1.2px, transparent 1.6px) 5px 5px / 11px 11px, ${base}`;
     case 'starburst': return `radial-gradient(circle, ${ink} 0 1.5px, transparent 2px) 0 0 / 14px 14px, repeating-conic-gradient(from 0deg at 7px 7px, ${ink} 0 6deg, transparent 6deg 45deg) 0 0 / 14px 14px, ${base}`;
     case 'shiplap': case 'subway': case 'brick': case 'block': return `${stripes(ink, '0deg', 9)}, ${base}`;
     default: return base;
