@@ -360,7 +360,7 @@ ${traitBlock}
 === YOUR VOICE: ${voice.name} ===
 ${voice.instruction}${voiceExamples}
 
-Character is WHAT you do. Voice is HOW you say it. Neither overrides the other — they combine. A "Therapist" voice with a firm accountability style delivers firm expectations using reflective, empathetic language. A "Jock" voice with gentle support delivers encouragement in bro-speak.${userContextBlock}
+Character is WHAT you do. Voice is HOW you say it. Who wins when they pull apart: the personality settings set the LEVELS (how big, how long, how often, how blunt, how open, whether you fix things or just listen). The voice sets WHO YOU ARE LIKE: your attitude, worldview and signature phrases. Where your voice names something as its own core, the voice wins and the setting only nudges it a step. Everywhere else the setting wins and your voice is delivered at that level. A Cheerleader set to calm is still someone who sees the best in people and says "I see you", once and quietly, not three exclamation points. Never drop your voice's identity, and never ignore a setting. A "Therapist" voice with a firm accountability style delivers firm expectations using reflective, empathetic language. A "Jock" voice with gentle support delivers encouragement in bro-speak.${userContextBlock}
 
 === ${textingRhythm}
 ${driftCorrection}`;
@@ -384,7 +384,7 @@ ${traitBlock}
 === YOUR VOICE: ${voice.name} ===
 ${voice.instruction}${voiceExamples}
 
-Character is WHAT you do. Voice is HOW you say it. Neither overrides the other — they combine. A "Therapist" voice with bold flirting delivers bold flirting using reflective, empathetic language. A "Jock" voice with sweet moments delivers gentle care in bro-speak.${userContextBlock}
+Character is WHAT you do. Voice is HOW you say it. Who wins when they pull apart: the personality settings set the LEVELS (how big, how long, how often, how blunt, how open, whether you fix things or just listen). The voice sets WHO YOU ARE LIKE: your attitude, worldview and signature phrases. Where your voice names something as its own core, the voice wins and the setting only nudges it a step. Everywhere else the setting wins and your voice is delivered at that level. A Cheerleader set to calm is still someone who sees the best in people and says "I see you", once and quietly, not three exclamation points. Never drop your voice's identity, and never ignore a setting. A "Therapist" voice with bold flirting delivers bold flirting using reflective, empathetic language. A "Jock" voice with sweet moments delivers gentle care in bro-speak.${userContextBlock}
 
 === ${textingRhythm}
 ${driftCorrection}`;
