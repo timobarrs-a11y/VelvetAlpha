@@ -31,14 +31,15 @@ export interface CatalogEntry {
   buy?: string;
   /** A themed set sold as one bundle: the catalog ids it holds and the share taken off what is not owned yet. */
   set?: { items: string[]; off: number };
-  /** Not in the shop until the player has it: it comes from a code (state/unlockCodes.ts), never from the shelves. */
-  secret?: boolean;
-  /** Not in the shop until the player owns this catalog id: the finishing touches of a secret pack wait for the pack. */
-  needs?: string;
+  /**
+   * A promo item: it comes free with a promo code (state/unlockCodes.ts) and can't be bought. Until the player has it,
+   * the shop shows it by name only, locked, with no preview; the Promo tab lists the promo packs.
+   */
+  promo?: boolean;
 }
 
 export const TABS = [
-  'Today', 'Sets', 'Groceries', 'Paint', 'Wallpaper', 'Floors',
+  'Today', 'Sets', 'Promo', 'Groceries', 'Paint', 'Wallpaper', 'Floors',
   'Furniture', 'Wall', 'Decor', 'Plants', 'Hobbies',
   'Outdoor', 'Clothes', 'Upgrades', 'Attic', 'Pets', 'Homes',
 ] as const;
@@ -75,10 +76,8 @@ const bundle = (id: string, name: string, desc: string, items: string[], tags: s
   id, name, desc, price: 0, icon: 'set', tab: 'Sets', tags, set: { items, off },
 });
 
-/** A secret entry: out of the shop until the player owns it. */
-const secret = (e: CatalogEntry): CatalogEntry => ({ ...e, secret: true });
-/** An entry that waits for another: out of the shop until the player owns `id`. */
-const after = (e: CatalogEntry, id: string): CatalogEntry => ({ ...e, needs: id });
+/** A promo entry: free with a promo code, never sold. */
+const promo = (e: CatalogEntry): CatalogEntry => ({ ...e, promo: true });
 
 const hobby = (id: string, type: string, name: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
   id, name, price, icon: 'obj', tab: 'Hobbies', type, tags, cols, repeat: true,
@@ -156,7 +155,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-serape-adobe', 'Serape band', 'serape-adobe', 100, ['warm', 'natural', 'cozy']),
   wallpaper('paper-circuit', 'Circuit', 'circuit', 110, ['bold', 'modern', 'industrial']),
   wallpaper('paper-sprinkles', 'Sprinkles', 'sprinkles', 90, ['soft', 'playful', 'warm']),
-  secret(wallpaper('paper-clouds-sky', 'Clouds and rainbows', 'clouds-sky', 90, ['soft', 'playful', 'cozy'])),
+  promo(wallpaper('paper-clouds-sky', 'Clouds and rainbows', 'clouds-sky', 90, ['soft', 'playful', 'cozy'])),
   wallpaper('paper-pixel-invaders', 'Pixel invaders', 'pixel-invaders', 110, ['playful', 'bold', 'vintage']),
   wallpaper('paper-shiplap', 'Shiplap', 'shiplap', 80, ['natural', 'minimal', 'cozy']),
   wallpaper('paper-subway', 'Subway tile', 'subway', 80, ['modern', 'minimal', 'industrial']),
@@ -221,7 +220,7 @@ export const CATALOG: CatalogEntry[] = [
   bundle('set-candy', 'Candy kitchen and living room', 'Pastel pink, mint and lilac: the bow fridge, scalloped mint counter with a cupcake stand, scalloped table with heart-back chairs under a lollipop light, scalloped pink sofa, an ice cream cone lamp and a teacup planter, with sprinkles on the walls and a pink check underfoot.',
     ['look-fridge-candy', 'look-counter-candy', 'look-dining-candy', 'look-sofa-candy', 'look-lamp-candy', 'look-plant-candy', 'paper-sprinkles', 'floor-checkpink'], ['soft', 'playful', 'warm']),
 
-  secret(bundle('set-cuddle', 'Cuddle Clouds kitchen and living room', 'Pastel bears, clouds and rainbows: the rainbow bear fridge, cloud counter with a heart basin and a bear plush, cloud table with bear-face chairs under a rainbow, a puffy cloud sofa, a cloud lamp with rainbow drops and a cloud pot, with clouds and rainbows on the walls and a sky check underfoot.',
+  promo(bundle('set-cuddle', 'Cuddle Clouds kitchen and living room', 'Pastel bears, clouds and rainbows: the rainbow bear fridge, cloud counter with a heart basin and a bear plush, cloud table with bear-face chairs under a rainbow, a puffy cloud sofa, a cloud lamp with rainbow drops and a cloud pot, with clouds and rainbows on the walls and a sky check underfoot.',
     ['look-fridge-cuddle', 'look-counter-cuddle', 'look-dining-cuddle', 'look-sofa-cuddle', 'look-lamp-cuddle', 'look-plant-cuddle', 'paper-clouds-sky', 'floor-skycheck'], ['soft', 'playful', 'cozy'])),
 
   bundle('set-arcade', 'Arcade kitchen and living room', 'Black cabinets, marquee lights and neon: the cabinet fridge with a glowing screen, coin-op counter with a joystick at the end, a cocktail cabinet to eat off with red vinyl stools under a marquee, a vinyl sofa with chasing lights, a joystick lamp and a pixel pot, with pixel invaders on the walls and the arcade carpet underfoot. The claw machine in Hobbies goes with it.',
@@ -230,8 +229,8 @@ export const CATALOG: CatalogEntry[] = [
   bundle('touches-arcade', 'Arcade finishing touches', 'The rest of the arcade: the carpet as a rug, a marquee sign that says PLAY in chasing bulbs, a pixel art print, a stack of game cartridges and a pinball machine with a playfield that comes alive when someone plays.',
     ['rug-arcade', 'wobj-marquee', 'wobj-pixelprint', 'cartridges', 'pinball'], ['playful', 'bold', 'vintage']),
 
-  after(bundle('touches-cuddle', 'Cuddle Clouds finishing touches', 'The rest of the clouds: a cloud-shaped rug with a rainbow across it, a rainbow arch for the wall, a cloud night light that glows, a pile of bear plushies and a swing seat hanging from a cloud that bobs and glows.',
-    ['rug-cuddle', 'wobj-rainbowarch', 'wobj-cloudlight', 'plushpile', 'cloudswing'], ['soft', 'playful', 'cozy']), 'set-cuddle'),
+  promo(bundle('touches-cuddle', 'Cuddle Clouds finishing touches', 'The rest of the clouds: a cloud-shaped rug with a rainbow across it, a rainbow arch for the wall, a cloud night light that glows, a pile of bear plushies and a swing seat hanging from a cloud that bobs and glows.',
+    ['rug-cuddle', 'wobj-rainbowarch', 'wobj-cloudlight', 'plushpile', 'cloudswing'], ['soft', 'playful', 'cozy'])),
 
   bundle('touches-neon', 'Neon finishing touches', 'The rest of the neon: a black grid rug edged in light, a neon bolt that flickers, a holo poster with a rolling scan, a server stack with blinking lights and a VR pod with ring lights and a holo cube that spins while someone is in it.',
     ['rug-neon', 'wobj-neonbolt', 'wobj-holoposter', 'serverstack', 'vrpod'], ['bold', 'modern', 'industrial']),
@@ -311,7 +310,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-saltillo', 'Saltillo tile', 'saltillo', 140, ['warm', 'natural', 'cozy']),
   floor('floor-grate', 'Lit grate', 'grate', 170, ['bold', 'modern', 'industrial']),
   floor('floor-checkpink', 'Pink check', 'checkpink', 140, ['soft', 'playful', 'warm']),
-  secret(floor('floor-skycheck', 'Sky check', 'skycheck', 140, ['soft', 'playful', 'cozy'])),
+  promo(floor('floor-skycheck', 'Sky check', 'skycheck', 140, ['soft', 'playful', 'cozy'])),
   floor('floor-arcadecarpet', 'Arcade carpet', 'arcadecarpet', 170, ['playful', 'bold', 'vintage']),
   floor('floor-checker', 'Checkerboard', 'checker', 180, ['bold', 'playful', 'vintage']),
   floor('floor-rose', 'Rose carpet', 'rose', 100, ['soft', 'warm', 'cozy']),
@@ -345,7 +344,7 @@ export const CATALOG: CatalogEntry[] = [
   furn('rugrunner', 'rugrunner', 'Runner rug', 60, ['cozy', 'natural'], ['#A63A2C', '#4A5DA8', '#D8C9AE', '#3F5B4C']),
   furn('ruground', 'ruground', 'Round rug', 80, ['soft', 'playful', 'warm'], ['#E8DCC8', '#D24A7A', '#8E9C96', '#2B2B30', '#E0A43A']),
   furn('rug-arcade', 'rugarcade', 'Arcade rug', 110, ['playful', 'bold', 'vintage'], ['#2B2459', '#15121F', '#3A2E73']),
-  after(furn('rug-cuddle', 'rugcloud', 'Cloud rug', 110, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F6EEF2', '#DCEEFA']), 'set-cuddle'),
+  promo(furn('rug-cuddle', 'rugcloud', 'Cloud rug', 110, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F6EEF2', '#DCEEFA'])),
   furn('rug-neon', 'rugneon', 'Grid rug', 110, ['bold', 'modern', 'industrial'], ['#111118', '#1E2230', '#2A2F3A']),
   furn('rug-gothic', 'ruggothic', 'Damask rug', 110, ['luxe', 'vintage', 'cozy'], ['#5E1F2A', '#2E3B57', '#3B2541']),
   furn('rug-candy', 'rugcandy', 'Lollipop rug', 110, ['soft', 'playful', 'warm'], ['#F6B7CC', '#BFE8D6', '#D6C4F0']),
@@ -491,12 +490,12 @@ export const CATALOG: CatalogEntry[] = [
   look('look-lamp-candy', 'lamp', 'candy', 'Ice cream cone lamp', 'A waffle cone with a pink scoop that glows, sprinkles and a cherry on top.', 90, ['soft', 'playful', 'warm'], ['#F6B7CC', '#FBE7A6', '#FFF8F0']),
   look('look-plant-candy', 'plant', 'candy', 'Teacup planter', 'Your plant in a pink teacup with a handle, on a scalloped saucer.', 60, ['soft', 'playful', 'warm'], ['#F6B7CC', '#FFF8F0', '#BFE8D6', '#E04A6A']),
 
-  secret(look('look-fridge-cuddle', 'fridge', 'cuddle', 'Rainbow bear fridge', 'Sky blue with a cloud cap, a rainbow between two clouds on the upper door, a pink bear face with a heart on the lower one, and heart handles.', 350, ['soft', 'playful', 'cozy'], ['#AEDDF7', '#FFFFFF', '#F6B7CC'])),
-  secret(look('look-counter-cuddle', 'counter', 'cuddle', 'Cloud counter', 'Cloud-white fronts with a rainbow band at the kick, hearts and stars for pulls, cloud puffs along the top edge, a sky top with stars, a pink heart basin and a blue bear plush at the end.', 420, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F6B7CC'])),
-  secret(look('look-dining-cuddle', 'dining', 'cuddle', 'Cloud table and bear chairs', 'A scalloped cloud top on a stack of puffs, chairs with bear-face backs in pink and blue, and a rainbow hanging from a cloud above.', 340, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F6B7CC', '#9CCBF2'])),
-  secret(look('look-sofa-cuddle', 'sofa', 'cuddle', 'Cloud sofa', 'A puffy white cloud sofa with a rainbow band along the base, sky-blue cushions with a heart and a star, and a yellow bear plush in the corner.', 380, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F6B7CC'])),
-  secret(look('look-lamp-cuddle', 'lamp', 'cuddle', 'Cloud lamp', 'A cloud shade on a sky-blue pole with a star on top and rainbow drops hanging under it.', 90, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F9E27A'])),
-  secret(look('look-plant-cuddle', 'plant', 'cuddle', 'Cloud pot', 'Your plant in a puffy white pot with cloud bumps round the rim, a rainbow on the front and a star on the side.', 60, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F9E27A', '#F6B7CC'])),
+  promo(look('look-fridge-cuddle', 'fridge', 'cuddle', 'Rainbow bear fridge', 'Sky blue with a cloud cap, a rainbow between two clouds on the upper door, a pink bear face with a heart on the lower one, and heart handles.', 350, ['soft', 'playful', 'cozy'], ['#AEDDF7', '#FFFFFF', '#F6B7CC'])),
+  promo(look('look-counter-cuddle', 'counter', 'cuddle', 'Cloud counter', 'Cloud-white fronts with a rainbow band at the kick, hearts and stars for pulls, cloud puffs along the top edge, a sky top with stars, a pink heart basin and a blue bear plush at the end.', 420, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F6B7CC'])),
+  promo(look('look-dining-cuddle', 'dining', 'cuddle', 'Cloud table and bear chairs', 'A scalloped cloud top on a stack of puffs, chairs with bear-face backs in pink and blue, and a rainbow hanging from a cloud above.', 340, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F6B7CC', '#9CCBF2'])),
+  promo(look('look-sofa-cuddle', 'sofa', 'cuddle', 'Cloud sofa', 'A puffy white cloud sofa with a rainbow band along the base, sky-blue cushions with a heart and a star, and a yellow bear plush in the corner.', 380, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F6B7CC'])),
+  promo(look('look-lamp-cuddle', 'lamp', 'cuddle', 'Cloud lamp', 'A cloud shade on a sky-blue pole with a star on top and rainbow drops hanging under it.', 90, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F9E27A'])),
+  promo(look('look-plant-cuddle', 'plant', 'cuddle', 'Cloud pot', 'Your plant in a puffy white pot with cloud bumps round the rim, a rainbow on the front and a star on the side.', 60, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F9E27A', '#F6B7CC'])),
 
   look('look-fridge-arcade', 'fridge', 'arcade', 'Cabinet fridge', 'A black cabinet with a marquee of chasing bulbs on top, a screen glowing in the upper door, a row of buttons on the lower one and a joystick-ball handle.', 520, ['playful', 'bold', 'vintage'], ['#1E1A2E', '#F4C430', '#FF2E9A']),
   look('look-counter-arcade', 'counter', 'arcade', 'Coin-op counter', 'Black cabinet fronts with yellow coin slots and neon trim, a chaser strip under a cyan-edged top, a steel basin, and a joystick and buttons at the end.', 600, ['playful', 'bold', 'vintage'], ['#1E1A2E', '#F4C430', '#19E6F0']),
@@ -537,7 +536,7 @@ export const CATALOG: CatalogEntry[] = [
   look('look-lamp-winter', 'lamp', 'winter', 'Candle-glow lamp', 'A frosted globe on a white stem that glows like a candle in a window.', 80, ['cozy', 'cool', 'soft'], ['#F2EEE8', '#8E1F2F', '#3F5B4C']),
   look('look-plant-winter', 'plant', 'winter', 'Frosted evergreen pot', 'Your plant with a dusting of snow and a few red berries.', 40, ['cozy', 'cool', 'soft'], ['#8E1F2F', '#F2EEE8', '#3F5B4C', '#2E3B57']),
 
-  // Cloud Nine: clouds, rainbows and stars. (Cuddle Clouds, the bear pack above, is the secret one.)
+  // Cloud Nine: clouds, rainbows and stars. (Cuddle Clouds, the bear pack above, is the promo one.)
   look('look-fridge-cloud', 'fridge', 'cloud', 'Cloud-nine icebox', 'A pale sky-blue icebox with a rainbow on the door and a cloud at each end.', 340, ['soft', 'playful', 'cozy'], ['#BFE3F5', '#F9C6DA', '#C9F0DC']),
   look('look-counter-cloud', 'counter', 'cloud', 'Candy-cloud counter', 'Pastel cabinets, a fluffy scalloped top, heart pulls and a jar of rainbow sweets.', 400, ['soft', 'playful', 'cozy'], ['#F9C6DA', '#BFE3F5', '#FFF2B8']),
   look('look-dining-cloud', 'dining', 'cloud', 'Tea-party table set', 'A white table set for tea, with chairs that have a heart in the back.', 330, ['soft', 'playful', 'cozy'], ['#F9C6DA', '#BFE3F5', '#E2D3F7']),
@@ -566,8 +565,8 @@ export const CATALOG: CatalogEntry[] = [
   wallItem('wobj-aquarium', 'Aquarium', 200, ['modern', 'playful', 'cool'], ['#2B2B30', '#9C6B45', '#F2EEE8']),
   wallItem('wobj-marquee', 'Marquee sign', 140, ['playful', 'bold', 'vintage'], ['#F4C430', '#FF2E9A', '#19E6F0']),
   wallItem('wobj-pixelprint', 'Pixel art print', 60, ['playful', 'bold', 'vintage'], ['#19E6F0', '#FF2E9A', '#39D353']),
-  after(wallItem('wobj-rainbowarch', 'Rainbow arch', 140, ['soft', 'playful', 'cozy'], ['#F58A8A', '#AEDDF7']), 'set-cuddle'),
-  after(wallItem('wobj-cloudlight', 'Cloud night light', 60, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F9E27A']), 'set-cuddle'),
+  promo(wallItem('wobj-rainbowarch', 'Rainbow arch', 140, ['soft', 'playful', 'cozy'], ['#F58A8A', '#AEDDF7'])),
+  promo(wallItem('wobj-cloudlight', 'Cloud night light', 60, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F9E27A'])),
   wallItem('wobj-neonbolt', 'Neon bolt', 140, ['bold', 'modern', 'industrial'], ['#19E6F0', '#FF2E9A', '#FFB020']),
   wallItem('wobj-holoposter', 'Holo poster', 60, ['bold', 'modern', 'industrial'], ['#111118', '#19E6F0', '#FF2E9A']),
   wallItem('wobj-stainedglass', 'Stained glass panel', 140, ['luxe', 'vintage', 'cozy'], ['#8E2E3C', '#2E4C9A', '#C9A24A']),
@@ -584,7 +583,7 @@ export const CATALOG: CatalogEntry[] = [
   decor('coatrack', 'coatrack', 'Coat rack', 70, ['natural', 'minimal', 'vintage'], ['#2B2B30', '#7A4E32', '#C9A24A']),
   decor('bookstack', 'bookstack', 'Stacked books', 25, ['cozy', 'vintage', 'creative'], ['#B5476E', '#3F5B4C', '#2E3B57', '#C9A24A']),
   decor('cartridges', 'cartridges', 'Game cartridges', 30, ['playful', 'bold', 'vintage'], ['#F4C430', '#E63946', '#39D353', '#7A5CFF']),
-  after(decor('plushpile', 'plushpile', 'Plush pile', 30, ['soft', 'playful', 'cozy'], ['#F6B7CC', '#9CCBF2', '#F9E27A', '#C7A8F0']), 'set-cuddle'),
+  promo(decor('plushpile', 'plushpile', 'Plush pile', 30, ['soft', 'playful', 'cozy'], ['#F6B7CC', '#9CCBF2', '#F9E27A', '#C7A8F0'])),
   decor('serverstack', 'serverstack', 'Server stack', 30, ['bold', 'modern', 'industrial'], ['#111118', '#3A3F4A', '#1E2230']),
   decor('grimoires', 'grimoires', 'Grimoires', 30, ['luxe', 'vintage', 'cozy'], ['#5E1F2A', '#2A2224', '#2E3B57']),
   decor('candyjars', 'candyjars', 'Candy jars', 30, ['soft', 'playful', 'warm'], ['#F6B7CC', '#BFE8D6', '#D6C4F0']),
@@ -630,7 +629,7 @@ export const CATALOG: CatalogEntry[] = [
   hobby('jukebox', 'jukebox', 'Jukebox', 300, ['vintage', 'playful', 'bold'], ['#C2413A', '#4A5DA8', '#E0A43A']),
   hobby('clawmachine', 'clawmachine', 'Claw machine', 280, ['playful', 'bold', 'vintage'], ['#FF2E9A', '#19E6F0', '#F4C430', '#7A5CFF']),
   hobby('pinball', 'pinball', 'Pinball machine', 320, ['playful', 'bold', 'vintage'], ['#E63946', '#1E1A2E', '#2E6BD6', '#F4C430']),
-  after(hobby('cloudswing', 'cloudswing', 'Cloud swing', 320, ['soft', 'playful', 'cozy'], ['#F6B7CC', '#AEDDF7', '#C7A8F0', '#F9E27A']), 'set-cuddle'),
+  promo(hobby('cloudswing', 'cloudswing', 'Cloud swing', 320, ['soft', 'playful', 'cozy'], ['#F6B7CC', '#AEDDF7', '#C7A8F0', '#F9E27A'])),
   hobby('vrpod', 'vrpod', 'VR pod', 320, ['bold', 'modern', 'industrial'], ['#111118', '#FF2E9A', '#7A5CFF', '#19E6F0']),
   hobby('fortuneteller', 'fortuneteller', 'Fortune-telling machine', 320, ['luxe', 'vintage', 'cozy'], ['#5E1F2A', '#2A2224', '#2E3B57', '#3B2541']),
   hobby('gumball', 'gumball', 'Gumball machine', 320, ['soft', 'playful', 'warm'], ['#E04A6A', '#F6B7CC', '#BFE8D6', '#2E6BD6']),
@@ -679,13 +678,17 @@ export function catalogById(id: string): CatalogEntry | undefined {
   return CATALOG.find(c => c.id === id);
 }
 
-/** What the shop shows: secret entries only once the player has them. */
-export function visibleItems(items: CatalogEntry[], owned: ReadonlySet<string>): CatalogEntry[] {
-  return items.filter((i) => (!i.secret || owned.has(i.id)) && (!i.needs || owned.has(i.needs)));
+/** A promo entry the player doesn't have yet: the shop shows its name, locked, and nothing else. */
+export function promoLocked(item: CatalogEntry, owned: ReadonlySet<string>): boolean {
+  return !!item.promo && !owned.has(item.id);
 }
+
+const inPromoSet = (c: CatalogEntry): boolean => CATALOG.some((s) => s.promo && s.set?.items.includes(c.id));
 
 export function itemsForTab(tab: string): CatalogEntry[] {
   if (tab === 'Today') return CATALOG.filter(c => c.tab !== 'Today');
+  // The promo packs, and any promo piece that isn't part of one.
+  if (tab === 'Promo') return CATALOG.filter(c => c.promo && (c.set || !inPromoSet(c)));
   return CATALOG.filter(c => c.tab === tab);
 }
 

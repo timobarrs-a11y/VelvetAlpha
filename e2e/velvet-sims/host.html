@@ -62,5 +62,19 @@ addEventListener('message', (e) => {
     default: return answer({ ok: false, error: 'unavailable' });
   }
 });
+
+// Promo codes, once per account: which house (companion) used each code. Tests can set window.promoUsed[code] to
+// another house's id to play an account that already used it elsewhere.
+window.promoUsed = {};
+window.promoLog = [];
+addEventListener('message', (e) => {
+  const d = e.data;
+  if (!d || d.type !== 'velvet:promo') return;
+  window.promoLog.push(d.code);
+  const house = new URL(document.getElementById('g').src, location.href).searchParams.get('companion');
+  const prev = window.promoUsed[d.code];
+  if (prev === undefined) window.promoUsed[d.code] = house;
+  setTimeout(() => e.source.postMessage({ type: 'velvet:promoResult', seq: d.seq, status: prev === undefined || prev === house ? 'ok' : 'used' }, location.origin), 50);
+});
 </script>
 </body></html>

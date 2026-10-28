@@ -37,6 +37,8 @@ for (const [set, ids] of Object.entries(SETS)) {
       const frame = await openGame(page, { freeze: true });
       await setMoney(page, 9999);
       await inGame(page, 'v.setView(1)');
+      // Cuddle Clouds is a promo pack: a code gives it, so the pieces are theirs before they go on.
+      if (set === 'cuddle') for (const id of ids) await inGame(page, `v.own('${id}')`);
       for (const id of ids) await inGame(page, `v.buy('${id}')`);
       // Every piece kept its place: a look never moves anything.
       const wearing = (await objects(page)).filter((o) => o.level === 1 && ['fridge', 'counter', 'dining', 'sofa', 'lamp1', 'plant1'].includes(o.id));

@@ -1564,7 +1564,7 @@ export function createHouseArt(ctx0, opts = {}) {
     LOOK_DRAWERS.sofa[sk] = seasonSofa(sk); LOOK_DRAWERS.lamp[sk] = seasonLamp(sk); LOOK_DRAWERS.plant[sk] = seasonPlant(sk);
   }
 
-  // ---- Cloud Nine (a secret pastel pack, unlocked by a code): clouds, rainbows, stars and hearts ----
+  // ---- Cloud Nine (a pastel shop pack): clouds, rainbows, stars and hearts ----
   const CN = { rainbow: ['#F27C8D', '#F6B26B', '#F6E06B', '#8FD3A0', '#7FB7E8'], white: '#FFFFFF', pink: '#F9C6DA', blue: '#BFE3F5', yellow: '#FFF2B8', lilac: '#E2D3F7' };
   const cloudPuff = (cx, cy, k = 1) => { circle(cx - 3.2 * k, cy + 0.6 * k, 2.6 * k, CN.white); circle(cx, cy - 1.2 * k, 3.2 * k, CN.white); circle(cx + 3.4 * k, cy + 0.6 * k, 2.4 * k, CN.white); };
   const rainbowArc = (cx, cy, r) => { ctx.lineCap = 'round'; CN.rainbow.forEach((c, i) => { ctx.strokeStyle = c; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.ellipse(cx, cy, r - i * 1.8, (r - i * 1.8) * 0.8, 0, Math.PI, 0); ctx.stroke(); }); };

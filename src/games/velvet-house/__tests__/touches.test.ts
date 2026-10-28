@@ -66,6 +66,19 @@ describe.each(BUNDLES)('the finishing touches $id', (B) => {
   });
 
   it('buying the bundle is one payment: the rug, the cluster and the hero land on the floor, the two wall pieces are hung', () => {
+    if (set().promo) {
+      // A promo bundle isn't sold; a code gives it, and then Apply puts it all out for nothing.
+      const shut = shopWith(5000);
+      shut.buy(set());
+      expect(shut.paid).toEqual([]);
+      expect(shut.logs.join(' ')).toMatch(/comes free with a promo code/);
+      const { objs, paid, hung, buy } = shopWith(5000, [set().id, ...B.items]);
+      buy(set());
+      expect(paid).toEqual([]);
+      for (const t of B.floor) expect(objs.some((o) => o.type === t && o.level === 1), t).toBe(true);
+      expect(hung).toEqual(B.walls.map(([w, c]) => [1, w, c]));
+      return;
+    }
     const { objs, paid, hung, owned, buy, logs } = shopWith(5000);
     buy(set());
     expect(paid).toEqual([set().price]);

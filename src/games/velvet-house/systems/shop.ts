@@ -5,7 +5,7 @@ import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
 import { LEVEL_NAMES, ATTIC } from '../state/house';
 import { isPaintable } from '../state/scenes';
 import { buildWorld } from '../state/agents';
-import { type CatalogEntry, setQuote } from '../state/catalog';
+import { type CatalogEntry, promoLocked, setQuote } from '../state/catalog';
 import { tasteOf } from '../state/taste';
 import { skinTarget, skinColour, wearSkin } from '../state/skins';
 import { displayName, TYPES } from '../state/objects';
@@ -60,6 +60,8 @@ export function createShop(g: Game): Partial<Game> {
   }
 
   function handleBuy(item: CatalogEntry, color?: string, fromSet = false): void {
+    // Promo items come with a promo code and are never sold (a code gives them through fromSet, free).
+    if (!fromSet && promoLocked(item, owned)) { log(`${item.name} comes free with a promo code. It isn't sold in the shop.`); return; }
     if (item.set) { buySet(item); return; }
     const price = item.price;
     if (item.icon === 'upgrade' && item.id === 'upgrade-attic' && hasAttic()) { log('The attic is already built.'); return; }

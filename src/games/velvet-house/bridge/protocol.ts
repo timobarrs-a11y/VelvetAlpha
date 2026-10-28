@@ -25,7 +25,9 @@ export type BridgeMessageType =
   | 'velvet:menuReady'
   | 'velvet:startRequested'
   | 'velvet:startGo'
-  | 'velvet:startCancel';
+  | 'velvet:startCancel'
+  | 'velvet:promo'
+  | 'velvet:promoResult';
 
 export interface BridgeMessage {
   type: BridgeMessageType;
@@ -354,6 +356,34 @@ export function isRestartedMessage(data: unknown): data is RestartedMessage {
   if (!isBridgeMessage(data)) return false;
   const m = data as Record<string, unknown>;
   return m.type === 'velvet:restarted' && typeof m.day === 'number';
+}
+
+// A promo code the player typed: the host claims it for the account (once per account) and answers with the same seq.
+export interface PromoRequestMessage extends BridgeMessage {
+  type: 'velvet:promo';
+  game: 'velvet-house';
+  seq: number;
+  code: string;
+}
+
+export interface PromoResultMessage extends BridgeMessage {
+  type: 'velvet:promoResult';
+  seq: number;
+  // 'ok': first use, or again for the same house. 'used': already used in another house on this account.
+  status: 'ok' | 'used';
+}
+
+export function isPromoRequestMessage(data: unknown): data is PromoRequestMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:promo' && typeof m.seq === 'number' && typeof m.code === 'string'
+    && m.code.length > 0 && m.code.length <= 40;
+}
+
+export function isPromoResultMessage(data: unknown): data is PromoResultMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:promoResult' && typeof m.seq === 'number' && (m.status === 'ok' || m.status === 'used');
 }
 
 /**

@@ -20,7 +20,11 @@ export function groupSets(items: CatalogEntry[]): SetGroup[] {
   return order.map((t) => by.get(t)!);
 }
 
-/** The groups that carry a tag; no tag means all of them. */
+/** The Sets filter that shows the promo packs (alongside the feels). */
+export const PROMO_FILTER = 'promo';
+
+/** The groups that carry a tag, or the promo packs for PROMO_FILTER; no tag means all of them. */
 export function groupsWithTag(groups: SetGroup[], tag: string | null): SetGroup[] {
+  if (tag === PROMO_FILTER) return groups.filter((gp) => gp.set.promo || gp.extras.some((e) => e.promo));
   return tag ? groups.filter((gp) => gp.tags.includes(tag)) : groups;
 }

@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { CATALOG, itemsForTab, visibleItems, catalogById } from '../state/catalog';
-import { groupSets, groupsWithTag } from '../state/setGroups';
+import { CATALOG, itemsForTab, catalogById } from '../state/catalog';
+import { groupSets, groupsWithTag, PROMO_FILTER } from '../state/setGroups';
 
 describe('the Sets tab, grouped by theme', () => {
-  const shelf = () => visibleItems(itemsForTab('Sets'), new Set());
+  const shelf = () => itemsForTab('Sets');
 
   it('makes one group per theme, in catalog order, the set first and its finishing touches under it', () => {
     const groups = groupSets(shelf());
@@ -18,12 +18,14 @@ describe('the Sets tab, grouped by theme', () => {
     for (const g of groups) { expect(g.name).not.toMatch(/kitchen and living room/); for (const e of g.extras) expect(e.id).toBe(`touches-${g.theme}`); }
   });
 
-  it('leaves a secret pack out until it is owned, then groups it like the rest', () => {
-    const secretThemes = CATALOG.filter((c) => c.secret && c.set).map((c) => c.id.replace(/^set-/, ''));
-    expect(secretThemes.length).toBeGreaterThan(0);
-    for (const t of secretThemes) expect(groupSets(shelf()).some((g) => g.theme === t), t).toBe(false);
-    const owned = new Set(CATALOG.filter((c) => c.secret).map((c) => c.id));
-    for (const t of secretThemes) expect(groupSets(visibleItems(itemsForTab('Sets'), owned)).some((g) => g.theme === t), t).toBe(true);
+  it('shows a promo pack in its place like the rest (locked until a code gives it), and has a Promo filter for them', () => {
+    const promoThemes = CATALOG.filter((c) => c.promo && c.id.startsWith('set-')).map((c) => c.id.replace(/^set-/, ''));
+    expect(promoThemes).toContain('cuddle');
+    const groups = groupSets(shelf());
+    for (const t of promoThemes) expect(groups.some((g) => g.theme === t), t).toBe(true);
+    const cuddle = groups.find((g) => g.theme === 'cuddle')!;
+    expect(cuddle.extras.map((e) => e.id)).toEqual(['touches-cuddle']);
+    expect(groupsWithTag(groups, PROMO_FILTER).map((g) => g.theme)).toEqual(promoThemes);
   });
 
   it('filters by a feel: a tag keeps the themes that carry it, no tag keeps them all', () => {

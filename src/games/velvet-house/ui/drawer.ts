@@ -4,8 +4,8 @@ import { createGarmentPreview } from './garmentPreview';
  * Drawer UI — the sidebar/bottom-sheet with pages: Shop, Goals, Do, Partner, You, Home, Log.
  * Pure DOM manipulation, called from main.ts.
  */
-import { CATALOG, TABS, itemsForTab, visibleItems, lockOf, setQuote, type CatalogEntry } from '../state/catalog';
-import { groupSets, groupsWithTag } from '../state/setGroups';
+import { CATALOG, TABS, itemsForTab, promoLocked, lockOf, setQuote, type CatalogEntry } from '../state/catalog';
+import { groupSets, groupsWithTag, PROMO_FILTER } from '../state/setGroups';
 import { STYLE_TAGS } from '../state/taste';
 import { SETTLE, LIFE, lifeGoalProgress, type GoalContext } from '../state/goals';
 import { careerTitle } from '../state/career';
@@ -171,6 +171,8 @@ function readableOn(hex: string): string {
   const n = parseInt(m[1], 16), lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
   return lum > 0.62 ? '#241B25' : '#FFFFFF';
 }
+
+const PROMO_LOCK_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
 export const DOCK_TABS: Record<string, { color: string; label?: string; icon: string }> = {
   people: { color: '#4FC3C9', icon: svg('<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.4 2.7-5.6 6-5.6s6 2.2 6 5.6"/><circle cx="17.2" cy="9" r="2.3"/><path d="M16.5 14.6c2.7-.3 4.6 1.3 4.8 4.2"/>') },
@@ -401,8 +403,22 @@ export function createDrawer(cb: DrawerCallbacks): {
       return;
     }
 
-    const items = visibleItems(itemsForTab(tab), state.owned);
+    const items = itemsForTab(tab);
     const card = (item: CatalogEntry): string => {
+      // A promo item they don't have: its name and a lock, nothing to see or buy until a code gives it to them.
+      if (promoLocked(item, state.owned)) {
+        return `<div class="vh-shop-card vh-promo-locked" data-item="${item.id}">
+        <div class="vh-shop-icon vh-promo-icon" aria-hidden="true">${PROMO_LOCK_SVG}</div>
+        <div class="vh-shop-info">
+          <strong>${item.name}</strong>
+          <span class="vh-promo-tag">Promo</span>
+          <span class="vh-shop-desc">Free with a promo code. It isn't sold in the shop.</span>
+        </div>
+        <div class="vh-shop-actions">
+          <button data-buy="${item.id}" disabled>Code only</button>
+        </div>
+      </div>`;
+      }
       const lock = lockOf(item.id, state.day, state.bond);
       const quote = item.set ? setQuote(item, state.owned) : null;
       const owned = quote ? quote.missing.length === 0 : state.owned.has(item.id) && !item.repeat;
@@ -418,6 +434,7 @@ export function createDrawer(cb: DrawerCallbacks): {
         <div class="vh-shop-icon" data-icon="${item.id}" style="${iconStyle(item, state)}"></div>
         <div class="vh-shop-info">
           <strong>${item.name}</strong>
+          ${item.promo ? '<span class="vh-promo-tag">Promo</span>' : ''}
           ${item.desc ? `<span class="vh-shop-desc">${item.desc}</span>` : ''}
           ${quote ? `<span class="vh-shop-desc vh-set-save">${quote.missing.length ? `${quote.missing.length} of ${quote.members.length} pieces to go. Save $${quote.full - quote.cost} against buying them apart.` : 'You have all of it. Tap Apply to put it all on; Arrange can switch single pieces.'}</span>` : ''}
           ${cols}
@@ -433,8 +450,8 @@ export function createDrawer(cb: DrawerCallbacks): {
     let cards: string;
     if (tab === 'Sets') {
       const groups = groupsWithTag(groupSets(items), setsTag);
-      const chips = `<div class="vh-set-filter"><button data-settag="" class="${setsTag ? '' : 'vh-active'}">All</button>${STYLE_TAGS.map(t => `<button data-settag="${t}" class="${setsTag === t ? 'vh-active' : ''}">${t}</button>`).join('')}</div>`;
-      cards = chips + (groups.map(gp => `<div class="vh-set-group" data-theme="${esc(gp.theme)}"><h4 class="vh-set-theme">${esc(gp.name)}<small>${esc(gp.tags.join(' · '))}</small></h4>${[gp.set, ...gp.extras].map(card).join('')}</div>`).join('') || '<p class="vh-empty">No sets with that feel yet.</p>');
+      const chips = `<div class="vh-set-filter"><button data-settag="" class="${setsTag ? '' : 'vh-active'}">All</button><button data-settag="${PROMO_FILTER}" class="vh-set-promo ${setsTag === PROMO_FILTER ? 'vh-active' : ''}">Promo</button>${STYLE_TAGS.map(t => `<button data-settag="${t}" class="${setsTag === t ? 'vh-active' : ''}">${t}</button>`).join('')}</div>`;
+      cards = chips + (groups.map(gp => `<div class="vh-set-group" data-theme="${esc(gp.theme)}"><h4 class="vh-set-theme">${esc(gp.name)}<small>${esc(gp.tags.join(' · '))}</small></h4>${[gp.set, ...gp.extras].map(card).join('')}</div>`).join('') || (setsTag === PROMO_FILTER ? '<p class="vh-empty">No promo packs right now.</p>' : '<p class="vh-empty">No sets with that feel yet.</p>'));
     } else cards = items.map(card).join('');
 
     const styling = tab === 'Paint' || tab === 'Wallpaper' || tab === 'Floors';
