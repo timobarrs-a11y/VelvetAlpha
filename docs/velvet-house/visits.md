@@ -30,7 +30,7 @@ The director: "we do need to be able to let friends go into friends houses and s
 
 ## Still open
 
-- The migration has to be applied to the live project before the list fills; until then the Household page says
-  friends' houses could not be loaded.
+- The migration is applied to the live project (checked after: the five functions exist, signed-out callers cannot run
+  them, members cannot read a raw save or the closed list, and a call with no member gets nothing).
 - A visit shows the friend's last save, not their house live. Visiting together, leaving a note or rating a room are
   not built.
