@@ -1,6 +1,7 @@
 import { findPath, nearestFree, cellOf } from '../state/pathfinding';
 import { STAIRS } from '../state/house';
 import { TYPES, type ObjectInstance } from '../state/objects';
+import { isAsleep } from '../state/agents';
 import type { Game } from '../kernel/game';
 
 export const ROOM_SERVICE_PRICE = 20;
@@ -57,6 +58,14 @@ export function createRoomService(g: Game): Partial<Game> {
     arrival = null;
   }
 
-  return { ringBell, roomServiceTick };
+  // The candelabra: lit candles go out by themselves, one after another, once someone on that floor is asleep.
+  function candlesTick(): void {
+    for (const o of world.objs) {
+      if (o.type !== 'tallcandelabra' || !art.candlesOn(o.id)) continue;
+      if (people.slice(0, 2).some((p) => p.level === o.level && isAsleep(p))) { art.candles(o.id, false); log('Someone is asleep. The candles go out one by one.'); }
+    }
+  }
+
+  return { ringBell, roomServiceTick, candlesTick };
 }
 export { SPEED as CART_SPEED, WAIT as CART_WAIT };

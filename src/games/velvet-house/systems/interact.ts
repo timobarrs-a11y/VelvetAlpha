@@ -30,7 +30,8 @@ export function createInteract(g: Game): Partial<Game> {
     const acts: TrayAction[] = [];
     if (obj.type === 'pbox' && obj.contents) acts.push({ act: 'unpack', label: 'Unpack', icon: '' });
     if (obj.type === 'bag' && obj.contents) acts.push({ act: 'unpack', label: 'Open', icon: '' });
-    if (isLight) acts.push({ act: 'toggleLight', label: obj.type === 'woodstove' ? 'Light or bank the stove' : 'Turn light on/off', icon: '' });
+    if (obj.type === 'tallcandelabra') acts.push({ act: 'candles', label: art.candlesOn(obj.id) ? 'Snuff the candles' : 'Light the candles', icon: '' });
+    else if (isLight) acts.push({ act: 'toggleLight', label: obj.type === 'woodstove' ? 'Light or bank the stove' : 'Turn light on/off', icon: '' });
     if (obj.type === 'servicebell') acts.push({ act: 'ringBell', label: 'Ring for room service', icon: '' });
     if (obj.type === 'overseer') {
       acts.push({ act: 'overseerTalk', label: 'Ask for encouragement', icon: '' }, { act: 'overseerCake', label: 'Request cake', icon: '' }, { act: 'overseerUnplug', label: 'Unplug', icon: '' });
@@ -100,6 +101,7 @@ export function createInteract(g: Game): Partial<Game> {
     if (tag === 'unpack') { unpack(obj); return; }
     if (tag.startsWith('overseer')) { g.overseerAction(obj, tag); return; }
     if (tag === 'ringBell') { g.ringBell(obj); return; }
+    if (tag === 'candles') { const on = !art.candlesOn(obj.id); art.candles(obj.id, on); log(on ? 'One by one, the candles catch.' : 'One by one, the candles go out.'); return; }
     if (tag === 'toggleLight') {
       const on = art.toggleObjectLight(obj.id);
       log(`${TYPES[obj.type]?.name ?? 'Light'} turned ${on ? 'on' : 'off'}.`);

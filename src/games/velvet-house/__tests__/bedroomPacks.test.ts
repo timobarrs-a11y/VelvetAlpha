@@ -17,6 +17,7 @@ const PACKS: PackSpec[] = [
   { theme: 'midcentury', tags: ['modern', 'warm', 'vintage'], materials: ['wood', 'stone', 'laminate'], paper: { id: 'paper-starburst-amber', pattern: 'starburst-amber' }, floor: { id: 'floor-walnutparquet', floor: 'walnutparquet' }, extra: 'hificonsole' },
   { theme: 'regency', tags: ['luxe', 'bold', 'playful'], materials: ['fabric', 'glass', 'stone'], paper: { id: 'paper-banana-leaf', pattern: 'banana-leaf' }, floor: { id: 'floor-whiteherring', floor: 'whiteherring' }, extra: 'glamtable' },
   { theme: 'chalet', tags: ['cozy', 'warm', 'natural'], materials: ['wood', 'stone'], paper: { id: 'paper-knotty-pine', pattern: 'knotty-pine' }, floor: { id: 'floor-riverslate', floor: 'riverslate' }, extra: 'woodstove' },
+  { theme: 'victorian', tags: ['luxe', 'cozy', 'vintage'], materials: ['wood', 'stone', 'fabric'], paper: { id: 'paper-damask-rose', pattern: 'damask-rose' }, floor: { id: 'floor-mahoganyherring', floor: 'mahoganyherring' }, extra: 'tallcandelabra' },
 ];
 const PIECES = ['bed', 'nightstand', 'dresser', 'toilet', 'vanity', 'shower'];
 // What the household uses on each piece: a look must leave these where they are.

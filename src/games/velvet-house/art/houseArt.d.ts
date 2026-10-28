@@ -140,6 +140,9 @@ export interface HouseArt {
   /** Room service: a breakfast cart rolls along these points (world x, y) on a floor, waits, and rolls back. */
   roomService(level: number, pts: [number, number][]): void;
   roomServiceBusy(): boolean;
+  /** The Victorian candelabra: light or snuff its candles one after another. */
+  candles(id: string, on: boolean): void;
+  candlesOn(id: string): boolean;
   /** Sets the partner's mood, 0-1, for facial expression. */
   setMood(v: number): void;
   TYPES: Record<string, unknown>;

@@ -186,6 +186,7 @@ export function createHouseArt(ctx0, opts = {}) {
     grate: { kind: 'tile', a: '#1A1C24', b: '#171920', line: 'rgba(25,230,240,.35)' },
     checkpink: { kind: 'check', a: '#FFF8F0', b: '#F6B7CC', line: 'rgba(0,0,0,.05)' },
     skycheck: { kind: 'check', a: '#F7FAFE', b: '#DCEEFA', line: 'rgba(0,0,0,.04)' },
+    mahoganyherring: { kind: 'herring', a: '#5E3A28', b: '#523222', line: 'rgba(20,8,4,.35)' },
     riverslate: { kind: 'stone', a: '#6E6A64', b: '#62605A', line: 'rgba(0,0,0,.28)' },
     whiteherring: { kind: 'herring', a: '#F1EDE6', b: '#E3DCD1', line: 'rgba(120,105,90,.22)' },
     walnutparquet: { kind: 'parquet', a: '#8A5A36', b: '#7A4E2D', line: 'rgba(40,20,8,.32)' },
@@ -223,6 +224,7 @@ export function createHouseArt(ctx0, opts = {}) {
     circuit: { pat: 'circuit', base: '#111118', ink: 'rgba(25,230,240,.6)', ink2: 'rgba(255,46,154,.75)' },
     sprinkles: { pat: 'sprinkles', base: '#FFF8F0', ink: 'rgba(224,74,106,.9)', pal: ['#E04A6A', '#BFE0F5', '#FBE7A6', '#D6C4F0', '#BFE8D6'] },
     'clouds-sky': { pat: 'clouds', base: '#C9E6F8', ink: 'rgba(255,255,255,.95)' },
+    'damask-rose': { pat: 'damask', base: '#E9D3D0', ink: 'rgba(140,60,70,.32)' },
     'knotty-pine': { pat: 'knotty', base: '#D2A770', ink: 'rgba(110,70,30,.3)', ink2: 'rgba(110,65,25,.55)' },
     'banana-leaf': { pat: 'monstera', base: '#F7F1EC', ink: 'rgba(63,140,92,.85)', ink2: 'rgba(38,104,66,.85)' },
     'starburst-amber': { pat: 'starburst', base: '#F3E6CC', ink: 'rgba(210,105,58,.7)', ink2: 'rgba(63,127,122,.85)' },
@@ -1064,6 +1066,88 @@ export function createHouseArt(ctx0, opts = {}) {
       // rail round the top tying both to the stone wall.
       F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.04], [0, 1.18, 2.04]], 'rgba(235,240,240,.5)', AL.iron, 1.6); T.line([0.59, 1.18, 0.06], [0.59, 1.18, 2.04], AL.iron, 1.2); T.line([0.5, 1.18, 1.0], [0.5, 1.18, 1.3], AL.iron, 2.2); T.line([0, 1.18, 2.04], [1.18, 1.18, 2.04], AL.iron, 2.6); }),
       F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0.08, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.04], [1.18, 0.08, 2.04]], 'rgba(235,240,240,.45)', AL.iron, 1.6); T.line([1.18, 0.08, 2.04], [1.18, 1.18, 2.04], AL.iron, 2.6); T.line([1.18, 0.6, 0.06], [1.18, 0.6, 2.04], AL.iron, 1); }, { onTop: true })],
+  });
+
+  // Victorian Boudoir: carved mahogany, rose damask, velvet, lace, brass and blue-and-white china.
+  const VI = { mahog: '#5A2A1E', mahogLite: '#7A3E2C', mahogDark: '#3E1C14', brass: '#C9A24A', lace: '#FBF6EE', rose: '#C98A94', marble: '#EEE8E2', china: '#2E4C9A' };
+  const lacePillow = (x, y) => [x, y, 0.5, 0.4, 0.72, 0.14, VI.lace];
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A carved mahogany four-poster with a canopy and valance in the piece's colour, velvet drapes tied back at the foot
+    // posts, lace pillows and a damask coverlet.
+    victorian: (o) => { const c = cl(o), post = (T, x, y) => { T.box(x - 0.05, y - 0.05, 0, 0.1, 0.1, 2.2, VI.mahog); const [kx, ky] = T.P(x, y, 2.24); circle(kx, ky, 3.4, VI.mahogLite, VI.mahogDark); };
+      // A valance along one top rail, from a to b: a band in the piece's colour with a gold-swagged hem.
+      const valance = (T, a, b) => { const q = (p, z) => [p[0], p[1], z]; T.poly([q(a, 2.18), q(b, 2.18), q(b, 1.98), q(a, 1.98)], c, 'rgba(0,0,0,.2)', 0.6);
+        const n = Math.max(2, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.2)); for (let k = 0; k < n; k++) { const f0 = k / n, f1 = (k + 1) / n; const p0 = [a[0] + (b[0] - a[0]) * f0, a[1] + (b[1] - a[1]) * f0], p1 = [a[0] + (b[0] - a[0]) * f1, a[1] + (b[1] - a[1]) * f1];
+          for (let m = 0; m < 6; m++) { const g0 = m / 6, g1 = (m + 1) / 6; T.line([p0[0] + (p1[0] - p0[0]) * g0, p0[1] + (p1[1] - p0[1]) * g0, 1.98 - Math.sin(g0 * Math.PI) * 0.06], [p0[0] + (p1[0] - p0[0]) * g1, p0[1] + (p1[1] - p0[1]) * g1, 1.98 - Math.sin(g1 * Math.PI) * 0.06], VI.brass, 1.2); } } };
+      // A drape hanging from the canopy beside a post, gathered and tied back halfway down with a gold tassel.
+      const drape = (T, x, y, dy) => { const top = (f) => [x, y + dy * f, 2.0]; T.poly([top(0), top(1), [x, y + dy * 0.35, 1.15], [x, y + dy * 0.55, 0.05], [x, y, 0.05]], shade(c, -0.05), 'rgba(0,0,0,.25)', 0.6);
+        T.line([x, y + dy * 0.5, 1.95], [x, y + dy * 0.2, 1.18], 'rgba(0,0,0,.18)', 0.8); T.line([x, y + dy * 0.8, 1.95], [x, y + dy * 0.3, 1.16], 'rgba(0,0,0,.18)', 0.8); const [tx, ty] = T.P(x, y + dy * 0.2, 1.15); circle(tx, ty, 2.4, VI.brass); limb(tx, ty, tx, ty + 7, VI.brass, 1.2); };
+      return [
+      F(0, 0, 0.16, 1.6, (T) => { post(T, 0.06, 0.06); post(T, 0.06, 1.54); T.box(0.02, 0.1, 0.3, 0.1, 1.4, 1.0, VI.mahog);
+        const arch = (y) => 1.3 + 0.18 * Math.sin(Math.PI * (y - 0.1) / 1.4); const pts = []; for (let k = 0; k <= 14; k++) { const y = 0.1 + 1.4 * k / 14; pts.push([0.121, y, arch(y)]); } T.poly([[0.121, 0.1, 1.3], ...pts, [0.121, 1.5, 1.3]], VI.mahog, VI.mahogDark, 1);
+        T.poly([[0.122, 0.3, 0.55], [0.122, 1.3, 0.55], [0.122, 1.3, 1.15], [0.122, 0.3, 1.15]], c, VI.brass, 1);
+        T.line([0.06, 0.06, 2.18], [0.06, 1.54, 2.18], VI.mahog, 3); T.line([0.06, 0.06, 2.18], [2.44, 0.06, 2.18], VI.mahog, 3); valance(T, [0.06, 0.06], [0.06, 1.54]); valance(T, [0.06, 0.06], [2.44, 0.06]); }),
+      B(0.12, 0.04, 0.12, 2.32, 1.52, 0.2, VI.mahog), B(0.16, 0.06, 0.32, 2.26, 1.48, 0.2, VI.lace, { name: 'mattress' }),
+      pillowsOn([0.16, 0.06, 0.32, 2.26, 1.48], [lacePillow(0.18, 0.06), lacePillow(0.18, 0.82), [0.38, 0.4, 0.5, 0.16, 0.8, 0.14, c]]),
+      B(0.86, 0.04, 0.52, 1.58, 1.52, 0.05, c), B(0.86, 0.04, 0.57, 1.58, 1.52, 0.01, c, { cover: true }),
+      F(0.86, 0, 2.5, 1.6, (T) => { for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { const [dx, dy] = T.P(1.05 + i * 0.4, 0.22 + j * 0.38, 0.581); ell(dx, dy, 4, 2.2, null, shade(c, 0.25)); circle(dx, dy, 1, shade(c, 0.25)); }
+        T.poly([[0.86, 1.56, 0.57], [2.44, 1.56, 0.57], [2.44, 1.56, 0.3], [0.86, 1.56, 0.3]], shade(c, -0.12)); for (let x = 0.9; x < 2.44; x += 0.08) { const [hx, hy] = T.P(x, 1.56, 0.3); circle(hx, hy, 1.2, VI.lace); } }, { onTop: true }),
+      // The foot posts, the near rails with their valances, and drapes tied back at the foot posts.
+      F(0, 0, 2.5, 1.6, (T) => { post(T, 2.44, 0.06); post(T, 2.44, 1.54);
+        T.line([0.06, 1.54, 2.18], [2.44, 1.54, 2.18], VI.mahog, 3); T.line([2.44, 0.06, 2.18], [2.44, 1.54, 2.18], VI.mahog, 3);
+        drape(T, 2.46, 1.54, -1); drape(T, 2.46, 0.06, 1); drape(T, 2.44, 1.56, 0); valance(T, [0.06, 1.55], [2.45, 1.55]); valance(T, [2.45, 0.06], [2.45, 1.55]);
+        [[2.3, 1.56], [0.2, 1.56]].forEach(([x, y]) => { T.poly([[x, y, 2.0], [x + (x > 1 ? 0.14 : -0.14), y, 2.0], [x + (x > 1 ? 0.06 : -0.06), y, 1.15], [x + (x > 1 ? 0.1 : -0.1), y, 0.05], [x, y, 0.05]], shade(c, -0.05), 'rgba(0,0,0,.25)', 0.6); const [tx, ty] = T.P(x + (x > 1 ? 0.06 : -0.06), y, 1.15); circle(tx, ty, 2.4, VI.brass); }); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A mahogany bedside table on cabriole legs with a marble top, and a lamp under a fringed rose shade.
+    victorian: (T, o) => { const lit = isLit(o.id);
+      [[0.06, 0.06, -1, -1], [0.39, 0.06, 1, -1], [0.06, 0.39, -1, 1], [0.39, 0.39, 1, 1]].forEach(([x, y, dx, dy]) => { const [ax, ay] = T.P(x, y, 0.3), [bx, by] = T.P(x + dx * 0.03, y + dy * 0.03, 0); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo(ax + dx * 4, (ay + by) / 2, bx, by); ctx.strokeStyle = VI.mahog; ctx.lineWidth = 2.6; ctx.stroke(); });
+      T.box(0.03, 0.03, 0.3, 0.39, 0.39, 0.2, VI.mahog); const [kx, ky] = T.P(0.22, 0.421, 0.4); circle(kx, ky, 1.6, VI.brass); T.box(0, 0, 0.5, 0.45, 0.45, 0.03, VI.marble);
+      T.box(0.13, 0.13, 0.53, 0.08, 0.08, 0.14, VI.brass); const [sx, sy] = T.P(0.17, 0.17, 0.78); if (lit) ell(sx, sy + 6, 14, 8, 'rgba(255,200,170,.32)');
+      ctx.beginPath(); ctx.moveTo(sx - 5, sy - 6); ctx.lineTo(sx + 5, sy - 6); ctx.lineTo(sx + 9, sy + 4); ctx.lineTo(sx - 9, sy + 4); ctx.closePath(); ctx.fillStyle = lit ? '#F6C9CF' : VI.rose; ctx.fill(); for (let k = -8; k <= 8; k += 2) limb(sx + k, sy + 4, sx + k, sy + 7, VI.brass, 0.8); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A mahogany chest with brass escutcheons on carved feet, a tall oval mirror in a carved frame, a lace runner and
+    // cut-glass perfume bottles.
+    victorian: (T, o) => { const c = cl(o);
+      [[0.06, 0.06], [1.14, 0.06], [0.06, 0.44], [1.14, 0.44]].forEach(([x, y]) => { const [fx, fy] = T.P(x, y, 0.04); ell(fx, fy, 3.4, 2.4, VI.mahogDark); });
+      T.box(0, 0, 0.06, 1.2, 0.5, 0.76, c); [0.3, 0.55].forEach((z) => T.line([0.02, 0.501, z], [1.18, 0.501, z], 'rgba(0,0,0,.35)', 1));
+      [[0.3, 0.18], [0.9, 0.18], [0.3, 0.43], [0.9, 0.43], [0.3, 0.68], [0.9, 0.68]].forEach(([x, z]) => { const [ex, ey] = T.P(x, 0.502, z); ell(ex, ey, 3.4, 2.2, VI.brass); circle(ex, ey, 0.8, VI.mahogDark); });
+      T.box(-0.02, -0.02, 0.82, 1.24, 0.54, 0.04, VI.mahogLite); T.poly([[0.1, 0.06, 0.861], [1.1, 0.06, 0.861], [1.1, 0.44, 0.861], [0.1, 0.44, 0.861]], VI.lace, 'rgba(0,0,0,.08)', 0.6);
+      T.line([0.35, 0.06, 0.86], [0.35, 0.06, 1.05], c, 3); T.line([0.85, 0.06, 0.86], [0.85, 0.06, 1.05], c, 3);
+      const [mx, my] = T.P(0.6, 0.06, 1.35); ctx.save(); ctx.translate(mx, my); ctx.scale(1, 1.25); ell(0, 0, 16, 16, c, VI.mahogDark); ell(0, 0, 13, 13, '#D8E2EA', VI.brass); ctx.restore(); limb(mx - 6, my - 10, mx + 2, my + 8, 'rgba(255,255,255,.6)', 1.2);
+      [[0.25, '#C98A94'], [0.33, '#9DB7D5'], [0.95, '#E8C468']].forEach(([x, col]) => { T.box(x, 0.24, 0.86, 0.05, 0.05, 0.09, col); const [bx, by] = T.P(x + 0.025, 0.265, 0.97); circle(bx, by, 1.6, VI.brass); }); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A blue-and-white china bowl with a mahogany seat, under a mahogany high tank with a brass pull chain.
+    victorian: (T, o) => {
+      T.box(0.04, 0, 1.45, 0.34, 0.14, 0.22, VI.mahog); T.line([0.21, 0.07, 1.45], [0.21, 0.07, 0.4], VI.brass, 1.6); T.line([0.34, 0.14, 1.5], [0.34, 0.16, 1.05], VI.brass, 0.8); const [hx, hy] = T.P(0.34, 0.16, 1.03); circle(hx, hy, 2, VI.lace);
+      T.box(0.09, 0.08, 0, 0.24, 0.3, 0.34, '#FFFFFF'); for (let k = 0; k < 5; k++) { const [px, py] = T.P(0.1 + k * 0.05, 0.381, 0.12 + (k % 2) * 0.08); circle(px, py, 1.6, VI.china); limb(px, py, px + 3, py + 2, VI.china, 0.6); }
+      const [bx, by] = T.P(0.21, 0.4, 0.3); ell(bx, by, 7.5, 6, '#FFFFFF', 'rgba(0,0,0,.12)'); const [sx, sy] = T.P(0.21, 0.38, 0.385); ell(sx, sy, 7, 4, VI.mahog); ell(sx, sy, 5, 2.8, '#E8EEF0');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A marble-topped mahogany washstand with a china basin and jug, a brass tap and a lace-edged towel on the rail.
+    victorian: (T, o) => { const c = cl(o);
+      T.box(0.02, 0.02, 0, 0.96, 0.46, 0.78, c); [0.04, 0.52].forEach((x) => T.poly([[x + 0.03, 0.481, 0.08], [x + 0.39, 0.481, 0.08], [x + 0.39, 0.481, 0.7], [x + 0.03, 0.481, 0.7]], null, VI.mahogLite, 1.2)); [0.44, 0.56].forEach((x) => { const [kx, ky] = T.P(x, 0.482, 0.42); circle(kx, ky, 1.6, VI.brass); });
+      T.box(-0.02, -0.02, 0.78, 1.04, 0.54, 0.05, VI.marble); T.box(-0.02, -0.02, 0.83, 1.04, 0.06, 0.2, VI.marble);
+      const [vx, vy] = T.P(0.45, 0.27, 0.83); ell(vx, vy, 10, 5, '#FFFFFF', VI.china); ell(vx, vy, 7, 3.4, '#DCE6EE'); T.line([0.45, 0.06, 0.83], [0.45, 0.06, 0.98], VI.brass, 2); T.line([0.45, 0.06, 0.98], [0.45, 0.16, 0.95], VI.brass, 2);
+      T.box(0.78, 0.2, 0.83, 0.1, 0.1, 0.17, '#FFFFFF'); const [jx, jy] = T.P(0.83, 0.25, 0.9); circle(jx, jy, 1.8, VI.china); circle(jx + 3, jy + 1, 1.2, VI.china);
+      T.line([1.0, 0.1, 0.65], [1.0, 0.4, 0.65], VI.brass, 1.4); T.poly([[1.002, 0.14, 0.65], [1.002, 0.36, 0.65], [1.002, 0.36, 0.42], [1.002, 0.14, 0.42]], VI.lace, 'rgba(0,0,0,.1)', 0.6); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // A rose and cream mosaic floor, green tile below a damask wall, a brass riser to a big rose head, and a lace curtain
+    // round a brass ring rail.
+    victorian: (o) => [F(0, 0, 1.18, 1.18, (T, ob) => { const c = cl(ob);
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, '#F2EADF'); for (let i = 0; i < 12; i++) for (let j = 0; j < 12; j++) if ((i * 3 + j * 5) % 7 < 2) { const [px, py] = T.P(0.05 + i * 0.09, 0.05 + j * 0.09, 0.061); ell(px, py, 2, 1.1, (i + j) % 2 ? VI.rose : '#7A9A7A'); }
+        T.box(0, 0, 0.06, 1.18, 0.06, 1.0, '#4E7A5E'); for (let z = 0.16; z < 1.06; z += 0.1) T.line([0, 0.061, z], [1.18, 0.061, z], 'rgba(255,255,255,.35)', 0.7); T.box(0, 0, 1.06, 1.18, 0.06, 1.04, '#E9D3D0'); T.line([0, 0.061, 1.06], [1.18, 0.061, 1.06], VI.mahog, 2.4);
+        T.line([0.6, 0.07, 0.4], [0.6, 0.07, 2.0], VI.brass, 2.4); T.line([0.6, 0.07, 2.0], [0.6, 0.35, 2.0], VI.brass, 2.4); const [hx, hy] = T.P(0.6, 0.4, 1.98); ell(hx, hy, 9, 4.5, VI.brass, shade(VI.brass, -0.3)); [[0.5, 1.0], [0.7, 1.0]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.07, z); circle(kx, ky, 2.6, VI.brass); circle(kx, ky, 0.9, '#FFFFFF'); });
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.4); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.9, 1); }
+      }, { name: 'tray' }),
+      F(0, 1.14, 1.18, 1.2, (T) => { const open = usingSlot(T.o.id + ':s') ? 0.45 : 0.95; T.line([0, 1.17, 2.06], [1.18, 1.17, 2.06], VI.brass, 1.8);
+        for (let k = 0; k < 10; k++) { const y0 = k * open / 10 * 1.18, y1 = (k + 1) * open / 10 * 1.18; T.poly([[y0, 1.17 + (k % 2) * 0.02, 0.15], [y1, 1.17 + ((k + 1) % 2) * 0.02, 0.15], [y1, 1.17 + ((k + 1) % 2) * 0.02, 2.04], [y0, 1.17 + (k % 2) * 0.02, 2.04]], 'rgba(251,246,238,.78)', 'rgba(200,190,175,.4)', 0.5); }
+        for (let y = 0.02; y < open * 1.18; y += 0.06) { const [lx, ly] = T.P(y, 1.19, 0.15); circle(lx, ly, 1.1, VI.lace); } }),
+      F(1.14, 0, 1.2, 1.18, (T) => { T.line([1.17, 0, 2.06], [1.17, 1.18, 2.06], VI.brass, 1.8); for (let k = 0; k < 8; k++) { const y0 = 0.1 + k * 0.135, y1 = y0 + 0.135; T.poly([[1.17 + (k % 2) * 0.02, y0, 0.15], [1.17 + ((k + 1) % 2) * 0.02, y1, 0.15], [1.17 + ((k + 1) % 2) * 0.02, y1, 2.04], [1.17 + (k % 2) * 0.02, y0, 2.04]], 'rgba(251,246,238,.7)', 'rgba(200,190,175,.4)', 0.5); } }, { onTop: true })],
   });
   const diningLife = () => F(0, 0.74, 1.3, 1.74, (T, o) => {
     ['c1', 'c2'].forEach((s, i) => { const sid = o.id + ':' + s, who = reserved[sid]; if (who && who.task && who.task.slot === sid && (doing(who, 'eat') || doing(who, 'eatOut') || doing(who, 'sip'))) { const [px, py] = T.P(0.65, i ? 1.5 : 0.98, 0.775); if (doing(who, 'eatOut')) { rr(px - 5, py - 7, 10, 7, 1.5, '#F2EEE8'); } else if (doing(who, 'sip')) { rr(px - 3, py - 6, 6, 6, 1.2, '#F2EEE8'); } else { ell(px, py, 10, 5, '#F5F2EC', 'rgba(0,0,0,.15)'); ell(px, py - 1, 6, 2.8, who.mealFresh ? '#7FB069' : '#D9822B'); circle(px + 3, py - 2, 1.8, '#4F9460'); } } });
@@ -2535,6 +2619,19 @@ export function createHouseArt(ctx0, opts = {}) {
           T.poly([[0.28, 0.601, 0.2], [0.44, 0.601, 0.2], [0.44, 0.601, 0.34], [0.28, 0.601, 0.34]], AR.ink, AR.chrome, 1);
         }, { onTop: true })]; },
        },
+    tallcandelabra: {
+      // A tall brass candelabra with five candles on scrolled arms. Lit or snuffed one candle after another.
+      parts: (o) => [F(0, 0, 0.45, 0.45, (T, ob, t) => { const n = candlesLitCount(ob.id, t);
+        const [bx, by] = T.P(0.225, 0.225, 0); ell(bx, by, 9, 4.5, VI.brass, shade(VI.brass, -0.3)); T.line([0.225, 0.225, 0.02], [0.225, 0.225, 1.45], VI.brass, 3); [0.5, 1.0].forEach((z) => { const [kx, ky] = T.P(0.225, 0.225, z); ell(kx, ky, 4, 2.4, VI.brass); });
+        const arms = [[0.225, -0.18], [0.225, -0.09], [0.225, 0], [0.225, 0.09], [0.225, 0.18]];
+        arms.forEach(([x, dy], k) => { const y = 0.225 + dy, z = 1.45 + (k === 2 ? 0.12 : Math.abs(k - 2) === 1 ? 0.05 : 0);
+          if (k !== 2) { const [ax, ay] = T.P(0.225, 0.225, 1.4), [cx2, cy2] = T.P(x, y, z); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo((ax + cx2) / 2, ay + 6, cx2, cy2); ctx.strokeStyle = VI.brass; ctx.lineWidth = 1.8; ctx.stroke(); }
+          const [cx, cy] = T.P(x, y, z); ell(cx, cy, 3, 1.4, VI.brass); rr(cx - 1.4, cy - 9, 2.8, 9, 0.8, '#F6EEDC');
+          const lit = [2, 1, 3, 0, 4].indexOf(k) < n;
+          if (lit) { circle(cx, cy - 11, 6, 'rgba(255,200,120,.25)'); ell(cx, cy - 11 + Math.sin(t * 8 + k) * 0.4, 1.3, 2.6, '#FFC861'); }
+          else { limb(cx, cy - 9, cx, cy - 10, '#2A2224', 0.8); if (candleSmoke(ob.id, t, k)) { ctx.save(); ctx.globalAlpha = 0.4; limb(cx, cy - 11, cx + Math.sin(t * 3 + k) * 2, cy - 18, '#BBB4AC', 1); ctx.restore(); } } });
+      })],
+    },
     woodstove: {
       // A black cast-iron stove on stone hearth tiles, a glass door, a flue pipe up to the ceiling and a log basket.
       // Lit, flames dance behind the glass, embers glow, sparks rise from the flue collar and the room warms orange.
@@ -3690,6 +3787,11 @@ export function createHouseArt(ctx0, opts = {}) {
     }
     ctx.restore();
   }
+  // Candles that catch or go out one after another: when the change started, and which way. With no change, the
+  // piece's light decides (all lit or none).
+  const candleFx = new Map(), CANDLE_STEP = 0.5;
+  function candlesLitCount(id, t) { const fx = candleFx.get(id); if (!fx) return isLit(id) ? 5 : 0; const k = Math.floor((t - fx.at) / CANDLE_STEP); return fx.on ? Math.min(5, k + 1) : Math.max(0, 5 - k - 1); }
+  const candleSmoke = (id, t, k) => { const fx = candleFx.get(id); return !!fx && !fx.on && t - fx.at < (5 - [2, 1, 3, 0, 4].indexOf(k)) * CANDLE_STEP + 2; };
   // Room service: a breakfast cart that rolls along a path to the bed, waits there, and rolls back out.
   let cart = null;
   const CART_SPEED = 1.1, CART_WAIT = 25;
@@ -4471,6 +4573,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const run = (secs, msg) => { liveUntil.set(o.id + ':' + part, animT + secs); return msg; };
     switch (o.type) {
       case 'overseer': return 'The eye turns toward you.';
+      case 'tallcandelabra': return isLit(o.id) ? 'The candle flames waver.' : 'Five fresh candles, waiting for a match.';
       case 'woodstove': { const on = toggleObjectLight(o.id); return on ? 'The kindling catches and the stove roars into life.' : 'The fire in the stove settles down to embers and goes out.'; }
       case 'glamtable': return run(4, 'The bulbs light up one after another round the mirror.');
       case 'hificonsole': return run(40, 'The lid lifts, the needle drops, and the room goes amber.');
@@ -4496,5 +4599,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }

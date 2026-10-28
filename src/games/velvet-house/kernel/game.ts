@@ -245,6 +245,8 @@ export interface Game {
   /** The service bell: ring for room service, and a breakfast cart rolls to the bed. */
   ringBell(obj: ObjectInstance): void;
   roomServiceTick(): void;
+  /** The Victorian candelabra goes out by itself when someone on its floor falls asleep. */
+  candlesTick(): void;
   /** The player's order for a pet: 'feedPet', 'playPet', 'petPet', 'walkDog' or 'scoop'. */
   petOrder(act: string, petId: string): void;
   petFrames(): PetFrame[];

@@ -144,6 +144,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-circuit', 'Circuit', 'circuit', 110, ['bold', 'modern', 'industrial']),
   wallpaper('paper-sprinkles', 'Sprinkles', 'sprinkles', 90, ['soft', 'playful', 'warm']),
   wallpaper('paper-clouds-sky', 'Clouds and rainbows', 'clouds-sky', 90, ['soft', 'playful', 'cozy']),
+  wallpaper('paper-damask-rose', 'Rose damask', 'damask-rose', 120, ['luxe', 'cozy', 'vintage']),
   wallpaper('paper-knotty-pine', 'Knotty pine paneling', 'knotty-pine', 100, ['cozy', 'warm', 'natural']),
   wallpaper('paper-banana-leaf', 'Banana leaf', 'banana-leaf', 120, ['luxe', 'bold', 'playful']),
   wallpaper('paper-starburst-amber', 'Atomic starburst', 'starburst-amber', 100, ['modern', 'warm', 'vintage']),
@@ -242,6 +243,9 @@ export const CATALOG: CatalogEntry[] = [
   bundle('set-chalet', 'Alpine Chalet bedroom and bath', 'Honey logs, knotty pine, buffalo check and river stone: the log bed with a check blanket and sheepskin, a stump side table with a lantern, a rough-hewn pine chest, a pine-boxed toilet, a copper basin on a log stand, a river-stone shower, knotty pine walls, a river slate floor, and a cast-iron wood stove to sit by.',
     ['look-bed-chalet', 'look-nightstand-chalet', 'look-dresser-chalet', 'look-toilet-chalet', 'look-vanity-chalet', 'look-shower-chalet', 'paper-knotty-pine', 'floor-riverslate', 'woodstove'], ['cozy', 'warm', 'natural']),
 
+  bundle('set-victorian', 'Victorian Boudoir bedroom and bath', 'Carved mahogany, rose damask, velvet and lace: the canopied four-poster, a cabriole bedside table, a mahogany chest with an oval mirror, a china toilet with a high tank, a marble washstand, a tiled shower with a lace curtain, rose damask walls, mahogany herringbone floors, and a brass candelabra whose candles go out one by one at bedtime.',
+    ['look-bed-victorian', 'look-nightstand-victorian', 'look-dresser-victorian', 'look-toilet-victorian', 'look-vanity-victorian', 'look-shower-victorian', 'paper-damask-rose', 'floor-mahoganyherring', 'tallcandelabra'], ['luxe', 'cozy', 'vintage']),
+
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
 
@@ -294,6 +298,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-grate', 'Lit grate', 'grate', 170, ['bold', 'modern', 'industrial']),
   floor('floor-checkpink', 'Pink check', 'checkpink', 140, ['soft', 'playful', 'warm']),
   floor('floor-skycheck', 'Sky check', 'skycheck', 140, ['soft', 'playful', 'cozy']),
+  floor('floor-mahoganyherring', 'Mahogany herringbone', 'mahoganyherring', 180, ['luxe', 'cozy', 'vintage']),
   floor('floor-riverslate', 'River slate', 'riverslate', 160, ['cozy', 'warm', 'natural']),
   floor('floor-whiteherring', 'White herringbone', 'whiteherring', 170, ['luxe', 'bold', 'playful']),
   floor('floor-walnutparquet', 'Walnut parquet', 'walnutparquet', 170, ['modern', 'warm', 'vintage']),
@@ -538,6 +543,13 @@ export const CATALOG: CatalogEntry[] = [
   look('look-vanity-chalet', 'vanity', 'chalet', 'Copper basin on a log stand', 'A hammered copper basin on a thick pine plank over log legs, a black iron tap and wool towels below.', 360, ['cozy', 'warm', 'natural'], ['#C89A62', '#A87A48', '#8A5A30']),
   look('look-shower-chalet', 'shower', 'chalet', 'River-stone shower with a cedar floor', 'River-stone walls, a cedar slat floor, black iron pipes to a big rain head and a frosted glass door.', 520, ['cozy', 'warm', 'natural'], ['#9A948A', '#C89A62', '#2A2826']),
 
+  look('look-bed-victorian', 'bed', 'victorian', 'Mahogany four-poster with a canopy', 'Carved mahogany posts to a canopy with a scalloped valance, velvet drapes tied back at the foot, lace pillows and a damask coverlet in claret, forest or plum.', 820, ['luxe', 'cozy', 'vintage'], ['#7A1F2E', '#2F4A3A', '#3A2A55']),
+  look('look-nightstand-victorian', 'nightstand', 'victorian', 'Cabriole-leg bedside table', 'Mahogany on cabriole legs with a marble top, and a lamp under a fringed rose shade.', 240, ['luxe', 'cozy', 'vintage'], ['#5A2A1E', '#7A3E2C', '#3E1C14']),
+  look('look-dresser-victorian', 'dresser', 'victorian', 'Mahogany chest with an oval mirror', 'Brass escutcheons on carved feet, a tall oval mirror, a lace runner and cut-glass perfume bottles.', 560, ['luxe', 'cozy', 'vintage'], ['#5A2A1E', '#7A3E2C', '#3E1C14']),
+  look('look-toilet-victorian', 'toilet', 'victorian', 'China toilet with a high tank', 'A blue-and-white china bowl with a mahogany seat under a mahogany high tank and a brass pull chain.', 280, ['luxe', 'cozy', 'vintage'], ['#FFFFFF', '#2E4C9A', '#5A2A1E']),
+  look('look-vanity-victorian', 'vanity', 'victorian', 'Marble-topped washstand', 'A mahogany washstand under marble, a china basin and jug, a brass tap and a lace-edged towel.', 420, ['luxe', 'cozy', 'vintage'], ['#5A2A1E', '#7A3E2C', '#3E1C14']),
+  look('look-shower-victorian', 'shower', 'victorian', 'Tiled shower with a lace curtain', 'A rose and cream mosaic floor, green tile under a damask wall, a brass rose head and a lace curtain on a brass rail.', 560, ['luxe', 'cozy', 'vintage'], ['#C98A94', '#4E7A5E', '#FBF6EE']),
+
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
   wallItem('wobj-landscape', 'Landscape canvas', 80, ['natural', 'vintage'], ['#9EC1F5', '#F2B48A', '#C9B8E8', '#2B3A5E']),
@@ -598,6 +610,7 @@ export const CATALOG: CatalogEntry[] = [
   hobby('gym', 'gym', 'Weights and mat', 180, ['cool', 'bold', 'minimal']),
   hobby('yogamat', 'yogamat', 'Yoga mat', 30, ['natural', 'soft', 'minimal'], ['#8E5468', '#7FB069', '#4A88B8', '#E0A43A', '#2B2B30']),
   hobby('massage', 'massage', 'Massage chair', 350, ['luxe', 'modern', 'cozy'], ['#2B2B30', '#E8DCC8', '#6E3C50']),
+  hobby('tallcandelabra', 'tallcandelabra', 'Brass candelabra', 180, ['luxe', 'cozy', 'vintage'], ['#C9A24A', '#8E6E2A', '#E0C26E']),
   hobby('woodstove', 'woodstove', 'Wood stove', 420, ['cozy', 'warm', 'natural'], ['#2A2826', '#3A3634', '#5A1E1E']),
   hobby('glamtable', 'glamtable', 'Hollywood dressing table', 360, ['luxe', 'bold', 'playful'], ['#F2C4CE', '#1F6B52', '#151517']),
   hobby('hificonsole', 'hificonsole', 'Hi-fi console', 380, ['modern', 'warm', 'vintage'], ['#7A4E2D', '#9A6A44', '#5E3A20']),
