@@ -92,7 +92,43 @@ describe('poseRig', () => {
   });
 });
 
-import { idleRig, expressionFor, walkRig, seatLegs, LEG, ARM } from '../art/poseAnim.js';
+import { idleRig, expressionFor, walkRig, seatLegs, legIK, LEG, ARM } from '../art/poseAnim.js';
+
+describe('the knee', () => {
+  const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  const hip = [0, 0.62];
+
+  it('keeps the thigh and shin their own lengths wherever the foot lands in a stride', () => {
+    for (let ph = 0; ph < Math.PI * 2; ph += 0.05) {
+      const foot = [Math.sin(ph) * 0.17, Math.max(0, Math.sin(ph)) * 0.075];
+      const knee = legIK(hip, foot);
+      const d = dist(hip, foot);
+      if (d <= LEG.thigh + LEG.shin) {
+        expect(dist(hip, knee), `thigh at ${ph}`).toBeCloseTo(LEG.thigh, 3);
+        expect(dist(knee, foot), `shin at ${ph}`).toBeCloseTo(LEG.shin, 3);
+      } else {
+        // Out of reach: the leg straightens toward the foot, split at the knee.
+        expect(dist(hip, knee) / dist(knee, foot)).toBeCloseTo(LEG.thigh / LEG.shin, 3);
+      }
+    }
+  });
+
+  it('bends forward, never backward', () => {
+    for (const foot of [[0, 0], [0.15, 0], [-0.15, 0], [0.1, 0.2], [0.2, 0.3], [-0.1, 0.05]]) {
+      const knee = legIK(hip, foot);
+      const t = (knee[1] - hip[1]) / ((foot[1] - hip[1]) || -1e-6); // where along the hip-foot line the knee is
+      const onLine = hip[0] + (foot[0] - hip[0]) * t;
+      expect(knee[0], `foot ${foot}`).toBeGreaterThanOrEqual(onLine - 1e-9);
+    }
+  });
+
+  it('straightens a leg that hangs with the foot right below the hip', () => {
+    const knee = legIK(hip, [0, 0]);
+    expect(knee[1]).toBeCloseTo(0.31, 3);
+    expect(knee[0]).toBeGreaterThanOrEqual(0); // a 0.62 leg over a 0.62 drop: the knee sits dead on the line
+    expect(knee[0]).toBeLessThan(0.01);
+  });
+});
 
 describe('the walk', () => {
   const len = (v: number[]) => Math.hypot(v[0], v[2]);

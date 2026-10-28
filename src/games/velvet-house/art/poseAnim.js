@@ -506,6 +506,27 @@ export function walkRig(phase, amp = 1) {
 }
 
 /**
+ * Two-bone leg: where the knee goes for a hip and a foot given as [forward, z], with the knee
+ * bending forward. A foot out of reach straightens the leg toward it (a slight stretch, never
+ * a gap), so a stride or a pedal never leaves a leg that grows and shrinks.
+ */
+export function legIK(hip, foot, thigh = LEG.thigh, shin = LEG.shin) {
+  const dx = foot[0] - hip[0], dz = foot[1] - hip[1];
+  const d = Math.hypot(dx, dz) || 1e-6;
+  if (d >= thigh + shin) {
+    const k = thigh / (thigh + shin);
+    return [hip[0] + dx * k, hip[1] + dz * k];
+  }
+  // Law of cosines: the knee sits a distance `a` along the hip-foot line and `h` off it.
+  const a = (thigh * thigh - shin * shin + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, thigh * thigh - a * a));
+  const ux = dx / d, uz = dz / d;
+  let px = -uz, pz = ux; // the perpendicular that points forward
+  if (px < 0) { px = -px; pz = -pz; }
+  return [hip[0] + ux * a + px * h, hip[1] + uz * a + pz * h];
+}
+
+/**
  * Sitting legs for a seat `seat` high, as [forward, z] from the hip's footprint on the seat.
  * The hip sinks a little into the cushion; the thigh runs forward to the knee; the shin
  * drops to the floor when it can (stretching a shade on tall seats, as cartoon legs do) and
