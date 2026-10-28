@@ -35,6 +35,9 @@ vi.mock('../../../shared/supabase/client', () => ({
 const people = { getAll: vi.fn(), create: vi.fn() };
 vi.mock('../../../services/realPeopleService', () => ({ realPeopleService: people }));
 
+const dock = { current: null as null | { companions: Array<{ id: string }>; draftToCompanion: ReturnType<typeof vi.fn> } };
+vi.mock('../../../components/dock/DockContext', () => ({ useDockOptional: () => dock.current }));
+
 const { TodayCard } = await import('../TodayCard');
 
 function event(overrides: Partial<UserEvent>): UserEvent {
@@ -222,5 +225,32 @@ describe('TodayCard', () => {
     await waitFor(() => expect(calendar.setCompleted).toHaveBeenCalled());
     await new Promise(r => setTimeout(r, 20));
     expect(screen.queryByText(/With Velvet Plus/)).toBeNull();
+  });
+});
+
+
+describe('Get help from the coach on a task', () => {
+  it('types the question into that coach\'s chat box (not sent), with the task, its goal and its date', async () => {
+    dock.current = { companions: [{ id: 'coach1' }], draftToCompanion: vi.fn() };
+    coaching.getTodayCommitments.mockResolvedValue([commitment({ id: 'c9', description: 'File the trademark', goal_id: 'g1' })]);
+    coaching.getGoals.mockResolvedValue([{ id: 'g1', title: 'Start my own company' }]);
+    render(<TodayCard />);
+    fireEvent.click(await screen.findByText('Get help from Maya'));
+    expect(dock.current.draftToCompanion).toHaveBeenCalledTimes(1);
+    const [companionId, text] = dock.current.draftToCompanion.mock.calls[0];
+    expect(companionId).toBe('coach1');
+    expect(text).toContain('"File the trademark"');
+    expect(text).toContain('my goal: Start my own company');
+    expect(text).toContain('Break it down into small steps');
+  });
+
+  it('is not offered for a done task, a calendar event, or a coach that is not in the dock', async () => {
+    dock.current = { companions: [{ id: 'someone-else' }], draftToCompanion: vi.fn() };
+    coaching.getTodayCommitments.mockResolvedValue([commitment({ description: 'Open task' })]);
+    calendar.getUserEvents.mockResolvedValue([event({ title: 'Dentist' })]);
+    render(<TodayCard />);
+    await screen.findByText('Open task');
+    expect(screen.queryByText(/Get help from/)).toBeNull();
+    dock.current = null;
   });
 });
