@@ -78,5 +78,6 @@ Tally: 10 full, 9 close, 7 with newly drawn pieces.
 - Whether a random match should start in the default and have the wardrobe to find, like the built path. As built it
   is dressed, because it has no wardrobe step.
 - The fox mask replaces the Trickster's hat slot; say if they should also keep a hat.
-- The migration (`20261111120000_companion_voice_attire.sql`) needs applying before free people keep a member-only
-  signature piece on save; until then the app saves the look unchecked, which still works.
+- The migration (`20261111120000_companion_voice_attire.sql`) is **applied** to the live database (as `companion_voice_attire`,
+  with execute revoked from `anon`). Not yet tried with a signed-in free account: the save path calls it with the
+  companion's id, and falls back to an unchecked save if it ever errors.

@@ -101,4 +101,6 @@ begin
 end
 $function$;
 
+-- Lock the function down like sanitize_avatar_config: only signed-in users may call it.
+REVOKE EXECUTE ON FUNCTION public.sanitize_companion_avatar_config(jsonb, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.sanitize_companion_avatar_config(jsonb, uuid) TO authenticated;
