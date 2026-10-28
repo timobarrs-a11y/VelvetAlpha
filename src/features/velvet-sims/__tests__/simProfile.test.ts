@@ -3,7 +3,7 @@ import { buildHeadSprites, buildBodySprites, signatureOutfit, buildProfile, buil
 import { migrateAvatarConfig } from '../../../utils/avatarConfig';
 import { validHeadSvgs } from '../../../games/velvet-house/state/headSprites';
 import { validWardrobe, validOutfit, SIGNATURE_STYLES } from '../../../games/velvet-house/state/clothing';
-import { PERSONAS } from '../../../data/avatarItems';
+import { PERSONAS, OUTFITS, BOTTOMS } from '../../../data/avatarItems';
 import { validBodySvgs, HAND_SPRITE } from '../../../games/velvet-house/state/bodySprites';
 import { validOutfit } from '../../../games/velvet-house/state/clothing';
 import { STARTER_ONLY } from '../../../data/avatarItems';
@@ -80,8 +80,8 @@ describe('Velvet Sims wardrobe', () => {
   it('lists every piece and persona a member may wear, in a form the game accepts', () => {
     const w = validWardrobe(buildWardrobe(MEMBER, 'chef_hat'))!;
     expect(w.personas.map(p => p.id)).toEqual(PERSONAS.map(p => p.id));
-    expect(w.pieces.filter(p => p.slot === 'top')).toHaveLength(12);
-    expect(w.pieces.filter(p => p.slot === 'bottom')).toHaveLength(11);
+    expect(w.pieces.filter(p => p.slot === 'top')).toHaveLength(OUTFITS.length);
+    expect(w.pieces.filter(p => p.slot === 'bottom')).toHaveLength(BOTTOMS.length);
     expect(w.hat).toBe('chef_hat');
     // Lawyers and presidents wear their own navy trousers, not the plain pair.
     expect(w.personas.find(p => p.id === 'lawyer')?.bottomCol).toBe('#1f2a44');

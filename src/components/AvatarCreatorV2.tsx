@@ -55,6 +55,10 @@ interface AvatarCreatorV2Props {
   blink?: boolean;
   // The person this look is for already has a gender (a companion or coach being made): no Male/Female toggle.
   lockGender?: boolean;
+  // A companion's signature voice has an outfit of its own. It is offered first on the Wardrobe tab, and with
+  // `lockOthers` (someone without a membership) it is the only outfit besides the plain default they can pick:
+  // the rest stay on show, locked. `look` holds the shirt, pants and hat.
+  signatureStyle?: { label: string; look: Partial<AvatarConfigV2>; lockOthers: boolean };
 }
 
 function ColorSwatch({
@@ -221,6 +225,7 @@ export function AvatarCreatorV2({
   contained = false,
   blink = true,
   lockGender = false,
+  signatureStyle,
 }: AvatarCreatorV2Props) {
   const ownUnlocks = useAvatarUnlocks();
   const unlocks = unlocksProp ?? ownUnlocks;
@@ -606,8 +611,17 @@ export function AvatarCreatorV2({
   const pantsItem = bottomItem(pants.id);
   const hat = headwearItem(config.headwear);
   const currentPersona = personaOf(config);
+  // With a signature style and no membership, only that style (and the plain default) can be picked; the rest are shown locked.
+  const plainPieces = ['outfit:tee', 'bottom:jeans', 'headwear:none', 'faceAccessory:none'];
+  const sigLook = signatureStyle?.look;
+  const allowedPieces = signatureStyle?.lockOthers && sigLook
+    ? new Set([...plainPieces, `outfit:${sigLook.outfit}`, `bottom:${sigLook.bottom}`, `headwear:${sigLook.headwear ?? 'none'}`, `faceAccessory:${sigLook.faceAccessory ?? 'none'}`])
+    : null;
+  const pieceLock = (slot: 'outfit' | 'bottom' | 'headwear' | 'faceAccessory', id: string): UnlockResult =>
+    allowedPieces && !allowedPieces.has(`${slot}:${id}`) ? { ok: false, need: 'membership' } : canUse(itemId(slot, id), unlocks);
+  const wearingSignature = !!sigLook && config.outfit === sigLook.outfit && config.bottom === sigLook.bottom && (config.headwear ?? 'none') === (sigLook.headwear ?? 'none');
   const kitButton = (kit: typeof PERSONAS[number]) => {
-    const lock = lookUnlock(kit.look, unlocks);
+    const lock = allowedPieces ? ({ ok: false, need: 'membership' } as UnlockResult) : lookUnlock(kit.look, unlocks);
     const active = currentPersona?.id === kit.id;
     return (
       <button
@@ -642,6 +656,22 @@ export function AvatarCreatorV2({
 
   const wardrobeTab = (
     <div className="space-y-5">
+      {signatureStyle && (
+        <button
+          onClick={() => update(signatureStyle.look)}
+          aria-pressed={wearingSignature}
+          data-testid="signature-style"
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left border transition-all ${
+            wearingSignature ? 'bg-amber-500/10 border-amber-400/60' : 'bg-white/5 border-white/15 hover:bg-white/10 hover:border-amber-400/40'
+          }`}
+        >
+          <Sparkles className="w-5 h-5 text-amber-300 flex-shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white truncate">{signatureStyle.label}'s signature style</p>
+            <p className="text-xs text-gray-400">The outfit that goes with their voice.</p>
+          </div>
+        </button>
+      )}
       <Section label="Personas">
         <p className="text-xs text-gray-500">Tap one for the whole look: shirt, pants and hat. Then change any piece on its own below.</p>
         <div className="grid grid-cols-2 gap-2">
@@ -658,7 +688,7 @@ export function AvatarCreatorV2({
       <Section label="Shirt">
         <div className="grid grid-cols-3 gap-2">
           {OUTFITS.map(o => (
-            <LockableOption key={o.id} label={o.label} lock={canUse(itemId('outfit', o.id), unlocks)}
+            <LockableOption key={o.id} label={o.label} lock={pieceLock('outfit', o.id)}
               selected={currentOutfit.id === o.id}
               onClick={() => update({ outfit: o.id, outfitColor: o.color, outfitAccent: o.accent })} />
           ))}
@@ -690,7 +720,7 @@ export function AvatarCreatorV2({
           <OptionButton label="Match shirt" selected={!config.bottom}
             onClick={() => update({ bottom: undefined, bottomColor: undefined, bottomAccent: undefined })} />
           {BOTTOMS.map(b => (
-            <LockableOption key={b.id} label={b.label} lock={canUse(itemId('bottom', b.id), unlocks)}
+            <LockableOption key={b.id} label={b.label} lock={pieceLock('bottom', b.id)}
               selected={config.bottom === b.id}
               onClick={() => update({ bottom: b.id, bottomColor: b.color, bottomAccent: b.accent })} />
           ))}
@@ -720,7 +750,7 @@ export function AvatarCreatorV2({
       <Section label="Hat">
         <div className="grid grid-cols-3 gap-2">
           {HEADWEAR.map(h => (
-            <LockableOption key={h.id} label={h.label} lock={canUse(itemId('headwear', h.id), unlocks)}
+            <LockableOption key={h.id} label={h.label} lock={pieceLock('headwear', h.id)}
               selected={(config.headwear ?? 'none') === h.id}
               onClick={() => update({ headwear: h.id })} />
           ))}
@@ -730,7 +760,7 @@ export function AvatarCreatorV2({
       <Section label="Face">
         <div className="grid grid-cols-3 gap-2">
           {FACE_ACCESSORIES.map(f => (
-            <LockableOption key={f.id} label={f.label} lock={canUse(itemId('faceAccessory', f.id), unlocks)}
+            <LockableOption key={f.id} label={f.label} lock={pieceLock('faceAccessory', f.id)}
               selected={(config.faceAccessory ?? 'none') === f.id}
               onClick={() => update({ faceAccessory: f.id })} />
           ))}

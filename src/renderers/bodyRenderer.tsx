@@ -50,6 +50,7 @@ const LEGS: Record<Bottom, LegSpec> = {
   shorts: { top: 36, bottom: 34, hem: 96, kind: 'straight' },
   skirt: { top: 70, bottom: 78, hem: 100, kind: 'skirt' },
   cheer_skirt: { top: 70, bottom: 84, hem: 98, kind: 'skirt' },
+  plaid_skirt: { top: 70, bottom: 80, hem: 100, kind: 'skirt' },
 };
 
 // Shoes follow the pants: boots with breeches, leather and uniforms, clogs with scrubs and whites.
@@ -66,6 +67,7 @@ const SHOES: Record<Bottom, ShoeSpec> = {
   shorts: { kind: 'sneaker', color: '#f2eee8', sole: '#c9c3b8', sock: '#f4f1ea' },
   skirt: { kind: 'dress', color: '#26211f', sole: '#120f0e', sock: '#f4f1ea' },
   cheer_skirt: { kind: 'sneaker', color: '#f6f6f4', sole: '#cfcfca', sock: '#f6f6f4' },
+  plaid_skirt: { kind: 'dress', color: '#26211f', sole: '#120f0e', sock: '#f4f1ea' },
 };
 
 // How long each shirt's sleeves are: none, short (to the elbow) or long (to the wrist).
@@ -73,6 +75,7 @@ type Sleeve = 'none' | 'short' | 'long';
 const SLEEVES: Record<Outfit, Sleeve> = {
   tee: 'short', linen: 'long', suit: 'long', chef: 'long', labcoat: 'long', pirate: 'long',
   rockstar: 'long', cheer: 'none', cop: 'short', scrubs: 'short', streetwear: 'long', president: 'long',
+  letterman: 'long', hero: 'short', cardigan: 'long', uniform: 'short', doublet: 'long', sundress: 'none',
 };
 
 function legCentres(w: number): [number, number] {
@@ -108,6 +111,12 @@ export function renderLegs(p: FullBodyParams): React.ReactNode {
         <stop offset="0.45" stopColor={shade(p.skin, 0.05)} />
         <stop offset="1" stopColor={shade(p.skin, -0.16)} />
       </linearGradient>
+      <pattern id={`${p.idPrefix}-plaid`} width="10" height="10" patternUnits="userSpaceOnUse">
+        <rect width="10" height="2.4" y="3.8" fill={accent} opacity="0.55" />
+        <rect width="2.4" height="10" x="3.8" fill={accent} opacity="0.55" />
+        <rect width="10" height="0.8" y="4.6" fill="#f4f1ea" opacity="0.5" />
+        <rect width="0.8" height="10" x="4.6" fill="#f4f1ea" opacity="0.5" />
+      </pattern>
       <pattern id={`${p.idPrefix}-check`} width="6" height="6" patternUnits="userSpaceOnUse">
         <rect width="3" height="3" fill={accent} opacity="0.5" />
         <rect x="3" y="3" width="3" height="3" fill={accent} opacity="0.5" />
@@ -136,6 +145,9 @@ export function renderLegs(p: FullBodyParams): React.ReactNode {
         {shoes(p, shoe, [lc, rc], ankle, undefined, 14 * k)}
         {/* the skirt */}
         <path d={`M${c - half} ${top} L${c - flare} ${hem} Q${c} ${hem + 4} ${c + flare} ${hem} L${c + half} ${top} Z`} fill={`url(#${gradId})`} stroke={edge} strokeWidth="0.8" />
+        {p.bottom === 'plaid_skirt'
+          ? <path d={`M${c - half} ${top} L${c - flare} ${hem} Q${c} ${hem + 4} ${c + flare} ${hem} L${c + half} ${top} Z`} fill={`url(#${p.idPrefix}-plaid)`} />
+          : null}
         {pleats}
         <path d={`M${c - flare} ${hem - 1.4} Q${c} ${hem + 2.6} ${c + flare} ${hem - 1.4}`} stroke={accent} strokeWidth="2.6" fill="none" strokeLinecap="round" />
       </g>
@@ -292,6 +304,9 @@ export function renderWaist(p: FullBodyParams, hemHalf: number): React.ReactNode
     case 'shorts':
     case 'breeches':
       return band(base);
+    case 'plaid_skirt':
+    case 'skirt':
+      return band(base);
     case 'cheer_skirt':
       return (
         <g>
@@ -307,7 +322,8 @@ export function renderWaist(p: FullBodyParams, hemHalf: number): React.ReactNode
 // ---- Arms: sleeves, forearms and hands.
 export function renderArms(p: FullBodyParams): React.ReactNode {
   const sleeve = SLEEVES[p.outfit] ?? 'short';
-  const cloth = p.outfit === 'pirate' ? '#efe6d2' : p.outfitMain;
+  // A pirate's sleeves are the linen under the vest, a letterman jacket's are its contrast colour.
+  const cloth = p.outfit === 'pirate' ? '#efe6d2' : p.outfit === 'letterman' ? p.outfitAccent : p.outfitMain;
   const gradId = `${p.idPrefix}-sleeve`, skinId = `${p.idPrefix}-armskin`;
   const sh = (50 - 0) , shoulderX = (p.S + 8) * p.sx, y0 = p.N + 24;
   const elbowY = p.N + 52, wristY = p.N + 80;

@@ -9,6 +9,9 @@ import { trackSaveAvatar } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
 import { sanitizeAvatarConfigForSave } from '../services/avatarSaveService';
 import { getRandomName } from '../data/companionNames';
+import { getVoiceById } from '../config/signatureVoices';
+import { voiceAttire, attireUnlocks } from '../config/voiceAttire';
+import { useAvatarUnlocks } from '../hooks/useAvatarUnlocks';
 import { companionDestination, finishCompanionPipeline } from '../services/randomCompanionService';
 
 async function resolveCompanionId(): Promise<string | null> {
@@ -32,6 +35,11 @@ async function resolveCompanionId(): Promise<string | null> {
   return data?.id ?? null;
 }
 
+/** "Bad Boy" for THE BAD BOY. */
+function signatureLabel(voiceId: string | null): string {
+  return getVoiceById(voiceId ?? '').name.replace(/^THE /, '').toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+}
+
 export function CreateCompanionAvatarPage() {
   const navigate = useNavigate();
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfigV2>(DEFAULT_FEMALE_AVATAR_V2);
@@ -39,6 +47,8 @@ export function CreateCompanionAvatarPage() {
   const [companionName, setCompanionName] = useState('');
   const [companionGender, setCompanionGender] = useState<'male' | 'female'>('female');
   const [companionKey, setCompanionKey] = useState<string | null>(null);
+  const [voiceId, setVoiceId] = useState<string | null>(null);
+  const ownUnlocks = useAvatarUnlocks();
   const [ready, setReady] = useState(false);
   const [showReveal, setShowReveal] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -49,18 +59,20 @@ export function CreateCompanionAvatarPage() {
       let gender: 'male' | 'female' = matchData.relationshipType === 'Male' ? 'male' : 'female';
       let name: string = matchData.companionName || '';
       let existingLook: AvatarConfigV2 | null = null;
+      let voice: string | null = null;
 
       // The companion itself is the source of truth for who this is: their gender decides the face.
       const companionId = await resolveCompanionId();
       if (companionId) {
         const { data } = await supabase
           .from('companions')
-          .select('custom_name, gender, avatar_config')
+          .select('custom_name, gender, avatar_config, signature_voice')
           .eq('id', companionId)
           .maybeSingle();
         if (data) {
           if (data.gender === 'male' || data.gender === 'female') gender = data.gender;
           if (!name && data.custom_name) name = data.custom_name;
+          voice = data.signature_voice ?? null;
           if (data.avatar_config && !matchData.relationshipType) existingLook = data.avatar_config as AvatarConfigV2;
         }
       }
@@ -68,7 +80,9 @@ export function CreateCompanionAvatarPage() {
       // Drafts are kept per companion: one left behind for an earlier companion must not show up here.
       const key = `companion-avatar-draft:${companionId ?? 'new'}`;
 
+      // A new companion starts in the plain default outfit; their voice's signature style is there to find on the Wardrobe tab.
       const look = existingLook ?? (gender === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2);
+      setVoiceId(voice);
       setCompanionName(name);
       setCompanionGender(gender);
       setCompanionKey(key);
@@ -91,7 +105,7 @@ export function CreateCompanionAvatarPage() {
         return;
       }
 
-      const sanitized = await sanitizeAvatarConfigForSave(avatarConfig);
+      const sanitized = await sanitizeAvatarConfigForSave(avatarConfig, companionId);
 
       const { error } = await supabase
         .from('companions')
@@ -170,6 +184,10 @@ export function CreateCompanionAvatarPage() {
               onChange={setAvatarConfig}
               draftKey={companionKey ?? undefined}
               lockGender
+              unlocks={attireUnlocks(ownUnlocks, voiceId)}
+              signatureStyle={voiceAttire(voiceId)
+                ? { label: signatureLabel(voiceId), look: voiceAttire(voiceId)!, lockOthers: !ownUnlocks.member }
+                : undefined}
             />
           )}
         </motion.div>

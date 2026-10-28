@@ -26,7 +26,7 @@ export default function SignatureVoiceSelectionPage() {
     setCompanionGender(gender);
 
     const filtered = SIGNATURE_VOICES.filter(voice =>
-      voice.gender === gender || voice.gender === 'neutral'
+      (voice.gender === gender || voice.gender === 'neutral') && voice.category !== 'professional'
     );
     setAvailableVoices(filtered);
   };
@@ -35,11 +35,7 @@ export default function SignatureVoiceSelectionPage() {
     setSelectedVoice(voiceId);
   };
 
-  // Skipping keeps the plain classic voice for their gender; "surprise me" picks any of them.
-  const handleSkip = async () => {
-    await saveVoiceAndContinue(companionGender === 'male' ? 'classic_male' : 'classic_female');
-  };
-
+  // There is no default voice to fall back on: they pick one from the list, or ask to be surprised.
   const handleSurprise = async () => {
     const pick = availableVoices[Math.floor(Math.random() * availableVoices.length)];
     if (pick) await saveVoiceAndContinue(pick.id);
@@ -181,13 +177,6 @@ export default function SignatureVoiceSelectionPage() {
             </button>
           </div>
 
-          <button
-            onClick={handleSkip}
-            disabled={loading}
-            className="mt-3 text-xs text-gray-400 hover:text-gray-200 transition-colors disabled:opacity-40"
-          >
-            Skip, use the classic voice
-          </button>
         </div>
 
         <div className="space-y-8 mb-12">

@@ -27,7 +27,7 @@ export interface SetupProgress {
 /** The first session's steps, in order. Someone at one of these has not finished arriving. */
 export const ARRIVAL_STEPS: SetupStep[] = ['arrival_goal', 'arrival_look', 'arrival_home', 'arrival_atlas', 'arrival_town'];
 
-export const SOMEONE_NEW_ROUTE = '/intent-select?people=1';
+export const SOMEONE_NEW_ROUTE = '/companion-path';
 
 interface CompanionLite {
   id: string;

@@ -9,7 +9,12 @@ interface AvatarSaveRevealProps {
   companionName?: string;
   isCompanion?: boolean;
   onContinue: () => void;
+  /** 0 waits for the button. */
   autoDismissMs?: number;
+  /** Replaces the "looks perfect" copy, e.g. for meeting someone for the first time. */
+  headline?: string;
+  subline?: string;
+  buttonLabel?: string;
 }
 
 export function AvatarSaveReveal({
@@ -18,23 +23,27 @@ export function AvatarSaveReveal({
   isCompanion = false,
   onContinue,
   autoDismissMs = 2500,
+  headline: headlineOverride,
+  subline: sublineOverride,
+  buttonLabel = 'Continue',
 }: AvatarSaveRevealProps) {
   useEffect(() => {
+    if (!autoDismissMs) return;
     const timer = setTimeout(onContinue, autoDismissMs);
     return () => clearTimeout(timer);
   }, [onContinue, autoDismissMs]);
 
-  const headline = isCompanion
+  const headline = headlineOverride ?? (isCompanion
     ? companionName
       ? `${companionName} looks perfect.`
       : 'They look perfect.'
-    : 'You look amazing.';
+    : 'You look amazing.');
 
-  const subline = isCompanion
+  const subline = sublineOverride ?? (isCompanion
     ? companionName
       ? `${companionName} is ready to meet you.`
       : 'Your companion is ready.'
-    : 'Your look has been saved.';
+    : 'Your look has been saved.');
 
   return (
     <motion.div
@@ -94,7 +103,7 @@ export function AvatarSaveReveal({
             bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold
             transition-colors shadow-lg shadow-sky-900/40"
         >
-          Continue
+          {buttonLabel}
           <ArrowRight className="w-4 h-4" />
         </motion.button>
       </motion.div>

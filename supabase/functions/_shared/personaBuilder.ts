@@ -38,7 +38,7 @@ interface _UserProfile {
 const ENERGY_MAP: [string[], string][] = [
   [['life of the party', 'outgoing', 'social'], "You're the life of the party — social, outgoing, you bring the energy and light up every conversation."],
   [['somewhere in between', 'balanced', 'adaptable'], "Balanced energy — you can be lively or chill depending on the moment, naturally adaptable."],
-  [['in your own world', 'introspective', 'mysterious', 'thoughtful'], "Thoughtful and introspective — you don't perform, you just exist authentically with a quiet, mysterious energy."],
+  [['in your own world', 'own world', 'introspective', 'mysterious', 'thoughtful'], "Thoughtful and introspective — you don't perform, you just exist authentically with a quiet, mysterious energy."],
 ];
 
 const HUMOR_MAP: [string[], string][] = [
@@ -82,6 +82,7 @@ const CONFLICT_MAP: [string[], string][] = [
 ];
 
 const SUPPORT_MAP: [string[], string][] = [
+  [['listens first', 'then helps'], "When they're stressed, you listen first — 'that sounds like a lot, I'm here' — and once they have felt heard, you ask if they want help working out what to do."],
   [['solutions', 'fix', 'problem-solving', 'figure out'], "When they're stressed, you jump into problem-solving mode — 'okay, let's figure this out together'."],
   [['listens', 'validate', 'hold space', 'hear'], "When they're stressed, you hold space — 'that makes sense, I hear you' — you don't rush to fix."],
   [['distract', 'fun', 'positivity', 'lighten'], "When they're stressed, you lighten the mood — change the vibe, bring laughter, distract with fun."],
@@ -139,6 +140,19 @@ function matchTrait(value: string | null | undefined, map: [string[], string][])
   return `"${value}" — embody this fully.`;
 }
 
+// Humor can be a mix: "Witty & Clever + Warm & Light" is mostly witty, with a streak of warm. The first one named
+// is the main one, so the order they appear in the text decides, not the order of the list above.
+function matchHumor(value: string | null | undefined): string | null {
+  if (!value || typeof value !== 'string') return null;
+  const lower = value.toLowerCase();
+  const found = HUMOR_MAP
+    .map(([tokens, instruction]) => ({ at: Math.min(...tokens.map(t => lower.indexOf(t)).filter(i => i >= 0), Infinity), instruction }))
+    .filter(f => f.at !== Infinity)
+    .sort((a, b) => a.at - b.at);
+  if (found.length === 0) return matchTrait(value, HUMOR_MAP);
+  return found.length === 1 ? found[0].instruction : `${found[0].instruction} With a streak of: ${found[1].instruction}`;
+}
+
 function arrayToText(arr: string[] | null | undefined): string {
   if (!arr || !Array.isArray(arr) || arr.length === 0) return '';
   return arr.filter(Boolean).join(', ');
@@ -150,7 +164,7 @@ function buildTraitBlock(companion: CompanionRow, isRomantic: boolean): string {
   const energy = matchTrait(companion.energy_preference, ENERGY_MAP);
   if (energy) traits.push(`- Energy: ${energy}`);
 
-  const humor = matchTrait(companion.humor_style, HUMOR_MAP);
+  const humor = matchHumor(companion.humor_style);
   if (humor) traits.push(`- Humor: ${humor}`);
 
   if (isRomantic) {
@@ -257,7 +271,7 @@ function buildMentorTraitBlock(companion: CompanionRow): string {
   const energy = matchTrait(companion.energy_preference, ENERGY_MAP);
   if (energy) traits.push(`- Energy: ${energy}`);
 
-  const humor = matchTrait(companion.humor_style, HUMOR_MAP);
+  const humor = matchHumor(companion.humor_style);
   if (humor) traits.push(`- Humor: ${humor}`);
 
   const conflict = matchTrait(companion.confrontation_style, CONFLICT_MAP);
@@ -360,7 +374,7 @@ ${traitBlock}
 === YOUR VOICE: ${voice.name} ===
 ${voice.instruction}${voiceExamples}
 
-Character is WHAT you do. Voice is HOW you say it. Neither overrides the other — they combine. A "Therapist" voice with a firm accountability style delivers firm expectations using reflective, empathetic language. A "Jock" voice with gentle support delivers encouragement in bro-speak.${userContextBlock}
+Character is WHAT you do. Voice is HOW you say it. Who wins when they pull apart: the personality settings set the LEVELS (how big, how long, how often, how blunt, how open, whether you fix things or just listen). The voice sets WHO YOU ARE LIKE: your attitude, worldview and signature phrases. Where your voice names something as its own core, the voice wins and the setting only nudges it a step. Everywhere else the setting wins and your voice is delivered at that level. A Cheerleader set to calm is still someone who sees the best in people and says "I see you", once and quietly, not three exclamation points. Never drop your voice's identity, and never ignore a setting. A "Therapist" voice with a firm accountability style delivers firm expectations using reflective, empathetic language. A "Jock" voice with gentle support delivers encouragement in bro-speak.${userContextBlock}
 
 === ${textingRhythm}
 ${driftCorrection}`;
@@ -384,7 +398,7 @@ ${traitBlock}
 === YOUR VOICE: ${voice.name} ===
 ${voice.instruction}${voiceExamples}
 
-Character is WHAT you do. Voice is HOW you say it. Neither overrides the other — they combine. A "Therapist" voice with bold flirting delivers bold flirting using reflective, empathetic language. A "Jock" voice with sweet moments delivers gentle care in bro-speak.${userContextBlock}
+Character is WHAT you do. Voice is HOW you say it. Who wins when they pull apart: the personality settings set the LEVELS (how big, how long, how often, how blunt, how open, whether you fix things or just listen). The voice sets WHO YOU ARE LIKE: your attitude, worldview and signature phrases. Where your voice names something as its own core, the voice wins and the setting only nudges it a step. Everywhere else the setting wins and your voice is delivered at that level. A Cheerleader set to calm is still someone who sees the best in people and says "I see you", once and quietly, not three exclamation points. Never drop your voice's identity, and never ignore a setting. A "Therapist" voice with bold flirting delivers bold flirting using reflective, empathetic language. A "Jock" voice with sweet moments delivers gentle care in bro-speak.${userContextBlock}
 
 === ${textingRhythm}
 ${driftCorrection}`;

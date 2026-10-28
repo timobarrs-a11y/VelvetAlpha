@@ -22,7 +22,7 @@ describe('signature voices, app and server', () => {
     for (const v of SIGNATURE_VOICES) {
       expect(v.name && v.description && v.sample && v.instruction).toBeTruthy();
       expect(['male', 'female', 'neutral']).toContain(v.gender);
-      expect(['standard', 'anime', 'culture']).toContain(v.category);
+      expect(['standard', 'anime', 'culture', 'professional']).toContain(v.category);
     }
   });
 
@@ -36,7 +36,8 @@ describe('signature voices, app and server', () => {
   it('the picker shows every voice for the gender it suits, so none is unreachable', () => {
     for (const gender of ['male', 'female'] as const) {
       const shown = new Set(['standard', 'anime', 'culture'].flatMap(c => getVoicesByCategory(gender, c as 'standard').map(v => v.id)));
-      const suited = SIGNATURE_VOICES.filter(v => v.gender === gender || v.gender === 'neutral').map(v => v.id);
+      // The professional (classic) voices are the coaches' and the fallback, not a choice.
+      const suited = SIGNATURE_VOICES.filter(v => (v.gender === gender || v.gender === 'neutral') && v.category !== 'professional').map(v => v.id);
       expect([...shown].sort()).toEqual(suited.sort());
     }
   });
@@ -61,6 +62,7 @@ describe('signature voices, app and server', () => {
         const v = SIGNATURE_VOICES.find(x => x.id === id)!;
         expect(v).toBeTruthy();
         expect([g, 'neutral']).toContain(v.gender);
+        expect(v.category).not.toBe('professional');
       }
     }
   });

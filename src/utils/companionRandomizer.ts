@@ -1,7 +1,8 @@
 import { getRandomName } from '../data/companionNames';
-import { SIGNATURE_VOICES } from '../config/signatureVoices';
 import { COMPANION_QUESTIONNAIRE } from '../features/questionnaire/companionBank';
-import type { TabsQuestion } from '../features/questionnaire/types';
+import { makeContext, tpl } from '../features/questionnaire/pronouns';
+import type { ScrubQuestion, PreviewQuestion, TabsQuestion } from '../features/questionnaire/types';
+import { SIGNATURE_VOICES } from '../config/signatureVoices';
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -60,7 +61,7 @@ export function deriveUserInterests(interestPreference: string): { hobbies: stri
 
 /** Any signature voice that suits this gender (a neutral one too). All of them are open to everyone. */
 export function randomVoice(gender: 'male' | 'female'): string {
-  const pool = SIGNATURE_VOICES.filter(v => v.gender === gender || v.gender === 'neutral');
+  const pool = SIGNATURE_VOICES.filter(v => (v.gender === gender || v.gender === 'neutral') && v.category !== 'professional');
   return pick(pool.length ? pool : SIGNATURE_VOICES).id;
 }
 
@@ -117,26 +118,41 @@ export function generateRandomCompanionProfile(
 
 /**
  * A random match, in the words the setup questionnaire (companionBank) uses, for the gender and kind of
- * connection they chose: how lively, how they text, how they show they care, what they love, a name and a
- * signature voice. The look is chosen on the next page. A friend is never given the flirty way of showing care.
+ * connection they chose: every dial, what they are into, a name and a signature voice. It reads its options
+ * from the questionnaire itself, so a question that changes cannot leave this behind. The look is chosen next.
+ * A friend is not asked how they flirt, so a random friend does not flirt either.
  */
 export function randomMatchAnswers(gender: 'male' | 'female', connection: 'friend' | 'romantic'): Record<string, string | string[]> {
-  const own = gender === 'male' ? 'In his own world' : 'In her own world';
+  const q = (id: string) => COMPANION_QUESTIONNAIRE.questions.find(x => x.id === id)!;
+  const stops = (id: string): string[] => {
+    const cfg = (q(id) as ScrubQuestion).config;
+    return cfg.values ?? cfg.valueLabels;
+  };
+  const ctx = makeContext({}, gender === 'male' ? 'Male' : 'Female', connection === 'friend' ? 'friend' : 'companion');
+  const humors = (q('humor') as PreviewQuestion).bubbles.map(b => b.value);
+  const humor1 = pick(humors);
+  // About one in three is a mix of two styles, the way real people are.
+  const humor = Math.random() < 0.35 ? [humor1, pick(humors.filter(h => h !== humor1))] : [humor1];
   // One pick from each of two different interest tabs, saved the way the tabs screen saves them.
-  const tabs = (COMPANION_QUESTIONNAIRE.questions.find(q => q.id === 'interests') as TabsQuestion).tabs;
+  const tabs = (q('interests') as TabsQuestion).tabs;
   const firstTab = pick(tabs);
   const secondTab = pick(tabs.filter(t => t !== firstTab));
   const first = pick(firstTab.options).value;
   const second = pick(secondTab.options.filter(o => o.value !== first)).value;
-  return {
-    [firstTab.answerKey]: [first],
-    [secondTab.answerKey]: [second],
+  const out: Record<string, string | string[]> = {
     relationshipType: gender === 'male' ? 'Male' : 'Female',
     connectionType: connection,
-    energy: pick(['Life of the party', 'Somewhere in between', own]),
-    warmth: pick(connection === 'friend' ? ['sweet', 'banter', 'deep'] : ['bold', 'sweet', 'banter', 'deep']),
+    energy: tpl(pick(stops('energy')), ctx),
+    humor,
+    directness: pick(stops('directness')),
+    openness: pick(stops('openness')),
+    care: pick(stops('care')),
+    [firstTab.answerKey]: [first],
+    [secondTab.answerKey]: [second],
     interests: [first, second],
     companionName: getRandomName(gender),
     signatureVoice: randomVoice(gender),
   };
+  if (connection === 'romantic') out.warmth = pick((q('warmth') as PreviewQuestion).bubbles.map(b => b.value));
+  return out;
 }

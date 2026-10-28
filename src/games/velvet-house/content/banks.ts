@@ -18,7 +18,13 @@ export type CommKey = (typeof COMM_KEYS)[number];
 /** What the app stores ("Sarcastic & Dry") as the key the banks use. */
 export function humorKey(raw: unknown): HumorKey {
   const s = typeof raw === 'string' ? raw.toLowerCase() : '';
-  return s.includes('witty') ? 'witty' : s.includes('goofy') ? 'goofy' : s.includes('sarcas') || s.includes('dry') ? 'dry' : 'warm';
+  // A mix is saved as "Witty & Clever + Warm & Light": the first one named is the main one.
+  const at = (...words: string[]) => Math.min(...words.map(w => s.indexOf(w)).filter(i => i >= 0), Infinity);
+  const first = (['witty', 'goofy', 'dry', 'warm'] as const)
+    .map(k => ({ k, i: k === 'witty' ? at('witty') : k === 'goofy' ? at('goofy') : k === 'dry' ? at('sarcas', 'dry') : at('warm', 'light') }))
+    .filter(x => x.i !== Infinity)
+    .sort((a, b) => a.i - b.i)[0];
+  return first ? first.k : 'warm';
 }
 export function commKey(raw: unknown): CommKey {
   const s = typeof raw === 'string' ? raw.toLowerCase() : '';

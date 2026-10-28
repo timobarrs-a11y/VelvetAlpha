@@ -37,14 +37,17 @@ export type SkinDetail = 'none' | 'smooth' | 'textured';
 // Wardrobe. Which of these a person may wear lives in src/data/avatarItems.ts.
 // The shirt (top), the pants (bottom) and the hat are three separate slots; a persona is just a preset for all three.
 export type Outfit = 'tee' | 'linen' | 'suit' | 'chef' | 'labcoat' | 'pirate'
-  | 'rockstar' | 'cheer' | 'cop' | 'scrubs' | 'streetwear' | 'president';
+  | 'rockstar' | 'cheer' | 'cop' | 'scrubs' | 'streetwear' | 'president'
+  // The signature voices' own: a varsity jacket, a tee with a long scarf, a cardigan and bow tie, a school sailor
+  // uniform, an Elizabethan doublet and a sundress.
+  | 'letterman' | 'hero' | 'cardigan' | 'uniform' | 'doublet' | 'sundress';
 export type Bottom = 'jeans' | 'trousers' | 'breeches' | 'chef_pants' | 'leather' | 'cheer_skirt'
-  | 'cop_pants' | 'scrub_pants' | 'baggy' | 'shorts' | 'skirt';
+  | 'cop_pants' | 'scrub_pants' | 'baggy' | 'shorts' | 'skirt' | 'plaid_skirt';
 export type Headwear =
   | 'none' | 'chef_hat' | 'bandana' | 'tricorn' | 'top_hat'
   | 'beanie' | 'baseball_cap' | 'cowboy_hat' | 'beret' | 'headband' | 'bucket_hat' | 'headwrap'
   | 'cop_cap' | 'nurse_cap' | 'hair_bow' | 'snapback';
-export type FaceAccessory = 'none' | 'eyepatch';
+export type FaceAccessory = 'none' | 'eyepatch' | 'fox_mask';
 
 export const AVATAR_CONFIG_VERSION = 4 as const;
 export type AvatarConfigVersion = typeof AVATAR_CONFIG_VERSION;

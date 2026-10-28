@@ -29,3 +29,12 @@ describe('companion styles map to word banks', () => {
     }
   });
 });
+
+describe('a humor that is a mix', () => {
+  it('goes by the first style named, since that is the main one', () => {
+    expect(humorKey('Witty & Clever + Warm & Light')).toBe('witty');
+    expect(humorKey('Warm & Light + Sarcastic & Dry')).toBe('warm');
+    expect(humorKey('Sarcastic & Dry + Goofy & Random')).toBe('dry');
+    expect(humorKey('Goofy & Random + Witty & Clever')).toBe('goofy');
+  });
+});
