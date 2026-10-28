@@ -479,7 +479,7 @@ export { TAU };
 // ---- The walk and the seat: the parts of the rig every character shares ----
 
 /** Leg bones in world units: hip to knee, knee to ankle, and how far the hips sit above a seat. */
-export const LEG = { thigh: 0.31, shin: 0.31, hipRise: 0.03, sink: 0.08, stretch: 1.2 };
+export const LEG = { thigh: 0.31, shin: 0.31, hipRise: 0.03, sink: 0.08, stretch: 1.25 };
 /** Arm reach from the shoulder, and the foot's length, in world units. */
 export const ARM = { length: 0.42 };
 export const FOOT = { length: 0.22, heel: 0.3 };
