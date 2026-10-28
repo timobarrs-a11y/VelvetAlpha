@@ -144,6 +144,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-circuit', 'Circuit', 'circuit', 110, ['bold', 'modern', 'industrial']),
   wallpaper('paper-sprinkles', 'Sprinkles', 'sprinkles', 90, ['soft', 'playful', 'warm']),
   wallpaper('paper-clouds-sky', 'Clouds and rainbows', 'clouds-sky', 90, ['soft', 'playful', 'cozy']),
+  wallpaper('paper-constellations', 'Constellations', 'constellations', 120, ['soft', 'playful', 'cool']),
   wallpaper('paper-clay-plaster', 'Clay plaster', 'clay-plaster', 90, ['minimal', 'natural', 'cool']),
   wallpaper('paper-damask-rose', 'Rose damask', 'damask-rose', 120, ['luxe', 'cozy', 'vintage']),
   wallpaper('paper-knotty-pine', 'Knotty pine paneling', 'knotty-pine', 100, ['cozy', 'warm', 'natural']),
@@ -250,6 +251,9 @@ export const CATALOG: CatalogEntry[] = [
   bundle('set-ryokan', 'Wabi-Sabi Ryokan bedroom and bath', 'Pale hinoki, tatami, clay plaster and river stone: a futon on a tatami dais, a paper lantern, a kiri tansu, a hinoki-seat toilet, a stone vessel basin, a hinoki wet room with a noren, clay plaster walls, hinoki boards, and a bamboo water fountain to meditate beside.',
     ['look-bed-ryokan', 'look-nightstand-ryokan', 'look-dresser-ryokan', 'look-toilet-ryokan', 'look-vanity-ryokan', 'look-shower-ryokan', 'paper-clay-plaster', 'floor-hinokiboards', 'shishiodoshi'], ['minimal', 'natural', 'cool']),
 
+  bundle('set-celestial', 'Celestial Dream bedroom and bath', 'Pearl, moon gold, night navy and lavender: the crescent moon bed, a moon lamp, a moon-phase dresser, a pearl toilet and vanity, an opal glass shower, constellation walls, a stardust carpet, and a star projector that dims the room and fills the walls with drifting stars.',
+    ['look-bed-celestial', 'look-nightstand-celestial', 'look-dresser-celestial', 'look-toilet-celestial', 'look-vanity-celestial', 'look-shower-celestial', 'paper-constellations', 'floor-stardust', 'starprojector'], ['soft', 'playful', 'cool']),
+
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
 
@@ -302,6 +306,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-grate', 'Lit grate', 'grate', 170, ['bold', 'modern', 'industrial']),
   floor('floor-checkpink', 'Pink check', 'checkpink', 140, ['soft', 'playful', 'warm']),
   floor('floor-skycheck', 'Sky check', 'skycheck', 140, ['soft', 'playful', 'cozy']),
+  floor('floor-stardust', 'Stardust carpet', 'stardust', 150, ['soft', 'playful', 'cool']),
   floor('floor-hinokiboards', 'Hinoki boards', 'hinokiboards', 150, ['minimal', 'natural', 'cool']),
   floor('floor-mahoganyherring', 'Mahogany herringbone', 'mahoganyherring', 180, ['luxe', 'cozy', 'vintage']),
   floor('floor-riverslate', 'River slate', 'riverslate', 160, ['cozy', 'warm', 'natural']),
@@ -562,6 +567,13 @@ export const CATALOG: CatalogEntry[] = [
   look('look-vanity-ryokan', 'vanity', 'ryokan', 'Stone vessel on hinoki', 'A river-stone vessel basin on a hinoki counter, a bamboo spout, and a folded indigo tenugui underneath.', 340, ['minimal', 'natural', 'cool'], ['#E2C99E', '#C9AC7E', '#B7A184']),
   look('look-shower-ryokan', 'shower', 'ryokan', 'Hinoki wet room with a noren', 'Slatted hinoki floor and side screen, a river-stone wall, a bamboo rain spout, a wooden stool and bucket, and a noren at the front.', 500, ['minimal', 'natural', 'cool'], ['#2E3F66', '#8A9A7A', '#B5533C']),
 
+  look('look-bed-celestial', 'bed', 'celestial', 'Crescent moon bed', 'A cloud-white upholstered bed under a great gold crescent moon, puffy pillows and a duvet in night navy, lavender or blush scattered with gold stars.', 640, ['soft', 'playful', 'cool'], ['#1F2550', '#B9A9DE', '#F2C4CE']),
+  look('look-nightstand-celestial', 'nightstand', 'celestial', 'Moon lamp side table', 'A round pearl table on a gold stem, and a cratered moon lamp that glows.', 190, ['soft', 'playful', 'cool'], ['#F4F1F8', '#E2C46A', '#DCD6E8']),
+  look('look-dresser-celestial', 'dresser', 'celestial', 'Moon-phase dresser', 'Gold knobs that wax from new moon to full across every drawer, an amethyst geode and a glowing star on top.', 440, ['soft', 'playful', 'cool'], ['#B9A9DE', '#F4F1F8', '#1F2550']),
+  look('look-toilet-celestial', 'toilet', 'celestial', 'Pearl toilet with a lavender seat', 'A pearl toilet with a lavender seat and a little gold star on the tank.', 230, ['soft', 'playful', 'cool'], ['#F4F1F8', '#B9A9DE', '#E2C46A']),
+  look('look-vanity-celestial', 'vanity', 'celestial', 'Pearl vanity with an opal shell basin', 'Gold star knobs, a shell-shaped opal basin and a gold tap.', 380, ['soft', 'playful', 'cool'], ['#F4F1F8', '#B9A9DE', '#1F2550']),
+  look('look-shower-celestial', 'shower', 'celestial', 'Opal glass shower', 'Opal glass tile shimmering in four tints, a gold star rain head and glass frosted with stars.', 560, ['soft', 'playful', 'cool'], ['#F4F1F8', '#E2C46A', '#B9A9DE']),
+
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
   wallItem('wobj-landscape', 'Landscape canvas', 80, ['natural', 'vintage'], ['#9EC1F5', '#F2B48A', '#C9B8E8', '#2B3A5E']),
@@ -622,6 +634,7 @@ export const CATALOG: CatalogEntry[] = [
   hobby('gym', 'gym', 'Weights and mat', 180, ['cool', 'bold', 'minimal']),
   hobby('yogamat', 'yogamat', 'Yoga mat', 30, ['natural', 'soft', 'minimal'], ['#8E5468', '#7FB069', '#4A88B8', '#E0A43A', '#2B2B30']),
   hobby('massage', 'massage', 'Massage chair', 350, ['luxe', 'modern', 'cozy'], ['#2B2B30', '#E8DCC8', '#6E3C50']),
+  hobby('starprojector', 'starprojector', 'Star projector', 140, ['soft', 'playful', 'cool'], ['#F4F1F8', '#B9A9DE', '#1F2550']),
   hobby('shishiodoshi', 'shishiodoshi', 'Bamboo water fountain', 260, ['minimal', 'natural', 'cool'], ['#7FA06A', '#8E8A84', '#C9C2B4']),
   hobby('tallcandelabra', 'tallcandelabra', 'Brass candelabra', 180, ['luxe', 'cozy', 'vintage'], ['#C9A24A', '#8E6E2A', '#E0C26E']),
   hobby('woodstove', 'woodstove', 'Wood stove', 420, ['cozy', 'warm', 'natural'], ['#2A2826', '#3A3634', '#5A1E1E']),

@@ -186,6 +186,7 @@ export function createHouseArt(ctx0, opts = {}) {
     grate: { kind: 'tile', a: '#1A1C24', b: '#171920', line: 'rgba(25,230,240,.35)' },
     checkpink: { kind: 'check', a: '#FFF8F0', b: '#F6B7CC', line: 'rgba(0,0,0,.05)' },
     skycheck: { kind: 'check', a: '#F7FAFE', b: '#DCEEFA', line: 'rgba(0,0,0,.04)' },
+    stardust: { kind: 'speck', a: '#CDC4E6', b: '#CDC4E6', line: 'rgba(255,255,255,.06)', pal: ['#F4F1F8', '#E2C46A', '#B9A9DE', '#FFFFFF'] },
     hinokiboards: { kind: 'plank', a: '#E3CDA6', b: '#D9C29A', line: 'rgba(120,95,55,.22)' },
     mahoganyherring: { kind: 'herring', a: '#5E3A28', b: '#523222', line: 'rgba(20,8,4,.35)' },
     riverslate: { kind: 'stone', a: '#6E6A64', b: '#62605A', line: 'rgba(0,0,0,.28)' },
@@ -225,6 +226,7 @@ export function createHouseArt(ctx0, opts = {}) {
     circuit: { pat: 'circuit', base: '#111118', ink: 'rgba(25,230,240,.6)', ink2: 'rgba(255,46,154,.75)' },
     sprinkles: { pat: 'sprinkles', base: '#FFF8F0', ink: 'rgba(224,74,106,.9)', pal: ['#E04A6A', '#BFE0F5', '#FBE7A6', '#D6C4F0', '#BFE8D6'] },
     'clouds-sky': { pat: 'clouds', base: '#C9E6F8', ink: 'rgba(255,255,255,.95)' },
+    'constellations': { pat: 'starmap', base: '#232A5C', ink: 'rgba(232,230,255,.9)', ink2: 'rgba(226,196,106,.9)' },
     'clay-plaster': { pat: 'limewash', base: '#C8B496', ink: 'rgba(120,95,60,.07)', ink2: 'rgba(255,245,225,.1)' },
     'damask-rose': { pat: 'damask', base: '#E9D3D0', ink: 'rgba(140,60,70,.32)' },
     'knotty-pine': { pat: 'knotty', base: '#D2A770', ink: 'rgba(110,70,30,.3)', ink2: 'rgba(110,65,25,.55)' },
@@ -1212,6 +1214,66 @@ export function createHouseArt(ctx0, opts = {}) {
       F(0, 1.14, 1.18, 1.2, (T, ob) => { const c = cl(ob); T.line([0, 1.17, 2.06], [1.18, 1.17, 2.06], RY.hinokiDark, 2.4); const parts = 3, gap = 0.012;
         for (let k = 0; k < parts; k++) { const y0 = k * 1.18 / parts + gap, y1 = (k + 1) * 1.18 / parts - gap; T.poly([[y0, 1.18, 2.06], [y1, 1.18, 2.06], [y1, 1.18, 1.4], [y0, 1.18, 1.4]], c, 'rgba(0,0,0,.2)', 0.6); }
         const [mx, my] = T.P(0.59, 1.181, 1.75); circle(mx, my, 6, null, '#F2EBDD'); ctx.strokeStyle = '#F2EBDD'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(mx, my, 6, 0, Math.PI * 2); ctx.stroke(); }, { onTop: true })],
+  });
+
+  // Celestial Dream: pearl white, moon gold, night navy and lavender, opal glass and stars.
+  const CE = { pearl: '#F4F1F8', pearlShade: '#DCD6E8', gold: '#E2C46A', navy: '#1F2550', lav: '#B9A9DE', opal: 'rgba(200,220,255,.55)' };
+  const star4 = (x, y, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.28, y - r * 0.28); ctx.lineTo(x + r, y); ctx.lineTo(x + r * 0.28, y + r * 0.28); ctx.lineTo(x, y + r); ctx.lineTo(x - r * 0.28, y + r * 0.28); ctx.lineTo(x - r, y); ctx.lineTo(x - r * 0.28, y - r * 0.28); ctx.closePath(); ctx.fill(); };
+  const opalTint = (k) => ['rgba(214,228,255,.9)', 'rgba(232,214,250,.9)', 'rgba(214,246,240,.9)', 'rgba(250,226,238,.9)'][k % 4];
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A cloud-white upholstered bed under a great gold crescent moon, puffy white pillows, and a duvet in the piece's colour
+    // scattered with gold stars.
+    celestial: (o) => { const c = cl(o); return [
+      F(0, 0, 0.16, 1.6, (T) => { T.box(0, 0.05, 0, 0.14, 1.5, 0.9, CE.pearl); for (let k = 1; k < 6; k++) T.line([0.141, 0.05 + k * 0.25, 0.1], [0.141, 0.05 + k * 0.25, 0.85], CE.pearlShade, 1);
+        // The crescent rises from the headboard: both horns rest on its top edge.
+        const pts = [], inner = []; for (let k = 0; k <= 16; k++) { const a = Math.PI * k / 16; pts.push([0.07, 0.8 - Math.cos(a) * 0.72, 0.9 + Math.sin(a) * 0.72]); inner.push([0.07, 0.92 - Math.cos(a) * 0.6, 0.9 + Math.sin(a) * 0.5]); }
+        T.poly([...pts, ...inner.reverse()], CE.gold, shade(CE.gold, -0.25), 1); [[0.07, 0.3, 1.55], [0.07, 1.35, 1.5], [0.07, 0.9, 1.75]].forEach((p, k) => { const [sx, sy] = T.P(...p); star4(sx, sy, 3 + k, CE.gold); }); }),
+      B(0.14, 0.04, 0.08, 2.32, 1.52, 0.24, CE.pearl), B(0.16, 0.06, 0.32, 2.28, 1.48, 0.2, '#FFFFFF', { name: 'mattress' }),
+      pillowsOn([0.16, 0.06, 0.32, 2.28, 1.48], [[0.18, 0.06, 0.52, 0.42, 0.72, 0.16, CE.pearl], [0.18, 0.82, 0.52, 0.42, 0.72, 0.16, CE.pearl], [0.4, 0.5, 0.52, 0.18, 0.6, 0.12, CE.lav]]),
+      B(0.84, 0.03, 0.52, 1.62, 1.54, 0.06, c), B(0.84, 0.03, 0.58, 1.62, 1.54, 0.01, c, { cover: true }),
+      F(0.84, 0, 2.46, 1.6, (T) => { for (let k = 0; k < 22; k++) { const [sx, sy] = T.P(0.9 + ((k * 0.618) % 1) * 1.5, 0.1 + ((k * 0.382) % 1) * 1.4, 0.591); star4(sx, sy, 1.2 + (k % 3) * 0.6, CE.gold); } T.poly([[0.84, 1.57, 0.58], [2.46, 1.57, 0.58], [2.46, 1.57, 0.34], [0.84, 1.57, 0.34]], shade(c, -0.12)); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A round pearl side table on a gold stem, and a moon lamp: a cratered sphere that glows when on.
+    celestial: (T, o) => { const lit = isLit(o.id);
+      const [bx, by] = T.P(0.22, 0.22, 0); ell(bx, by, 10, 5, CE.gold); T.line([0.22, 0.22, 0], [0.22, 0.22, 0.48], CE.gold, 2.6); const [tx, ty] = T.P(0.22, 0.22, 0.5); ell(tx, ty + 2, 14, 7, CE.pearlShade); ell(tx, ty, 14, 7, CE.pearl, CE.pearlShade);
+      const [mx, my] = T.P(0.22, 0.22, 0.66); if (lit) circle(mx, my, 18, 'rgba(255,244,214,.3)'); circle(mx, my, 9, lit ? '#FFF6E2' : '#E8E4DA', 'rgba(0,0,0,.12)'); [[-3, -2, 2], [3, 2, 1.6], [2, -4, 1.1]].forEach(([dx, dy, r]) => circle(mx + dx, my + dy, r, lit ? 'rgba(210,190,150,.5)' : 'rgba(150,145,135,.45)')); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A dresser in the piece's colour with moon-phase knobs waxing across the drawers, and an amethyst geode and a star lamp on top.
+    celestial: (T, o) => { const c = cl(o);
+      T.box(0.03, 0.03, 0, 1.14, 0.44, 0.08, CE.gold); T.box(0, 0, 0.08, 1.2, 0.5, 0.74, c); [0.33, 0.58].forEach((z) => T.line([0.02, 0.501, z], [1.18, 0.501, z], 'rgba(0,0,0,.18)', 1));
+      [0.2, 0.45, 0.7].forEach((z) => [0.2, 0.4, 0.6, 0.8, 1.0].forEach((x, k) => { const [kx, ky] = T.P(x, 0.502, z); circle(kx, ky, 2.4, CE.gold); if (k < 4) { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(kx + (k - 1.5) * 0.8, ky, 2.4 * (1 - k / 4), 2.4, 0, 0, Math.PI * 2); ctx.fill(); } }));
+      T.box(-0.02, -0.02, 0.82, 1.24, 0.54, 0.03, CE.pearl);
+      const [gx, gy] = T.P(0.3, 0.25, 0.86); ell(gx, gy, 8, 5, '#6E6A7A'); ell(gx, gy - 2, 6, 3.4, '#9A6FD0'); [[-2, -3], [1, -4], [3, -2]].forEach(([dx, dy]) => star4(gx + dx, gy + dy, 1.4, '#E8DCFF'));
+      const [sx, sy] = T.P(0.9, 0.25, 1.05); T.line([0.9, 0.25, 0.85], [0.9, 0.25, 1.0], CE.gold, 1.4); star4(sx, sy, 7, '#FFF0B8'); circle(sx, sy, 10, 'rgba(255,240,184,.25)'); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A pearl toilet with a lavender seat and a little gold star on the tank.
+    celestial: (T, o) => {
+      T.box(0.04, 0, 0.36, 0.34, 0.16, 0.38, CE.pearl); T.box(0.02, -0.01, 0.74, 0.38, 0.18, 0.03, CE.pearlShade); const [gx, gy] = T.P(0.21, 0.161, 0.58); star4(gx, gy, 3, CE.gold);
+      T.box(0.09, 0.16, 0, 0.24, 0.26, 0.32, CE.pearl); const [bx, by] = T.P(0.21, 0.42, 0.3); ell(bx, by, 7.5, 6, CE.pearl, 'rgba(0,0,0,.12)');
+      const [sx, sy] = T.P(0.21, 0.4, 0.385); ell(sx, sy, 7, 4, CE.lav); ell(sx, sy, 5, 2.8, '#E8EEF8');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A pearl vanity with gold star knobs, an opal shell basin and a gold tap.
+    celestial: (T, o) => { const c = cl(o);
+      T.box(0, 0, 0.04, 1.0, 0.5, 0.76, c); T.box(0, 0, 0, 1.0, 0.5, 0.04, shade(c, -0.15)); T.line([0, 0.501, 0.05], [1.0, 0.501, 0.05], CE.gold, 1.4); T.line([0.5, 0.501, 0.08], [0.5, 0.501, 0.78], 'rgba(0,0,0,.18)', 1); [0.42, 0.58].forEach((x) => { const [kx, ky] = T.P(x, 0.502, 0.48); star4(kx, ky, 3, CE.gold); });
+      T.box(-0.02, -0.02, 0.8, 1.04, 0.54, 0.04, CE.pearl); const [vx, vy] = T.P(0.5, 0.27, 0.841);
+      ctx.beginPath(); ctx.moveTo(vx - 11, vy + 1); for (let k = 0; k <= 8; k++) { const a = Math.PI + Math.PI * k / 8; ctx.lineTo(vx + Math.cos(a) * 11, vy + Math.sin(a) * 6 - (k % 2 ? 1 : 0)); } ctx.closePath(); ctx.fillStyle = opalTint(1); ctx.fill(); ctx.strokeStyle = CE.pearlShade; ctx.lineWidth = 0.8; ctx.stroke(); ell(vx, vy, 8, 3.4, opalTint(0));
+      T.line([0.5, 0.05, 0.84], [0.5, 0.05, 1.0], CE.gold, 2); T.line([0.5, 0.05, 1.0], [0.5, 0.17, 0.97], CE.gold, 2); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // Opal glass tile shimmering in four tints, a gold star head, and glass frosted with a scatter of stars on all open sides.
+    celestial: (o) => [F(0, 0, 1.18, 1.18, (T) => {
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, CE.pearl); for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) T.poly([[i * 0.1475, j * 0.1475, 0.061], [(i + 1) * 0.1475, j * 0.1475, 0.061], [(i + 1) * 0.1475, (j + 1) * 0.1475, 0.061], [i * 0.1475, (j + 1) * 0.1475, 0.061]], opalTint(i + j * 3), 'rgba(255,255,255,.6)', 0.5);
+        T.box(0, 0, 0.06, 1.18, 0.06, 2.04, CE.pearl); for (let i = 0; i < 8; i++) for (let k = 0; k < 14; k++) T.poly([[i * 0.1475, 0.061, 0.06 + k * 0.146], [(i + 1) * 0.1475, 0.061, 0.06 + k * 0.146], [(i + 1) * 0.1475, 0.061, 0.06 + (k + 1) * 0.146], [i * 0.1475, 0.061, 0.06 + (k + 1) * 0.146]], opalTint(i * 2 + k), 'rgba(255,255,255,.6)', 0.5);
+        T.line([0.6, 0.06, 2.06], [0.6, 0.4, 2.06], CE.gold, 2.2); const [hx, hy] = T.P(0.6, 0.45, 2.04); star4(hx, hy, 5, CE.gold); [[0.48, 1.05], [0.72, 1.05]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.062, z); circle(kx, ky, 2.4, CE.gold); });
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.45); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.9, 1); }
+      }, { name: 'tray' }),
+      F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [0, 1.18, 2.06]], 'rgba(220,230,255,.22)', CE.gold, 1.4); T.line([0.59, 1.18, 0.06], [0.59, 1.18, 2.06], CE.gold, 1.2); for (let k = 0; k < 14; k++) { const [sx, sy] = T.P(0.05 + ((k * 0.618) % 1) * 1.1, 1.181, 0.2 + ((k * 0.382) % 1) * 1.8); star4(sx, sy, 1.6, 'rgba(255,255,255,.85)'); } }),
+      F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0.06, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [1.18, 0.06, 2.06]], 'rgba(220,230,255,.2)', CE.gold, 1.4); for (let k = 0; k < 12; k++) { const [sx, sy] = T.P(1.181, 0.1 + ((k * 0.618) % 1) * 1.0, 0.2 + ((k * 0.382) % 1) * 1.8); star4(sx, sy, 1.6, 'rgba(255,255,255,.85)'); } }, { onTop: true })],
   });
   const diningLife = () => F(0, 0.74, 1.3, 1.74, (T, o) => {
     ['c1', 'c2'].forEach((s, i) => { const sid = o.id + ':' + s, who = reserved[sid]; if (who && who.task && who.task.slot === sid && (doing(who, 'eat') || doing(who, 'eatOut') || doing(who, 'sip'))) { const [px, py] = T.P(0.65, i ? 1.5 : 0.98, 0.775); if (doing(who, 'eatOut')) { rr(px - 5, py - 7, 10, 7, 1.5, '#F2EEE8'); } else if (doing(who, 'sip')) { rr(px - 3, py - 6, 6, 6, 1.2, '#F2EEE8'); } else { ell(px, py, 10, 5, '#F5F2EC', 'rgba(0,0,0,.15)'); ell(px, py - 1, 6, 2.8, who.mealFresh ? '#7FB069' : '#D9822B'); circle(px + 3, py - 2, 1.8, '#4F9460'); } } });
@@ -2683,6 +2745,18 @@ export function createHouseArt(ctx0, opts = {}) {
           T.poly([[0.28, 0.601, 0.2], [0.44, 0.601, 0.2], [0.44, 0.601, 0.34], [0.28, 0.601, 0.34]], AR.ink, AR.chrome, 1);
         }, { onTop: true })]; },
        },
+    starprojector: {
+      // A little dome of a star projector, pierced with stars. Switched on it glows violet, turns slowly, and throws drifting
+      // constellations across the back walls while the room dims (see drawStarfield). Small, so it sits on a table; on the
+      // floor it has a pearl stand of its own.
+      parts: (o) => [F(0, 0, 0.3, 0.3, (T, ob, t) => { const c = cl(o), on = isLit(ob.id), z0 = ob.on ? 0 : 0.5;
+        if (!ob.on) { const [sx, sy] = T.P(0.15, 0.15, 0); ell(sx, sy, 8, 4, CE.pearlShade); T.line([0.15, 0.15, 0], [0.15, 0.15, z0], CE.gold, 2); T.box(0.04, 0.04, z0 - 0.02, 0.22, 0.22, 0.02, CE.pearl); }
+        T.box(0.06, 0.06, z0, 0.18, 0.18, 0.06, c); const [dx, dy] = T.P(0.15, 0.15, z0 + 0.06);
+        if (on) circle(dx, dy - 6, 16, 'rgba(170,150,255,.22)');
+        ctx.beginPath(); ctx.ellipse(dx, dy, 9, 4.5, 0, Math.PI, 0); ctx.bezierCurveTo(dx + 9, dy - 13, dx - 9, dy - 13, dx - 9, dy); ctx.fillStyle = on ? '#3A2E7A' : CE.navy; ctx.fill();
+        for (let k = 0; k < 6; k++) { const a = k * 1.05 + (on ? t * 0.6 : 0); const px = dx + Math.cos(a) * 6, py = dy - 5 + Math.sin(a) * 2.5 - Math.abs(Math.cos(a)) * 2; if (Math.sin(a) > -0.3) star4(px, py, 1.4, on ? '#FFF6C8' : '#8A86B0'); }
+      })],
+    },
     shishiodoshi: {
       // A shishi-odoshi on a bed of river pebbles: water runs from a bamboo spout into a pivoting bamboo arm, which fills,
       // tips, spills into a stone basin and knocks back against a rock with a "tok".
@@ -2945,6 +3019,10 @@ export function createHouseArt(ctx0, opts = {}) {
     else if (pat === 'starburst') { for (let z = 0.55, r = 0; z < WH - 0.05; z += 0.55, r++) for (let u = 0.3 + (r % 2) * 0.3; u < len - 0.05; u += 0.6) { const [sx, sy] = iso(...P(u, z)); for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, l = k % 2 ? 4 : 7; limb(sx - Math.cos(a) * 1.5, sy - Math.sin(a) * 1.5, sx + Math.cos(a) * l, sy + Math.sin(a) * l, ink, 1.1); } circle(sx, sy, 1.2, S.ink2 || ink); } }
     // Board-formed concrete: the seams of the formwork boards, and a grid of tie holes.
     // Limewash: soft clouds of darker and lighter wash, brushed across the wall.
+    // A star map: scattered stars, a few bright gold ones joined into constellations, and a crescent here and there.
+    else if (pat === 'starmap') { const br = []; for (let k = 0; k < len * 12; k++) { const u = 0.05 + ((k * 0.618 * 3.1) % (len - 0.1)), z = 0.3 + ((k * 0.414 * 2.3) % (WH - 0.4)), [sx, sy] = iso(...P(u, z)); if (k % 11 === 0) { star4(sx, sy, 2.6, S.ink2); br.push([sx, sy]); } else circle(sx, sy, 0.7 + (k % 3) * 0.3, ink); }
+      ctx.strokeStyle = 'rgba(226,196,106,.45)'; ctx.lineWidth = 0.7; for (let k = 0; k + 2 < br.length; k += 3) { ctx.beginPath(); ctx.moveTo(...br[k]); ctx.lineTo(...br[k + 1]); ctx.lineTo(...br[k + 2]); ctx.stroke(); }
+      for (let u = 0.6; u < len; u += 2.2) { const [mx, my] = iso(...P(u, WH - 0.5)); circle(mx, my, 5, S.ink2); circle(mx + 2, my - 1, 4.4, S.base); } }
     // Knotty pine: tongue-and-groove boards with a knot here and there.
     else if (pat === 'knotty') { for (let u = 0.16; u < len; u += 0.16) line3(P(u, 0.14), P(u, WH), ink, 1); for (let k = 0; k < len * 3; k++) { const u = 0.08 + ((k * 0.618 * 4.1) % (len - 0.16)), z = 0.4 + ((k * 0.414 * 3.3) % (WH - 0.6)), [sx, sy] = iso(...P(u, z)); ell(sx, sy, 2.4, 1.8, S.ink2); ell(sx, sy, 1, 0.8, 'rgba(70,40,15,.6)'); } }
     // Ditsy floral: tiny four-petal flowers in a scatter of colours, with a leaf beside each.
@@ -3868,6 +3946,20 @@ export function createHouseArt(ctx0, opts = {}) {
     }
     ctx.restore();
   }
+  // A star projector that is on dims its floor and throws constellations across the back walls, drifting slowly along.
+  function drawStarfield(level, t) {
+    if (!OBJS.some((o) => o.level === level && o.type === 'starprojector' && isLit(o.id))) return;
+    ctx.save(); ctx.fillStyle = 'rgba(20,18,60,.32)'; ctx.fillRect(-4000, -4000, 8000, 8000);
+    const plane = { L: (u, z) => [0.02, u, z], B: (u, z) => [u, 0.02, z], R: (u, z) => [WX - 0.02, u, z], F: (u, z) => [u, WY - 0.02, z] }, len = { L: WY, R: WY, B: WX, F: WX };
+    for (const p of BACK[VR]) {
+      const L = len[p], drift = t * 0.05, pts = [];
+      for (let k = 0; k < L * 7; k++) { const u = ((k * 0.618 * 5.3 + drift) % L + L) % L, z = 0.35 + ((k * 0.414 * 3.7) % (WH - 0.5)), [sx, sy] = iso(...plane[p](u, z)), tw = 0.6 + 0.4 * Math.sin(t * 2 + k);
+        ctx.globalAlpha = tw; star4(sx, sy, k % 9 === 0 ? 3 : 1.2, k % 5 === 0 ? '#FFF2B8' : '#E8E6FF'); if (k % 9 === 0) pts.push([sx, sy]); }
+      // Constellations: each bright star joined to its nearest bright neighbour, and only when it is close.
+      ctx.globalAlpha = 0.4; ctx.strokeStyle = '#D8D4FF'; ctx.lineWidth = 0.8; pts.forEach((a, i) => { let best = null, bd = 70; pts.forEach((b, j) => { if (j !== i) { const d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (d < bd) { bd = d; best = b; } } }); if (best) { ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...best); ctx.stroke(); } });
+    }
+    ctx.restore();
+  }
   // Candles that catch or go out one after another: when the change started, and which way. With no change, the
   // piece's light decides (all lit or none).
   const candleFx = new Map(), CANDLE_STEP = 0.5;
@@ -4477,7 +4569,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const deferred = !!(G && opts.deferredLights && opts.deferredLights()) && tier() !== 'low';
     if (deferred) { G.begin(W, H, Math.min((cv.width / W) * (tier() === 'high' ? 0.75 : 0.5), 1600 / W)); ctx = G.wrap(ctx0); gOn = true; }
     try {
-    drawWalls(lv); drawFloor(lv); decals(lv, t); drawFloorDirt(lv);
+    drawWalls(lv); drawFloor(lv); decals(lv, t); drawFloorDirt(lv); drawStarfield(lv, t);
     const items = [];
     wallItemsFull(lv, items);
     OBJS.forEach(o => { if (o.level === lv && TYPES[o.type] && !(arr.hold && arr.hold === o)) objItems(o, items, t); });
@@ -4654,6 +4746,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const run = (secs, msg) => { liveUntil.set(o.id + ':' + part, animT + secs); return msg; };
     switch (o.type) {
       case 'overseer': return 'The eye turns toward you.';
+      case 'starprojector': { const on = toggleObjectLight(o.id); return on ? 'The room dims and the stars come out.' : 'The stars fade from the walls.'; }
       case 'shishiodoshi': return 'Water trickles in. The bamboo tips, spills, and knocks: tok.';
       case 'tallcandelabra': return isLit(o.id) ? 'The candle flames waver.' : 'Five fresh candles, waiting for a match.';
       case 'woodstove': { const on = toggleObjectLight(o.id); return on ? 'The kindling catches and the stove roars into life.' : 'The fire in the stove settles down to embers and goes out.'; }

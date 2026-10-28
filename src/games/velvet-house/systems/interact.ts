@@ -31,7 +31,7 @@ export function createInteract(g: Game): Partial<Game> {
     if (obj.type === 'pbox' && obj.contents) acts.push({ act: 'unpack', label: 'Unpack', icon: '' });
     if (obj.type === 'bag' && obj.contents) acts.push({ act: 'unpack', label: 'Open', icon: '' });
     if (obj.type === 'tallcandelabra') acts.push({ act: 'candles', label: art.candlesOn(obj.id) ? 'Snuff the candles' : 'Light the candles', icon: '' });
-    else if (isLight) acts.push({ act: 'toggleLight', label: obj.type === 'woodstove' ? 'Light or bank the stove' : 'Turn light on/off', icon: '' });
+    else if (isLight) acts.push({ act: 'toggleLight', label: obj.type === 'woodstove' ? 'Light or bank the stove' : obj.type === 'starprojector' ? 'Turn the stars on/off' : 'Turn light on/off', icon: '' });
     if (obj.type === 'servicebell') acts.push({ act: 'ringBell', label: 'Ring for room service', icon: '' });
     if (obj.type === 'overseer') {
       acts.push({ act: 'overseerTalk', label: 'Ask for encouragement', icon: '' }, { act: 'overseerCake', label: 'Request cake', icon: '' }, { act: 'overseerUnplug', label: 'Unplug', icon: '' });
