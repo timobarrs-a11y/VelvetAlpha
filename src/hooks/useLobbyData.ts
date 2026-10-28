@@ -6,7 +6,7 @@ import {
   Rocket, Brain, Home, Target,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
-import { getCompanions, CompanionWithLastMessage } from '../services/companionService';
+import { getCompanions, deleteCompanion, COMPANIONS_CHANGED, CompanionWithLastMessage } from '../services/companionService';
 import { authService } from '../services/authService';
 import { useSubscription } from './useSubscription';
 import { useCustomization } from './useCustomization';
@@ -66,6 +66,13 @@ export function useLobbyData() {
   }), []);
 
   useEffect(() => { loadData(); }, []);
+  // Someone was deleted elsewhere (Settings → Your team): the list here loads again.
+  useEffect(() => {
+    const reload = () => { loadData(); };
+    window.addEventListener(COMPANIONS_CHANGED, reload);
+    return () => window.removeEventListener(COMPANIONS_CHANGED, reload);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -130,14 +137,13 @@ export function useLobbyData() {
   const handleDeleteCompanion = useCallback((companionId: string, companionName: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setConfirmModal({
-      title: 'Delete Companion',
-      message: `Delete ${companionName}? This will remove all conversation history.`,
+      title: `Delete ${companionName} permanently?`,
+      message: `Your chats with ${companionName} and everything they remember about you are deleted. This is permanent and can't be undone.`,
       onConfirm: async () => {
         try {
-          const { error } = await supabase.from('companions').delete().eq('id', companionId);
-          if (error) throw error;
+          const err = await deleteCompanion(companionId);
+          if (err) throw new Error(err);
           setConfirmModal(null);
-          await loadData();
         } catch {
           setConfirmModal(null);
           toast.error('Failed to delete companion. Please try again.');

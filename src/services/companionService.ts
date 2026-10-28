@@ -393,6 +393,26 @@ export async function deactivateCompanion(companionId: string): Promise<void> {
   }
 }
 
+/** Told when a companion or coach is deleted, so lists elsewhere (the menu, the lobby) load again. */
+export const COMPANIONS_CHANGED = 'velvet:companions-changed';
+
+/**
+ * Delete a companion or coach for good: the row goes, and with it (in the database) their chats, memories, insights,
+ * rituals, commitments and Velvet Sims house. Goals, plans and notes they carried stay, with no one on them. Their
+ * house's copy in this browser goes too. Returns an error message, or null.
+ */
+export async function deleteCompanion(companionId: string): Promise<string | null> {
+  const { error } = await supabase.from('companions').delete().eq('id', companionId);
+  if (error) return error.message;
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (key === `velvet-sims:${companionId}` || key.startsWith(`velvet-sims:${companionId}:`) || key === `velvet-house-v1:${companionId}`) localStorage.removeItem(key);
+    }
+  } catch { /* storage unavailable: nothing to clear */ }
+  window.dispatchEvent(new Event(COMPANIONS_CHANGED));
+  return null;
+}
+
 export async function getUserDefaultCompanion(userId: string): Promise<Companion | null> {
   const { data, error } = await supabase
     .from('companions')

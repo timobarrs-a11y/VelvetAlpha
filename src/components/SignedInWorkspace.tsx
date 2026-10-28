@@ -431,7 +431,10 @@ function SidebarContent({ pathname, lobby, onNavigate, onSelect, inkColor, inkMu
         </div>
         <div className="my-3 border-t border-white/8" />
         <div className="space-y-0.5">
-          <SidebarLabel inkSubtle={inkSubtle}>Your team</SidebarLabel>
+          <div className="flex items-center justify-between pr-1">
+            <SidebarLabel inkSubtle={inkSubtle}>Your team</SidebarLabel>
+            <button type="button" onClick={() => onNavigate('/settings?tab=team')} className="rounded-md px-1.5 py-0.5 text-[9px] font-semibold transition-colors hover:bg-white/8" style={{ color: inkSubtle }} title="Delete or replace companions and coaches">Manage</button>
+          </div>
           {coaches.map(coach => <PersonRow key={coach.id} companion={coach} coach pathname={pathname} onClick={() => lobby.openCompanion(coach)} inkColor={inkColor} inkMuted={inkMuted} />)}
           <ToolRow label="Commitments" path="/coaching-commitments" tone="#38bdf8" icon={<CheckCircle2 className="h-3.5 w-3.5" />} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
           <ToolRow label="Plans" path="/coaching-commitments?view=plans" tone="#a78bfa" icon={<Layers className="h-3.5 w-3.5" />} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
