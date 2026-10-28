@@ -1352,26 +1352,25 @@ export function createHouseArt(ctx0, opts = {}) {
     nana: (o) => { const ps = [], c = cl(o);
       const chair = (y0, back, col) => { [[0.39, y0 + 0.04], [0.83, y0 + 0.04], [0.39, y0 + 0.48], [0.83, y0 + 0.48]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.05, 0.05, 0.42, NA.gold)));
         ps.push(B(0.35, y0, 0.42, 0.6, 0.58, 0.07, col, { name: y0 === 0 ? 'seat1' : 'seat2' }));
-        // A real back: a padded panel with a scalloped top, a heart and a bow, so the chair reads as a chair.
-        ps.push(B(0.37, back, 0.49, 0.56, 0.08, 0.44, col));
+        // A real back, as wide as the seat: one padded panel in the chair's colour with a scalloped top and a single bow.
+        ps.push(B(0.35, back, 0.49, 0.6, 0.08, 0.46, col));
         ps.push(F(0.35, back - 0.02, 0.95, back + 0.1, (T) => {
-          const fy = back + 0.085;
-          for (let x = 0.44; x < 0.9; x += 0.1) { const [px, py] = T.P(x, fy, 0.93); circle(px, py, 4.1, shade(col, -0.14)); circle(px, py, 3.4, shade(col, 0.06)); }
-          const [hx, hy] = T.P(0.65, fy, 0.66); heart(hx, hy, 1.1, NA.white);
-          const [bx, by] = T.P(0.65, fy, 0.84); bow(bx, by, 3.2, y0 === 0 ? NA.lilacDeep : NA.pinkDeep);
-          T.line([0.4, fy, 0.5], [0.9, fy, 0.5], shade(col, -0.18), 1);
+          const fy = back + 0.085, edge = shade(col, -0.16);
+          for (let x = 0.4; x < 0.93; x += 0.1) { const [px, py] = T.P(x, fy, 0.95); circle(px, py, 3.3, edge); }
+          for (let x = 0.4; x < 0.93; x += 0.1) { const [px, py] = T.P(x, fy, 0.95); circle(px, py, 2.7, col); }
+          const [bx, by] = T.P(0.65, fy, 0.74); bow(bx, by, 3.4, y0 === 0 ? NA.lilacDeep : NA.pinkDeep);
         }, { onTop: true })); };
       chair(0, 0, NA.pink); chair(1.89, 2.42, NA.lilac);
       ps.push(B(0.52, 1.11, 0, 0.26, 0.26, 0.7, NA.gold));
       ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, c, { name: 'top' }));
       ps.push(F(0, 0.74, 1.3, 1.74, (T) => {
-        // The cloth: a pink drop on the two visible sides, a lace hem, a lilac runner down the middle.
-        T.poly([[0, 1.74, 0.7], [1.3, 1.74, 0.7], [1.3, 1.74, 0.5], [0, 1.74, 0.5]], NA.pink, NA.edge, 0.8); T.poly([[1.3, 0.74, 0.7], [1.3, 1.74, 0.7], [1.3, 1.74, 0.5], [1.3, 0.74, 0.5]], shade(NA.pink, -0.06), NA.edge, 0.8);
-        scallopTrim(T, [0, 1.745, 0.5], [1.3, 1.745, 0.5], 13, 0, NA.white); scallopTrim(T, [1.305, 0.74, 0.5], [1.305, 1.74, 0.5], 10, 0, NA.white);
-        T.poly([[0.38, 0.78, 0.772], [0.92, 0.78, 0.772], [0.92, 1.72, 0.772], [0.38, 1.72, 0.772]], NA.lilac, 'rgba(176,96,132,.35)', 1);
-        const [px, py] = T.P(0.65, 1.25, 0.78); ell(px, py, 9, 4.5, NA.white, 'rgba(0,0,0,.1)'); ell(px, py - 5, 5.5, 5, NA.pink, 'rgba(0,0,0,.1)'); limb(px + 5, py - 6, px + 9, py - 4, NA.pinkDeep, 1.4); circle(px, py - 11, 1.3, NA.pinkDeep);
-        [[0.2, 1.0], [1.05, 1.5]].forEach(([x, y]) => { const [cx, cy] = T.P(x, y, 0.772); ell(cx, cy, 4, 2, NA.white, 'rgba(0,0,0,.1)'); ell(cx, cy - 2, 2.6, 2.2, NA.lilac, 'rgba(0,0,0,.1)'); });
-        const [dx, dy] = T.P(0.3, 1.5, 0.772); daisy(dx, dy, 3); const [fx, fy] = T.P(1.0, 1.0, 0.78); butterfly(fx, fy - 2, 3, NA.pinkDeep, NA.lilacDeep, 0.7 + 0.3 * Math.sin(animT * 4));
+        // One cloth: the top's cream carries down both visible sides to a lace hem, with a pink runner along the middle.
+        T.poly([[0, 1.74, 0.7], [1.3, 1.74, 0.7], [1.3, 1.74, 0.5], [0, 1.74, 0.5]], c, 'rgba(176,96,132,.3)', 0.8); T.poly([[1.3, 0.74, 0.7], [1.3, 1.74, 0.7], [1.3, 1.74, 0.5], [1.3, 0.74, 0.5]], shade(c, -0.06), 'rgba(176,96,132,.3)', 0.8);
+        scallopTrim(T, [0, 1.745, 0.5], [1.3, 1.745, 0.5], 13, 0, NA.pink); scallopTrim(T, [1.305, 0.74, 0.5], [1.305, 1.74, 0.5], 10, 0, shade(NA.pink, -0.05));
+        T.poly([[0.42, 0.76, 0.772], [0.88, 0.76, 0.772], [0.88, 1.72, 0.772], [0.42, 1.72, 0.772]], NA.pink, 'rgba(176,96,132,.35)', 1);
+        const [px, py] = T.P(0.65, 1.2, 0.78); ell(px, py, 9, 4.5, NA.white, 'rgba(0,0,0,.1)'); ell(px, py - 5, 5.5, 5, NA.lilac, 'rgba(0,0,0,.1)'); limb(px + 5, py - 6, px + 9, py - 4, NA.lilacDeep, 1.4); circle(px, py - 11, 1.3, NA.lilacDeep);
+        [[0.55, 1.5], [0.76, 0.98]].forEach(([x, y]) => { const [cx, cy] = T.P(x, y, 0.78); ell(cx, cy, 4, 2, NA.white, 'rgba(0,0,0,.1)'); ell(cx, cy - 2, 2.6, 2.2, NA.cream, 'rgba(0,0,0,.1)'); });
+        const [dx, dy] = T.P(0.65, 1.62, 0.78); daisy(dx, dy, 3);
       }, { onTop: true }));
       ps.push(diningLife(), diningLight('cloudlamp'));
       return ps; },
