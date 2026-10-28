@@ -697,14 +697,24 @@ export function createHouseArt(ctx0, opts = {}) {
   const veins = (T, pts) => pts.forEach(([a, b]) => T.line(a, b, HO.vein, 0.8));
   const knob = (T, x, y, z) => { const [kx, ky] = T.P(x, y, z); circle(kx, ky, 1.6, HO.brass); };
   Object.assign(LOOK_DRAWERS.bed, {
-    // A tall channel-tufted velvet headboard edged in brass, a walnut plinth, white hotel linen and a velvet runner at the foot.
+    // A tall channel-tufted velvet headboard edged in brass, a velvet base on a brass trim, a full-length mattress with
+    // upright euro shams and two pillows, a white duvet folded back at the top, and a velvet runner across the foot.
+    // The mattress runs the whole length (as the stock bed's does) so the base never paints over it.
     hotel: (o) => { const c = cl(o); return [
-      B(0, 0, 0, 0.16, 1.6, 1.45, shade(c, -0.08)), B(0.16, 0.02, 0, 2.34, 1.56, 0.34, HO.walnut),
-      B(0.2, 0.06, 0.34, 0.75, 1.48, 0.2, HO.cream, { name: 'mattress' }),
-      B(0.24, 0.12, 0.54, 0.46, 0.6, 0.14, HO.white), B(0.24, 0.88, 0.54, 0.46, 0.6, 0.14, HO.white), B(0.62, 0.3, 0.54, 0.16, 1.0, 0.1, c),
-      B(0.95, 0.06, 0.34, 1.5, 1.48, 0.22, HO.white), B(0.95, 0.06, 0.56, 1.5, 1.48, 0.02, HO.white, { cover: true }),
-      F(0, 0, 0.17, 1.6, (T) => { for (let k = 1; k < 10; k++) T.line([0.161, 1.6 * k / 10, 0.2], [0.161, 1.6 * k / 10, 1.38], 'rgba(0,0,0,.25)', 1.2); T.line([0.165, 0, 1.45], [0.165, 1.6, 1.45], HO.brass, 2.2); }, { onTop: true }),
-      F(1.8, 0.04, 2.15, 1.56, (T) => { T.poly([[1.82, 0.04, 0.581], [2.12, 0.04, 0.581], [2.12, 1.56, 0.581], [1.82, 1.56, 0.581]], c); T.line([1.82, 0.04, 0.582], [1.82, 1.56, 0.582], HO.brass, 1); T.line([2.12, 0.04, 0.582], [2.12, 1.56, 0.582], HO.brass, 1); }, { onTop: true })]; },
+      // The headboard and its channels in one part, so the pillows in front of it cover the channel lines.
+      F(0, 0, 0.16, 1.6, (T) => { T.box(0, 0, 0, 0.16, 1.6, 1.45, shade(c, -0.08)); for (let k = 1; k < 10; k++) T.line([0.161, 1.6 * k / 10, 0.2], [0.161, 1.6 * k / 10, 1.38], 'rgba(0,0,0,.25)', 1.2); }),
+      B(0.16, 0.02, 0, 2.34, 1.56, 0.04, HO.brass), B(0.16, 0.02, 0.04, 2.34, 1.56, 0.3, c),
+      B(0.18, 0.05, 0.34, 2.3, 1.5, 0.18, HO.cream, { name: 'mattress' }),
+      // Euro shams upright against the headboard and pillows in front, each pair spanning the mattress edge to edge.
+      B(0.16, 0.05, 0.52, 0.16, 0.74, 0.32, HO.white), B(0.16, 0.81, 0.52, 0.16, 0.74, 0.32, HO.white),
+      B(0.32, 0.05, 0.52, 0.4, 0.74, 0.12, HO.white), B(0.32, 0.81, 0.52, 0.4, 0.74, 0.12, HO.white),
+      B(0.9, 0.05, 0.52, 1.58, 1.5, 0.06, HO.white), B(0.9, 0.05, 0.58, 1.58, 1.5, 0.01, HO.white, { cover: true }),
+      // The brass frame round the headboard: a cap along the top and a post at each end, as boxes so the pillows sort in front.
+      B(-0.01, -0.01, 1.45, 0.18, 1.62, 0.035, HO.brass), B(-0.01, -0.01, 0.04, 0.18, 0.035, 1.41, HO.brass), B(-0.01, 1.575, 0.04, 0.18, 0.035, 1.41, HO.brass),
+      F(0.9, 0.04, 2.5, 1.56, (T) => {
+        T.poly([[0.9, 0.05, 0.591], [1.06, 0.05, 0.591], [1.06, 1.55, 0.591], [0.9, 1.55, 0.591]], '#E9E4DA'); T.line([1.06, 0.05, 0.592], [1.06, 1.55, 0.592], 'rgba(0,0,0,.12)', 1);
+        T.poly([[1.9, 0.03, 0.592], [2.2, 0.03, 0.592], [2.2, 1.57, 0.592], [1.9, 1.57, 0.592]], c); T.line([1.9, 0.03, 0.593], [1.9, 1.57, 0.593], HO.brass, 1); T.line([2.2, 0.03, 0.593], [2.2, 1.57, 0.593], HO.brass, 1);
+        T.poly([[1.9, 1.57, 0.592], [2.2, 1.57, 0.592], [2.2, 1.57, 0.4], [1.9, 1.57, 0.4]], shade(c, -0.12)); }, { onTop: true })]; },
   });
   Object.assign(LOOK_DRAWERS.nightstand, {
     // A walnut bedside chest with a marble top and brass pulls, and a brass lamp with a pleated shade.
@@ -3333,22 +3343,20 @@ export function createHouseArt(ctx0, opts = {}) {
     const [x, y, dir] = along(cart.pts, d);
     return { x, y, dir, parked: e >= go && e < go + CART_WAIT, lifted: e >= go + 2 };
   }
-  // The cart: a white cloth over a trolley on brass casters, a silver cloche, coffee, juice and a rose.
+  // The cart: a trolley on brass legs and casters with a lower shelf, a white cloth skirt to the shelf, and on top a
+  // silver cloche (lifted once it has arrived), a coffee pot, juice and a rose. Solid boxes, so nothing shows through.
   function drawCart(c, t) {
-    const P3 = (dx, dy, z) => iso(c.x + dx, c.y + dy, z), [gx, gy] = P3(0, 0, 0);
-    ell(gx, gy, 18, 8, 'rgba(0,0,0,.18)');
-    [[-0.3, -0.18], [0.3, -0.18], [-0.3, 0.18], [0.3, 0.18]].forEach(([dx, dy]) => { const [wx, wy] = P3(dx, dy, 0.05); circle(wx, wy, 2, HO.brass); });
-    const top = [[-0.34, -0.22], [0.34, -0.22], [0.34, 0.22], [-0.34, 0.22]];
-    const poly2 = (pts, fill) => { ctx.beginPath(); pts.forEach(([px, py], k) => (k ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 0.8; ctx.stroke(); };
-    poly2([P3(-0.34, 0.22, 0.12), P3(0.34, 0.22, 0.12), P3(0.34, 0.22, 0.72), P3(-0.34, 0.22, 0.72)], '#F1EEE8');
-    poly2([P3(0.34, -0.22, 0.12), P3(0.34, 0.22, 0.12), P3(0.34, 0.22, 0.72), P3(0.34, -0.22, 0.72)], '#E4E0D8');
-    poly2(top.map(([dx, dy]) => P3(dx, dy, 0.72)), HO.white);
-    const [cx, cy] = P3(-0.08, 0, 0.72); ctx.beginPath(); ctx.moveTo(cx - 9, cy); ctx.bezierCurveTo(cx - 9, cy - (c.lifted ? 4 : 12), cx + 9, cy - (c.lifted ? 4 : 12), cx + 9, cy); ctx.closePath(); ctx.fillStyle = '#D5DAE0'; ctx.fill(); ctx.strokeStyle = '#9AA3A8'; ctx.stroke();
-    if (c.lifted) { ell(cx, cy - 1, 7, 3, '#F2C14E'); circle(cx - 2, cy - 2, 2, '#FFF6D8'); }
-    else circle(cx, cy - 12, 1.6, '#9AA3A8');
-    const [px, py] = P3(0.2, -0.1, 0.72); rr(px - 3, py - 9, 6, 9, 1.5, '#C9CED6'); const [jx, jy] = P3(0.22, 0.12, 0.72); rr(jx - 2, jy - 7, 4, 7, 1, '#F4A93B');
-    const [fx, fy] = P3(0.08, 0.16, 0.72); limb(fx, fy, fx, fy - 8, '#3F6B3A', 1); circle(fx, fy - 9, 2.2, '#B5243A');
-    if (c.parked) PFX.emit('cart:coffee', 'steam', c.level, c.x + 0.2, c.y - 0.1, 0.84, 0.4);
+    const X = c.x, Y = c.y, [gx, gy] = iso(X, Y, 0);
+    ell(gx, gy, 20, 9, 'rgba(0,0,0,.2)');
+    [[-0.32, -0.2], [0.32, -0.2], [-0.32, 0.2], [0.32, 0.2]].forEach(([dx, dy]) => { line3([X + dx, Y + dy, 0.04], [X + dx, Y + dy, 0.72], HO.brass, 1.6); const [wx, wy] = iso(X + dx, Y + dy, 0.03); circle(wx, wy, 2.2, '#3A3A40'); });
+    box(X - 0.34, Y - 0.22, 0.12, 0.68, 0.44, 0.03, '#C9CED6');
+    box(X - 0.37, Y - 0.25, 0.4, 0.74, 0.5, 0.33, '#F4F1EA');
+    box(X - 0.37, Y - 0.25, 0.73, 0.74, 0.5, 0.02, '#FFFFFF');
+    const [cx, cy] = iso(X - 0.08, Y, 0.75); ctx.beginPath(); ctx.moveTo(cx - 9, cy); ctx.bezierCurveTo(cx - 9, cy - (c.lifted ? 4 : 12), cx + 9, cy - (c.lifted ? 4 : 12), cx + 9, cy); ctx.closePath(); ctx.fillStyle = '#D5DAE0'; ctx.fill(); ctx.strokeStyle = '#9AA3A8'; ctx.lineWidth = 0.8; ctx.stroke();
+    if (c.lifted) { ell(cx, cy - 1, 7, 3, '#F2C14E'); circle(cx - 2, cy - 2, 2, '#FFF6D8'); } else circle(cx, cy - 12, 1.6, '#9AA3A8');
+    box(X + 0.15, Y - 0.14, 0.75, 0.08, 0.08, 0.16, '#C9CED6'); box(X + 0.18, Y + 0.08, 0.75, 0.06, 0.06, 0.12, '#F4A93B');
+    const [fx, fy] = iso(X + 0.06, Y + 0.16, 0.75); limb(fx, fy, fx, fy - 8, '#3F6B3A', 1); circle(fx, fy - 9, 2.2, '#B5243A');
+    if (c.parked) PFX.emit('cart:coffee', 'steam', c.level, X + 0.19, Y - 0.1, 0.92, 0.4);
   }
   // What the talking pieces are saying: their lines and when they started. One line at a time, each held for its length.
   const speech = new Map();
