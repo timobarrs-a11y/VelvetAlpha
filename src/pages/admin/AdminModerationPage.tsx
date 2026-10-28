@@ -3,6 +3,7 @@ import { Bot as BotIcon } from 'lucide-react';
 import { adminConsole, ReportRow } from '../../services/adminConsoleService';
 import { approveBoard, fetchBoards, rejectBoard } from '../../services/communityService';
 import { PageHeader, ErrorBanner, Spinner, Empty, panel, btnNeutral, btnDanger, btnGood, useLoad, act, ago } from './ui';
+import { WordBankSection } from './AdminWordBank';
 
 const STATUSES = ['pending', 'reviewed', 'resolved', 'all'];
 
@@ -46,7 +47,35 @@ function ProposedSpaces() {
   );
 }
 
+const VIEWS = [
+  { id: 'reports', label: 'Reports' },
+  { id: 'words', label: 'Word bank' },
+] as const;
+
 export function AdminModerationPage() {
+  const [view, setView] = useState<(typeof VIEWS)[number]['id']>('reports');
+  return (
+    <>
+      <PageHeader
+        title="Moderation"
+        subtitle={view === 'reports'
+          ? 'Proposed spaces, and reported posts and comments with the content shown inline. Removing content is permanent.'
+          : 'Slurs and hate speech the database refuses everywhere public. Swearing is allowed.'}
+      />
+      <div className="flex gap-2 mb-5 border-b border-white/10 pb-3">
+        {VIEWS.map(v => (
+          <button key={v.id} onClick={() => setView(v.id)}
+            className={`px-3 py-1.5 rounded-lg text-sm transition ${view === v.id ? 'bg-white/15 text-white' : 'text-white/50 hover:text-white'}`}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+      {view === 'reports' ? <><ProposedSpaces /><ReportsSection /></> : <WordBankSection />}
+    </>
+  );
+}
+
+function ReportsSection() {
   const [status, setStatus] = useState('pending');
   const { data, error, loading, reload } = useLoad(() => adminConsole.listReports(status), [status]);
   const [busy, setBusy] = useState<string | null>(null);
@@ -60,8 +89,6 @@ export function AdminModerationPage() {
 
   return (
     <>
-      <PageHeader title="Moderation" subtitle="Proposed spaces, and reported posts and comments with the content shown inline. Removing content is permanent." />
-      <ProposedSpaces />
       <div className="flex gap-2 mb-5">
         {STATUSES.map(s => (
           <button key={s} onClick={() => setStatus(s)}

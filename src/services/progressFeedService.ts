@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { throwIfModerated } from './moderation';
 
 export interface ProgressPost {
   id: string;
@@ -84,6 +85,7 @@ export async function createStatus(body: string, audience: PostAudience = 'every
   const params = audience === 'everyone' ? { p_body: body } : { p_body: body, p_audience: audience };
   const { data, error } = await supabase.rpc('create_status_post', params);
   if (error) {
+    throwIfModerated(error);
     console.error('[progressFeedService] create_status_post error:', error.message);
     throw new Error("Couldn't post that. Try again.");
   }

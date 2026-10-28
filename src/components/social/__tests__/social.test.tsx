@@ -52,6 +52,12 @@ describe('createStatus', () => {
     expect(rpc).toHaveBeenLastCalledWith('create_status_post', { p_body: 'for everyone' });
   });
 
+  it('passes the hate-speech block message through as is', async () => {
+    const message = "That includes a slur or hate speech, which Velvet doesn't allow. Swearing is fine. Please rephrase.";
+    rpc.mockResolvedValue({ data: null, error: { code: 'VM001', message } });
+    await expect(createStatus('...')).rejects.toThrow(message);
+  });
+
   it('turns server refusals into readable messages', async () => {
     rpc.mockResolvedValue({ data: { success: false, error: 'rate_limited' }, error: null });
     await expect(createStatus('hello')).rejects.toThrow(/posted a lot/);
@@ -139,6 +145,17 @@ describe('likes on a profile', () => {
     fireEvent.click(await screen.findByLabelText('Like'));
     await waitFor(() => expect(interactions.toggleLike).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByLabelText('Like').textContent).toBe('3'));
+  });
+
+  it('shows why a comment was refused', async () => {
+    const { ModerationBlockedError } = await import('../../../services/moderation');
+    renderPosts([post('a')], []);
+    interactions.addComment.mockRejectedValue(new ModerationBlockedError('That includes a slur or hate speech.'));
+    fireEvent.click(await screen.findByLabelText('Comments'));
+    fireEvent.change(screen.getByLabelText('Write a comment'), { target: { value: 'bad words' } });
+    fireEvent.click(screen.getByLabelText('Send comment'));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('That includes a slur or hate speech.'));
+    expect((screen.getByLabelText('Write a comment') as HTMLInputElement).value).toBe('bad words');
   });
 
   it('shows a status as its text', async () => {

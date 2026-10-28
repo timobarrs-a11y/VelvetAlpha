@@ -4,6 +4,7 @@ import { Input, Textarea } from '../../shared/ui';
 import { Button } from '../../shared/ui/Button';
 import { toast } from '../../shared/ui';
 import { reportContent } from '../../services/communityService';
+import { saveErrorMessage } from '../../services/moderation';
 import { SmiliePicker } from './SmiliePicker';
 import { PollCreator } from './PollCreator';
 import { SMILIES, smilieUrl } from '../../config/smilieRegistry';
@@ -97,7 +98,14 @@ export function CreatePostModal({ isOpen, onClose, boardId, onCreated }: CreateP
     if (!title.trim() || !body.trim()) return;
     setSubmitting(true);
     const { createPost } = await import('../../services/communityService');
-    const post = await createPost({ board_id: boardId, title: title.trim(), body: body.trim(), post_smilie: postSmilie });
+    let post: Awaited<ReturnType<typeof createPost>> = null;
+    try {
+      post = await createPost({ board_id: boardId, title: title.trim(), body: body.trim(), post_smilie: postSmilie });
+    } catch (err) {
+      setSubmitting(false);
+      toast.error(saveErrorMessage(err, 'Could not create post. Try again.'));
+      return;
+    }
     setSubmitting(false);
     if (post) {
       if (pollData && pollData.options.length >= 2) {
@@ -260,12 +268,19 @@ export function CreateBoardModal({ isOpen, onClose, onCreated }: CreateBoardModa
     if (!name.trim()) return;
     setSubmitting(true);
     const { createBoard } = await import('../../services/communityService');
-    const board = await createBoard({
-      name: name.trim(),
-      description: description.trim(),
-      color,
-      icon: 'MessageSquare',
-    });
+    let board: Awaited<ReturnType<typeof createBoard>> = null;
+    try {
+      board = await createBoard({
+        name: name.trim(),
+        description: description.trim(),
+        color,
+        icon: 'MessageSquare',
+      });
+    } catch (err) {
+      setSubmitting(false);
+      toast.error(saveErrorMessage(err, 'Could not create board. Try again.'));
+      return;
+    }
     setSubmitting(false);
     if (board) {
       toast.success(board.is_approved ? 'Space created!' : 'Space sent for approval.');
