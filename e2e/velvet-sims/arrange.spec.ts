@@ -30,8 +30,15 @@ test('tap a piece, then drag it to a free spot; a bad spot puts it back', async 
   const tv = await clientPosOf(page, 'tvunit');
   const here = await clientPosOf(page, 'sofa');
   await drag(page, here, tv);
+  // A piece let go of is loose until it is set down: over the TV it does not fit, so it is red and Set it down refuses.
+  await expect(game.locator('.vh-arr-bar [data-arr=back]')).toBeVisible();
+  await game.locator('.vh-arr-bar [data-arr=set]').click();
+  const stuck = await piece(page, 'sofa');
+  expect([stuck.x, stuck.y]).not.toEqual([moved.x, moved.y]); // still loose where it was let go, not placed
+  // Put it back returns it to where it was picked up.
+  await game.locator('.vh-arr-bar [data-arr=back]').click();
   const after = await piece(page, 'sofa');
-  expect([after.x, after.y]).toEqual([moved.x, moved.y]);
+  expect([after.x, after.y]).toEqual([before.x, before.y]);
 });
 
 test('carry a piece to another floor, and put one in storage and back', async ({ page }) => {
