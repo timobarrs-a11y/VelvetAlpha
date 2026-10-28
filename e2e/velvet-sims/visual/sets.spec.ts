@@ -34,7 +34,7 @@ const SETS: Record<string, string[]> = {
 for (const [set, ids] of Object.entries(SETS)) {
   for (const [time, minutes] of [['day', 13 * 60], ['night', 23 * 60]] as const) {
     test(`the ${set} set on the main floor, ${time}`, async ({ page }) => {
-      await openGame(page, { freeze: true });
+      const frame = await openGame(page, { freeze: true });
       await setMoney(page, 9999);
       await inGame(page, 'v.setView(1)');
       for (const id of ids) await inGame(page, `v.buy('${id}')`);
@@ -43,6 +43,8 @@ for (const [set, ids] of Object.entries(SETS)) {
       expect(wearing).toHaveLength(6);
       await inGame(page, `v.setMinutes(${minutes})`);
       await page.waitForTimeout(2600);
+      // The log and the vitals are hidden for the shot: the companion's taste is rolled per game, so her reaction lines, the log's height and the bond bar vary from run to run.
+      for (const q of ['.vh-log', '.vh-vitals']) await frame.locator(q).first().evaluate((el) => { (el as HTMLElement).style.visibility = 'hidden'; });
       await expect(page).toHaveScreenshot(`set-${set}-${time}.png`);
     });
   }
