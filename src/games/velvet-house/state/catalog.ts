@@ -144,6 +144,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-circuit', 'Circuit', 'circuit', 110, ['bold', 'modern', 'industrial']),
   wallpaper('paper-sprinkles', 'Sprinkles', 'sprinkles', 90, ['soft', 'playful', 'warm']),
   wallpaper('paper-clouds-sky', 'Clouds and rainbows', 'clouds-sky', 90, ['soft', 'playful', 'cozy']),
+  wallpaper('paper-starburst-amber', 'Atomic starburst', 'starburst-amber', 100, ['modern', 'warm', 'vintage']),
   wallpaper('paper-ditsy-cream', 'Ditsy floral', 'ditsy-cream', 90, ['cozy', 'soft', 'vintage']),
   wallpaper('paper-pinstripe-gold', 'Gold pinstripe', 'pinstripe-gold', 110, ['luxe', 'bold', 'vintage']),
   wallpaper('paper-limewash', 'Limewash', 'limewash', 100, ['soft', 'minimal', 'natural']),
@@ -230,6 +231,9 @@ export const CATALOG: CatalogEntry[] = [
   bundle('set-cottage', 'Cottagecore bedroom and bath', 'White iron, painted pine, patchwork and chintz: the iron bed with a patchwork quilt, a painted bedside table and a hand-painted flower chest, a high-cistern toilet, a skirted gingham sink, a beadboard shower with a floral curtain, ditsy floral walls, painted pine boards, and a music box with a little dancer.',
     ['look-bed-cottage', 'look-nightstand-cottage', 'look-dresser-cottage', 'look-toilet-cottage', 'look-vanity-cottage', 'look-shower-cottage', 'paper-ditsy-cream', 'floor-paintedpine', 'musicbox'], ['cozy', 'soft', 'vintage']),
 
+  bundle('set-midcentury', 'Mid-Century bedroom and bath', 'Walnut on tapered legs, cane, mustard and teal, and pastel tile: the walnut and cane bed, a splayed-leg nightstand and long lowboy, a pastel toilet and vanity, a tiled shower with a reeded slider, atomic starburst walls, walnut parquet, and a hi-fi console whose record turns the room amber.',
+    ['look-bed-midcentury', 'look-nightstand-midcentury', 'look-dresser-midcentury', 'look-toilet-midcentury', 'look-vanity-midcentury', 'look-shower-midcentury', 'paper-starburst-amber', 'floor-walnutparquet', 'hificonsole'], ['modern', 'warm', 'vintage']),
+
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
 
@@ -282,6 +286,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-grate', 'Lit grate', 'grate', 170, ['bold', 'modern', 'industrial']),
   floor('floor-checkpink', 'Pink check', 'checkpink', 140, ['soft', 'playful', 'warm']),
   floor('floor-skycheck', 'Sky check', 'skycheck', 140, ['soft', 'playful', 'cozy']),
+  floor('floor-walnutparquet', 'Walnut parquet', 'walnutparquet', 170, ['modern', 'warm', 'vintage']),
   floor('floor-paintedpine', 'Painted pine boards', 'paintedpine', 130, ['cozy', 'soft', 'vintage']),
   floor('floor-marblecheck', 'Marble check', 'marblecheck', 180, ['luxe', 'bold', 'vintage']),
   floor('floor-teakdeck', 'Teak deck', 'teakdeck', 160, ['soft', 'minimal', 'natural']),
@@ -502,6 +507,13 @@ export const CATALOG: CatalogEntry[] = [
   look('look-vanity-cottage', 'vanity', 'cottage', 'Skirted gingham sink', 'A basin in a pine top over a gathered gingham skirt, copper taps, a jug and a soap dish.', 300, ['cozy', 'soft', 'vintage'], ['#E8A0A8', '#A9BFA0', '#9DB7D5']),
   look('look-shower-cottage', 'shower', 'cottage', 'Beadboard shower with a floral curtain', 'Whitewashed beadboard, exposed copper pipes to a big rain head, a pine duckboard and a floral curtain that draws back while you shower.', 460, ['cozy', 'soft', 'vintage'], ['#E8A0A8', '#9DB7D5', '#F2D98A']),
 
+  look('look-bed-midcentury', 'bed', 'midcentury', 'Walnut and cane bed', 'A walnut bed on tapered legs with a cane-panelled headboard, a cover in mustard, teal or orange and a striped throw at the foot.', 560, ['modern', 'warm', 'vintage'], ['#D9A441', '#3F7F7A', '#D2693A']),
+  look('look-nightstand-midcentury', 'nightstand', 'midcentury', 'Splayed-leg walnut nightstand', 'Walnut on splayed tapered legs with a long recessed pull, and a white mushroom lamp.', 180, ['modern', 'warm', 'vintage'], ['#7A4E2D', '#9A6A44', '#5E3A20']),
+  look('look-dresser-midcentury', 'dresser', 'midcentury', 'Long walnut lowboy', 'Six drawers with recessed pulls on splayed legs, a teal ceramic vase and a brass sunburst.', 420, ['modern', 'warm', 'vintage'], ['#7A4E2D', '#9A6A44', '#5E3A20']),
+  look('look-toilet-midcentury', 'toilet', 'midcentury', 'Pastel toilet', 'A toilet in pink, mint or butter yellow with a chrome flush handle.', 220, ['modern', 'warm', 'vintage'], ['#F3B6C4', '#9ED8C6', '#F6E3A1']),
+  look('look-vanity-midcentury', 'vanity', 'midcentury', 'Laminate vanity on chrome legs', 'A pastel laminate vanity on chrome legs, a round basin, a chrome tap and a checked tile backsplash.', 320, ['modern', 'warm', 'vintage'], ['#9ED8C6', '#F3B6C4', '#F6E3A1']),
+  look('look-shower-midcentury', 'shower', 'midcentury', 'Pastel tile shower with a reeded slider', 'Square pastel tile with a black pencil trim, a chrome head, and a reeded glass door that slides open while you shower.', 480, ['modern', 'warm', 'vintage'], ['#F3B6C4', '#9ED8C6', '#9DB7D5']),
+
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
   wallItem('wobj-landscape', 'Landscape canvas', 80, ['natural', 'vintage'], ['#9EC1F5', '#F2B48A', '#C9B8E8', '#2B3A5E']),
@@ -562,6 +574,7 @@ export const CATALOG: CatalogEntry[] = [
   hobby('gym', 'gym', 'Weights and mat', 180, ['cool', 'bold', 'minimal']),
   hobby('yogamat', 'yogamat', 'Yoga mat', 30, ['natural', 'soft', 'minimal'], ['#8E5468', '#7FB069', '#4A88B8', '#E0A43A', '#2B2B30']),
   hobby('massage', 'massage', 'Massage chair', 350, ['luxe', 'modern', 'cozy'], ['#2B2B30', '#E8DCC8', '#6E3C50']),
+  hobby('hificonsole', 'hificonsole', 'Hi-fi console', 380, ['modern', 'warm', 'vintage'], ['#7A4E2D', '#9A6A44', '#5E3A20']),
   hobby('musicbox', 'musicbox', 'Music box', 90, ['cozy', 'soft', 'vintage'], ['#E8A0A8', '#9DB7D5', '#A9BFA0', '#F2D98A']),
   hobby('servicebell', 'servicebell', 'Service bell', 150, ['luxe', 'bold', 'vintage'], ['#C9A24A', '#4A3226', '#1E1E22']),
   hobby('diffuser', 'diffuser', 'Aroma diffuser', 120, ['soft', 'minimal', 'natural'], ['#D8D0C2', '#9DB3A5', '#F6F4EE']),

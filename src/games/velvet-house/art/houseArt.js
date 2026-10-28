@@ -186,6 +186,7 @@ export function createHouseArt(ctx0, opts = {}) {
     grate: { kind: 'tile', a: '#1A1C24', b: '#171920', line: 'rgba(25,230,240,.35)' },
     checkpink: { kind: 'check', a: '#FFF8F0', b: '#F6B7CC', line: 'rgba(0,0,0,.05)' },
     skycheck: { kind: 'check', a: '#F7FAFE', b: '#DCEEFA', line: 'rgba(0,0,0,.04)' },
+    walnutparquet: { kind: 'parquet', a: '#8A5A36', b: '#7A4E2D', line: 'rgba(40,20,8,.32)' },
     paintedpine: { kind: 'plank', a: '#EDE3D0', b: '#E4D8C2', line: 'rgba(120,95,60,.22)' },
     marblecheck: { kind: 'check', a: '#F2EEE6', b: '#26262B', line: 'rgba(0,0,0,.08)' },
     teakdeck: { kind: 'plank', a: '#9C6B45', b: '#8E6040', line: 'rgba(40,25,10,.32)' },
@@ -220,6 +221,7 @@ export function createHouseArt(ctx0, opts = {}) {
     circuit: { pat: 'circuit', base: '#111118', ink: 'rgba(25,230,240,.6)', ink2: 'rgba(255,46,154,.75)' },
     sprinkles: { pat: 'sprinkles', base: '#FFF8F0', ink: 'rgba(224,74,106,.9)', pal: ['#E04A6A', '#BFE0F5', '#FBE7A6', '#D6C4F0', '#BFE8D6'] },
     'clouds-sky': { pat: 'clouds', base: '#C9E6F8', ink: 'rgba(255,255,255,.95)' },
+    'starburst-amber': { pat: 'starburst', base: '#F3E6CC', ink: 'rgba(210,105,58,.7)', ink2: 'rgba(63,127,122,.85)' },
     'ditsy-cream': { pat: 'ditsy', base: '#F8F1E1', ink: 'rgba(232,160,168,.9)', pal: ['#E8A0A8', '#F2D98A', '#9DB7D5', '#A9BFA0'] },
     'pinstripe-gold': { pat: 'pinstripe2', base: '#EFE6D2', ink: 'rgba(201,162,74,.6)' },
     limewash: { pat: 'limewash', base: '#E7E0D2', ink: 'rgba(160,145,120,.06)', ink2: 'rgba(255,255,255,.1)' },
@@ -844,6 +846,74 @@ export function createHouseArt(ctx0, opts = {}) {
         const open = usingSlot(T.o.id + ':s') ? 0.45 : 0.85;
         for (let k = 0; k < 10; k++) { const y0 = k * open / 10 * 1.18, y1 = (k + 1) * open / 10 * 1.18; T.poly([[y0, 1.17 + (k % 2) * 0.02, 0.2], [y1, 1.17 + ((k + 1) % 2) * 0.02, 0.2], [y1, 1.17 + ((k + 1) % 2) * 0.02, 2.04], [y0, 1.17 + (k % 2) * 0.02, 2.04]], k % 2 ? c : shade(c, -0.08)); }
         ditsy(T, 0.02, open * 1.18, 1.2, 0.3, 1.95, 24); })],
+  });
+
+  // Mid-Century: walnut on tapered legs, cane, mustard and teal, chrome and pastel tile.
+  const MC = { walnut: '#7A4E2D', walnutDark: '#5E3A20', walnutLite: '#9A6A44', cane: '#D9BC86', mustard: '#D9A441', teal: '#3F7F7A', orange: '#D2693A', chrome: '#C9CED6', cream: '#F3E6CC' };
+  const taperLegs = (T, pts, z, col) => pts.forEach(([x, y, dx, dy]) => T.line([x, y, z], [x + dx, y + dy, 0], col, 2.4));
+  // A cane panel on a face that looks along +x: the panel, then a fine weave of straight and diagonal strands clipped to it.
+  const cane = (T, x, y0, y1, z0, z1) => { const q = [[x, y0, z0], [x, y1, z0], [x, y1, z1], [x, y0, z1]]; T.poly(q, MC.cane);
+    ctx.save(); ctx.beginPath(); q.forEach((p, k) => { const [px, py] = T.P(...p); k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }); ctx.closePath(); ctx.clip();
+    const st = 'rgba(120,80,30,.4)', h = z1 - z0;
+    for (let y = y0; y <= y1; y += 0.06) T.line([x + 0.001, y, z0], [x + 0.001, y, z1], st, 0.6);
+    for (let z = z0; z <= z1; z += 0.06) T.line([x + 0.001, y0, z], [x + 0.001, y1, z], st, 0.6);
+    for (let y = y0 - h; y <= y1; y += 0.085) { T.line([x + 0.001, y, z0], [x + 0.001, y + h, z1], st, 0.6); T.line([x + 0.001, y + h, z0], [x + 0.001, y, z1], st, 0.6); }
+    ctx.restore(); };
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A walnut bed on tapered legs with a cane-panelled headboard, a full mattress, two pillows and a cover in the piece's colour.
+    midcentury: (o) => { const c = cl(o); return [
+      F(0, 0, 0.12, 1.6, (T) => { T.box(0, 0, 0.1, 0.12, 1.6, 1.0, MC.walnut); cane(T, 0.121, 0.12, 1.48, 0.42, 0.96); }),
+      F(0.12, 0, 2.5, 1.6, (T) => taperLegs(T, [[0.2, 0.1, -0.03, -0.03], [2.4, 0.1, 0.03, -0.03], [0.2, 1.5, -0.03, 0.03], [2.4, 1.5, 0.03, 0.03]], 0.14, MC.walnutDark)),
+      B(0.12, 0.02, 0.14, 2.36, 1.56, 0.16, MC.walnut), B(0.15, 0.05, 0.3, 2.32, 1.5, 0.18, '#F7F3EA', { name: 'mattress' }),
+      B(0.16, 0.05, 0.48, 0.4, 0.72, 0.13, shade(c, 0.5)), B(0.16, 0.83, 0.48, 0.4, 0.72, 0.13, shade(c, 0.5)),
+      B(0.86, 0.03, 0.48, 1.62, 1.54, 0.06, c), B(0.86, 0.03, 0.54, 1.62, 1.54, 0.01, c, { cover: true }),
+      F(0.86, 0, 2.5, 1.6, (T) => { T.poly([[1.95, 0.03, 0.551], [2.3, 0.03, 0.551], [2.3, 1.57, 0.551], [1.95, 1.57, 0.551]], MC.orange); for (let k = 0; k < 6; k++) T.line([1.97 + k * 0.06, 0.03, 0.552], [1.97 + k * 0.06, 1.57, 0.552], 'rgba(255,255,255,.35)', 0.8); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A walnut nightstand on splayed legs with a long recessed pull, and a white mushroom lamp.
+    midcentury: (T, o) => { const lit = isLit(o.id), c = cl(o);
+      taperLegs(T, [[0.06, 0.06, -0.03, -0.03], [0.39, 0.06, 0.03, -0.03], [0.06, 0.39, -0.03, 0.03], [0.39, 0.39, 0.03, 0.03]], 0.2, MC.walnutDark);
+      T.box(0.02, 0.02, 0.2, 0.41, 0.41, 0.3, c); T.poly([[0.08, 0.431, 0.38], [0.37, 0.431, 0.38], [0.37, 0.431, 0.4], [0.08, 0.431, 0.4]], MC.walnutDark);
+      T.box(0.15, 0.15, 0.5, 0.06, 0.06, 0.16, '#FFFFFF'); const [lx, ly] = T.P(0.18, 0.18, 0.72); if (lit) circle(lx, ly + 4, 16, 'rgba(255,214,150,.3)');
+      ctx.beginPath(); ctx.ellipse(lx, ly + 3, 10, 9, 0, Math.PI, Math.PI * 2); ctx.ellipse(lx, ly + 3, 10, 2.5, 0, 0, Math.PI); ctx.closePath(); ctx.fillStyle = lit ? '#FFF6E6' : '#F7F4EE'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 0.8; ctx.stroke(); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A long, low walnut dresser on splayed legs: six drawers with recessed pulls, a ceramic vase and a brass sunburst.
+    midcentury: (T, o) => { const c = cl(o);
+      taperLegs(T, [[0.08, 0.08, -0.04, -0.04], [1.12, 0.08, 0.04, -0.04], [0.08, 0.42, -0.04, 0.04], [1.12, 0.42, 0.04, 0.04]], 0.16, MC.walnutDark);
+      T.box(0, 0, 0.16, 1.2, 0.5, 0.64, c); T.line([0.6, 0.501, 0.16], [0.6, 0.501, 0.8], 'rgba(0,0,0,.3)', 1); [0.37, 0.58].forEach((z) => T.line([0.01, 0.501, z], [1.19, 0.501, z], 'rgba(0,0,0,.3)', 1));
+      [[0.12, 0.48], [0.72, 1.08]].forEach(([a, b]) => [0.33, 0.54, 0.75].forEach((z) => T.poly([[a, 0.502, z - 0.025], [b, 0.502, z - 0.025], [b, 0.502, z], [a, 0.502, z]], MC.walnutDark)));
+      T.box(-0.01, -0.01, 0.8, 1.22, 0.52, 0.02, MC.walnutLite);
+      T.box(0.2, 0.18, 0.82, 0.1, 0.1, 0.24, MC.teal); const [vx, vy] = T.P(0.25, 0.23, 1.06); ell(vx, vy, 3, 1.4, shade(MC.teal, -0.3));
+      const [sx, sy] = T.P(0.85, 0.2, 1.05); for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6; limb(sx, sy, sx + Math.cos(a) * 9, sy + Math.sin(a) * 9, '#C9A24A', 1); } circle(sx, sy, 3, '#E0C26E'); T.line([0.85, 0.2, 0.82], [0.85, 0.2, 0.98], '#C9A24A', 1.4); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A pastel toilet in the piece's colour, with a chrome flush handle on the tank.
+    midcentury: (T, o) => { const c = cl(o);
+      T.box(0.04, 0, 0.36, 0.34, 0.16, 0.38, c); T.box(0.02, -0.01, 0.74, 0.38, 0.18, 0.03, shade(c, 0.08)); T.line([0.06, 0.161, 0.68], [0.13, 0.161, 0.68], MC.chrome, 1.8);
+      T.box(0.09, 0.16, 0, 0.24, 0.26, 0.32, c); const [bx, by] = T.P(0.21, 0.42, 0.3); ell(bx, by, 7.5, 6, c, 'rgba(0,0,0,.12)');
+      const [sx, sy] = T.P(0.21, 0.4, 0.385); ell(sx, sy, 7, 4, shade(c, -0.1)); ell(sx, sy, 5, 2.8, '#E8EEF0');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A laminate vanity in the piece's colour on chrome legs, a round basin and chrome tap, and a square-tile backsplash.
+    midcentury: (T, o) => { const c = cl(o);
+      [[0.06, 0.06], [0.94, 0.06], [0.06, 0.44], [0.94, 0.44]].forEach(([x, y]) => T.line([x, y, 0], [x, y, 0.3], MC.chrome, 2));
+      T.box(0, 0, 0.3, 1.0, 0.5, 0.5, c); T.line([0.5, 0.501, 0.32], [0.5, 0.501, 0.78], 'rgba(0,0,0,.25)', 1); [0.44, 0.56].forEach((x) => T.line([x, 0.502, 0.5], [x, 0.502, 0.62], MC.chrome, 1.8));
+      T.box(-0.02, -0.02, 0.8, 1.04, 0.54, 0.04, '#F4F1EA'); T.line([-0.02, 0.521, 0.82], [1.02, 0.521, 0.82], MC.chrome, 1.2);
+      for (let i = 0; i < 10; i++) for (let j = 0; j < 2; j++) T.poly([[i * 0.1 + 0.005, 0.001, 0.845 + j * 0.1], [i * 0.1 + 0.095, 0.001, 0.845 + j * 0.1], [i * 0.1 + 0.095, 0.001, 0.94 + j * 0.1], [i * 0.1 + 0.005, 0.001, 0.94 + j * 0.1]], (i + j) % 2 ? shade(c, 0.3) : '#FFFFFF');
+      const [vx, vy] = T.P(0.5, 0.27, 0.841); ell(vx, vy, 9, 4.5, '#FFFFFF', 'rgba(0,0,0,.15)'); T.line([0.5, 0.06, 0.84], [0.5, 0.06, 0.98], MC.chrome, 2); T.line([0.5, 0.06, 0.98], [0.5, 0.18, 0.96], MC.chrome, 2); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // Square pastel tile in the piece's colour with a black pencil trim, a chrome head, and a sliding door of reeded glass.
+    midcentury: (o) => [F(0, 0, 1.18, 1.18, (T, ob) => { const c = cl(ob);
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, '#FFFFFF'); for (let i = 0; i < 12; i++) for (let j = 0; j < 12; j++) if ((i + j) % 2) T.poly([[i * 0.098, j * 0.098, 0.061], [i * 0.098 + 0.098, j * 0.098, 0.061], [i * 0.098 + 0.098, j * 0.098 + 0.098, 0.061], [i * 0.098, j * 0.098 + 0.098, 0.061]], shade(c, 0.2));
+        T.box(0, 0, 0.06, 1.18, 0.06, 2.04, c); for (let k = 1; k < 12; k++) T.line([1.18 * k / 12, 0.061, 0.06], [1.18 * k / 12, 0.061, 2.1], 'rgba(255,255,255,.55)', 0.7); for (let z = 0.16; z < 2.1; z += 0.1) T.line([0, 0.061, z], [1.18, 0.061, z], 'rgba(255,255,255,.55)', 0.7); T.line([0, 0.062, 1.2], [1.18, 0.062, 1.2], '#1E1E22', 2.2);
+        T.line([0.6, 0.06, 1.9], [0.6, 0.3, 1.95], MC.chrome, 2.2); const [hx, hy] = T.P(0.6, 0.32, 1.94); ell(hx, hy, 6, 3, MC.chrome, '#8E939A'); [[0.48, 1.05], [0.72, 1.05]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.062, z); circle(kx, ky, 2.4, MC.chrome); });
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.32); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.85, 1); }
+      }, { name: 'tray' }),
+      F(0, 1.16, 1.18, 1.2, (T) => { const open = usingSlot(T.o.id + ':s') ? 0.55 : 0; T.line([0, 1.18, 2.02], [1.18, 1.18, 2.02], MC.chrome, 2);
+        [[0, 0.6], [0.58, 1.18]].forEach(([a, b], k) => { const s0 = k ? a - open : a, s1 = k ? b - open : b; T.poly([[s0, 1.18, 0.06], [s1, 1.18, 0.06], [s1, 1.18, 2.0], [s0, 1.18, 2.0]], 'rgba(220,235,238,.55)', MC.chrome, 1.2); for (let u = s0 + 0.03; u < s1; u += 0.04) T.line([u, 1.18, 0.1], [u, 1.18, 1.96], 'rgba(255,255,255,.35)', 0.7); }); })],
   });
   const diningLife = () => F(0, 0.74, 1.3, 1.74, (T, o) => {
     ['c1', 'c2'].forEach((s, i) => { const sid = o.id + ':' + s, who = reserved[sid]; if (who && who.task && who.task.slot === sid && (doing(who, 'eat') || doing(who, 'eatOut') || doing(who, 'sip'))) { const [px, py] = T.P(0.65, i ? 1.5 : 0.98, 0.775); if (doing(who, 'eatOut')) { rr(px - 5, py - 7, 10, 7, 1.5, '#F2EEE8'); } else if (doing(who, 'sip')) { rr(px - 3, py - 6, 6, 6, 1.2, '#F2EEE8'); } else { ell(px, py, 10, 5, '#F5F2EC', 'rgba(0,0,0,.15)'); ell(px, py - 1, 6, 2.8, who.mealFresh ? '#7FB069' : '#D9822B'); circle(px + 3, py - 2, 1.8, '#4F9460'); } } });
@@ -2315,6 +2385,22 @@ export function createHouseArt(ctx0, opts = {}) {
           T.poly([[0.28, 0.601, 0.2], [0.44, 0.601, 0.2], [0.44, 0.601, 0.34], [0.28, 0.601, 0.34]], AR.ink, AR.chrome, 1);
         }, { onTop: true })]; },
        },
+    hificonsole: {
+      // A long walnut hi-fi on splayed legs: woven speaker grilles either end, a turntable under a smoked lid in the middle.
+      // Playing, the lid lifts, the record spins, notes rise, and its amber light comes on and fills the room.
+      parts: (o) => [F(0, 0, 1.8, 0.5, (T, ob, t) => { const c = cl(o), playing = usingSlot(ob.id + ':r') || live(ob.id);
+        if (playing && objectLights.get(ob.id) !== true) objectLights.set(ob.id, true);
+        taperLegs(T, [[0.1, 0.08, -0.04, -0.04], [1.7, 0.08, 0.04, -0.04], [0.1, 0.42, -0.04, 0.04], [1.7, 0.42, 0.04, 0.04]], 0.18, MC.walnutDark);
+        T.box(0, 0, 0.18, 1.8, 0.5, 0.5, c);
+        [[0.04, 0.5], [1.3, 1.76]].forEach(([a, b]) => { T.poly([[a, 0.501, 0.22], [b, 0.501, 0.22], [b, 0.501, 0.64], [a, 0.501, 0.64]], MC.cane); for (let x = a + 0.03; x < b; x += 0.04) T.line([x, 0.502, 0.22], [x, 0.502, 0.64], 'rgba(120,80,30,.3)', 0.7); });
+        T.poly([[0.55, 0.501, 0.3], [1.25, 0.501, 0.3], [1.25, 0.501, 0.6], [0.55, 0.501, 0.6]], shade(c, -0.15)); [0.75, 0.9, 1.05].forEach((x) => { const [kx, ky] = T.P(x, 0.502, 0.45); circle(kx, ky, 2.4, MC.chrome); });
+        T.box(-0.01, -0.01, 0.68, 1.82, 0.52, 0.02, MC.walnutLite);
+        const [px, py] = T.P(0.9, 0.25, 0.71), spin = playing ? t * 4 : 0; ell(px, py, 13, 6, '#1B1A1F'); ell(px, py, 4, 2, MC.orange); limb(px + Math.cos(spin) * 9, py + Math.sin(spin) * 4, px + Math.cos(spin) * 5, py + Math.sin(spin) * 2, 'rgba(255,255,255,.35)', 1);
+        const [ax, ay] = T.P(1.15, 0.1, 0.72); limb(ax, ay, px + 6, py - 2, MC.chrome, 1.4);
+        const lid = playing ? 0.28 : 0.06; T.poly([[0.6, 0.02, 0.7], [1.2, 0.02, 0.7], [1.2, 0.02 + (0.46 - lid * 1.4), 0.7 + lid], [0.6, 0.02 + (0.46 - lid * 1.4), 0.7 + lid]], 'rgba(60,50,45,.28)', 'rgba(60,50,45,.5)', 0.8);
+        if (playing) { ctx.save(); ctx.font = '700 9px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; for (let k = 0; k < 3; k++) { const u = (t * 0.6 + k / 3) % 1; ctx.globalAlpha = Math.sin(u * Math.PI); ctx.fillStyle = [MC.mustard, MC.orange, MC.teal][k]; ctx.fillText(k % 2 ? '♫' : '♪', px - 8 + k * 8, py - 10 - u * 24); } ctx.restore(); }
+      })],
+    },
     musicbox: {
       // A painted music box; wound or tapped, the lid opens, a little dancer turns and notes float up. Small, so it sits on a
       // table; on the floor it has a painted stand of its own.
@@ -4202,6 +4288,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const run = (secs, msg) => { liveUntil.set(o.id + ':' + part, animT + secs); return msg; };
     switch (o.type) {
       case 'overseer': return 'The eye turns toward you.';
+      case 'hificonsole': return run(40, 'The lid lifts, the needle drops, and the room goes amber.');
       case 'musicbox': return run(30, 'The lid opens and a tinkly little tune starts to play.');
       case 'servicebell': return run(1.2, 'Ding!');
       case 'diffuser': return run(20, 'The diffuser hums and puffs out eucalyptus.');
