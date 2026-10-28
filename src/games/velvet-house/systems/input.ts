@@ -77,7 +77,7 @@ export function createInput(g: Game): void {
   canvas.addEventListener('dblclick', () => { if (view.follow) g.toggleFollow(view.follow); g.resetCamera(); });
   canvas.addEventListener('pointerdown', (e) => {
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (touches.size === 1) dragFrom = g.isArranging() && g.movableAt(...g.toView(e.clientX, e.clientY)) ? null : { x: e.clientX, y: e.clientY, fx: cam.tfx, fy: cam.tfy };
+    if (touches.size === 1) dragFrom = g.isArranging() && (g.movableAt(...g.toView(e.clientX, e.clientY)) || g.wallAt(...g.toView(e.clientX, e.clientY))) ? null : { x: e.clientX, y: e.clientY, fx: cam.tfx, fy: cam.tfy };
     if (touches.size === 2) { const [a, b] = [...touches.values()]; pinchFrom = Math.hypot(a.x - b.x, a.y - b.y); dragFrom = null; g.abortDrag(); }
   });
   canvas.addEventListener('pointermove', (e) => {

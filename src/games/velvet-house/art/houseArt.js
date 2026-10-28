@@ -357,22 +357,64 @@ export function createHouseArt(ctx0, opts = {}) {
     return H;
   }
   function drawWallObj(w, t) { const T = WTYPES[w.type]; if (!T) return; ctx.save(); const sh = wallHelper(Object.assign({}, w, { u: w.u + 0.03, z: w.z - 0.04 })); sh.r(0, 0, T.w, T.h, 'rgba(0,0,0,.08)'); ctx.restore(); T.draw(wallHelper(w), w, t || animT); }
+  // Wall pieces taken down in Arrange: off the wall, still the player's, saved with the house.
+  const WALLSTORE = [];
+  let wallSeq = 0;
+  const wallId = () => `wall-${++wallSeq}-${(Date.now() + wallSeq * 7919) & 0xffff}`;
+  /** Whether a wall piece sits clear of the others on its wall and of the windows and doors (with a little air round each). */
+  function wallClear(w) {
+    const T = WTYPES[w.type]; if (!T) return false;
+    const over = (a0, a1, b0, b1, pad) => !(a1 + pad < b0 || a0 > b1 + pad);
+    if (WALLOBJS.some((o) => o !== w && o.level === w.level && o.p === w.p && WTYPES[o.type] && over(w.u, w.u + T.w, o.u, o.u + WTYPES[o.type].w, 0.1) && over(w.z, w.z + T.h, o.z, o.z + WTYPES[o.type].h, 0.1))) return false;
+    return !(LEVELS[w.level].feats || []).some((f) => f.p === w.p && Array.isArray(f.u) && Array.isArray(f.z) && over(w.u, w.u + T.w, f.u[0], f.u[1], 0.1) && over(w.z, w.z + T.h, f.z[0], f.z[1], 0.1));
+  }
   /** Hangs a bought wall piece on one of the level's back walls, at eye height, on the first free stretch nearest the middle. */
-  function hangWallObj(level, type, col) {
+  function hangWallObj(level, type, col, id) {
     const T = WTYPES[type]; if (!T) return false;
     const z = Math.max(0.9, Math.min(WH - T.h - 0.15, 1.55 - T.h / 2));
-    const taken = (pl, u) => WALLOBJS.some((w) => w.level === level && w.p === pl && !(u + T.w + 0.15 < w.u || u > w.u + (WTYPES[w.type] ? WTYPES[w.type].w : 1) + 0.15))
-      || (LEVELS[level].feats || []).some((f) => f.p === pl && Array.isArray(f.u) && !(u + T.w < f.u[0] - 0.1 || u > f.u[1] + 0.1));
+    const piece = { id: id || wallId(), type, level, p: 'B', u: 0, z, col };
     // The long back wall first, from its middle outward; then the side wall from its far corner (the stairs take its near end).
     for (const pl of ['B', 'L']) {
       const len = planeLen(pl), mid = (len - T.w) / 2, cands = [];
       if (pl === 'B') for (let d = 0; mid - d >= 0.3; d += 0.25) { cands.push(mid - d); if (d > 0 && mid + d <= len - T.w - 0.3) cands.push(mid + d); }
       else for (let u = 0.4; u <= len - T.w - 0.3; u += 0.25) cands.push(u);
-      for (const u of cands) if (!taken(pl, u)) { WALLOBJS.push({ type, level, p: pl, u, z, col }); return true; }
+      for (const u of cands) { piece.p = pl; piece.u = u; if (wallClear(piece)) { WALLOBJS.push(piece); return true; } }
     }
-    WALLOBJS.push({ type, level, p: BACK[0][1], u: (planeLen(BACK[0][1]) - T.w) / 2, z, col });
+    piece.p = BACK[0][1]; piece.u = (planeLen(BACK[0][1]) - T.w) / 2;
+    WALLOBJS.push(piece);
     return true;
   }
+  // ---- Wall pieces in Arrange: find one under the pointer, slide it along its wall, take it down, hang it again ----
+  const wallQuad = (w) => { const T = WTYPES[w.type]; return [[0, 0], [T.w, 0], [T.w, T.h], [0, T.h]].map(([du, dz]) => iso(...wallPoint(w.p, w.u + du, w.z + dz))); };
+  const wallName = (w) => (WTYPES[w.type] ? WTYPES[w.type].name : w.type);
+  /** The wall pieces on a level, on the walls the view shows, for the Arrange list. */
+  function wallObjsOn(level) { return WALLOBJS.filter((w) => w.level === level && WTYPES[w.type]).map((w) => ({ id: w.id, type: w.type, name: wallName(w), level: w.level, p: w.p, u: w.u, z: w.z, col: w.col, shown: BACK[VR].includes(w.p) })); }
+  /** Every wall piece in the house, for the Arrange list. */
+  function wallObjsAll() { return WALLOBJS.filter((w) => WTYPES[w.type]).map((w) => ({ id: w.id, type: w.type, name: wallName(w), level: w.level, col: w.col })); }
+  /** The id of the wall piece under a view point on the walls the view shows, if any. */
+  function hitWallObj(level, sx, sy) { let hit = null; WALLOBJS.forEach((w) => { if (w.level === level && WTYPES[w.type] && BACK[VR].includes(w.p) && inPoly(sx, sy, wallQuad(w))) hit = w; }); return hit ? hit.id : null; }
+  /** The view point at a wall piece's centre, for framing and tests. */
+  function wallObjView(id) { const w = WALLOBJS.find((x) => x.id === id); if (!w || !WTYPES[w.type]) return null; const T = WTYPES[w.type]; return iso(...wallPoint(w.p, w.u + T.w / 2, w.z + T.h / 2)); }
+  /** Slides a wall piece so its centre follows a view point (less where it was grabbed), kept on its wall and off the floor and ceiling. */
+  function moveWallObj(id, sx, sy, grab = [0, 0]) {
+    const w = WALLOBJS.find((x) => x.id === id); if (!w || !WTYPES[w.type]) return false;
+    const T = WTYPES[w.type];
+    // The wall is a plane in view space: a point on it is p0 + u * au + z * az. Solve the two for the point under the pointer.
+    const p0 = iso(...wallPoint(w.p, 0, 0)), pu = iso(...wallPoint(w.p, 1, 0)), pz = iso(...wallPoint(w.p, 0, 1));
+    const au = [pu[0] - p0[0], pu[1] - p0[1]], az = [pz[0] - p0[0], pz[1] - p0[1]];
+    const det = au[0] * az[1] - au[1] * az[0]; if (Math.abs(det) < 1e-6) return false;
+    const dx = sx - grab[0] - p0[0], dy = sy - grab[1] - p0[1];
+    const u = (dx * az[1] - dy * az[0]) / det - T.w / 2, z = (au[0] * dy - au[1] * dx) / det - T.h / 2;
+    w.u = Math.max(0.1, Math.min(planeLen(w.p) - T.w - 0.1, u));
+    w.z = Math.max(0.3, Math.min(WH - T.h - 0.1, z));
+    return true;
+  }
+  const wallObjClear = (id) => { const w = WALLOBJS.find((x) => x.id === id); return !!w && wallClear(w); };
+  /** Takes a wall piece down into storage. Returns its name, or null. */
+  function takeDownWallObj(id) { const i = WALLOBJS.findIndex((x) => x.id === id); if (i < 0) return null; const [w] = WALLOBJS.splice(i, 1); WALLSTORE.push(w); return wallName(w); }
+  function storedWallObjs() { return WALLSTORE.map((w) => ({ id: w.id, type: w.type, name: wallName(w), col: w.col })); }
+  /** Hangs a stored wall piece on a level's back wall again. */
+  function rehangWallObj(id, level) { const i = WALLSTORE.findIndex((x) => x.id === id); if (i < 0) return false; const w = WALLSTORE[i]; if (!hangWallObj(level, w.type, w.col, w.id)) return false; WALLSTORE.splice(i, 1); return true; }
   function drawWallDecor(level, back) { WALLOBJS.forEach(w => { if (w.level === level && back.includes(w.p) && !(arranging && arr.wHold === w)) drawWallObj(w); }); }
 
   const PARCEL = { stand: [1.5, 6.0], box: [0.55, 5.75] };
@@ -3068,7 +3110,8 @@ export function createHouseArt(ctx0, opts = {}) {
     if (Array.isArray(s.owned)) { owned = new Set(s.owned); }
     if (Array.isArray(s.LOOKS)) s.LOOKS.forEach((lk, i) => { if (LOOKS[i] && lk) Object.assign(LOOKS[i], lk); });
     if (Array.isArray(s.ROOMLOOK)) ROOMLOOK.forEach((r, i) => { Object.keys(r).forEach(k => delete r[k]); Object.assign(r, s.ROOMLOOK[i] || {}); });
-    WALLOBJS.length = 0; (s.WALLOBJS || []).forEach(w => { if (w && WTYPES[w.type]) WALLOBJS.push(w); });
+    WALLOBJS.length = 0; (s.WALLOBJS || []).forEach(w => { if (w && WTYPES[w.type]) { if (!w.id) w.id = wallId(); WALLOBJS.push(w); } });
+    WALLSTORE.length = 0; (s.WALLSTORE || []).forEach(w => { if (w && WTYPES[w.type]) { if (!w.id) w.id = wallId(); WALLSTORE.push(w); } });
     if (s.yard && Array.isArray(s.yard.t)) { s.yard.t.forEach((a, k) => { const t = YARD.tiles[k]; if (t && Array.isArray(a)) [t.len, t.water, t.weed, t.burn, t.mowedAt] = a; }); YARD.rainAt = s.yard.rainAt || 0; YARD.rainUntil = s.yard.rainUntil || 0; YARD.rainCheck = s.yard.rainCheck ?? -1; }
     if (typeof s.dishes === 'number') dishes = s.dishes;
     if (typeof s.power === 'boolean') power = s.power;
@@ -4032,6 +4075,7 @@ export function createHouseArt(ctx0, opts = {}) {
     LOOKS: getLooks(),
     ROOMLOOK: ROOMLOOK.map(r => JSON.parse(JSON.stringify(r))),
     WALLOBJS: WALLOBJS.map(w => Object.assign({}, w)),
+    WALLSTORE: WALLSTORE.map(w => Object.assign({}, w)),
     yard: { t: YARD.tiles.map(t => [t.len, t.water, t.weed, t.burn, t.mowedAt]), rainAt: YARD.rainAt, rainUntil: YARD.rainUntil, rainCheck: YARD.rainCheck },
   });
   const lookInfo = (kind, key) => (kind === 'paper' ? PAPERS[key] : kind === 'floor' ? FLOORS[key] : null) || null;
@@ -4104,6 +4148,12 @@ export function createHouseArt(ctx0, opts = {}) {
       ctx.beginPath(); hull.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
       ctx.strokeStyle = hot ? 'rgba(214,74,122,.95)' : 'rgba(214,74,122,.35)'; ctx.lineWidth = hot ? 2 : 1; ctx.setLineDash(hot ? [] : [4, 4]); ctx.stroke();
     });
+    WALLOBJS.forEach((w) => {
+      if (w.level !== level || !WTYPES[w.type] || !BACK[VR].includes(w.p)) return;
+      const q = wallQuad(w), mine = w.id === a.wall;
+      ctx.beginPath(); q.forEach((pt, i) => (i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]))); ctx.closePath();
+      ctx.strokeStyle = mine ? (a.wallValid === false ? 'rgba(220,70,60,.95)' : 'rgba(143,217,168,.95)') : 'rgba(214,74,122,.35)'; ctx.lineWidth = mine ? 2 : 1; ctx.setLineDash(mine ? [] : [4, 4]); ctx.stroke();
+    });
     ctx.setLineDash([]);
     const o = pick && OBJS.find(q => q.id === pick);
     if (o && o.level === level) {
@@ -4174,5 +4224,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, hangWallObj, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }

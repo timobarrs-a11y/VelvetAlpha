@@ -33,6 +33,8 @@ export interface CatalogEntry {
   set?: { items: string[]; off: number };
   /** Not in the shop until the player has it: it comes from a code (state/unlockCodes.ts), never from the shelves. */
   secret?: boolean;
+  /** Not in the shop until the player owns this catalog id: the finishing touches of a secret pack wait for the pack. */
+  needs?: string;
 }
 
 export const TABS = [
@@ -75,6 +77,8 @@ const bundle = (id: string, name: string, desc: string, items: string[], tags: s
 
 /** A secret entry: out of the shop until the player owns it. */
 const secret = (e: CatalogEntry): CatalogEntry => ({ ...e, secret: true });
+/** An entry that waits for another: out of the shop until the player owns `id`. */
+const after = (e: CatalogEntry, id: string): CatalogEntry => ({ ...e, needs: id });
 
 const hobby = (id: string, type: string, name: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
   id, name, price, icon: 'obj', tab: 'Hobbies', type, tags, cols, repeat: true,
@@ -226,8 +230,8 @@ export const CATALOG: CatalogEntry[] = [
   bundle('touches-arcade', 'Arcade finishing touches', 'The rest of the arcade: the carpet as a rug, a marquee sign that says PLAY in chasing bulbs, a pixel art print, a stack of game cartridges and a pinball machine with a playfield that comes alive when someone plays.',
     ['rug-arcade', 'wobj-marquee', 'wobj-pixelprint', 'cartridges', 'pinball'], ['playful', 'bold', 'vintage']),
 
-  bundle('touches-cuddle', 'Cuddle Clouds finishing touches', 'The rest of the clouds: a cloud-shaped rug with a rainbow across it, a rainbow arch for the wall, a cloud night light that glows, a pile of bear plushies and a swing seat hanging from a cloud that bobs and glows.',
-    ['rug-cuddle', 'wobj-rainbowarch', 'wobj-cloudlight', 'plushpile', 'cloudswing'], ['soft', 'playful', 'cozy']),
+  after(bundle('touches-cuddle', 'Cuddle Clouds finishing touches', 'The rest of the clouds: a cloud-shaped rug with a rainbow across it, a rainbow arch for the wall, a cloud night light that glows, a pile of bear plushies and a swing seat hanging from a cloud that bobs and glows.',
+    ['rug-cuddle', 'wobj-rainbowarch', 'wobj-cloudlight', 'plushpile', 'cloudswing'], ['soft', 'playful', 'cozy']), 'set-cuddle'),
 
   bundle('touches-neon', 'Neon finishing touches', 'The rest of the neon: a black grid rug edged in light, a neon bolt that flickers, a holo poster with a rolling scan, a server stack with blinking lights and a VR pod with ring lights and a holo cube that spins while someone is in it.',
     ['rug-neon', 'wobj-neonbolt', 'wobj-holoposter', 'serverstack', 'vrpod'], ['bold', 'modern', 'industrial']),
@@ -341,7 +345,7 @@ export const CATALOG: CatalogEntry[] = [
   furn('rugrunner', 'rugrunner', 'Runner rug', 60, ['cozy', 'natural'], ['#A63A2C', '#4A5DA8', '#D8C9AE', '#3F5B4C']),
   furn('ruground', 'ruground', 'Round rug', 80, ['soft', 'playful', 'warm'], ['#E8DCC8', '#D24A7A', '#8E9C96', '#2B2B30', '#E0A43A']),
   furn('rug-arcade', 'rugarcade', 'Arcade rug', 110, ['playful', 'bold', 'vintage'], ['#2B2459', '#15121F', '#3A2E73']),
-  furn('rug-cuddle', 'rugcloud', 'Cloud rug', 110, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F6EEF2', '#DCEEFA']),
+  after(furn('rug-cuddle', 'rugcloud', 'Cloud rug', 110, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F6EEF2', '#DCEEFA']), 'set-cuddle'),
   furn('rug-neon', 'rugneon', 'Grid rug', 110, ['bold', 'modern', 'industrial'], ['#111118', '#1E2230', '#2A2F3A']),
   furn('rug-gothic', 'ruggothic', 'Damask rug', 110, ['luxe', 'vintage', 'cozy'], ['#5E1F2A', '#2E3B57', '#3B2541']),
   furn('rug-candy', 'rugcandy', 'Lollipop rug', 110, ['soft', 'playful', 'warm'], ['#F6B7CC', '#BFE8D6', '#D6C4F0']),
@@ -562,8 +566,8 @@ export const CATALOG: CatalogEntry[] = [
   wallItem('wobj-aquarium', 'Aquarium', 200, ['modern', 'playful', 'cool'], ['#2B2B30', '#9C6B45', '#F2EEE8']),
   wallItem('wobj-marquee', 'Marquee sign', 140, ['playful', 'bold', 'vintage'], ['#F4C430', '#FF2E9A', '#19E6F0']),
   wallItem('wobj-pixelprint', 'Pixel art print', 60, ['playful', 'bold', 'vintage'], ['#19E6F0', '#FF2E9A', '#39D353']),
-  wallItem('wobj-rainbowarch', 'Rainbow arch', 140, ['soft', 'playful', 'cozy'], ['#F58A8A', '#AEDDF7']),
-  wallItem('wobj-cloudlight', 'Cloud night light', 60, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F9E27A']),
+  after(wallItem('wobj-rainbowarch', 'Rainbow arch', 140, ['soft', 'playful', 'cozy'], ['#F58A8A', '#AEDDF7']), 'set-cuddle'),
+  after(wallItem('wobj-cloudlight', 'Cloud night light', 60, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F9E27A']), 'set-cuddle'),
   wallItem('wobj-neonbolt', 'Neon bolt', 140, ['bold', 'modern', 'industrial'], ['#19E6F0', '#FF2E9A', '#FFB020']),
   wallItem('wobj-holoposter', 'Holo poster', 60, ['bold', 'modern', 'industrial'], ['#111118', '#19E6F0', '#FF2E9A']),
   wallItem('wobj-stainedglass', 'Stained glass panel', 140, ['luxe', 'vintage', 'cozy'], ['#8E2E3C', '#2E4C9A', '#C9A24A']),
@@ -580,7 +584,7 @@ export const CATALOG: CatalogEntry[] = [
   decor('coatrack', 'coatrack', 'Coat rack', 70, ['natural', 'minimal', 'vintage'], ['#2B2B30', '#7A4E32', '#C9A24A']),
   decor('bookstack', 'bookstack', 'Stacked books', 25, ['cozy', 'vintage', 'creative'], ['#B5476E', '#3F5B4C', '#2E3B57', '#C9A24A']),
   decor('cartridges', 'cartridges', 'Game cartridges', 30, ['playful', 'bold', 'vintage'], ['#F4C430', '#E63946', '#39D353', '#7A5CFF']),
-  decor('plushpile', 'plushpile', 'Plush pile', 30, ['soft', 'playful', 'cozy'], ['#F6B7CC', '#9CCBF2', '#F9E27A', '#C7A8F0']),
+  after(decor('plushpile', 'plushpile', 'Plush pile', 30, ['soft', 'playful', 'cozy'], ['#F6B7CC', '#9CCBF2', '#F9E27A', '#C7A8F0']), 'set-cuddle'),
   decor('serverstack', 'serverstack', 'Server stack', 30, ['bold', 'modern', 'industrial'], ['#111118', '#3A3F4A', '#1E2230']),
   decor('grimoires', 'grimoires', 'Grimoires', 30, ['luxe', 'vintage', 'cozy'], ['#5E1F2A', '#2A2224', '#2E3B57']),
   decor('candyjars', 'candyjars', 'Candy jars', 30, ['soft', 'playful', 'warm'], ['#F6B7CC', '#BFE8D6', '#D6C4F0']),
@@ -626,7 +630,7 @@ export const CATALOG: CatalogEntry[] = [
   hobby('jukebox', 'jukebox', 'Jukebox', 300, ['vintage', 'playful', 'bold'], ['#C2413A', '#4A5DA8', '#E0A43A']),
   hobby('clawmachine', 'clawmachine', 'Claw machine', 280, ['playful', 'bold', 'vintage'], ['#FF2E9A', '#19E6F0', '#F4C430', '#7A5CFF']),
   hobby('pinball', 'pinball', 'Pinball machine', 320, ['playful', 'bold', 'vintage'], ['#E63946', '#1E1A2E', '#2E6BD6', '#F4C430']),
-  hobby('cloudswing', 'cloudswing', 'Cloud swing', 320, ['soft', 'playful', 'cozy'], ['#F6B7CC', '#AEDDF7', '#C7A8F0', '#F9E27A']),
+  after(hobby('cloudswing', 'cloudswing', 'Cloud swing', 320, ['soft', 'playful', 'cozy'], ['#F6B7CC', '#AEDDF7', '#C7A8F0', '#F9E27A']), 'set-cuddle'),
   hobby('vrpod', 'vrpod', 'VR pod', 320, ['bold', 'modern', 'industrial'], ['#111118', '#FF2E9A', '#7A5CFF', '#19E6F0']),
   hobby('fortuneteller', 'fortuneteller', 'Fortune-telling machine', 320, ['luxe', 'vintage', 'cozy'], ['#5E1F2A', '#2A2224', '#2E3B57', '#3B2541']),
   hobby('gumball', 'gumball', 'Gumball machine', 320, ['soft', 'playful', 'warm'], ['#E04A6A', '#F6B7CC', '#BFE8D6', '#2E6BD6']),
@@ -677,7 +681,7 @@ export function catalogById(id: string): CatalogEntry | undefined {
 
 /** What the shop shows: secret entries only once the player has them. */
 export function visibleItems(items: CatalogEntry[], owned: ReadonlySet<string>): CatalogEntry[] {
-  return items.filter((i) => !i.secret || owned.has(i.id));
+  return items.filter((i) => (!i.secret || owned.has(i.id)) && (!i.needs || owned.has(i.needs)));
 }
 
 export function itemsForTab(tab: string): CatalogEntry[] {
