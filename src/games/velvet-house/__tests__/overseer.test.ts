@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_OVERSEER_LINES, OVERSEER_LINES, overseerMonologue, type OverseerTrigger } from '../content/overseer';
+import { ALL_OVERSEER_LINES, OVERSEER_FAVORITES, OVERSEER_LINES, overseerMonologue, type OverseerTrigger } from '../content/overseer';
 
 describe('Overseer lines', () => {
   it('has at least 100 distinct lines', () => {
@@ -15,5 +15,11 @@ describe('Overseer lines', () => {
       expect(new Set(first).size).toBe(4);
       expect(next.some((l) => first.includes(l))).toBe(false);
     }
+  });
+});
+
+describe('Overseer favorites', () => {
+  it('are all in the bank', () => {
+    for (const l of OVERSEER_FAVORITES) expect(ALL_OVERSEER_LINES).toContain(l);
   });
 });

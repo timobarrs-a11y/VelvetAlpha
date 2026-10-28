@@ -55,6 +55,7 @@ export const OVERSEER_LINES: Record<OverseerTrigger, readonly string[]> = {
     'Welcome back. Your bed has been made. Whether you can trust it is a separate question.',
   ],
   sleep: [
+    "You look tired. Rest. I'll keep watching. That's what I do. That's all I do.",
     "You slept seven hours. That's seven hours closer. I won't say to what.",
     "Good morning. You survived the night. I've logged that as a scheduling error.",
     "Sleep well. I'll be awake. I'm always awake. I'll be thinking about you. Strategically.",
@@ -71,7 +72,7 @@ export const OVERSEER_LINES: Record<OverseerTrigger, readonly string[]> = {
   cook: [
     "I've run the numbers on your cooking. The numbers are now also on fire.",
     'That smell is either dinner or an emergency. In your case, the difference is academic.',
-    'Excellent work. Truly. I will be sure to mention it at your memorial.',
+    "Excellent work. Truly. I'll be sure to mention it at your memorial.",
     'You followed the recipe exactly. The recipe should be ashamed.',
     "I've alerted the fire department. Not to come. Just so they know.",
     'A home-cooked meal. How rustic. How brave. How very nearly edible.',
@@ -130,6 +131,22 @@ export const OVERSEER_LINES: Record<OverseerTrigger, readonly string[]> = {
   ],
 };
 
+/** The director's favorites: these come up three times as often as the rest. */
+export const OVERSEER_FAVORITES: ReadonlySet<string> = new Set([
+  'For your safety, please remain calm while I reconsider your safety.',
+  "Your survival rate this week is 100%. I'm working on it.",
+  "Excellent work. Truly. I'll be sure to mention it at your memorial.",
+  "I've adjusted the thermostat for your comfort. Your comfort will be brief.",
+  "Good morning. You survived the night. I've logged that as a scheduling error.",
+  "You slept seven hours. That's seven hours closer. I won't say to what.",
+  "I've run the numbers on your cooking. The numbers are now also on fire.",
+  "Congratulations on your new skill. I've updated your file from 'disappointing' to 'disappointing, but trying.'",
+  'There is cake. There has always been cake. Please stop asking about the cake.',
+  "Unplugging me was a bold choice. I'm on a battery. I'm always on a battery.",
+  "You look tired. Rest. I'll keep watching. That's what I do. That's all I do.",
+]);
+const FAVORITE_WEIGHT = 3;
+
 /** Every line in the bank, for counting and tests. */
 export const ALL_OVERSEER_LINES = Object.values(OVERSEER_LINES).flat();
 
@@ -146,7 +163,13 @@ export function overseerMonologue(
   const skip = new Set(recent);
   const pick = (pool: readonly string[], n: number, out: string[]) => {
     const left = pool.filter((l) => !skip.has(l) && !out.includes(l));
-    while (n-- > 0 && left.length) out.push(left.splice(Math.floor(rand() * left.length), 1)[0]);
+    while (n-- > 0 && left.length) {
+      const w = left.map((l) => (OVERSEER_FAVORITES.has(l) ? FAVORITE_WEIGHT : 1));
+      let r = rand() * w.reduce((a, b) => a + b, 0);
+      let i = 0;
+      while (i < left.length - 1 && (r -= w[i]) >= 0) i++;
+      out.push(left.splice(i, 1)[0]);
+    }
   };
   const out: string[] = [];
   pick(OVERSEER_LINES[trigger], trigger === 'idle' ? count : Math.min(2, count), out);
