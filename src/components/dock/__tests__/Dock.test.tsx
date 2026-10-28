@@ -135,7 +135,8 @@ describe('Dock', () => {
     fireEvent.click(screen.getByTitle('Friends HQ'));
     fireEvent.click(screen.getByTitle('Andre'));
     expect(await screen.findByText('friends inbox')).toBeTruthy();
-    expect(screen.getByText('Earlier with buddy')).toBeTruthy();
+    // The windows load on demand (Dock.tsx), so each appears once its code has arrived.
+    expect(await screen.findByText('Earlier with buddy')).toBeTruthy();
     expect(await screen.findByText('2')).toBeTruthy(); // unread badge
   });
 
@@ -147,8 +148,8 @@ describe('Dock', () => {
     fireEvent.click(screen.getByTitle('Friends HQ'));
     await screen.findByText('friends inbox');
     expect(screen.queryByText('Earlier with friendly')).toBeNull();
-    expect(screen.getByText('Earlier with coach')).toBeTruthy();
-    expect(screen.getByText('Earlier with buddy')).toBeTruthy();
+    expect(await screen.findByText('Earlier with coach')).toBeTruthy();
+    expect(await screen.findByText('Earlier with buddy')).toBeTruthy();
   });
 
   it('shows one window at a time on a phone', async () => {
