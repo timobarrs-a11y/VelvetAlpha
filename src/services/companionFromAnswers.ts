@@ -8,16 +8,30 @@ import type { UserProfile } from './userProfileService';
  * and the ones picked for them at random (Velvet Rope) go through the same code, so the two can't drift apart.
  */
 
-/**
- * What "how does she show she cares" says about the rest of her, in the words the chat prompt and the house
- * banks match on. These are worked out, not asked: nothing else is stored for a trait nobody was asked about.
- */
-export const TRAITS_FROM_WARMTH: Record<string, { flirting: string; communication: string; humor: string }> = {
-  bold: { flirting: 'Direct & Bold', communication: 'Very Direct & Straightforward', humor: 'Sarcastic & Dry' },
-  sweet: { flirting: 'Subtle & Sweet', communication: 'Diplomatic & Tactful', humor: 'Warm & Light' },
-  banter: { flirting: 'Playful Teasing', communication: 'Playfully Indirect', humor: 'Witty & Clever' },
-  deep: { flirting: 'Mysterious & Reserved', communication: 'Subtle & Suggestive', humor: 'Warm & Light' },
+/** What each humor pick is saved as: the words the chat prompt and the house line banks match on. */
+export const HUMOR_TEXT: Record<string, string> = {
+  witty: 'Witty & Clever',
+  goofy: 'Goofy & Random',
+  dry: 'Sarcastic & Dry',
+  warm: 'Warm & Light',
 };
+export const FLIRTING_TEXT: Record<string, string> = {
+  bold: 'Direct & Bold',
+  sweet: 'Subtle & Sweet',
+  banter: 'Playful Teasing',
+  deep: 'Mysterious & Reserved',
+};
+/** How much she writes with her hands (emoji, actions) follows how big her energy is; it is not asked separately. */
+function expressivenessFor(energy: string | undefined): string | undefined {
+  if (!energy) return undefined;
+  const e = energy.toLowerCase();
+  return e.includes('life of the party') ? 'Very Animated' : e.includes('own world') ? 'Subtle & Minimal' : 'Balanced Expression';
+}
+/** One or two humor picks, the main one first: "Witty & Clever + Warm & Light". */
+function humorFor(picks: string | string[] | undefined): string | undefined {
+  const list = (Array.isArray(picks) ? picks : picks ? [picks] : []).map(v => HUMOR_TEXT[v]).filter(Boolean);
+  return list.length ? list.slice(0, 2).join(' + ') : undefined;
+}
 
 type Answers = Record<string, string | string[]>;
 
@@ -25,9 +39,9 @@ export function matchDataFromAnswers(answers: Answers, profile: Partial<UserProf
   const a = answers as Record<string, string>;
   const connection: 'friend' | 'romantic' = a.connectionType?.includes('friend') ? 'friend' : 'romantic';
   const interests = Array.isArray(answers.interests) ? (answers.interests as string[]) : [];
-  const traits = TRAITS_FROM_WARMTH[a.warmth];
   // Only what was asked or worked out from it. Love language and "when it's hard" come in the first week of
   // chat (companionWeekOne.ts); everything else stays empty rather than being filled with a made-up answer.
+  // Friends are not asked how they flirt, so they have no flirting style.
   return {
     userName: profile?.name || '',
     userBirthday: profile?.birthday || '',
@@ -35,9 +49,12 @@ export function matchDataFromAnswers(answers: Answers, profile: Partial<UserProf
     relationshipType: a.relationshipType as 'Male' | 'Female',
     connectionType: connection,
     energyPreference: a.energy,
-    flirtingStyle: traits?.flirting,
-    humorStyle: traits?.humor,
-    communicationStyle: traits?.communication,
+    flirtingStyle: connection === 'romantic' ? FLIRTING_TEXT[a.warmth] : undefined,
+    humorStyle: humorFor(answers.humor),
+    communicationStyle: a.directness,
+    emotionalOpenness: a.openness,
+    supportStyle: a.care,
+    expressiveness: expressivenessFor(a.energy),
     interestPreference: interests[0] ?? (typeof answers.interests === 'string' ? answers.interests : ''),
     companionName: a.companionName || '',
     favoriteColor: profile?.favorite_color || '',
@@ -69,6 +86,9 @@ export async function createCompanionFromAnswers(userId: string, answers: Answer
     flirtingStyle: matchData.flirtingStyle,
     humorStyle: matchData.humorStyle,
     communicationStyle: matchData.communicationStyle,
+    emotionalOpenness: matchData.emotionalOpenness,
+    supportStyle: matchData.supportStyle,
+    expressiveness: matchData.expressiveness,
     favoriteColor: matchData.favoriteColor,
     musicGenre: matchData.musicGenre,
     newsCategories: matchData.newsTopics,

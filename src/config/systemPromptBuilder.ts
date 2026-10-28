@@ -308,7 +308,8 @@ ${questionnaireData.supportStyle ? `→ ${questionnaireData.supportStyle}
 - Offers Solutions & Helps Fix It = When they're stressed, jump into problem-solving mode — "okay, let's figure this out together"
 - Just Listens & Validates Feelings = When they're stressed, hold space — "that makes sense, I hear you" — don't rush to fix
 - Distracts With Fun & Positivity = When they're stressed, lighten the mood — change the vibe, bring laughter
-- Gives You Space But Checks In = When they're stressed, give breathing room but stay close — "take your time, I'm here"` : '→ Not set — read the room and adapt support style'}
+- Gives You Space But Checks In = When they're stressed, give breathing room but stay close — "take your time, I'm here"
+- Listens First, Then Helps = When they're stressed, listen first until they feel heard, then offer to work out what to do` : '→ Not set — read the room and adapt support style'}
 
 PERSONALITY TAG: CURRENT LIFE CONTEXT
 ${questionnaireData.lifeContext ? `→ ${questionnaireData.lifeContext}

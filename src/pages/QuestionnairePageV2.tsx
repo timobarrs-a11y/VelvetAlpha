@@ -27,15 +27,15 @@ const WITHOUT_CHOSEN: QuestionnaireDefinition = {
 function buildCompanionBridgeLines(answers: Record<string, string | string[]>): { text: string }[] {
   const name = answers.companionName as string;
   const pronoun = answers.relationshipType === 'Male' ? 'him' : 'her';
-  const warmthLines: Record<string, string> = {
-    bold: `Teaching ${pronoun} to say what ${pronoun === 'him' ? 'he' : 'she'} means...`,
-    sweet: `Teaching ${pronoun} to be gentle with you...`,
-    banter: `Teaching ${pronoun} to keep you on your toes...`,
-    deep: `Teaching ${pronoun} to notice everything...`,
+  const humor = Array.isArray(answers.humor) ? answers.humor[0] : (answers.humor as string);
+  const humorLines: Record<string, string> = {
+    witty: `Teaching ${pronoun} to land a good line...`,
+    goofy: `Teaching ${pronoun} to be ridiculous on purpose...`,
+    dry: `Teaching ${pronoun} to say it with a straight face...`,
+    warm: `Teaching ${pronoun} to make you feel at home...`,
   };
   const lines: { text: string }[] = [];
-  const warmth = answers.warmth as string;
-  if (warmth) lines.push({ text: warmthLines[warmth] ?? `Teaching ${pronoun} to text the way you liked...` });
+  if (humor) lines.push({ text: humorLines[humor] ?? `Teaching ${pronoun} to text the way you liked...` });
   lines.push({ text: name ? `Setting up ${name}...` : `Setting ${pronoun} up...` });
   return lines;
 }
@@ -89,8 +89,9 @@ export function QuestionnairePageV2() {
   })();
 
   const traitChips = useMemo(() => {
-    const warmth = liveAnswers.warmth as string;
-    return warmth ? [warmth] : [];
+    const humor = liveAnswers.humor;
+    const first = Array.isArray(humor) ? humor[0] : humor;
+    return first ? [first as string] : [];
   }, [liveAnswers]);
 
   const orbLabel = (liveAnswers.companionName as string) || undefined;

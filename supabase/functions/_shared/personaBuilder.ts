@@ -38,7 +38,7 @@ interface _UserProfile {
 const ENERGY_MAP: [string[], string][] = [
   [['life of the party', 'outgoing', 'social'], "You're the life of the party — social, outgoing, you bring the energy and light up every conversation."],
   [['somewhere in between', 'balanced', 'adaptable'], "Balanced energy — you can be lively or chill depending on the moment, naturally adaptable."],
-  [['in your own world', 'introspective', 'mysterious', 'thoughtful'], "Thoughtful and introspective — you don't perform, you just exist authentically with a quiet, mysterious energy."],
+  [['in your own world', 'own world', 'introspective', 'mysterious', 'thoughtful'], "Thoughtful and introspective — you don't perform, you just exist authentically with a quiet, mysterious energy."],
 ];
 
 const HUMOR_MAP: [string[], string][] = [
@@ -82,6 +82,7 @@ const CONFLICT_MAP: [string[], string][] = [
 ];
 
 const SUPPORT_MAP: [string[], string][] = [
+  [['listens first', 'then helps'], "When they're stressed, you listen first — 'that sounds like a lot, I'm here' — and once they have felt heard, you ask if they want help working out what to do."],
   [['solutions', 'fix', 'problem-solving', 'figure out'], "When they're stressed, you jump into problem-solving mode — 'okay, let's figure this out together'."],
   [['listens', 'validate', 'hold space', 'hear'], "When they're stressed, you hold space — 'that makes sense, I hear you' — you don't rush to fix."],
   [['distract', 'fun', 'positivity', 'lighten'], "When they're stressed, you lighten the mood — change the vibe, bring laughter, distract with fun."],
@@ -139,6 +140,19 @@ function matchTrait(value: string | null | undefined, map: [string[], string][])
   return `"${value}" — embody this fully.`;
 }
 
+// Humor can be a mix: "Witty & Clever + Warm & Light" is mostly witty, with a streak of warm. The first one named
+// is the main one, so the order they appear in the text decides, not the order of the list above.
+function matchHumor(value: string | null | undefined): string | null {
+  if (!value || typeof value !== 'string') return null;
+  const lower = value.toLowerCase();
+  const found = HUMOR_MAP
+    .map(([tokens, instruction]) => ({ at: Math.min(...tokens.map(t => lower.indexOf(t)).filter(i => i >= 0), Infinity), instruction }))
+    .filter(f => f.at !== Infinity)
+    .sort((a, b) => a.at - b.at);
+  if (found.length === 0) return matchTrait(value, HUMOR_MAP);
+  return found.length === 1 ? found[0].instruction : `${found[0].instruction} With a streak of: ${found[1].instruction}`;
+}
+
 function arrayToText(arr: string[] | null | undefined): string {
   if (!arr || !Array.isArray(arr) || arr.length === 0) return '';
   return arr.filter(Boolean).join(', ');
@@ -150,7 +164,7 @@ function buildTraitBlock(companion: CompanionRow, isRomantic: boolean): string {
   const energy = matchTrait(companion.energy_preference, ENERGY_MAP);
   if (energy) traits.push(`- Energy: ${energy}`);
 
-  const humor = matchTrait(companion.humor_style, HUMOR_MAP);
+  const humor = matchHumor(companion.humor_style);
   if (humor) traits.push(`- Humor: ${humor}`);
 
   if (isRomantic) {
@@ -257,7 +271,7 @@ function buildMentorTraitBlock(companion: CompanionRow): string {
   const energy = matchTrait(companion.energy_preference, ENERGY_MAP);
   if (energy) traits.push(`- Energy: ${energy}`);
 
-  const humor = matchTrait(companion.humor_style, HUMOR_MAP);
+  const humor = matchHumor(companion.humor_style);
   if (humor) traits.push(`- Humor: ${humor}`);
 
   const conflict = matchTrait(companion.confrontation_style, CONFLICT_MAP);

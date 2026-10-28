@@ -6,11 +6,13 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 20,
   chapters: [
     { id: 'connection', label: 'How you connect', questionIds: ['relationshipType', 'connectionType'] },
-    { id: 'energy', label: 'Who {she} is', questionIds: ['energy', 'beat1'] },
+    { id: 'energy', label: 'Who {she} is', questionIds: ['energy', 'humor', 'beat1'] },
+    { id: 'treats', label: 'How {she} treats you', questionIds: ['directness', 'openness', 'care'] },
     { id: 'warmth', label: 'How {she} loves', questionIds: ['warmth', 'interests'] },
-    // How {she} texts (direct, playful, gentle...) is not asked: it follows from how {she} shows {she} cares, and the
-    // signature voice page that comes after covers the rest. Love language and "when it's hard" are asked by the companion in its first week
-    // (supabase/functions/_shared/companionWeekOne.ts), not here.
+    // Six dials, each one thing the companion visibly does differently (docs/onboarding/voice-audit.md): energy,
+    // humor, how straight {she} is, how open, fix-or-listen, and (companions only) how bold. Everything else a person
+    // could be asked is learned in conversation: love language and "when it's hard" in the first week
+    // (supabase/functions/_shared/companionWeekOne.ts).
     { id: 'depth', label: 'The bond', questionIds: ['companionName', 'beat2'] },
   ],
   questions: [
@@ -45,7 +47,7 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'energy',
       archetype: 'scrub',
       chapter: 'energy',
-      question: (ctx) => tpl(`Picture your ideal person. Is {she} the life of the party, or in {hers} own world?`, ctx),
+      question: (ctx) => tpl(`Picture {her} walking into a party. Does {she} work the room, or find the quiet corner?`, ctx),
       confidence: 'tapped',
       config: {
         min: 0,
@@ -53,13 +55,28 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
         step: 1,
         default: 1,
         leftLabel: 'Life of the party',
-        rightLabel: 'In {hers} own world',
+        rightLabel: 'In {their} own world',
         valueLabels: [
           'Life of the party',
           'Somewhere in between',
-          'In {hers} own world',
+          'In {their} own world',
         ],
       },
+    },
+    {
+      id: 'humor',
+      archetype: 'preview',
+      chapter: 'energy',
+      question: (ctx) => tpl(`You burn the toast and set off the smoke alarm. What does {she} say?`, ctx),
+      confidence: 'tapped',
+      pickUpTo: 2,
+      pickHint: 'Pick the one that sounds most like them. Add a second if they are a mix.',
+      bubbles: [
+        { voice: 'Witty', value: 'witty', messages: ["Impressive. You've turned breakfast into a fire drill."] },
+        { voice: 'Goofy', value: 'goofy', messages: ['BREAKING NEWS: toast escapes, alarm sounds the alert 🚨🍞'] },
+        { voice: 'Dry', value: 'dry', messages: ["Crispy. Just how the smoke detector likes it."] },
+        { voice: 'Warm', value: 'warm', messages: ["Aw, come here, it's just toast. I'll open a window, you make more."] },
+      ],
     },
     {
       id: 'beat1',
@@ -75,10 +92,54 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       },
     },
     {
+      id: 'directness',
+      archetype: 'scrub',
+      chapter: 'treats',
+      question: (ctx) => tpl(`You ask {her} how the new haircut looks, and it is not great. What happens?`, ctx),
+      confidence: 'tapped',
+      config: {
+        min: 0, max: 2, step: 1, default: 1,
+        leftLabel: 'Tells you straight',
+        rightLabel: 'Hints and teases',
+        valueLabels: ['Tells you straight', 'Tactful, but honest', 'Hints and teases'],
+        values: ['Very Direct & Straightforward', 'Diplomatic & Tactful', 'Playfully Indirect'],
+      },
+    },
+    {
+      id: 'openness',
+      archetype: 'scrub',
+      chapter: 'treats',
+      question: (ctx) => tpl(`{She} has had a rough week. Does {she} tell you about it?`, ctx),
+      confidence: 'tapped',
+      config: {
+        min: 0, max: 2, step: 1, default: 1,
+        leftLabel: 'Keeps it to {herself}',
+        rightLabel: 'Tells you everything',
+        valueLabels: ['Keeps it to {herself}', "Opens up when {she}'s ready", 'Tells you everything'],
+        values: ['Private & Guarded', 'Opens Up Over Time', 'Open Book'],
+      },
+    },
+    {
+      id: 'care',
+      archetype: 'scrub',
+      chapter: 'treats',
+      question: (ctx) => tpl(`You come home wrecked after a bad day. What does {she} do?`, ctx),
+      confidence: 'tapped',
+      config: {
+        min: 0, max: 2, step: 1, default: 1,
+        leftLabel: 'Rolls up {their} sleeves',
+        rightLabel: 'Just stays with you',
+        valueLabels: ['Fixes it with you', 'Listens first, then helps', 'Just listens'],
+        values: ['Offers Solutions & Helps You Fix It', 'Listens First, Then Helps', 'Just Listens & Validates'],
+      },
+    },
+    {
       id: 'warmth',
       archetype: 'preview',
       chapter: 'warmth',
-      question: (ctx) => tpl(`How does {she} show {she} cares? Pick the one that hits.`, ctx),
+      // Friends do not flirt: this is the one question only a companion is asked.
+      skipIf: (ctx) => ctx.subject === 'friend' || ctx.answers.connectionType === 'friend',
+      question: (ctx) => tpl(`Now the fun part. How does {she} let you know {she}'s into you?`, ctx),
       confidence: 'tapped',
       bubbles: [
         {
@@ -119,7 +180,7 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'interests',
       archetype: 'grid',
       chapter: 'warmth',
-      question: (ctx) => tpl(`What's {she} passionate about?`, ctx),
+      question: (ctx) => tpl(`What is {she} into? Pick a few.`, ctx),
       confidence: 'tapped',
       multiSelect: true,
       minSelections: 1,

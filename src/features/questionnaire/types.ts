@@ -6,6 +6,8 @@ export interface PronounSet {
   she: string;
   her: string;
   hers: string;
+  /** The possessive that goes before a noun: "her own world", "his own world". */
+  their: string;
   herself: string;
 }
 
@@ -42,6 +44,8 @@ export interface ScrubConfig {
   leftLabel: string;
   rightLabel: string;
   valueLabels: string[];
+  /** What is saved for each stop, when it should not be the label that is shown. */
+  values?: string[];
 }
 
 export interface PreviewBubble {
@@ -132,6 +136,10 @@ export interface ScrubQuestion extends BaseQuestion {
 export interface PreviewQuestion extends BaseQuestion {
   archetype: 'preview';
   bubbles: PreviewBubble[];
+  /** Pick up to this many (the first one tapped is the main one); the answer is the list. Without it, one tap answers. */
+  pickUpTo?: number;
+  /** Said under the bubbles when more than one can be picked. */
+  pickHint?: string;
 }
 
 export interface BeatQuestion extends Omit<BaseQuestion, 'question'> {

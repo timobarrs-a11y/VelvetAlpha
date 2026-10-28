@@ -90,6 +90,6 @@ describe('the companion questionnaire (build your own)', () => {
   it('starts at the first real question without asking who or what kind again', () => {
     mount('/questionnaire?gender=Male&type=friend', <QuestionnairePageV2 />);
     expect(screen.queryAllByText('Who are you looking for?')).toHaveLength(0);
-    expect(screen.getAllByText(/Is he the life of the party/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Picture him walking into a party/).length).toBeGreaterThan(0);
   });
 });

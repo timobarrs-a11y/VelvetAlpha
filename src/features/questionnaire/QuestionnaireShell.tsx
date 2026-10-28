@@ -260,7 +260,7 @@ export function QuestionnaireShell({
 
   const handleScrubSubmit = () => {
     const scrubQ = question as ScrubQuestion;
-    const label = tpl(scrubQ.config.valueLabels[scrubValue] || String(scrubValue), ctx);
+    const label = tpl(scrubQ.config.values?.[scrubValue] ?? scrubQ.config.valueLabels[scrubValue] ?? String(scrubValue), ctx);
     handleAnswer(label);
   };
 
@@ -991,47 +991,76 @@ function PreviewRenderer({
   setSelectedOption,
 }: {
   question: PreviewQuestion;
-  onSelect: (value: string) => void;
+  onSelect: (value: string | string[]) => void;
   selectedOption: number | null;
   setSelectedOption: (v: number | null) => void;
 }) {
+  const max = question.pickUpTo ?? 1;
+  // More than one allowed: taps add and remove, in the order they were made, and Next sends the list.
+  const [picked, setPicked] = useState<number[]>([]);
+  const multi = max > 1;
+  const bubbleButton = (bubble: PreviewQuestion['bubbles'][number], index: number) => {
+    const rank = picked.indexOf(index);
+    const on = multi ? rank >= 0 : selectedOption === index;
+    return (
+      <button
+        key={index}
+        onClick={() => {
+          if (multi) {
+            setPicked(prev => prev.includes(index) ? prev.filter(i => i !== index) : prev.length >= max ? prev : [...prev, index]);
+            return;
+          }
+          setSelectedOption(index);
+          setTimeout(() => {
+            onSelect(bubble.value);
+            setSelectedOption(null);
+          }, 400);
+        }}
+        disabled={!multi && selectedOption !== null}
+        aria-pressed={multi ? on : undefined}
+        className={`w-full text-left p-4 rounded-2xl border-2 transition-all duration-200 ${
+          on
+            ? 'border-green-500/60 bg-green-900/20'
+            : 'border-white/10 bg-white/[0.03] hover:border-rose-400/40 hover:bg-white/[0.06]'
+        } ${!multi && selectedOption !== null && selectedOption !== index ? 'opacity-40' : ''} ${multi && !on && picked.length >= max ? 'opacity-50' : ''}`}
+      >
+        <p className="text-xs text-rose-400/70 font-semibold mb-2 uppercase tracking-wider">
+          {bubble.voice}{multi && rank === 0 && picked.length > 1 ? ' · main' : ''}{multi && rank === 1 ? ' · and a bit of this' : ''}
+        </p>
+        <div className="space-y-1.5">
+          {bubble.messages.map((msg, i) => (
+            <div
+              key={i}
+              className="inline-block px-4 py-2.5 rounded-2xl rounded-bl-md text-sm text-white"
+              style={{
+                background: 'linear-gradient(135deg, rgba(244,63,94,0.15) 0%, rgba(251,113,133,0.1) 100%)',
+                border: '1px solid rgba(244,63,94,0.15)',
+              }}
+            >
+              {msg}
+            </div>
+          ))}
+        </div>
+        {on && <Check className="w-5 h-5 text-green-400 mt-2" />}
+      </button>
+    );
+  };
   return (
     <div className="space-y-3">
-      {question.bubbles.map((bubble, index) => (
-        <button
-          key={index}
-          onClick={() => {
-            setSelectedOption(index);
-            setTimeout(() => {
-              onSelect(bubble.value);
-              setSelectedOption(null);
-            }, 400);
-          }}
-          disabled={selectedOption !== null}
-          className={`w-full text-left p-4 rounded-2xl border-2 transition-all duration-200 ${
-            selectedOption === index
-              ? 'border-green-500/60 bg-green-900/20'
-              : 'border-white/10 bg-white/[0.03] hover:border-rose-400/40 hover:bg-white/[0.06]'
-          } ${selectedOption !== null && selectedOption !== index ? 'opacity-40' : ''}`}
-        >
-          <p className="text-xs text-rose-400/70 font-semibold mb-2 uppercase tracking-wider">{bubble.voice}</p>
-          <div className="space-y-1.5">
-            {bubble.messages.map((msg, i) => (
-              <div
-                key={i}
-                className="inline-block px-4 py-2.5 rounded-2xl rounded-bl-md text-sm text-white"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(244,63,94,0.15) 0%, rgba(251,113,133,0.1) 100%)',
-                  border: '1px solid rgba(244,63,94,0.15)',
-                }}
-              >
-                {msg}
-              </div>
-            ))}
-          </div>
-          {selectedOption === index && <Check className="w-5 h-5 text-green-400 mt-2" />}
-        </button>
-      ))}
+      {question.bubbles.map(bubbleButton)}
+      {multi && (
+        <div className="flex flex-col items-center gap-2 pt-1">
+          {question.pickHint && <p className="text-sm text-gray-500">{question.pickHint}</p>}
+          <button
+            onClick={() => onSelect(picked.map(i => question.bubbles[i].value))}
+            disabled={picked.length === 0}
+            className={`${NEXT_BUTTON_CLASS} disabled:cursor-not-allowed`}
+            style={picked.length === 0 ? { background: 'rgb(55 65 81)' } : { background: 'linear-gradient(to right, rgb(244 63 94), rgb(219 39 119))' }}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }
