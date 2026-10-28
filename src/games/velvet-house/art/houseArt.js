@@ -1694,6 +1694,53 @@ export function createHouseArt(ctx0, opts = {}) {
   const HEAD_W = 24;
   // Shoes follow the pants: white sneakers with jeans, brown boots with breeches, black boots with leather and uniforms.
   const SHOE_COLOR = { jeans: '#EDE8E0', baggy: '#EDE8E0', shorts: '#EDE8E0', cheer_skirt: '#F6F6F4', scrub_pants: '#F4F4F2', breeches: '#3A2A1C', leather: '#101013', cop_pants: '#17171B' };
+  // The drawn head, for anyone without avatar head sprites (visitors, and a resident whose sprites
+  // have not loaded yet). Built at the sprites' size and turned in three-quarters: `rt` is how far
+  // right the head points (-1..1) and `fr` how far toward the camera, so the features slide across
+  // the face as the head turns and the hair takes over as it turns away.
+  function drawSimpleHead(cx, cy, R, o) {
+    const L = o.L, skin = L.skin, hair = L.hair, fr = o.fr, rt = o.rt;
+    const vis = Math.max(0, Math.min(1, (fr + 0.35) / 0.7)); // how much of the face shows
+    const off = rt * R * 0.42; // the features lead the turn
+    ctx.save(); ctx.translate(cx, cy); if (o.rot) ctx.rotate(o.rot);
+    [-1, 1].forEach(sd => circle(sd * R * 0.92 - rt * R * 0.25, R * 0.08, R * 0.2, skin)); // ears, behind
+    circle(0, 0, R, skin);
+    if (L.longHair) [-1, 1].forEach(sd => ell(sd * R * 0.9 - rt * R * 0.2, R * 0.35, R * 0.3, R * 0.75, hair));
+    // The hair cap: over the top from the front, most of the head from behind.
+    const back = Math.max(0, -fr), sw = o.sway || 0;
+    ell(-rt * R * 0.22 + sw * 0.3, -R * 0.45 + back * R * 0.35, R * 1.03, R * 0.62 + back * R * 0.45, hair);
+    ell(-rt * R * 0.22 + sw * 0.3 - R * 0.3, -R * 0.8, R * 0.32, R * 0.12, shade(hair, 0.28), null, -0.3);
+    if (vis > 0.01) {
+      ctx.save(); ctx.globalAlpha *= vis;
+      const eyeY = -R * 0.05 + (o.headDown ? R * 0.12 : 0) - (o.lookUp ? R * 0.1 : 0);
+      const gap = R * 0.42 * (1 - Math.abs(rt) * 0.35), g = (o.gaze || 0) * 0.5;
+      const a0 = ctx.globalAlpha;
+      ctx.globalAlpha = a0 * 0.18; [-1, 1].forEach(sd => circle(off + sd * R * 0.6, R * 0.3, R * 0.22, '#E0607A')); ctx.globalAlpha = a0;
+      // Eyes: whites, pupils that follow the gaze and the turn, lids that close for a blink and droop when tired.
+      const lids = o.tired || o.yawn ? 0.5 : 1, open = Math.max(0, lids * (1 - (o.blink || 0)));
+      const bi = o.expr === 'annoyed' ? R * 0.06 : o.expr === 'sad' ? -R * 0.07 : 0;
+      [-1, 1].forEach(sd => {
+        const ex = off + sd * gap, ry = R * 0.2 * open;
+        if (open > 0.08) {
+          ell(ex, eyeY, R * 0.17, ry, '#F6F3EE');
+          ell(ex + g + rt * R * 0.05, eyeY + R * 0.01, R * 0.09, Math.min(ry, R * 0.1), '#241B25');
+        } else { ctx.fillStyle = '#241B25'; ctx.fillRect(ex - R * 0.16, eyeY - 0.5, R * 0.32, 1); }
+        // Brows: level by default, down at the inner end when annoyed, up when sad.
+        ctx.strokeStyle = shade(hair, -0.3); ctx.lineWidth = 1; ctx.beginPath();
+        ctx.moveTo(ex - sd * R * 0.2, eyeY - R * 0.3 - bi * 0.3); ctx.lineTo(ex + sd * R * 0.2, eyeY - R * 0.3 + bi); ctx.stroke();
+      });
+      circle(off + rt * R * 0.12, eyeY + R * 0.3, R * 0.08, shade(skin, -0.2)); // the nose leads the turn
+      const mx = off * 0.9, my = R * 0.5;
+      ctx.strokeStyle = '#4A2B2B'; ctx.lineWidth = 1.1;
+      if (o.talk) ell(mx, my, R * 0.16, (0.5 + 0.5 * Math.sin((o.t || 0) * 13 + (o.seed || 0) * 7)) * R * 0.18 + R * 0.04, '#8C4A42');
+      else if (o.yawn) ell(mx, my, R * 0.14, R * 0.2, '#5A2A2A');
+      else if (o.smile) { ctx.beginPath(); ctx.arc(mx, my - R * 0.12, R * 0.22, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); }
+      else if (o.sad) { ctx.beginPath(); ctx.arc(mx, my + R * 0.2, R * 0.18, 1.2 * Math.PI, 1.8 * Math.PI); ctx.stroke(); }
+      else { ctx.beginPath(); ctx.moveTo(mx - R * 0.14, my); ctx.lineTo(mx + R * 0.14, my); ctx.stroke(); }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
   function drawHeadImage(img, cx, chinY, w, mirror, rot) {
     const h = w * 1.04;
     ctx.save(); ctx.translate(cx, chinY);
@@ -1840,17 +1887,31 @@ export function createHouseArt(ctx0, opts = {}) {
     hps.ha = turnHead(hps.ha ?? bodyA, headTarget(bodyA, hps.want ?? bodyA, lookA, glance), Math.max(0.001, Math.min(0.05, rdt || 0.016)));
     const hdir = [Math.cos(hps.ha), Math.sin(hps.ha)], hf = facing(hdir);
     if (pose === 'sleep') {
-      // Breathing under the covers, and rolling over now and then.
-      const [lx, ly] = c.face, breath = Math.sin(t * 1.2 + c.seed * 4) * 0.012;
-      const turn = Math.floor((t + c.seed * 37) / 24) % 2 === 1, tilt = turn ? 1 : -1;
-      const head = P3(0, 0, 0.16), mid = P3(lx * 0.3, ly * 0.3, 0.14 + breath), feet = P3(lx * 1.45, ly * 1.45, 0.12);
-      limb(mid[0], mid[1], feet[0], feet[1], shade(L.top, 0.25), 15 + breath * 60);
-      limb(mid[0] + tilt * 3, mid[1] - 2, mid[0] + tilt * 1, mid[1] + 1, shade(L.top, 0.35), 4);
-      if (L.heads && L.heads.neutral) drawHeadImage(L.heads.blink || L.heads.neutral, head[0], head[1] + 4, HEAD_W * 0.9, tilt < 0, tilt * -1.1);
-      else {
-        if (L.longHair) ell(head[0] - 3, head[1] - 1, 7, 4, L.hair);
-        circle(head[0], head[1] - 2, 5.5, L.skin); ell(head[0] - 1, head[1] - 5, 6, 3.5, L.hair);
+      // Under the covers: breathing, and rolling over now and then, eased rather than popped.
+      const sps = poseState(c), [lx, ly] = c.face, breath = Math.sin(t * 1.2 + c.seed * 4) * 0.012;
+      const wantRoll = Math.floor((t + c.seed * 37) / 24) % 2 === 1 ? 1 : -1;
+      const sdt = Math.max(0.001, Math.min(0.05, rdt || 0.016));
+      if (sps.roll == null) sps.roll = wantRoll;
+      sps.roll += (wantRoll - sps.roll) * Math.min(1, sdt * 2.5);
+      const roll = sps.roll;
+      const head = P3(0, 0, 0.16), shd = P3(lx * 0.28, ly * 0.28, 0.16 + breath), hips = P3(lx * 0.78, ly * 0.78, 0.13), feet = P3(lx * 1.45, ly * 1.45, 0.1);
+      const cover = shade(L.top, 0.25);
+      // The body under the cover: broad at the shoulders, narrower down the legs, a bump for the feet.
+      limb(hips[0], hips[1], feet[0], feet[1], cover, 11);
+      ell(feet[0], feet[1] - 1, 5, 3.2, shade(L.top, 0.32));
+      limb(shd[0], shd[1], hips[0], hips[1], cover, 16 + breath * 60);
+      limb(shd[0], shd[1] + 2, hips[0], hips[1] + 2, shade(L.top, 0.1), 1.2); // the fold
+      // An arm draped over the cover on the upper side of the roll.
+      const bvx = feet[0] - head[0], bvy = feet[1] - head[1], bl0 = Math.hypot(bvx, bvy) || 1, ux = bvx / bl0, uy = bvy / bl0, px = -uy, py = ux;
+      const up = Math.abs(roll) > 0.3 ? Math.sign(roll) : 0;
+      if (up) {
+        ctx.save(); ctx.globalAlpha *= Math.min(1, (Math.abs(roll) - 0.3) / 0.5);
+        const s0 = [shd[0] + px * up * 5, shd[1] + py * up * 5], e0 = [shd[0] + ux * 6 + px * up * 7.5, shd[1] + uy * 6 + py * up * 7.5], h0 = [shd[0] + ux * 13 + px * up * 4, shd[1] + uy * 13 + py * up * 4];
+        limb(s0[0], s0[1], e0[0], e0[1], L.top, 4); limb(e0[0], e0[1], h0[0], h0[1], L.skin, 3.2); circle(h0[0], h0[1], 2.2, L.skin);
+        ctx.restore();
       }
+      if (L.heads && L.heads.neutral) drawHeadImage(L.heads.blink || L.heads.neutral, head[0], head[1] + 4, HEAD_W * 0.9, roll < 0, -roll * 1.1);
+      else drawSimpleHead(head[0], head[1] - 5, 9, { L, fr: 0.6, rt: -roll * 0.7, blink: 1, rot: -roll * 1.1, t, seed: c.seed });
       const zz = (t * 0.6 + c.seed) % 1; ctx.globalAlpha = 1 - zz; ctx.fillStyle = '#F2EEE8'; ctx.font = '600 9px Inter, system-ui, sans-serif'; ctx.fillText('z', head[0] + 6 + zz * 6, head[1] - 10 - zz * 12); ctx.globalAlpha = 1;
       return;
     }
@@ -2212,40 +2273,11 @@ export function createHouseArt(ctx0, opts = {}) {
       drawHeadImage(L.heads[frame] || L.heads.neutral, hx + shift * 1.6, hy + 1.2, HEAD_W, hf.flip < 0, 0);
       return;
     }
-    circle(hx + shift * 1.6, hy - 5, 5.6, L.skin);
-    if (hf.front) {
-      ell(hx + shift * 1.6 + sway * 0.3, hy - 9, 6, 3.6, L.hair);
-      // A sheen on the hair and a touch of warmth on the cheeks.
-      ell(hx + shift * 1.6 + sway * 0.3 - 2, hy - 10, 2.4, 1, shade(L.hair, 0.28));
-      ctx.globalAlpha = 0.18; [-1, 1].forEach(sd => circle(hx + shift * 1.6 + hf.flip * 1.2 + sd * 3.2, hy - 2.6, 1.3, '#E0607A')); ctx.globalAlpha = 1;
-      ctx.fillStyle = '#241B25';
-      const down = rig?.headDown ? 1.3 : rig?.lookUp ? -1.2 : 0;
-      const lids = c.expr === 'tired' || rig?.yawn ? 0.55 : 1;
-      [-1, 1].forEach(side => { const eh = Math.max(0.2, (rig?.headDown ? 0.8 : 1.4) * lids * (1 - bl)); ctx.fillRect(hx + shift * 1.6 + hf.flip * 1.2 + side * 2.1 + gaze - 0.6, hy - 5.5 + down + (1.4 - eh) / 2, 1.2, eh); });
-      const cx = hx + shift * 1.6 + hf.flip * 0.8 + gaze * 0.6, cy = hy - 1.8;
-      if (talking || rig?.talk) {
-        const open = (0.5 + 0.5 * Math.sin(t * 13 + c.seed * 7)) * 1.6 + 0.4;
-        ctx.fillStyle = '#8C4A42';
-        ell(cx, cy, 1.5, open, '#8C4A42');
-      } else if (rig?.yawn || c.expr) {
-        const ex = rig?.yawn ? 'yawn' : c.expr;
-        ctx.strokeStyle = '#241B25'; ctx.lineWidth = 0.8;
-        const bx = hx + shift * 1.6 + hf.flip * 1.2 + gaze, by = hy - 7.6;
-        // Brows set the feeling; the mouth finishes it.
-        if (ex === 'annoyed') [-1, 1].forEach(sd => { ctx.beginPath(); ctx.moveTo(bx + sd * 3.2, by - 0.6); ctx.lineTo(bx + sd * 1.1, by + 0.5); ctx.stroke(); });
-        if (ex === 'sad') [-1, 1].forEach(sd => { ctx.beginPath(); ctx.moveTo(bx + sd * 3.2, by + 0.5); ctx.lineTo(bx + sd * 1.1, by - 0.5); ctx.stroke(); });
-        if (ex === 'happy' || ex === 'playful') { ctx.beginPath(); ctx.arc(cx, cy - 0.8, 1.6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); }
-        else if (ex === 'sad') { ctx.beginPath(); ctx.arc(cx, cy + 1.6, 1.4, 1.2 * Math.PI, 1.8 * Math.PI); ctx.stroke(); }
-        else if (ex === 'yawn') ell(cx, cy, 1.3, 1.9, '#5A2A2A');
-        else { ctx.beginPath(); ctx.moveTo(cx - 1.2, cy); ctx.lineTo(cx + 1.2, cy); ctx.stroke(); }
-      } else if (mood > 0.6) {
-        ctx.strokeStyle = '#241B25'; ctx.lineWidth = 0.8;
-        ctx.beginPath(); ctx.arc(cx, cy - 0.8, 1.4, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke();
-      } else if (mood < 0.3) {
-        ctx.strokeStyle = '#241B25'; ctx.lineWidth = 0.8;
-        ctx.beginPath(); ctx.arc(cx, cy + 1.6, 1.4, 1.2 * Math.PI, 1.8 * Math.PI); ctx.stroke();
-      }
-    } else { ell(hx + shift * 1.6 + sway * 0.5, hy - 6.5, 6, 5.6, L.hair); hairBack(); }
+    // No sprites: the drawn head, turned the way the head points (three-quarter views included).
+    const [hva, hvb] = VD(hdir[0], hdir[1]), hfr = (hva + hvb) / Math.SQRT2, hrt = (hva - hvb) / Math.SQRT2;
+    const smiling = c.expr === 'happy' || c.expr === 'playful' || (!c.expr && mood > 0.6), sadFace = c.expr === 'sad' || (!c.expr && mood < 0.3);
+    if (!hf.front) hairBack();
+    drawSimpleHead(hx + shift * 1.6, hy - 9, 10, { L, fr: hfr, rt: hrt, gaze, blink: bl, expr: c.expr, tired: c.expr === 'tired', yawn: !!rig?.yawn, headDown: !!rig?.headDown, lookUp: !!rig?.lookUp, talk: talking || !!rig?.talk, smile: smiling, sad: sadFace, sway, t, seed: c.seed });
   }
 
   // Depth of field: while two people talk, everything away from them softens. The frame is shrunk and stretched

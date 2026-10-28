@@ -107,6 +107,37 @@ describe('character motion', () => {
   });
 })
 
+describe('sleep and the drawn head', () => {
+  const look = { skin: '#C68E6A', hair: '#2B1D16', top: '#3E6E8E', bottom: '#2F3542', longHair: true };
+  const scene = (chars: object[], rot = 0) => ({ level: 1, rot, minutes: 1380, day: 1, t: 1, dt: 0.016, objs: INITIAL_OBJS.map((o) => ({ ...o })), wallMode: 'up', chars });
+
+  it('draws a sleeper from every camera angle, and rolls over smoothly rather than popping', () => {
+    const rec = recordingCtx();
+    const art = createHouseArt(rec.ctx);
+    for (let rot = 0; rot < 4; rot++) { rec.reset(); art.render(scene([{ ...PERSON, pose: 'sleep', z: 0.56, face: [1, 0], look }], rot)); expect(rec.vec().length).toBeGreaterThan(20); }
+    // Across the roll-over (every 24 s) no frame jumps far from the one before it.
+    let worst = 0, last: number[] | null = null;
+    for (let i = 0; i < 1800; i++) {
+      rec.reset(); art.render({ ...scene([{ ...PERSON, pose: 'sleep', z: 0.56, face: [1, 0], look }]), t: 1 + i / 30 });
+      const v = rec.vec();
+      if (last && last.length === v.length) worst = Math.max(worst, apart(v, last));
+      last = v;
+    }
+    expect(worst).toBeLessThan(60);
+  });
+
+  it('draws the head without sprites facing every way, differently in each', () => {
+    const sigs = new Set<string>();
+    for (const face of [[1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [1, -1]] as [number, number][]) {
+      const rec = recordingCtx();
+      const art = createHouseArt(rec.ctx);
+      for (let i = 0; i < 60; i++) { rec.reset(); art.render(scene([{ ...PERSON, face, look, z: 0 }])); }
+      sigs.add(rec.sig());
+    }
+    expect(sigs.size).toBe(6);
+  });
+});
+
 describe('house artwork', () => {
   it('draws every floor from every camera angle, day and night', () => {
     const { ctx, calls } = stubCtx();
