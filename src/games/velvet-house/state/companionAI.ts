@@ -52,6 +52,8 @@ export interface PersonaContext {
   coreMem: string[];
   memories: string[];
   pastMem: string[];
+  /** The pets: name, kind, mood and what they are up to; empty with none. */
+  pets?: string;
   /** What is wrong with the house and how long it has been (state/concerns.ts), and how she feels about it. */
   concern?: { kind: 'food' | 'bills' | 'dishes' | 'laundry'; level: number; hours: number } | null;
   mood?: 'content' | 'unsettled' | 'worried' | 'upset';
@@ -122,7 +124,7 @@ export function stateLine(ctx: PersonaContext): string {
   return `[Day ${ctx.day}, ${season(ctx.day)}, ${clockText(ctx.minutes)}. ` +
     `${ctx.simName}: ${ctx.jordanStatus}. ${ctx.partnerName}: ${ctx.mayaStatus}. ` +
     `Bond ${ctx.bond}. $${ctx.money}. Fridge ${ctx.fridgeBasic + ctx.fridgeFresh}. ` +
-    `Dishes ${ctx.dishes}. ${ctx.power ? '' : 'Power OFF. '}${ctx.mood && ctx.mood !== 'content' ? `Mood ${ctx.mood}. ` : ''}]`;
+    `Dishes ${ctx.dishes}. ${ctx.power ? '' : 'Power OFF. '}${ctx.mood && ctx.mood !== 'content' ? `Mood ${ctx.mood}. ` : ''}${ctx.pets ? `Pets: ${ctx.pets}. ` : ''}]`;
 }
 
 /** Parses the mood tag from the end of an AI response. */

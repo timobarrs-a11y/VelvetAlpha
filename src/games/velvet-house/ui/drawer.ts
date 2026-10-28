@@ -32,6 +32,8 @@ export interface DrawerCallbacks {
   onPickFloor?: (level: number) => void;
   onBuy: (item: CatalogEntry, color?: string) => void;
   onOrder: (chain: string) => void;
+  // The Household page's pet buttons: 'feedPet', 'playPet', 'petPet', 'walkDog' or 'scoop' for a pet.
+  onPetOrder?: (act: string, petId: string) => void;
   onPayBill: () => void;
   onOrderGroceries: () => void;
   onOrderTakeout: () => void;
@@ -123,6 +125,8 @@ export interface DrawerState {
   billAmount: number | null;
   billOverdue: boolean;
   petCount: number;
+  petFood?: number;
+  pets?: Array<{ id: string; name: string; kind: 'cat' | 'dog'; coat: string; where: string; status: string; needs: Record<string, number>; litterUses: number }>;
   log: string[];
   partnerName: string;
   simName: string;
@@ -627,6 +631,13 @@ export function createDrawer(cb: DrawerCallbacks): {
       <div class="vh-home-row"><span>Internet</span><strong>${state.phone.services.internet ? 'On' : 'OFF'}</strong></div>` : ''}
       ${state.phone && state.phone.bills.length ? `<div class="vh-home-row vh-bill"><span>Bills to pay</span><strong>$${state.phone.bills.reduce((s, b) => s + b.total, 0)}${state.phone.bills.some(b => b.overdue) ? ' (OVERDUE)' : ''}</strong></div>` : ''}
       ${state.billAmount !== null ? `<div class="vh-home-row vh-bill"><span>Bill due</span><strong>$${state.billAmount}${state.billOverdue ? ' (OVERDUE)' : ''}</strong></div>` : ''}
+      ${state.pets && state.pets.length ? `<div class="vh-home-row"><span>Pet food</span><strong>${state.petFood ?? 0} portion${state.petFood === 1 ? '' : 's'}</strong></div>` : ''}
+      ${(state.pets ?? []).map(p => `<div class="vh-pet" data-pet="${p.id}">
+        <div class="vh-pet-head"><span class="vh-dot" style="background:${p.coat}"></span><strong>${esc(p.name)}</strong><span class="vh-pet-where">${esc(p.where)}</span></div>
+        <div class="vh-pet-status">${esc(p.status)}</div>
+        <div class="vh-pet-needs">${Object.entries(p.needs).map(([k, v]) => `<span class="vh-pet-need" title="${k}"><span>${k[0].toUpperCase() + k.slice(1)}</span><span class="vh-pet-bar"><i style="width:${Math.round(v)}%" data-tone="${v < 25 ? 'low' : v < 55 ? 'mid' : 'ok'}"></i></span></span>`).join('')}${p.kind === 'cat' ? `<span class="vh-pet-need" title="litter"><span>Litter</span><span class="vh-pet-bar"><i style="width:${Math.min(100, p.litterUses * 20)}%" data-tone="${p.litterUses >= 4 ? 'low' : p.litterUses >= 3 ? 'mid' : 'ok'}"></i></span></span>` : ''}</div>
+        <div class="vh-pet-acts">${[['feedPet', 'Fill bowl'], ['playPet', 'Play'], ['petPet', 'Pet'], p.kind === 'dog' ? ['walkDog', 'Walk'] : ['scoop', 'Scoop litter']].map(([a, l]) => `<button data-pact="${a}" data-pet-id="${p.id}">${l}</button>`).join('')}</div>
+      </div>`).join('')}
       <div class="vh-home-actions">
         ${state.phone && state.phone.bills.length ? `<button data-openphone>Pay bills on the phone</button>` : ''}
         ${state.billAmount !== null ? `<button data-paybill>Pay bill</button>` : ''}
@@ -638,6 +649,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     sec.querySelector('[data-openphone]')?.addEventListener('click', () => openPage('phone'));
     sec.querySelector('[data-groceries]')?.addEventListener('click', () => cb.onOrderGroceries());
     sec.querySelector('[data-takeout]')?.addEventListener('click', () => cb.onOrderTakeout());
+    sec.querySelectorAll<HTMLElement>('[data-pact]').forEach(b => b.addEventListener('click', () => cb.onPetOrder?.(b.dataset.pact!, b.dataset.petId!)));
   }
 
   function renderLog(state: DrawerState): void {

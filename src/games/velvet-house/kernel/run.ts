@@ -72,6 +72,7 @@ export function startGameLoop(g: Game): void {
       tickFitness(g.flags, gameMin, !!jt && jt.phase === 'do' && (jt.act === 'workout' || jt.act === 'lift'));
       if (snackTick(world.household, g.flags, gameMin)) log('Somebody raided the fridge for a snack.');
       g.concernsTick(gameMin);
+      g.petsTick(dt, gameMin, walkMul, hourF);
       g.deliveriesTick();
       // Visitors a script has brought in (people after the two who live here).
       for (const npc of people.slice(2)) tickAgent(house, npc, null, dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
@@ -94,6 +95,7 @@ export function startGameLoop(g: Game): void {
         level: view.level, rot: view.rot, minutes: interpMinutes, day: world.day,
         t: view.t, dt: frameDt, objs: world.objs, wallMode: WALL_MODES[view.wallIdx].mode,
         chars: people.map(g.toFrame),
+        pets: g.petFrames(),
         arrange: g.arrangeFrame(),
         focus: conversationFocus(),
         house: { power: world.household.power, dishes: world.household.dishes, laundryPile: world.household.laundryPile, fridge: world.household.fridge, parcel: world.household.parcel && world.household.parcel.ready !== false ? world.household.parcel : null, owned },

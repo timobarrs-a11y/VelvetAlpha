@@ -177,6 +177,35 @@ describe('the stairs', () => {
   });
 });
 
+describe('pets', () => {
+  const pet = (over: object) => ({ id: 'pet1', kind: 'cat', coat: { c: '#D9822B', d: '#B5651D' }, name: 'Biscuit', level: 1, x: 4.5, y: 3.5, z: 0, face: [1, 0], pose: 'stand', seed: 0.4, alpha: 1, hidden: false, hearts: 0, want: null, door: false, bowl: null, litter: null, bowlFood: 0, litterUses: 0, ...over });
+  const scene = (pets: object[], t = 1) => ({ level: 1, rot: 0, minutes: 600, day: 1, t, dt: 0.016, objs: INITIAL_OBJS.map((o) => ({ ...o })), wallMode: 'up', chars: [], pets });
+
+  it('draws a cat and a dog in every pose, each one differently', () => {
+    for (const kind of ['cat', 'dog']) {
+      const sigs = new Set<string>();
+      for (const pose of ['stand', 'walk', 'run', 'sit', 'sleep', 'eat', 'crouch', 'groom', 'play', 'happy']) {
+        const rec = recordingCtx();
+        createHouseArt(rec.ctx).render(scene([pet({ kind, pose, hearts: 2, want: 'feed' })]));
+        expect(rec.vec().length, `${kind} ${pose}`).toBeGreaterThan(20);
+        sigs.add(rec.sig());
+      }
+      expect(sigs.size, `${kind} poses all look different`).toBe(10);
+    }
+  });
+
+  it('leaves out a pet that is hidden or on another floor, and faces the way it is told', () => {
+    const base = recordingCtx(); createHouseArt(base.ctx).render(scene([]));
+    const hid = recordingCtx(); createHouseArt(hid.ctx).render(scene([pet({ hidden: true })]));
+    const other = recordingCtx(); createHouseArt(other.ctx).render(scene([pet({ level: 2 })]));
+    expect(hid.sig()).toBe(base.sig());
+    expect(other.sig()).toBe(base.sig());
+    const east = recordingCtx(); createHouseArt(east.ctx).render(scene([pet({ face: [1, 0] })]));
+    const west = recordingCtx(); createHouseArt(west.ctx).render(scene([pet({ face: [-1, 0] })]));
+    expect(east.sig()).not.toBe(west.sig());
+  });
+});
+
 describe('house artwork', () => {
   it('draws every floor from every camera angle, day and night', () => {
     const { ctx, calls } = stubCtx();

@@ -36,9 +36,12 @@ export function createShop(g: Game): Partial<Game> {
       log('Pick a floor of the house first (Basement, Main floor or Upstairs): walls and floors go inside.');
       return;
     }
+    if (item.id === 'pet-food' && !world.pets.length) { log('Adopt a pet first.'); return; }
     if (!g.spendOn(`Shop: ${item.name}`, price)) { log('Not enough money.'); return; }
     owned.add(item.id);
     log(`Bought ${item.name} for $${price}.`);
+    if (item.icon === 'pet' && item.pet) { g.adoptPet(item.pet, item.id); return; }
+    if (item.id === 'pet-food') { world.petFood += 14; log(`${world.petFood} portions of pet food in the cupboard.`); g.refreshDrawer(); return; }
 
     if (item.icon === 'upgrade' && item.id === 'upgrade-attic') {
       world.objs.push(...ATTIC_STAIR_OBJS.map(o => ({ ...o })));

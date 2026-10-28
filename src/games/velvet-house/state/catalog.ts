@@ -266,10 +266,11 @@ export const CATALOG: CatalogEntry[] = [
   outdoor('sprinkler', 'sprinkler', 'Sprinkler', 20, ['natural', 'playful']),
 
   // Pets
-  petItem('pet-cat', 'Tabby cat', 80, 'cat'),
-  petItem('pet-cat2', 'Black cat', 80, 'cat'),
-  petItem('pet-dog', 'Golden retriever', 120, 'dog'),
-  petItem('pet-dog2', 'Corgi', 100, 'dog'),
+  { ...petItem('pet-cat', 'Tabby cat', 80, 'cat'), desc: 'Comes with bowls, a bed and a litter box. Naps a lot, sheds, and the litter needs scooping.' },
+  { ...petItem('pet-cat2', 'Black cat', 80, 'cat'), desc: 'Comes with bowls, a bed and a litter box. Naps a lot, sheds, and the litter needs scooping.' },
+  { ...petItem('pet-dog', 'Golden retriever', 120, 'dog'), desc: 'Comes with bowls and a bed. Needs walks in the yard, play and attention. Tracks in mud.' },
+  { ...petItem('pet-dog2', 'Corgi', 100, 'dog'), desc: 'Comes with bowls and a bed. Needs walks in the yard, play and attention. Tracks in mud.' },
+  { id: 'pet-food', name: 'Pet food', desc: '14 portions for the bowls.', price: 14, icon: 'bag', tab: 'Pets', repeat: true },
 
   // Clothes (driven by the clothing catalog so ids and styles stay in sync)
   ...CLOTHES.map(c => clothItem(c.key)),
@@ -302,6 +303,10 @@ export function lockOf(id: string, day: number, bond: number): LockInfo | null {
     'eggchair': { bond: 70, hint: 'Available when bond reaches 70' },
     'aquarium': { day: 4, hint: 'Available on day 4' },
     'neon': { bond: 75, hint: 'Available when bond reaches 75' },
+    'pet-cat': { day: 2, hint: 'Settle in first: from day 2' },
+    'pet-cat2': { day: 2, hint: 'Settle in first: from day 2' },
+    'pet-dog': { day: 3, hint: 'Settle in first: from day 3' },
+    'pet-dog2': { day: 3, hint: 'Settle in first: from day 3' },
   };
   const lock = locks[id];
   if (!lock) return null;

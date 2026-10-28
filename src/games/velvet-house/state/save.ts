@@ -51,6 +51,10 @@ export interface SaveContext {
   /** How the companion talks (humor, communication, relationship), so the story keeps its voice without the host. */
   voice?: { humor: string; communication: string; relationship: string; gender: string };
   wallMode: string;
+  /** The pets and their food; carried over from the loaded save when the game does not pass them. */
+  pets?: Record<string, unknown>[];
+  petFood?: number;
+  petSeq?: number;
   /** From the art: house looks, per-room looks, wall decor and the yard. */
   looks: {
     LOOKS: unknown[];
@@ -145,12 +149,12 @@ export function snapshot(ctx: SaveContext, prev: Record<string, unknown> | null 
     career: kept('career', { level: 0, perf: 0 }),
     mcareer: kept('mcareer', { level: 0, perf: 0 }),
     pboxes: kept('pboxes', false),
-    pets: kept('pets', []),
+    pets: ctx.pets ?? kept('pets', []),
     dirt: kept('dirt', []),
     changes: kept('changes', []),
     CHANGES: kept('CHANGES', []),
-    petFood: kept('petFood', 6),
-    petSeq: kept('petSeq', 0),
+    petFood: ctx.petFood ?? kept('petFood', 6),
+    petSeq: ctx.petSeq ?? kept('petSeq', 0),
     dirtId: kept('dirtId', 0),
     changeSeq: kept('changeSeq', 0),
     projectAt: kept('projectAt', null),

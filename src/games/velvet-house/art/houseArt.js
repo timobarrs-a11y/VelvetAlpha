@@ -554,13 +554,13 @@ export function createHouseArt(ctx0, opts = {}) {
        },
     // ---- pets and lights ----
     bowl: {    
-      parts: () => [F(0, 0, 0.5, 0.4, (T, o) => { const p = PETS.find(q => q.bowl === o); [[0.13, '#3D6B73'], [0.37, '#C2413A']].forEach(([x, c], i) => { const [sx, sy] = T.P(x, 0.2, 0.06); ell(sx, sy + 2, 7, 3.5, shade(c, -0.25)); ell(sx, sy, 7, 3.5, c); ell(sx, sy, 5, 2.4, i ? '#4A3426' : '#9EC1F5'); if (i && p && p.bowlFood > 0) for (let k = 0; k < Math.min(6, p.bowlFood * 2); k++) circle(sx - 3.5 + k * 1.4, sy - 0.4 - (k % 2) * 0.8, 1.1, '#C07A3C'); }); })],
+      parts: () => [F(0, 0, 0.5, 0.4, (T, o) => { const p = PETS.find(q => q.bowl === o.id); [[0.13, '#3D6B73'], [0.37, '#C2413A']].forEach(([x, c], i) => { const [sx, sy] = T.P(x, 0.2, 0.06); ell(sx, sy + 2, 7, 3.5, shade(c, -0.25)); ell(sx, sy, 7, 3.5, c); ell(sx, sy, 5, 2.4, i ? '#4A3426' : '#9EC1F5'); if (i && p && p.bowlFood > 0) for (let k = 0; k < Math.min(6, p.bowlFood * 2); k++) circle(sx - 3.5 + k * 1.4, sy - 0.4 - (k % 2) * 0.8, 1.1, '#C07A3C'); }); })],
        },
     petbed: {    
       parts: () => [F(0, 0, 0.8, 0.7, (T) => { T.box(0, 0, 0, 0.8, 0.7, 0.08, '#6E3C50'); T.poly([[0.08, 0.1, 0.081], [0.72, 0.1, 0.081], [0.72, 0.64, 0.081], [0.08, 0.64, 0.081]], '#E8C9A0'); T.box(0, 0, 0.08, 0.8, 0.1, 0.14, '#8E5468'); T.box(0, 0.1, 0.08, 0.08, 0.6, 0.12, '#8E5468'); T.box(0.72, 0.1, 0.08, 0.08, 0.6, 0.12, '#8E5468'); T.box(0.08, 0.62, 0.08, 0.64, 0.08, 0.06, '#8E5468'); })],
        },
     litter: {    
-      parts: () => [F(0, 0, 0.7, 0.55, (T, o) => { const p = PETS.find(q => q.litter === o), n = p ? p.litterUses : 0; T.box(0, 0, 0, 0.7, 0.55, 0.22, '#7F9A90'); T.poly([[0.06, 0.06, 0.2], [0.64, 0.06, 0.2], [0.64, 0.49, 0.2], [0.06, 0.49, 0.2]], '#D9CBB0'); for (let k = 0; k < Math.min(6, n); k++) { const [sx, sy] = T.P(0.16 + ((k * 0.37) % 0.42), 0.14 + ((k * 0.23) % 0.3), 0.205); ell(sx, sy, 2.6, 1.5, '#8A6A50'); } })],
+      parts: () => [F(0, 0, 0.7, 0.55, (T, o) => { const p = PETS.find(q => q.litter === o.id), n = p ? p.litterUses : 0; T.box(0, 0, 0, 0.7, 0.55, 0.22, '#7F9A90'); T.poly([[0.06, 0.06, 0.2], [0.64, 0.06, 0.2], [0.64, 0.49, 0.2], [0.06, 0.49, 0.2]], '#D9CBB0'); for (let k = 0; k < Math.min(6, n); k++) { const [sx, sy] = T.P(0.16 + ((k * 0.37) % 0.42), 0.14 + ((k * 0.23) % 0.3), 0.205); ell(sx, sy, 2.6, 1.5, '#8A6A50'); } })],
        },
     arclamp: {      
       parts: () => [F(0, 0, 0.45, 0.5, (T, o) => { T.box(0.05, 0.08, 0, 0.35, 0.35, 0.08, '#C9CED6'); let prev = null; for (let i = 0; i <= 14; i++) { const a = i / 14, pt = [0.22 + 0.82 * Math.pow(a, 1.6), 0.25, 0.08 + 3.2 * a - 1.65 * a * a]; if (prev) T.line(prev, pt, '#9AA3A8', 2); prev = pt; }
@@ -2303,10 +2303,83 @@ export function createHouseArt(ctx0, opts = {}) {
     b.globalCompositeOperation = 'destination-out'; b.fillStyle = g; b.fillRect(0, 0, w, h);
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = Math.min(1, dofAmt); ctx.drawImage(dofBlur, 0, 0); ctx.restore();
   }
+  // ---- Pets: a cat or a dog, drawn from a few shapes in their own screen frame (+x is the way they face) ----
+  function drawPetShape(kind, coat, pose, t, front, seed = 0) {
+    const c = coat.c, d = coat.d, eye = '#1B1A1F';
+    const tri = (pts, col) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]); ctx.lineTo(pts[4], pts[5]); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); };
+    const curve = (x0, y0, cx, cy, x1, y1, col, w) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx, cy, x1, y1); ctx.stroke(); };
+    const walk = pose === 'walk' || pose === 'run', ph = t * (pose === 'run' ? 18 : 11) + seed;
+    const sit = ['sit', 'happy', 'groom'].includes(pose);
+    if (kind === 'cat') {
+      const head = (hx, hy, closed) => {
+        circle(hx, hy, 5.4, c); tri([hx - 4.8, hy - 1.5, hx - 3.6, hy - 9, hx - 0.4, hy - 4.6], c); tri([hx + 0.4, hy - 4.8, hx + 3.6, hy - 9.2, hx + 5, hy - 1.8], c); tri([hx - 3.6, hy - 3, hx - 3.1, hy - 7, hx - 1.4, hy - 4.6], '#E8A0AE');
+        if (closed) { ctx.strokeStyle = eye; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(hx + 2.4, hy - 0.4, 1.3, 0.2, Math.PI - 0.2); ctx.stroke(); }
+        else if (front) { circle(hx + 2.6, hy - 0.6, 1.05, eye); circle(hx + 4.6, hy + 1.7, 0.8, '#D98C9A'); }
+        if (front || closed) { ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(hx + 4, hy + 1.8); ctx.lineTo(hx + 9, hy + 0.8); ctx.moveTo(hx + 4, hy + 2.2); ctx.lineTo(hx + 9, hy + 3); ctx.stroke(); }
+      };
+      if (pose === 'sleep') { ell(0, -5, 11, 6, c); curve(-9, -3, -6, 3, 6, 1, c, 3.2); head(8, -6, true); for (let i = 0; i < 3; i++) curve(-6 + i * 4, -10, -5 + i * 4, -7, -6 + i * 4, -3, d, 1.2); return; }
+      const tw = Math.sin(t * 2 + seed) * 0.35;
+      const hop = pose === 'play' ? -Math.abs(Math.sin(t * 5 + seed)) * 8 : 0;
+      if (sit) {
+        curve(-5, -2, -13, 0, -11 + tw * 4, 3, c, 3);
+        ell(-1, -9, 7, 8.5, c); for (let i = 0; i < 2; i++) curve(-6, -12 + i * 4, -3, -11 + i * 4, -1, -13 + i * 4, d, 1.1);
+        limb(3, -5, 3.5, 0, d, 2.4); limb(6, -5, 6.5, 0, c, 2.4);
+        const hy = -20 + (pose === 'groom' ? Math.sin(t * 6 + seed) * 0.8 : 0); head(3, hy, pose === 'happy');
+        if (pose === 'groom') limb(6, -8, 7, hy + 4 + Math.sin(t * 9 + seed) * 1.5, c, 2.4);
+        return;
+      }
+      const by = pose === 'crouch' ? -5 : -8, eat = pose === 'eat';
+      curve(-9, by - 1 + hop, -16, by - 4 + hop, -15 + tw * 6, by - 13 + hop, c, 3);
+      [[-6, 0], [-3, 1], [4, 0], [7, 1]].forEach(([lx, k]) => { const sw = walk ? Math.sin(ph + k * Math.PI + (lx > 0 ? 1.5 : 0)) * 2.6 : 0; limb(lx, by + 2 + hop, lx + sw, Math.min(0, hop * 0.4), k ? d : c, 2.4); });
+      ell(0, by + hop, 10, 5.5, c); for (let i = 0; i < 3; i++) curve(-6 + i * 4, by - 5 + hop, -5 + i * 4, by - 2 + hop, -6 + i * 4, by + 1 + hop, d, 1.1);
+      head(eat ? 11 : 10, (eat ? by + 3 : by - 6) + hop, false);
+      return;
+    }
+    const head = (hx, hy, closed, tongue) => {
+      circle(hx, hy, 7, c); ell(hx + 6, hy + 2, 5.2, 3.6, c); circle(hx + 10.6, hy + 0.8, 1.9, eye);
+      if (closed) { ctx.strokeStyle = eye; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(hx + 2.5, hy - 1.5, 1.5, 0.2, Math.PI - 0.2); ctx.stroke(); } else if (front) circle(hx + 3, hy - 2, 1.25, eye);
+      if (tongue) ell(hx + 7.5, hy + 6.2, 1.6, 2.6, '#E07A8A');
+      ell(hx - 2.5, hy + 1.5, 3, 6.5, d, null, 0.25);
+    };
+    const wag = ['happy', 'play', 'walk', 'run', 'sit'].includes(pose) ? Math.sin(t * 14 + seed) * 0.6 : 0.1;
+    if (pose === 'sleep') { ell(0, -7, 14, 7, c); ell(-4, -9, 5, 3.5, d); limb(-12, -6, -6, -1, c, 3); head(11, -6, true, false); return; }
+    const hop = pose === 'play' ? -Math.abs(Math.sin(t * 5 + seed)) * 7 : 0;
+    if (sit) {
+      limb(-9, -3, -16, -6 + wag * 5, c, 3.2);
+      ell(-2, -12, 9, 11, c); ell(-4, -14, 4, 3, d);
+      limb(3, -6, 4, 0, c, 3); limb(7, -6, 8, 0, c, 3);
+      head(5, -26, false, pose === 'happy');
+      // Grooming, for a dog, is a good scratch behind the ear with a hind leg.
+      if (pose === 'groom') limb(-2, -8, 6 + Math.sin(t * 13 + seed) * 2.5, -22, c, 3);
+      return;
+    }
+    // Crouching (a squat in the yard) brings the body low on bent legs.
+    const by = pose === 'crouch' ? -11 : -15 + (pose === 'eat' ? 1 : 0);
+    limb(-12, by - 2 + hop, -19, by - 9 + wag * 6 + hop, c, 3.2);
+    [[-8, 0], [-5, 1], [6, 0], [9, 1]].forEach(([lx, k]) => { const sw = walk ? Math.sin(ph + k * Math.PI + (lx > 0 ? 1.5 : 0)) * 3 : 0; limb(lx, by + 4 + hop, lx + sw, Math.min(0, hop * 0.4), k ? shade(c, -0.15) : c, 3); });
+    ell(0, by + hop, 13, 7, c); ell(-4, by - 2 + hop, 5, 3.5, d);
+    if (pose === 'eat') head(15, by + 9, false, false); else head(14, by - 8 + hop, false, pose === 'play' || walk);
+  }
+  function drawPet(p, t) {
+    const [fx, fy] = iso(p.x, p.y, p.z), f = facing(p.face || [0, 1]), sc = p.kind === 'dog' ? 1.05 : 0.95;
+    ctx.save(); ctx.globalAlpha *= p.alpha == null ? 1 : p.alpha;
+    if (p.pose !== 'sleep' && p.z <= 0.05) ell(fx, fy, p.kind === 'dog' ? 11 : 8, 3.2, 'rgba(30,15,30,.16)');
+    ctx.save(); ctx.translate(fx, fy); ctx.scale(f.flip * sc, sc); drawPetShape(p.kind, p.coat, p.pose, t, f.front, p.seed || 0);
+    if (p.pose === 'play' && p.kind === 'dog') { const k = Math.sin(t * 5 + (p.seed || 0)); circle(26 + k * 6, -4 - Math.abs(k) * 12, 2.8, '#C9D94A'); }
+    ctx.restore();
+    const top = fy - (p.kind === 'dog' ? 40 : 30);
+    if (p.pose === 'sleep') for (let i = 0; i < 2; i++) { const ph = (t * 0.4 + i / 2 + (p.seed || 0)) % 1; ctx.fillStyle = `rgba(80,70,140,${1 - ph})`; ctx.font = `600 ${8 + ph * 4}px "IBM Plex Mono", ui-monospace, monospace`; ctx.fillText('z', fx + 6 + ph * 10, fy - 12 - ph * 16); }
+    if (p.hearts > 0) heart(fx + 6, top - 2 - (1 - Math.min(3, p.hearts) / 3) * 10, 1, 'rgba(205,70,110,.9)');
+    if (p.want || p.door) thought(fx + 15, top - 10 + Math.sin(t * 3) * 1.5, p.door ? 'leash' : p.want === 'feed' ? 'bowl' : p.want === 'play' ? 'ball' : 'love');
+    ctx.restore();
+  }
+
   function render(s) {
     // What the household is doing to the house (the power, the dishes, the fridge) comes in with every frame, so the art never shows stale state.
     if (s.house) { power = s.house.power; dishes = s.house.dishes; laundryPile = s.house.laundryPile; fridge = s.house.fridge; parcel = s.house.parcel || null; if (s.house.owned) owned = s.house.owned; }
     sync(s);
+    // The pets, so the bowls and litter boxes can show what is in them.
+    PETS.length = 0; if (s.pets) for (const p of s.pets) PETS.push(p);
     const t = animT, lv = viewLevel;
     const watching = [jordan, maya].some(c => c && c.task && c.task.phase === 'do' && (c.task.name === 'tv' || c.task.name === 'movie'));
     tvF += ((power && (watching || tvOn) ? 1 : 0) - tvF) * Math.min(1, rdt * 4);
@@ -2344,6 +2417,11 @@ export function createHouseArt(ctx0, opts = {}) {
       const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && isOutdoor(lv)) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); if (pit) { const W = TYPES[pit.type].W, D = TYPES[pit.type].D, P = [iso(pit.x, pit.y, 0), iso(pit.x + W, pit.y, 0), iso(pit.x + W, pit.y + D, 0), iso(pit.x, pit.y + D, 0)], lo = P.slice().sort((a, b) => a[0] - b[0]), bot = P.reduce((m, q) => (q[1] > m[1] ? q : m)); ctx.save(); ctx.beginPath(); ctx.moveTo(lo[0][0], lo[0][1]); ctx.lineTo(bot[0], bot[1]); ctx.lineTo(lo[3][0], lo[3][1]); ctx.lineTo(lo[3][0], -2000); ctx.lineTo(lo[0][0], -2000); ctx.closePath(); ctx.clip(); }
         drawPerson(c, t); if (c.carrying) drawCarried(c); if (gOn) G.clearBase(); if (c.npc && c.name) drawNameTag(c); if (c.bubble) drawBubble(c, t);
         if (pit) ctx.restore(); } }); });
+    (s.pets || []).forEach(p => {
+      if (p.level !== lv || p.hidden) return;
+      const r = p.z > 0.05 ? 0.04 : 0.14;
+      items.push({ x1: p.x - r, y1: p.y - r, x2: p.x + r, y2: p.y + r, key: vs(p.x, p.y) + 0.0005 + (p.z > 0.05 ? 0.3 : 0), d: () => { if (gOn) G.billboard(iso(p.x, p.y, 0)[1], ZH * 0.5, MATERIAL.body); drawPet(p, t); if (gOn) G.clearBase(); } });
+    });
     depthSort(items).forEach(it => it.d());
     drawFrontWalls(lv); drawProjector(lv);
     if (arrState) drawArrangeOverlay(arrState, lv);

@@ -30,6 +30,9 @@ export function createInput(g: Game): void {
       const [mx, my] = art.project(maya.x, maya.y, maya.z);
       if (Math.hypot(sx - mx, sy - my) < 30) { g.openChat(); return; }
     }
+    // A pet: what to do with them.
+    const pet = g.petAt(sx, sy);
+    if (pet) { g.showPetActions(pet, e.clientX, e.clientY); return; }
     // Try clicking on Jordan → follow
     const jordan = people[0];
     if (jordan.level === view.level) {

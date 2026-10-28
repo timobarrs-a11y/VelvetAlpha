@@ -4,7 +4,8 @@ import {
   petMood, petFree, petWantsNow, petDecayNeeds, petEnd, petPick,
   weight, petScoreForActivity, petActivityLabel,
 } from '../state/pets';
-import type { Pet, PetNeeds } from '../state/pets';
+import type { Pet, PetNeeds, PetWorld } from '../state/pets';
+import { petDecide, createPet, revivePet, serializePet, pickName, pickCoat, petStatusText, LITTER } from '../state/pets';
 
 function makePet(overrides: Partial<Pet> = {}): Pet {
   return {
@@ -40,9 +41,9 @@ function makePet(overrides: Partial<Pet> = {}): Pet {
 }
 
 describe('pets — constants', () => {
-  it('has 4 cat coats and 3 dog coats', () => {
+  it('has 4 cat coats and 4 dog coats', () => {
     expect(PET_COATS.cat.length).toBe(4);
-    expect(PET_COATS.dog.length).toBe(3);
+    expect(PET_COATS.dog.length).toBe(4);
   });
 
   it('has 5 names per kind', () => {
@@ -254,5 +255,99 @@ describe('pets — petActivityLabel', () => {
   it('labels beg with want', () => {
     expect(petActivityLabel(makePet({ state: 'beg', want: 'feed' }), 10)).toBe('Begging for food');
     expect(petActivityLabel(makePet({ state: 'beg', want: 'play' }), 10)).toBe('Wants to play');
+  });
+});
+
+
+// ---- Deciding, making and keeping pets ----
+
+function world(over: Partial<PetWorld> = {}): PetWorld {
+  const thing = (id: unknown) => (typeof id === 'string' ? { level: id === 'litter1' ? 0 : 1, at: (lx: number, ly: number): [number, number] => [4 + lx, 2 + ly] } : null);
+  return {
+    hour: 12, people: [{ id: 'jordan', level: 1, x: 5, y: 5, asleep: false, away: false }],
+    thing, randomFree: (lv) => [lv + 1.5, 3.5], spotNear: (who) => [who.x + 0.75, who.y - 0.75],
+    door: [0.6, 5.05], mainFloor: 1, yard: 3, floors: [0, 1, 2], rng: () => 0.99, ...over,
+  };
+}
+const withThings = (over: Partial<Pet> = {}) => makePet({ bowl: 'bowl1', bed: 'bed1', litter: 'litter1', ...over });
+
+describe('pets — deciding', () => {
+  it('goes to the bowl when hungry and there is food in it', () => {
+    const a = petDecide(withThings({ needs: { food: 40, play: 80, love: 80 }, bowlFood: 2 }), world());
+    expect(a).toMatchObject({ kind: 'go', state: 'eat', level: 1 });
+  });
+
+  it('does not go to an empty bowl; begs for food from whoever is up instead', () => {
+    const a = petDecide(withThings({ needs: { food: 30, play: 80, love: 80 }, bowlFood: 0 }), world());
+    expect(a).toMatchObject({ kind: 'go', state: 'beg', want: 'feed', who: 'jordan' });
+  });
+
+  it('a cat uses the litter box when it is time, and goes beside it when the box is too dirty', () => {
+    const w = world();
+    expect(petDecide(withThings({ litterT: LITTER.every + 1, litterUses: 1 }), w)).toMatchObject({ kind: 'go', state: 'litter', level: 0 });
+    const p = withThings({ litterT: LITTER.every + 1, litterUses: LITTER.tooDirty });
+    expect(petDecide(p, w)).toMatchObject({ kind: 'accident', level: 0 });
+    expect(p.litterT).toBe(0);
+  });
+
+  it('a dog that needs to go heads for the yard by day, and sits at the door when there is no yard', () => {
+    const dog = () => withThings({ kind: 'dog', needs: { food: 80, play: 80, love: 80, bladder: 20 } });
+    expect(petDecide(dog(), world())).toMatchObject({ kind: 'go', state: 'potty', level: 3 });
+    expect(petDecide(dog(), world({ yard: null }))).toMatchObject({ kind: 'go', state: 'door', level: 1 });
+  });
+
+  it('sleeps in its bed at night', () => {
+    const a = petDecide(withThings({ needs: { food: 80, play: 80, love: 80 } }), world({ hour: 1 }));
+    expect(a).toMatchObject({ kind: 'go', state: 'sleep', dur: 120 });
+  });
+
+  it('with nothing pressing and nobody about, wanders to a free spot', () => {
+    const a = petDecide(withThings({ needs: { food: 80, play: 80, love: 80 } }), world({ people: [], rng: () => 0.95 }));
+    expect(a.kind).toBe('go');
+    expect((a as { state: string }).state).toBe('idle');
+  });
+
+  it('a cat with time on its paws grooms', () => {
+    // Not sleepy, not in the mood for company, then the grooming roll comes up.
+    const rolls = [0.5, 0.5, 0.1];
+    const a = petDecide(withThings({ needs: { food: 80, play: 80, love: 80 } }), world({ rng: () => rolls.shift() ?? 0.9 }));
+    expect(a).toMatchObject({ kind: 'stay', state: 'groom' });
+  });
+});
+
+describe('pets — making and keeping', () => {
+  it('picks a name nobody has yet, and the coat the shop promised', () => {
+    const taken = ['Biscuit', 'Mochi', 'Pepper', 'Juniper'];
+    expect(pickName('cat', taken, () => 0.5)).toBe('Nori');
+    expect(pickCoat('dog', 'corgi', () => 0).n).toBe('corgi');
+    expect(pickCoat('dog', 'no such coat', () => 0).n).toBe('golden');
+  });
+
+  it('a new pet starts at the door with sensible needs', () => {
+    const p = createPet('pet3', 'dog', pickCoat('dog', 'golden', () => 0), 'Waffles', { level: 1, x: 1.3, y: 5.3 }, 2);
+    expect(p.needs.bladder).toBe(85);
+    expect(p.state).toBe('idle');
+    expect(p.face).toEqual([0, 1]);
+  });
+
+  it('survives a save and a load with its things, and shrugs off junk', () => {
+    const p = withThings({ kind: 'cat', name: 'Nori', needs: { food: 33, play: 44, love: 55 }, bowlFood: 1, litterUses: 2, route: [{ type: 'stair' }], hold: {} });
+    const back = revivePet(JSON.parse(JSON.stringify(serializePet(p))))!;
+    expect(back.name).toBe('Nori');
+    expect(back.needs).toEqual({ food: 33, play: 44, love: 55 });
+    expect(back.bowl).toBe('bowl1'); expect(back.litter).toBe('litter1');
+    expect(back.route).toEqual([]); expect(back.hold).toBeNull();
+    expect(revivePet(null)).toBeNull();
+    expect(revivePet({ kind: 'dog' })).toBeNull();
+    const old = revivePet({ id: 'p1', kind: 'cat', name: 'Miso' })!; // the old game's save
+    expect(old.kind).toBe('cat'); expect(old.needs.food).toBe(70);
+  });
+
+  it('says what they are up to, and with whom', () => {
+    const p = withThings({ state: 'beg', want: 'play' });
+    expect(petStatusText(p, 12, null)).toBe('Wants to play');
+    expect(petStatusText(withThings({ state: 'sleep' }), 2, null)).toBe('Asleep');
+    expect(petStatusText(withThings({ hold: 'maya' }), 12, { name: 'Maya', act: 'playPet', phase: 'do' })).toBe('Playing with Maya');
+    expect(petStatusText(withThings({ hold: 'maya' }), 12, { name: 'Maya', act: 'walkDog', phase: 'walk' })).toBe('Going for a walk with Maya');
   });
 });
