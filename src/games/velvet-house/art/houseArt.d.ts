@@ -39,6 +39,33 @@ export interface PersonFrame {
   look: { skin: string; hair: string; top: string; topStyle?: string; bottom: string; longHair: boolean; accent?: string; topGarment?: import('../state/garment').Garment; bottomGarment?: import('../state/garment').Garment; heads?: import('../state/headSprites').HeadImages; body?: import('../state/bodySprites').BodyImages };
 }
 
+/** A cat or a dog, as the art draws it. */
+export interface PetFrame {
+  id: string;
+  kind: 'cat' | 'dog';
+  coat: { c: string; d: string };
+  name: string;
+  level: number;
+  x: number;
+  y: number;
+  z: number;
+  face: [number, number];
+  pose: string;
+  seed: number;
+  alpha: number;
+  hidden: boolean;
+  /** Seconds of hearts still floating over them. */
+  hearts: number;
+  /** What they are begging for, shown in a thought bubble. */
+  want: 'feed' | 'play' | 'love' | null;
+  /** Sitting by the door wanting out. */
+  door: boolean;
+  bowl: string | null;
+  litter: string | null;
+  bowlFood: number;
+  litterUses: number;
+}
+
 export interface HouseFrame {
   level: number;
   rot: number;
@@ -49,6 +76,7 @@ export interface HouseFrame {
   objs: ObjectInstance[];
   wallMode: WallMode;
   chars?: PersonFrame[];
+  pets?: PetFrame[];
   /** The household's state, so the art always draws the real power, dishes, laundry, fridge and purchases. */
   house?: { power: boolean; dishes: number; laundryPile: number; fridge: { basic: number; fresh: number }; parcel?: { kind: string } | null; owned?: Set<string> };
   /** Arrange mode: what can move, what's carried, whether it fits, what's under the pointer. */

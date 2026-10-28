@@ -651,3 +651,19 @@
   .vh-vital-value { display: none; }
   .vh-vitals-title { display: none; }
 }
+
+/* Pets on the Household page: who, where, what they are up to, how they are, and what to do for them. */
+.vh-pet { margin: 8px 0; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.05); display: grid; gap: 6px; }
+.vh-pet-head { display: flex; align-items: center; gap: 8px; }
+.vh-pet-head .vh-pet-where { margin-left: auto; opacity: .7; font-size: 11px; }
+.vh-pet-status { font-size: 12px; opacity: .85; }
+.vh-pet-needs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; }
+.vh-pet-need { display: flex; align-items: center; gap: 6px; font-size: 10px; opacity: .8; }
+.vh-pet-need > span:first-child { width: 44px; }
+.vh-pet-bar { flex: 1; height: 5px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+.vh-pet-bar i { display: block; height: 100%; border-radius: 3px; background: #6FCB78; transition: width .4s ease; }
+.vh-pet-bar i[data-tone="mid"] { background: #E0A43A; }
+.vh-pet-bar i[data-tone="low"] { background: #D24A5A; }
+.vh-pet-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.vh-pet-acts button { font: inherit; font-size: 11px; padding: 5px 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.08); color: inherit; cursor: pointer; }
+.vh-pet-acts button:hover { background: rgba(255,255,255,.14); }

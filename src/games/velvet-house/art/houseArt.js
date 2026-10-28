@@ -3,7 +3,7 @@
 import { MATERIAL } from '../engine/gbuffer';
 import { sunLight, gradeTint } from '../engine/deferredLights';
 import { createParticles } from '../engine/particles';
-import { poseRig, idleRig, walkRig, seatLegs, FOOT } from './poseAnim.js';
+import { poseRig, idleRig, walkRig, seatLegs, legIK, gaitFoot, headTarget, turnHead, idleGlance, treeLeg, FOOT, GAIT } from './poseAnim.js';
 import { headFrameFor } from '../state/headSprites';
 import { handImage, HAND_SPRITE } from '../state/bodySprites';
 import { TYPES as STATE_TYPES, skinOf, colsOf } from '../state/objects';
@@ -556,13 +556,13 @@ export function createHouseArt(ctx0, opts = {}) {
        },
     // ---- pets and lights ----
     bowl: {    
-      parts: () => [F(0, 0, 0.5, 0.4, (T, o) => { const p = PETS.find(q => q.bowl === o); [[0.13, '#3D6B73'], [0.37, '#C2413A']].forEach(([x, c], i) => { const [sx, sy] = T.P(x, 0.2, 0.06); ell(sx, sy + 2, 7, 3.5, shade(c, -0.25)); ell(sx, sy, 7, 3.5, c); ell(sx, sy, 5, 2.4, i ? '#4A3426' : '#9EC1F5'); if (i && p && p.bowlFood > 0) for (let k = 0; k < Math.min(6, p.bowlFood * 2); k++) circle(sx - 3.5 + k * 1.4, sy - 0.4 - (k % 2) * 0.8, 1.1, '#C07A3C'); }); })],
+      parts: () => [F(0, 0, 0.5, 0.4, (T, o) => { const p = PETS.find(q => q.bowl === o.id); [[0.13, '#3D6B73'], [0.37, '#C2413A']].forEach(([x, c], i) => { const [sx, sy] = T.P(x, 0.2, 0.06); ell(sx, sy + 2, 7, 3.5, shade(c, -0.25)); ell(sx, sy, 7, 3.5, c); ell(sx, sy, 5, 2.4, i ? '#4A3426' : '#9EC1F5'); if (i && p && p.bowlFood > 0) for (let k = 0; k < Math.min(6, p.bowlFood * 2); k++) circle(sx - 3.5 + k * 1.4, sy - 0.4 - (k % 2) * 0.8, 1.1, '#C07A3C'); }); })],
        },
     petbed: {    
       parts: () => [F(0, 0, 0.8, 0.7, (T) => { T.box(0, 0, 0, 0.8, 0.7, 0.08, '#6E3C50'); T.poly([[0.08, 0.1, 0.081], [0.72, 0.1, 0.081], [0.72, 0.64, 0.081], [0.08, 0.64, 0.081]], '#E8C9A0'); T.box(0, 0, 0.08, 0.8, 0.1, 0.14, '#8E5468'); T.box(0, 0.1, 0.08, 0.08, 0.6, 0.12, '#8E5468'); T.box(0.72, 0.1, 0.08, 0.08, 0.6, 0.12, '#8E5468'); T.box(0.08, 0.62, 0.08, 0.64, 0.08, 0.06, '#8E5468'); })],
        },
     litter: {    
-      parts: () => [F(0, 0, 0.7, 0.55, (T, o) => { const p = PETS.find(q => q.litter === o), n = p ? p.litterUses : 0; T.box(0, 0, 0, 0.7, 0.55, 0.22, '#7F9A90'); T.poly([[0.06, 0.06, 0.2], [0.64, 0.06, 0.2], [0.64, 0.49, 0.2], [0.06, 0.49, 0.2]], '#D9CBB0'); for (let k = 0; k < Math.min(6, n); k++) { const [sx, sy] = T.P(0.16 + ((k * 0.37) % 0.42), 0.14 + ((k * 0.23) % 0.3), 0.205); ell(sx, sy, 2.6, 1.5, '#8A6A50'); } })],
+      parts: () => [F(0, 0, 0.7, 0.55, (T, o) => { const p = PETS.find(q => q.litter === o.id), n = p ? p.litterUses : 0; T.box(0, 0, 0, 0.7, 0.55, 0.22, '#7F9A90'); T.poly([[0.06, 0.06, 0.2], [0.64, 0.06, 0.2], [0.64, 0.49, 0.2], [0.06, 0.49, 0.2]], '#D9CBB0'); for (let k = 0; k < Math.min(6, n); k++) { const [sx, sy] = T.P(0.16 + ((k * 0.37) % 0.42), 0.14 + ((k * 0.23) % 0.3), 0.205); ell(sx, sy, 2.6, 1.5, '#8A6A50'); } })],
        },
     arclamp: {      
       parts: () => [F(0, 0, 0.45, 0.5, (T, o) => { T.box(0.05, 0.08, 0, 0.35, 0.35, 0.08, '#C9CED6'); let prev = null; for (let i = 0; i <= 14; i++) { const a = i / 14, pt = [0.22 + 0.82 * Math.pow(a, 1.6), 0.25, 0.08 + 3.2 * a - 1.65 * a * a]; if (prev) T.line(prev, pt, '#9AA3A8', 2); prev = pt; }
@@ -1551,7 +1551,8 @@ export function createHouseArt(ctx0, opts = {}) {
     let ws = walkStates.get(c.seed);
     if (!ws) { ws = { px: c.x, py: c.y, ph: 0, amp: 0 }; walkStates.set(c.seed, ws); }
     const dd = Math.hypot(c.x - ws.px, c.y - ws.py);
-    if (c.walking && dd < 0.6) ws.ph += dd / 0.24 * Math.PI;
+    // Half a cycle per footfall: a stride on the floor, one tread on the stairs.
+    if (c.walking && dd < 0.6) ws.ph += dd / (c.slope ? FL.RUN : GAIT.cycle / 2) * Math.PI;
     ws.amp += ((c.walking ? 1 : 0) - ws.amp) * Math.min(1, rdt * 7);
     ws.px = c.x; ws.py = c.y;
     return ws;
@@ -1696,6 +1697,53 @@ export function createHouseArt(ctx0, opts = {}) {
   const HEAD_W = 24;
   // Shoes follow the pants: white sneakers with jeans, brown boots with breeches, black boots with leather and uniforms.
   const SHOE_COLOR = { jeans: '#EDE8E0', baggy: '#EDE8E0', shorts: '#EDE8E0', cheer_skirt: '#F6F6F4', scrub_pants: '#F4F4F2', breeches: '#3A2A1C', leather: '#101013', cop_pants: '#17171B' };
+  // The drawn head, for anyone without avatar head sprites (visitors, and a resident whose sprites
+  // have not loaded yet). Built at the sprites' size and turned in three-quarters: `rt` is how far
+  // right the head points (-1..1) and `fr` how far toward the camera, so the features slide across
+  // the face as the head turns and the hair takes over as it turns away.
+  function drawSimpleHead(cx, cy, R, o) {
+    const L = o.L, skin = L.skin, hair = L.hair, fr = o.fr, rt = o.rt;
+    const vis = Math.max(0, Math.min(1, (fr + 0.35) / 0.7)); // how much of the face shows
+    const off = rt * R * 0.42; // the features lead the turn
+    ctx.save(); ctx.translate(cx, cy); if (o.rot) ctx.rotate(o.rot);
+    [-1, 1].forEach(sd => circle(sd * R * 0.92 - rt * R * 0.25, R * 0.08, R * 0.2, skin)); // ears, behind
+    circle(0, 0, R, skin);
+    if (L.longHair) [-1, 1].forEach(sd => ell(sd * R * 0.9 - rt * R * 0.2, R * 0.35, R * 0.3, R * 0.75, hair));
+    // The hair cap: over the top from the front, most of the head from behind.
+    const back = Math.max(0, -fr), sw = o.sway || 0;
+    ell(-rt * R * 0.22 + sw * 0.3, -R * 0.45 + back * R * 0.35, R * 1.03, R * 0.62 + back * R * 0.45, hair);
+    ell(-rt * R * 0.22 + sw * 0.3 - R * 0.3, -R * 0.8, R * 0.32, R * 0.12, shade(hair, 0.28), null, -0.3);
+    if (vis > 0.01) {
+      ctx.save(); ctx.globalAlpha *= vis;
+      const eyeY = -R * 0.05 + (o.headDown ? R * 0.12 : 0) - (o.lookUp ? R * 0.1 : 0);
+      const gap = R * 0.42 * (1 - Math.abs(rt) * 0.35), g = (o.gaze || 0) * 0.5;
+      const a0 = ctx.globalAlpha;
+      ctx.globalAlpha = a0 * 0.18; [-1, 1].forEach(sd => circle(off + sd * R * 0.6, R * 0.3, R * 0.22, '#E0607A')); ctx.globalAlpha = a0;
+      // Eyes: whites, pupils that follow the gaze and the turn, lids that close for a blink and droop when tired.
+      const lids = o.tired || o.yawn ? 0.5 : 1, open = Math.max(0, lids * (1 - (o.blink || 0)));
+      const bi = o.expr === 'annoyed' ? R * 0.06 : o.expr === 'sad' ? -R * 0.07 : 0;
+      [-1, 1].forEach(sd => {
+        const ex = off + sd * gap, ry = R * 0.2 * open;
+        if (open > 0.08) {
+          ell(ex, eyeY, R * 0.17, ry, '#F6F3EE');
+          ell(ex + g + rt * R * 0.05, eyeY + R * 0.01, R * 0.09, Math.min(ry, R * 0.1), '#241B25');
+        } else { ctx.fillStyle = '#241B25'; ctx.fillRect(ex - R * 0.16, eyeY - 0.5, R * 0.32, 1); }
+        // Brows: level by default, down at the inner end when annoyed, up when sad.
+        ctx.strokeStyle = shade(hair, -0.3); ctx.lineWidth = 1; ctx.beginPath();
+        ctx.moveTo(ex - sd * R * 0.2, eyeY - R * 0.3 - bi * 0.3); ctx.lineTo(ex + sd * R * 0.2, eyeY - R * 0.3 + bi); ctx.stroke();
+      });
+      circle(off + rt * R * 0.12, eyeY + R * 0.3, R * 0.08, shade(skin, -0.2)); // the nose leads the turn
+      const mx = off * 0.9, my = R * 0.5;
+      ctx.strokeStyle = '#4A2B2B'; ctx.lineWidth = 1.1;
+      if (o.talk) ell(mx, my, R * 0.16, (0.5 + 0.5 * Math.sin((o.t || 0) * 13 + (o.seed || 0) * 7)) * R * 0.18 + R * 0.04, '#8C4A42');
+      else if (o.yawn) ell(mx, my, R * 0.14, R * 0.2, '#5A2A2A');
+      else if (o.smile) { ctx.beginPath(); ctx.arc(mx, my - R * 0.12, R * 0.22, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); }
+      else if (o.sad) { ctx.beginPath(); ctx.arc(mx, my + R * 0.2, R * 0.18, 1.2 * Math.PI, 1.8 * Math.PI); ctx.stroke(); }
+      else { ctx.beginPath(); ctx.moveTo(mx - R * 0.14, my); ctx.lineTo(mx + R * 0.14, my); ctx.stroke(); }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
   function drawHeadImage(img, cx, chinY, w, mirror, rot) {
     const h = w * 1.04;
     ctx.save(); ctx.translate(cx, chinY);
@@ -1715,6 +1763,7 @@ export function createHouseArt(ctx0, opts = {}) {
   function settle(c) {
     const ps = poseState(c), dt = Math.max(0.001, Math.min(0.05, rdt || 0.016));
     const want = Math.atan2(c.face[1], c.face[0]);
+    ps.want = want;
     if (!ps.init || ps.lv !== c.level) {
       Object.assign(ps, { init: true, lv: c.level, fa: want, spin: 0, tph: 0, ox: 0, oy: 0, oz: 0, lx: c.x, ly: c.y, lz: c.z, key: null });
     }
@@ -1753,7 +1802,8 @@ export function createHouseArt(ctx0, opts = {}) {
   // What a visitor carries in their arms, drawn over the front of the torso.
   function drawCarried(c) {
     // Whoever is carrying walks with a little bob.
-    const [fx, fy] = iso(c.x, c.y, 0), f = facing(c.face), x = fx + f.flip * 2, y = fy - 17 + (c.walking ? Math.sin(animT * 11) * 1.3 : 0);
+    // The box rides at the hips, so it bobs with the stride instead of on its own clock.
+    const ps = poseState(c), [fx, fy] = iso(c.x, c.y, 0), f = facing(c.face), x = fx + f.flip * 2, y = ps.hipY != null ? ps.hipY + 4 : fy - 17;
     const rect = (px, py, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(px, py, w, h); };
     ctx.save();
     switch (c.carrying) {
@@ -1832,18 +1882,39 @@ export function createHouseArt(ctx0, opts = {}) {
     const L = c.look, pose = c.pose, f = facing(c.face);
     const P3 = (dx, dy, dz) => iso(c.x + dx, c.y + dy, c.z + dz);
     const [fx, fy] = P3(0, 0, 0);
+    // The head has its own heading: at whoever they're with, else where the body is turning to
+    // (so it leads the turn), with a glance to one side now and then while standing around.
+    const hps = poseState(c), bodyA = Math.atan2(c.face[1], c.face[0]);
+    const lookA = c.lookAt ? Math.atan2(c.lookAt[1] - c.y, c.lookAt[0] - c.x) : null;
+    const glance = !c.walking && !c.sit && pose === 'stand' && !c.lookAt ? idleGlance(t, c.seed) : 0;
+    hps.ha = turnHead(hps.ha ?? bodyA, headTarget(bodyA, hps.want ?? bodyA, lookA, glance), Math.max(0.001, Math.min(0.05, rdt || 0.016)));
+    const hdir = [Math.cos(hps.ha), Math.sin(hps.ha)], hf = facing(hdir);
     if (pose === 'sleep') {
-      // Breathing under the covers, and rolling over now and then.
-      const [lx, ly] = c.face, breath = Math.sin(t * 1.2 + c.seed * 4) * 0.012;
-      const turn = Math.floor((t + c.seed * 37) / 24) % 2 === 1, tilt = turn ? 1 : -1;
-      const head = P3(0, 0, 0.16), mid = P3(lx * 0.3, ly * 0.3, 0.14 + breath), feet = P3(lx * 1.45, ly * 1.45, 0.12);
-      limb(mid[0], mid[1], feet[0], feet[1], shade(L.top, 0.25), 15 + breath * 60);
-      limb(mid[0] + tilt * 3, mid[1] - 2, mid[0] + tilt * 1, mid[1] + 1, shade(L.top, 0.35), 4);
-      if (L.heads && L.heads.neutral) drawHeadImage(L.heads.blink || L.heads.neutral, head[0], head[1] + 4, HEAD_W * 0.9, tilt < 0, tilt * -1.1);
-      else {
-        if (L.longHair) ell(head[0] - 3, head[1] - 1, 7, 4, L.hair);
-        circle(head[0], head[1] - 2, 5.5, L.skin); ell(head[0] - 1, head[1] - 5, 6, 3.5, L.hair);
+      // Under the covers: breathing, and rolling over now and then, eased rather than popped.
+      const sps = poseState(c), [lx, ly] = c.face, breath = Math.sin(t * 1.2 + c.seed * 4) * 0.012;
+      const wantRoll = Math.floor((t + c.seed * 37) / 24) % 2 === 1 ? 1 : -1;
+      const sdt = Math.max(0.001, Math.min(0.05, rdt || 0.016));
+      if (sps.roll == null) sps.roll = wantRoll;
+      sps.roll += (wantRoll - sps.roll) * Math.min(1, sdt * 2.5);
+      const roll = sps.roll;
+      const head = P3(0, 0, 0.16), shd = P3(lx * 0.28, ly * 0.28, 0.16 + breath), hips = P3(lx * 0.78, ly * 0.78, 0.13), feet = P3(lx * 1.45, ly * 1.45, 0.1);
+      const cover = shade(L.top, 0.25);
+      // The body under the cover: broad at the shoulders, narrower down the legs, a bump for the feet.
+      limb(hips[0], hips[1], feet[0], feet[1], cover, 11);
+      ell(feet[0], feet[1] - 1, 5, 3.2, shade(L.top, 0.32));
+      limb(shd[0], shd[1], hips[0], hips[1], cover, 16 + breath * 60);
+      limb(shd[0], shd[1] + 2, hips[0], hips[1] + 2, shade(L.top, 0.1), 1.2); // the fold
+      // An arm draped over the cover on the upper side of the roll.
+      const bvx = feet[0] - head[0], bvy = feet[1] - head[1], bl0 = Math.hypot(bvx, bvy) || 1, ux = bvx / bl0, uy = bvy / bl0, px = -uy, py = ux;
+      const up = Math.abs(roll) > 0.3 ? Math.sign(roll) : 0;
+      if (up) {
+        ctx.save(); ctx.globalAlpha *= Math.min(1, (Math.abs(roll) - 0.3) / 0.5);
+        const s0 = [shd[0] + px * up * 5, shd[1] + py * up * 5], e0 = [shd[0] + ux * 6 + px * up * 7.5, shd[1] + uy * 6 + py * up * 7.5], h0 = [shd[0] + ux * 13 + px * up * 4, shd[1] + uy * 13 + py * up * 4];
+        limb(s0[0], s0[1], e0[0], e0[1], L.top, 4); limb(e0[0], e0[1], h0[0], h0[1], L.skin, 3.2); circle(h0[0], h0[1], 2.2, L.skin);
+        ctx.restore();
       }
+      if (L.heads && L.heads.neutral) drawHeadImage(L.heads.blink || L.heads.neutral, head[0], head[1] + 4, HEAD_W * 0.9, roll < 0, -roll * 1.1);
+      else drawSimpleHead(head[0], head[1] - 5, 9, { L, fr: 0.6, rt: -roll * 0.7, blink: 1, rot: -roll * 1.1, t, seed: c.seed });
       const zz = (t * 0.6 + c.seed) % 1; ctx.globalAlpha = 1 - zz; ctx.fillStyle = '#F2EEE8'; ctx.font = '600 9px Inter, system-ui, sans-serif'; ctx.fillText('z', head[0] + 6 + zz * 6, head[1] - 10 - zz * 12); ctx.globalAlpha = 1;
       return;
     }
@@ -1861,13 +1932,19 @@ export function createHouseArt(ctx0, opts = {}) {
     const gaze = look ? Math.max(-2.6, Math.min(2.6, (look[0] - fx) / 14)) : idle ? Math.sin(t * 0.45 + c.seed * 5) * 2.2 + Math.sin(t * 0.13 + c.seed) * 1.2 : 0;
     const shift = idle ? Math.sin(t * 0.6 + c.seed * 4) * 1.1 : 0;
     const dance = pose === 'dance' && !rig;
-    const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.035 * amp;
+    // A walk rides up over the planted leg (under the hip at |sin| = 1, the other foot mid-swing) and dips as the feet
+    // pass apart; the hips sit a touch lower than standing so the stride fits the legs.
+    const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.03 * amp;
     const clip = blendClip(c, rig, { drop: rig?.drop || 0, bob: rig?.bob || 0, lean: rig?.lean || 0, head: (rig?.nod || 0) - (rig?.headDown ? 0.05 : 0) + (rig?.lookUp ? 0.03 : 0) });
     // Seated: the hips, knees and feet come from the leg solver, so the shins keep their length on any seat.
     const seat = c.sit ? seatLegs(c.z) : null;
-    const hipZ = (seat ? seat.hip[1] : 0.62 - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
-    const [dx, dy] = c.face, lean = clip.v.lean;
+    const stairs = c.slope || 0;
+    const hipZ = (seat ? seat.hip[1] : 0.62 - 0.02 * amp - (stairs ? 0.06 : 0) - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
+    const [dx, dy] = c.face, lean = clip.v.lean + 0.025 * amp + stairs * 0.03;
     const hip = P3(0, 0, hipZ), sh = P3(dx * lean, dy * lean, shZ), hd = P3(dx * lean * 1.25, dy * lean * 1.25, hdZ);
+    // A turned head slides a little toward where it looks, as a neck does.
+    const nk1 = P3(hdir[0] * 0.06, hdir[1] * 0.06, 0), nk0 = P3(dx * 0.06, dy * 0.06, 0);
+    const hx = hd[0] + (nk1[0] - nk0[0]), hy = hd[1] + (nk1[1] - nk0[1]);
     // The body's own sideways axis, signed so side +1 is screen-right (matching the shoulders).
     let rx = -dy, ry = dx;
     if (P3(rx, ry, 0)[0] < fx) { rx = -rx; ry = -ry; }
@@ -1900,9 +1977,12 @@ export function createHouseArt(ctx0, opts = {}) {
     // Props too wide to grip by a handle: no fingers drawn over them.
     const NO_FINGERS = new Set(['guitar', 'gloves']);
     const mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+    // Shoulders sit either side of the body's sideways axis, projected: seen from the side one shoulder is behind the other.
+    const shOff = (side) => { const q = P3(dx * lean + rx * side * 0.14, dy * lean + ry * side * 0.14, shZ); const ox = q[0] - sh[0]; return [Math.abs(ox) < 1.8 ? side * 1.8 : ox, q[1] - sh[1]]; };
     const armGeo = (side) => {
       const psA = poseState(c);
-      const sx0 = sh[0] + shift * 1.4 + side * 4.5, sy0 = sh[1] + 1;
+      const [sox, soy] = shOff(side);
+      const sx0 = sh[0] + shift * 1.4 + sox, sy0 = sh[1] + 1 + soy;
       const spec = rig && rig.hands ? rig.hands[side] : null;
       let tx, ty, el = null;
       if (rig && rig.hands) {
@@ -1912,7 +1992,10 @@ export function createHouseArt(ctx0, opts = {}) {
         if (dance) [tx, ty] = [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3];
         else if (['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose)) [tx, ty] = [sh[0] + side * 4 + f.flip * 5, sh[1] + 8];
         else if (['phone', 'read', 'sip', 'eat'].includes(pose)) [tx, ty] = [sh[0] + side * 2, sh[1] + 6];
-        else {
+        else if (c.carrying) {
+          // Both hands on the box, held low in front: no swing while carrying.
+          const h = local([0.12, 0.1, -0.4], side); tx = h[0]; ty = h[1]; el = local([0.1, 0.17, -0.2], side);
+        } else {
           // Standing or walking: the arms hang from the shoulders and swing forward and back
           // in the body's own frame, opposite the legs, so they read the same from every side.
           const w = walkRig(ph, amp), h = local(w.hands[side], side);
@@ -1922,7 +2005,7 @@ export function createHouseArt(ctx0, opts = {}) {
       // Walking arms track the stride closely; a slow ease here leaves them trailing behind the body.
       const armRate = rig && rig.hands ? (rig.snap ? 28 : 12) : c.walking ? 26 : 9;
       const e = ease2(psA, side, tx, ty, rdt, clip.active ? Math.min(armRate, 4 + 9 * clip.e) : armRate);
-      if (!el) el = spec ? [(sx0 + e[0]) / 2 + side * 2.5, (sy0 + e[1]) / 2 + 3] : [(sx0 + e[0]) / 2, (sy0 + e[1]) / 2];
+      if (!el) el = spec ? [(sx0 + e[0]) / 2 + sox * 0.55, (sy0 + e[1]) / 2 + 3] : [(sx0 + e[0]) / 2, (sy0 + e[1]) / 2];
       const held = rig && rig.props ? rig.props.find(q => !NOT_HELD.has(q.kind) && (q.side == null || q.side === side)) : null;
       const grip = (rig && rig.grip && rig.grip[side]) || (held ? (OPEN_KINDS.has(held.kind) ? 'open' : 'fist') : spec && spec[2] > 0.3 ? 'open' : 'relaxed');
       return { sx0, sy0, el, e, grip, reach: spec ? spec[0] : 0, fingers: !!held && !NO_FINGERS.has(held.kind) };
@@ -1983,17 +2066,21 @@ export function createHouseArt(ctx0, opts = {}) {
       if (rig && rig.legs === 'pedal') {
         const p = rig.phase + (side > 0 ? 0 : Math.PI);
         // Pedals sit below a bike seat, or in front when standing on the floor.
-        const footZ = seat ? Math.max(-c.z, seat.knee[1] - 0.26) : 0.16, kneeZ = seat ? seat.knee[1] + 0.04 : hipZ * 0.7;
-        const foot = P3(dx * (0.16 + Math.cos(p) * 0.1), dy * (0.16 + Math.cos(p) * 0.1), footZ + Math.sin(p) * 0.1);
-        const knee = P3(dx * 0.3, dy * 0.3, kneeZ + Math.sin(p) * 0.06);
+        const footZ = seat ? -c.z * 0.5 : 0.16, ff = 0.16 + Math.cos(p) * 0.1, fz = footZ + Math.sin(p) * 0.1;
+        const kn = legIK([0, hipZ], [ff, fz]);
+        const foot = P3(dx * ff, dy * ff, fz), knee = P3(dx * kn[0], dy * kn[0], kn[1]);
         thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
         shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
       }
       if (seat) { const knee = P3(dx * seat.knee[0], dy * seat.knee[0], seat.knee[1]), foot = P3(dx * seat.foot[0], dy * seat.foot[0], seat.foot[1]); thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy); shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy); return; }
-      if (dance) { const sw = Math.sin(t * 6 + side) * 0.05, foot = P3(dx * sw, dy * sw, 0); shin(hip[0] + ox, hip[1] + oy, foot[0] + ox, foot[1] + oy); return; }
+      if (dance) {
+        const sw = Math.sin(t * 6 + side) * 0.05, kn = legIK([0, hipZ], [sw, 0]);
+        const foot = P3(dx * sw, dy * sw, 0), knee = P3(dx * kn[0], dy * kn[0], kn[1]);
+        thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy); shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy); return;
+      }
       if (rig && rig.legs === 'crouch') {
-        const knee = P3(dx * 0.24, dy * 0.24, hipZ * 0.75), foot = P3(dx * 0.06, dy * 0.06, 0);
+        const kn = legIK([0, hipZ], [0.06, 0]), knee = P3(dx * kn[0], dy * kn[0], kn[1]), foot = P3(dx * 0.06, dy * 0.06, 0);
         thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox * 1.2, knee[1] + oy);
         shin(knee[0] + ox * 1.2, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
@@ -2001,20 +2088,21 @@ export function createHouseArt(ctx0, opts = {}) {
       if (rig && rig.legs === 'swim') return; // underwater
       if (rig && rig.legs === 'jack') {
         // Jumping jacks: feet out to the sides and back together.
-        const out = (rig.spread || 0) * side, foot = P3(rx * out, ry * out, 0);
-        shin(hip[0] + ox, hip[1] + oy, foot[0] + ox, foot[1] + oy);
+        const out = (rig.spread || 0) * side, kn = legIK([0, hipZ], [Math.abs(out), 0]);
+        const foot = P3(rx * out, ry * out, 0), knee = P3(rx * side * kn[0], ry * side * kn[0], kn[1]); // knees bend outward
+        thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy); shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
       }
 
       if (rig && rig.legs === 'tree' && side > 0) {
-        // Tree pose: this foot rests against the other knee.
-        const knee = P3(rx * 0.22, ry * 0.22, hipZ * 0.55), foot = P3(rx * 0.02, ry * 0.02, hipZ * 0.45);
+        // Tree pose: this foot rests against the other knee, its own knee turned out.
+        const tl = treeLeg(hipZ), knee = P3(rx * tl.knee[0], ry * tl.knee[0], hipZ + tl.knee[1]), foot = P3(rx * tl.foot[0], ry * tl.foot[0], hipZ + tl.foot[1]);
         thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
-        shin(knee[0] + ox, knee[1] + oy, foot[0] + ox * 0.4, foot[1] + oy);
+        shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
       }
       if (rig && rig.legs === 'lunge') {
-        const fw = side > 0 ? 0.3 : -0.26, knee = P3(dx * fw * (side > 0 ? 1 : 0.6), dy * fw * (side > 0 ? 1 : 0.6), hipZ * 0.5), foot = P3(dx * fw * 1.1, dy * fw * 1.1, 0);
+        const fw = side > 0 ? 0.33 : -0.29, kn = legIK([0, hipZ], [fw, 0]), knee = P3(dx * kn[0], dy * kn[0], kn[1]), foot = P3(dx * fw, dy * fw, 0);
         thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
         shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
@@ -2022,7 +2110,8 @@ export function createHouseArt(ctx0, opts = {}) {
       if (rig && (rig.legs === 'run' || rig.legs === 'step')) {
         const big = rig.legs === 'run', off = side > 0 ? 0 : Math.PI, p = rig.phase + off;
         const sw = Math.sin(p) * (big ? 0.22 : 0.12), lift = Math.max(0, Math.sin(p)) * (big ? 0.15 : 0.06);
-        const foot = P3(dx * sw, dy * sw, lift), knee = P3(dx * (sw * 0.5 + (big ? lift * 0.9 : 0.02)), dy * (sw * 0.5 + (big ? lift * 0.9 : 0.02)), hipZ * 0.5 + lift);
+        const kn = legIK([0, hipZ], [sw, lift]);
+        const foot = P3(dx * sw, dy * sw, lift), knee = P3(dx * kn[0], dy * kn[0], kn[1]);
         thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
         shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
@@ -2030,24 +2119,28 @@ export function createHouseArt(ctx0, opts = {}) {
       const off = side > 0 ? 0 : Math.PI;
       // Turning on the spot: small alternating steps, so the feet carry the body round.
       const tp = poseState(c), shuf = c.walking ? 0 : tp.turn || 0;
-      const sw = Math.sin(ph + off) * 0.17 * amp + Math.sin(tp.tph + off) * 0.06 * shuf, lift = c.z < 0.05 ? Math.max(0, Math.sin(ph + off)) * 0.075 * amp + Math.max(0, Math.sin(tp.tph + off)) * 0.045 * shuf : 0;
-      const foot = P3(dx * sw, dy * sw, lift);
-      const knee = P3(dx * sw * 0.55, dy * sw * 0.55, hipZ * 0.5 + lift * 0.7);
+      // On the stairs the reach is half a tread, so each footfall lands on the next tread, and the foot
+      // follows the slope of the flight: a tread higher ahead going up, lower going down.
+      const gf = gaitFoot(ph + off, stairs ? amp * (FL.RUN / 2) / GAIT.reach : amp);
+      const sw = gf[0] + Math.sin(tp.tph + off) * 0.06 * shuf, lift = (c.z < 0.05 || stairs ? gf[1] + Math.max(0, Math.sin(tp.tph + off)) * 0.045 * shuf : 0) + stairs * sw;
+      const kn = legIK([0, hipZ], [sw, lift]);
+      const foot = P3(dx * sw, dy * sw, lift), knee = P3(dx * kn[0], dy * kn[0], kn[1]);
       thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
       shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
     });
     // Secondary motion: hair and hems trail the body on springs, so they
     // swing when someone moves, turns or bounces, then settle.
     const sp = poseState(c);
+    sp.hipY = hip[1];
     const hair = springAt(sp, 'hair', hd[0], hd[1], 0.05, 26, 7);
     const hem = springAt(sp, 'hem', hip[0], hip[1], 0.035, 32, 8);
     const hairBack = () => {
       if (!L.longHair) return;
-      ell(hd[0] + sway * 0.7 + hair[0] * 0.6, hd[1] - 2 + hair[1] * 0.3, 6, 7.5, L.hair);
+      ell(hx + sway * 0.7 + hair[0] * 0.6, hy - 2 + hair[1] * 0.3, 6, 7.5, L.hair);
       // The ends swing a little further than the rest.
-      ell(hd[0] + sway * 0.7 + hair[0], hd[1] + 3 + hair[1] * 0.5, 4.6, 3.6, L.hair);
+      ell(hx + sway * 0.7 + hair[0], hy + 3 + hair[1] * 0.5, 4.6, 3.6, L.hair);
     };
-    if (f.front && !L.heads) hairBack();
+    if (hf.front && !L.heads) hairBack();
     if ((L.topStyle === 'dress' || L.topStyle === 'sundress' || skirty) && !c.sit) {
       // A skirt that flares and swings at the hem: a dress's, or the skirt worn as pants (shorter, pleated for the cheer skirt).
       const kz = P3(0, 0, hipZ * (skirty ? 0.66 : 0.55)), fl = skirty ? 7.6 : 7;
@@ -2213,44 +2306,15 @@ export function createHouseArt(ctx0, opts = {}) {
       [-1, 1].forEach(k => ell(g.e[0] + ax * 1.6 - ay * k * 0.95, g.e[1] + ay * 1.6 + ax * k * 0.95, 0.95, 0.8, L.skin));
     });
     if (L.heads && L.heads.neutral) {
-      const frame = headFrameFor({ front: f.front, talking: talking || !!rig?.talk, t, seed: c.seed, blink: bl > 0.5, expr: c.expr, mood }, L.heads);
-      drawHeadImage(L.heads[frame] || L.heads.neutral, hd[0] + shift * 1.6, hd[1] + 1.2, HEAD_W, f.flip < 0, 0);
+      const frame = headFrameFor({ front: hf.front, talking: talking || !!rig?.talk, t, seed: c.seed, blink: bl > 0.5, expr: c.expr, mood }, L.heads);
+      drawHeadImage(L.heads[frame] || L.heads.neutral, hx + shift * 1.6, hy + 1.2, HEAD_W, hf.flip < 0, 0);
       return;
     }
-    circle(hd[0] + shift * 1.6, hd[1] - 5, 5.6, L.skin);
-    if (f.front) {
-      ell(hd[0] + shift * 1.6 + sway * 0.3, hd[1] - 9, 6, 3.6, L.hair);
-      // A sheen on the hair and a touch of warmth on the cheeks.
-      ell(hd[0] + shift * 1.6 + sway * 0.3 - 2, hd[1] - 10, 2.4, 1, shade(L.hair, 0.28));
-      ctx.globalAlpha = 0.18; [-1, 1].forEach(sd => circle(hd[0] + shift * 1.6 + f.flip * 1.2 + sd * 3.2, hd[1] - 2.6, 1.3, '#E0607A')); ctx.globalAlpha = 1;
-      ctx.fillStyle = '#241B25';
-      const down = rig?.headDown ? 1.3 : rig?.lookUp ? -1.2 : 0;
-      const lids = c.expr === 'tired' || rig?.yawn ? 0.55 : 1;
-      [-1, 1].forEach(side => { const eh = Math.max(0.2, (rig?.headDown ? 0.8 : 1.4) * lids * (1 - bl)); ctx.fillRect(hd[0] + shift * 1.6 + f.flip * 1.2 + side * 2.1 + gaze - 0.6, hd[1] - 5.5 + down + (1.4 - eh) / 2, 1.2, eh); });
-      const cx = hd[0] + shift * 1.6 + f.flip * 0.8 + gaze * 0.6, cy = hd[1] - 1.8;
-      if (talking || rig?.talk) {
-        const open = (0.5 + 0.5 * Math.sin(t * 13 + c.seed * 7)) * 1.6 + 0.4;
-        ctx.fillStyle = '#8C4A42';
-        ell(cx, cy, 1.5, open, '#8C4A42');
-      } else if (rig?.yawn || c.expr) {
-        const ex = rig?.yawn ? 'yawn' : c.expr;
-        ctx.strokeStyle = '#241B25'; ctx.lineWidth = 0.8;
-        const bx = hd[0] + shift * 1.6 + f.flip * 1.2 + gaze, by = hd[1] - 7.6;
-        // Brows set the feeling; the mouth finishes it.
-        if (ex === 'annoyed') [-1, 1].forEach(sd => { ctx.beginPath(); ctx.moveTo(bx + sd * 3.2, by - 0.6); ctx.lineTo(bx + sd * 1.1, by + 0.5); ctx.stroke(); });
-        if (ex === 'sad') [-1, 1].forEach(sd => { ctx.beginPath(); ctx.moveTo(bx + sd * 3.2, by + 0.5); ctx.lineTo(bx + sd * 1.1, by - 0.5); ctx.stroke(); });
-        if (ex === 'happy' || ex === 'playful') { ctx.beginPath(); ctx.arc(cx, cy - 0.8, 1.6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); }
-        else if (ex === 'sad') { ctx.beginPath(); ctx.arc(cx, cy + 1.6, 1.4, 1.2 * Math.PI, 1.8 * Math.PI); ctx.stroke(); }
-        else if (ex === 'yawn') ell(cx, cy, 1.3, 1.9, '#5A2A2A');
-        else { ctx.beginPath(); ctx.moveTo(cx - 1.2, cy); ctx.lineTo(cx + 1.2, cy); ctx.stroke(); }
-      } else if (mood > 0.6) {
-        ctx.strokeStyle = '#241B25'; ctx.lineWidth = 0.8;
-        ctx.beginPath(); ctx.arc(cx, cy - 0.8, 1.4, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke();
-      } else if (mood < 0.3) {
-        ctx.strokeStyle = '#241B25'; ctx.lineWidth = 0.8;
-        ctx.beginPath(); ctx.arc(cx, cy + 1.6, 1.4, 1.2 * Math.PI, 1.8 * Math.PI); ctx.stroke();
-      }
-    } else { ell(hd[0] + shift * 1.6 + sway * 0.5, hd[1] - 6.5, 6, 5.6, L.hair); hairBack(); }
+    // No sprites: the drawn head, turned the way the head points (three-quarter views included).
+    const [hva, hvb] = VD(hdir[0], hdir[1]), hfr = (hva + hvb) / Math.SQRT2, hrt = (hva - hvb) / Math.SQRT2;
+    const smiling = c.expr === 'happy' || c.expr === 'playful' || (!c.expr && mood > 0.6), sadFace = c.expr === 'sad' || (!c.expr && mood < 0.3);
+    if (!hf.front) hairBack();
+    drawSimpleHead(hx + shift * 1.6, hy - 9, 10, { L, fr: hfr, rt: hrt, gaze, blink: bl, expr: c.expr, tired: c.expr === 'tired', yawn: !!rig?.yawn, headDown: !!rig?.headDown, lookUp: !!rig?.lookUp, talk: talking || !!rig?.talk, smile: smiling, sad: sadFace, sway, t, seed: c.seed });
   }
 
   // Depth of field: while two people talk, everything away from them softens. The frame is shrunk and stretched
@@ -2272,10 +2336,83 @@ export function createHouseArt(ctx0, opts = {}) {
     b.globalCompositeOperation = 'destination-out'; b.fillStyle = g; b.fillRect(0, 0, w, h);
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = Math.min(1, dofAmt); ctx.drawImage(dofBlur, 0, 0); ctx.restore();
   }
+  // ---- Pets: a cat or a dog, drawn from a few shapes in their own screen frame (+x is the way they face) ----
+  function drawPetShape(kind, coat, pose, t, front, seed = 0) {
+    const c = coat.c, d = coat.d, eye = '#1B1A1F';
+    const tri = (pts, col) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]); ctx.lineTo(pts[4], pts[5]); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); };
+    const curve = (x0, y0, cx, cy, x1, y1, col, w) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx, cy, x1, y1); ctx.stroke(); };
+    const walk = pose === 'walk' || pose === 'run', ph = t * (pose === 'run' ? 18 : 11) + seed;
+    const sit = ['sit', 'happy', 'groom'].includes(pose);
+    if (kind === 'cat') {
+      const head = (hx, hy, closed) => {
+        circle(hx, hy, 5.4, c); tri([hx - 4.8, hy - 1.5, hx - 3.6, hy - 9, hx - 0.4, hy - 4.6], c); tri([hx + 0.4, hy - 4.8, hx + 3.6, hy - 9.2, hx + 5, hy - 1.8], c); tri([hx - 3.6, hy - 3, hx - 3.1, hy - 7, hx - 1.4, hy - 4.6], '#E8A0AE');
+        if (closed) { ctx.strokeStyle = eye; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(hx + 2.4, hy - 0.4, 1.3, 0.2, Math.PI - 0.2); ctx.stroke(); }
+        else if (front) { circle(hx + 2.6, hy - 0.6, 1.05, eye); circle(hx + 4.6, hy + 1.7, 0.8, '#D98C9A'); }
+        if (front || closed) { ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(hx + 4, hy + 1.8); ctx.lineTo(hx + 9, hy + 0.8); ctx.moveTo(hx + 4, hy + 2.2); ctx.lineTo(hx + 9, hy + 3); ctx.stroke(); }
+      };
+      if (pose === 'sleep') { ell(0, -5, 11, 6, c); curve(-9, -3, -6, 3, 6, 1, c, 3.2); head(8, -6, true); for (let i = 0; i < 3; i++) curve(-6 + i * 4, -10, -5 + i * 4, -7, -6 + i * 4, -3, d, 1.2); return; }
+      const tw = Math.sin(t * 2 + seed) * 0.35;
+      const hop = pose === 'play' ? -Math.abs(Math.sin(t * 5 + seed)) * 8 : 0;
+      if (sit) {
+        curve(-5, -2, -13, 0, -11 + tw * 4, 3, c, 3);
+        ell(-1, -9, 7, 8.5, c); for (let i = 0; i < 2; i++) curve(-6, -12 + i * 4, -3, -11 + i * 4, -1, -13 + i * 4, d, 1.1);
+        limb(3, -5, 3.5, 0, d, 2.4); limb(6, -5, 6.5, 0, c, 2.4);
+        const hy = -20 + (pose === 'groom' ? Math.sin(t * 6 + seed) * 0.8 : 0); head(3, hy, pose === 'happy');
+        if (pose === 'groom') limb(6, -8, 7, hy + 4 + Math.sin(t * 9 + seed) * 1.5, c, 2.4);
+        return;
+      }
+      const by = pose === 'crouch' ? -5 : -8, eat = pose === 'eat';
+      curve(-9, by - 1 + hop, -16, by - 4 + hop, -15 + tw * 6, by - 13 + hop, c, 3);
+      [[-6, 0], [-3, 1], [4, 0], [7, 1]].forEach(([lx, k]) => { const sw = walk ? Math.sin(ph + k * Math.PI + (lx > 0 ? 1.5 : 0)) * 2.6 : 0; limb(lx, by + 2 + hop, lx + sw, Math.min(0, hop * 0.4), k ? d : c, 2.4); });
+      ell(0, by + hop, 10, 5.5, c); for (let i = 0; i < 3; i++) curve(-6 + i * 4, by - 5 + hop, -5 + i * 4, by - 2 + hop, -6 + i * 4, by + 1 + hop, d, 1.1);
+      head(eat ? 11 : 10, (eat ? by + 3 : by - 6) + hop, false);
+      return;
+    }
+    const head = (hx, hy, closed, tongue) => {
+      circle(hx, hy, 7, c); ell(hx + 6, hy + 2, 5.2, 3.6, c); circle(hx + 10.6, hy + 0.8, 1.9, eye);
+      if (closed) { ctx.strokeStyle = eye; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(hx + 2.5, hy - 1.5, 1.5, 0.2, Math.PI - 0.2); ctx.stroke(); } else if (front) circle(hx + 3, hy - 2, 1.25, eye);
+      if (tongue) ell(hx + 7.5, hy + 6.2, 1.6, 2.6, '#E07A8A');
+      ell(hx - 2.5, hy + 1.5, 3, 6.5, d, null, 0.25);
+    };
+    const wag = ['happy', 'play', 'walk', 'run', 'sit'].includes(pose) ? Math.sin(t * 14 + seed) * 0.6 : 0.1;
+    if (pose === 'sleep') { ell(0, -7, 14, 7, c); ell(-4, -9, 5, 3.5, d); limb(-12, -6, -6, -1, c, 3); head(11, -6, true, false); return; }
+    const hop = pose === 'play' ? -Math.abs(Math.sin(t * 5 + seed)) * 7 : 0;
+    if (sit) {
+      limb(-9, -3, -16, -6 + wag * 5, c, 3.2);
+      ell(-2, -12, 9, 11, c); ell(-4, -14, 4, 3, d);
+      limb(3, -6, 4, 0, c, 3); limb(7, -6, 8, 0, c, 3);
+      head(5, -26, false, pose === 'happy');
+      // Grooming, for a dog, is a good scratch behind the ear with a hind leg.
+      if (pose === 'groom') limb(-2, -8, 6 + Math.sin(t * 13 + seed) * 2.5, -22, c, 3);
+      return;
+    }
+    // Crouching (a squat in the yard) brings the body low on bent legs.
+    const by = pose === 'crouch' ? -11 : -15 + (pose === 'eat' ? 1 : 0);
+    limb(-12, by - 2 + hop, -19, by - 9 + wag * 6 + hop, c, 3.2);
+    [[-8, 0], [-5, 1], [6, 0], [9, 1]].forEach(([lx, k]) => { const sw = walk ? Math.sin(ph + k * Math.PI + (lx > 0 ? 1.5 : 0)) * 3 : 0; limb(lx, by + 4 + hop, lx + sw, Math.min(0, hop * 0.4), k ? shade(c, -0.15) : c, 3); });
+    ell(0, by + hop, 13, 7, c); ell(-4, by - 2 + hop, 5, 3.5, d);
+    if (pose === 'eat') head(15, by + 9, false, false); else head(14, by - 8 + hop, false, pose === 'play' || walk);
+  }
+  function drawPet(p, t) {
+    const [fx, fy] = iso(p.x, p.y, p.z), f = facing(p.face || [0, 1]), sc = p.kind === 'dog' ? 1.05 : 0.95;
+    ctx.save(); ctx.globalAlpha *= p.alpha == null ? 1 : p.alpha;
+    if (p.pose !== 'sleep' && p.z <= 0.05) ell(fx, fy, p.kind === 'dog' ? 11 : 8, 3.2, 'rgba(30,15,30,.16)');
+    ctx.save(); ctx.translate(fx, fy); ctx.scale(f.flip * sc, sc); drawPetShape(p.kind, p.coat, p.pose, t, f.front, p.seed || 0);
+    if (p.pose === 'play' && p.kind === 'dog') { const k = Math.sin(t * 5 + (p.seed || 0)); circle(26 + k * 6, -4 - Math.abs(k) * 12, 2.8, '#C9D94A'); }
+    ctx.restore();
+    const top = fy - (p.kind === 'dog' ? 40 : 30);
+    if (p.pose === 'sleep') for (let i = 0; i < 2; i++) { const ph = (t * 0.4 + i / 2 + (p.seed || 0)) % 1; ctx.fillStyle = `rgba(80,70,140,${1 - ph})`; ctx.font = `600 ${8 + ph * 4}px "IBM Plex Mono", ui-monospace, monospace`; ctx.fillText('z', fx + 6 + ph * 10, fy - 12 - ph * 16); }
+    if (p.hearts > 0) heart(fx + 6, top - 2 - (1 - Math.min(3, p.hearts) / 3) * 10, 1, 'rgba(205,70,110,.9)');
+    if (p.want || p.door) thought(fx + 15, top - 10 + Math.sin(t * 3) * 1.5, p.door ? 'leash' : p.want === 'feed' ? 'bowl' : p.want === 'play' ? 'ball' : 'love');
+    ctx.restore();
+  }
+
   function render(s) {
     // What the household is doing to the house (the power, the dishes, the fridge) comes in with every frame, so the art never shows stale state.
     if (s.house) { power = s.house.power; dishes = s.house.dishes; laundryPile = s.house.laundryPile; fridge = s.house.fridge; parcel = s.house.parcel || null; if (s.house.owned) owned = s.house.owned; }
     sync(s);
+    // The pets, so the bowls and litter boxes can show what is in them.
+    PETS.length = 0; if (s.pets) for (const p of s.pets) PETS.push(p);
     const t = animT, lv = viewLevel;
     const watching = [jordan, maya].some(c => c && c.task && c.task.phase === 'do' && (c.task.name === 'tv' || c.task.name === 'movie'));
     tvF += ((power && (watching || tvOn) ? 1 : 0) - tvF) * Math.min(1, rdt * 4);
@@ -2300,19 +2437,24 @@ export function createHouseArt(ctx0, opts = {}) {
       if (c0.stair && !c0.hidden) {
         const st = c0.stair, k = Math.max(0, Math.min(1, st.s)), up = st.up;
         const x = st.bx + (st.tx - st.bx) * k, y = st.by + (st.ty - st.by) * k;
-        const steps = FL.N + 1, step = Math.floor(k * steps), within = k * steps - step;
-        const z = (step + Math.min(1, within * 1.6)) * (FL.TOP / steps);
+        // The body rises smoothly with the flight; the feet do the stepping (see the slope in drawPerson).
+        const z = k * FL.TOP, slope = (up ? 1 : -1) * FL.RISE / FL.RUN;
         const dx = st.tx - st.bx, dy = st.ty - st.by, dl = Math.hypot(dx, dy) || 1, fdir = up ? [dx / dl, dy / dl] : [-dx / dl, -dy / dl];
-        if (lv === st.low) c = Object.assign({}, c0, { level: lv, x, y, z, face: fdir, walking: true });
+        if (lv === st.low) c = Object.assign({}, c0, { level: lv, x, y, z, face: fdir, walking: true, slope });
         else if (lv === st.high && z > FL.TOP * 0.62) {
           const hole = OBJS.find(o => o.level === lv && (o.type === 'holeX' || o.type === 'holeY') && Math.hypot(o.x + (TYPES[o.type].W || 1) / 2 - st.tx, o.y + (TYPES[o.type].D || 1) / 2 - st.ty) < 3);
           if (!hole) return;
-          pit = hole; c = Object.assign({}, c0, { level: lv, x, y, z: z - FL.TOP, face: fdir, walking: true });
+          pit = hole; c = Object.assign({}, c0, { level: lv, x, y, z: z - FL.TOP, face: fdir, walking: true, slope });
         } else return;
       } else if (c0.level !== lv || c0.hidden) return;
       const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && isOutdoor(lv)) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); if (pit) { const W = TYPES[pit.type].W, D = TYPES[pit.type].D, P = [iso(pit.x, pit.y, 0), iso(pit.x + W, pit.y, 0), iso(pit.x + W, pit.y + D, 0), iso(pit.x, pit.y + D, 0)], lo = P.slice().sort((a, b) => a[0] - b[0]), bot = P.reduce((m, q) => (q[1] > m[1] ? q : m)); ctx.save(); ctx.beginPath(); ctx.moveTo(lo[0][0], lo[0][1]); ctx.lineTo(bot[0], bot[1]); ctx.lineTo(lo[3][0], lo[3][1]); ctx.lineTo(lo[3][0], -2000); ctx.lineTo(lo[0][0], -2000); ctx.closePath(); ctx.clip(); }
         drawPerson(c, t); if (c.carrying) drawCarried(c); if (gOn) G.clearBase(); if (c.npc && c.name) drawNameTag(c); if (c.bubble) drawBubble(c, t);
         if (pit) ctx.restore(); } }); });
+    (s.pets || []).forEach(p => {
+      if (p.level !== lv || p.hidden) return;
+      const r = p.z > 0.05 ? 0.04 : 0.14;
+      items.push({ x1: p.x - r, y1: p.y - r, x2: p.x + r, y2: p.y + r, key: vs(p.x, p.y) + 0.0005 + (p.z > 0.05 ? 0.3 : 0), d: () => { if (gOn) G.billboard(iso(p.x, p.y, 0)[1], ZH * 0.5, MATERIAL.body); drawPet(p, t); if (gOn) G.clearBase(); } });
+    });
     depthSort(items).forEach(it => it.d());
     drawFrontWalls(lv); drawProjector(lv);
     if (arrState) drawArrangeOverlay(arrState, lv);

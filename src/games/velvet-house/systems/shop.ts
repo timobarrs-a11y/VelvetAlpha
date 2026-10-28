@@ -38,6 +38,7 @@ export function createShop(g: Game): Partial<Game> {
       log('Pick a floor of the house first (Basement, Main floor or Upstairs): walls and floors go inside.');
       return;
     }
+    if (item.id === 'pet-food' && !world.pets.length) { log('Adopt a pet first.'); return; }
     // A look restyles the piece already on the main floor, so its one good spot stays; buying what it already wears costs nothing.
     const target = item.icon === 'obj' ? skinTarget(world.objs, item) : null;
     const lookCol = item.skin ? skinColour(item, color) : undefined;
@@ -47,6 +48,9 @@ export function createShop(g: Game): Partial<Game> {
     if (!free && !g.spendOn(`Shop: ${item.name}`, price)) { log('Not enough money.'); return; }
     owned.add(item.id);
     log(free ? `Put the ${item.name} back on.` : `Bought ${item.name} for $${price}.`);
+    // Pets: a new housemate, or food for the ones already here.
+    if (item.icon === 'pet' && item.pet) { g.adoptPet(item.pet, item.id); return; }
+    if (item.id === 'pet-food') { world.petFood += 14; log(`${world.petFood} portions of pet food in the cupboard.`); g.refreshDrawer(); return; }
 
     if (item.icon === 'upgrade' && item.id === 'upgrade-attic') {
       world.objs.push(...ATTIC_STAIR_OBJS.map(o => ({ ...o })));

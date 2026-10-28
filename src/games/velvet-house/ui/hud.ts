@@ -36,7 +36,7 @@ export function createHud(g: Game): Partial<Game> {
       phone: phoneView(world.household, world.life, world.day, world.minutes, !!people[0].away),
       billAmount: world.household.bill?.amount ?? null,
       billOverdue: world.household.bill?.overdue ?? false,
-      petCount: 0, log: logEntries,
+      petCount: world.pets.length, petFood: world.petFood, pets: g.petViews(), log: logEntries,
       partnerName, simName, townName,
       deliveryPending: !!world.household.delivery,
       mayaStatus: statusText(people[1]),
