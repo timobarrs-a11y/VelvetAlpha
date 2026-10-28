@@ -26,6 +26,8 @@ import {
   type Eff,
 } from "../../game/social-combat/fieldNotes";
 import { sfx } from "../../game/social-combat/sfx";
+import { ConversationScene } from "./ConversationScene";
+import { JAKE } from "../../game/social-combat/conversation/jake";
 
 type EmotionKey = 'confident' | 'vulnerable' | 'grateful' | 'angry' | 'annoyed' | 'lazy' | 'guilty' | 'doubtful' | 'trusting' | 'defensive' | 'hostile' | 'overconfident';
 type OppAction = 'jab' | 'guilt_trip' | 'deflect' | 'stall' | 'escalate';
@@ -1576,8 +1578,9 @@ function CharSelect({ onSelect, onExit = null }: { onSelect: (id: string) => voi
   );
 }
 
-function ModeSelect({ char, onTutorial, onSingle, onAscent, onDaily, dailySeed, onBack }: {
+function ModeSelect({ char, onTutorial, onSingle, onAscent, onDaily, onConversation, dailySeed, onBack }: {
   char: CharDef;
+  onConversation: () => void;
   onTutorial: () => void;
   onSingle: () => void;
   onAscent: () => void;
@@ -1590,6 +1593,7 @@ function ModeSelect({ char, onTutorial, onSingle, onAscent, onDaily, dailySeed, 
     { id:'t', onClick:onTutorial, icon:'🏀', title:'Tutorial', desc:'Learn the ropes with Coach Morgan — no stakes, just teaching.', time:'~3 MIN', color:'#FBBF24', timeColor:'#FBBF24' },
     { id:'s', onClick:onSingle, icon:'⚔️', title:'Single Scenario', desc:'One opponent. One conversation. Master it at your pace.', time:'~5 MIN', color:'#6366F1', timeColor:'#818CF8' },
     { id:'d', onClick:onDaily, icon:'🎲', title:'Daily Challenge', desc:'Same opponent for everyone today. Three stages. One shot.', time:`${dailySeed}`, color:'#06B6D4', timeColor:'#22D3EE', badge:'DAILY' },
+    { id:'c', onClick:onConversation, icon:'💬', title:'The Night Before', desc:'Prototype: no HP, no type chart. Say real lines to Jake and live with what they get you.', time:'~4 MIN', color:'#F472B6', timeColor:'#F9A8D4', badge:'NEW' },
     { id:'a', onClick:onAscent, icon:'🏔️', title:'Ascent Mode', desc:'Five escalating conflicts. Earn perks. Face a boss. Limited retries.', time:'~20 MIN • HARDCORE', color:'#EC4899', timeColor:'#F472B6', badge:'5 STAGES' },
   ];
   return (
@@ -2198,7 +2202,7 @@ function LeaderboardPanel({ entries, personalBest, onClose }: { entries: Leaderb
 }
 
 export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => void) | null }) {
-  const [screen, setScreen] = useState<'select'|'mode'|'tutorial'|'game'|'perk'|'runVictory'>('select');
+  const [screen, setScreen] = useState<'select'|'mode'|'tutorial'|'game'|'perk'|'runVictory'|'conversation'>('select');
   const [char, setChar] = useState<CharDef | null>(null);
   const [gs, setGs] = useState<GameState | null>(null);
   const [ascent, setAscent] = useState<AscentRun | null>(null);
@@ -2659,6 +2663,8 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
     </div>
   );
 
+  if (screen === 'conversation') return <ConversationScene scene={JAKE} onExit={() => setScreen('mode')} />;
+
   if (screen === 'mode') return (
     <div style={appBg}>
       <Starfield />
@@ -2668,6 +2674,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
         onSingle={startSingle}
         onAscent={startAscent}
         onDaily={startDaily}
+        onConversation={() => setScreen('conversation')}
         dailySeed={dailySeedLabel()}
         onBack={() => { setChar(null); setScreen('select'); }}
       />
