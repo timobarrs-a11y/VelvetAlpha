@@ -138,6 +138,45 @@ describe('sleep and the drawn head', () => {
   });
 });
 
+describe('the stairs', () => {
+  const look = { skin: '#C68E6A', hair: '#2B1D16', top: '#3E6E8E', bottom: '#2F3542', longHair: false };
+  // The flight from the ground floor to the first: bottom (9.5, 3.25), top (9.5, 1.25).
+  const climber = (s: number, up: boolean) => ({ ...PERSON, level: 0, x: 9.5, y: 3.25 - 2 * s, z: 0, look, walking: true,
+    stair: { s, up, bx: 9.5, by: 3.25, tx: 9.5, ty: 1.25, low: 0, high: 1 } });
+  const scene = (level: number, chars: object[], t: number, rot = 0) => ({ level, rot, minutes: 600, day: 1, t, dt: 0.016, objs: INITIAL_OBJS.map((o) => ({ ...o })), wallMode: 'up', chars });
+
+  it('draws a climber on the flight below and coming up out of the stairwell above, both ways, from every angle', () => {
+    for (const up of [true, false]) for (let rot = 0; rot < 4; rot++) {
+      const { ctx, calls } = stubCtx();
+      const art = createHouseArt(ctx);
+      for (let i = 0; i <= 20; i++) {
+        const s = i / 20;
+        for (const level of [0, 1]) { const before = calls.n; art.render(scene(level, [climber(s, up)], 1 + i * 0.1, rot)); expect(calls.n, `s=${s} level ${level}`).toBeGreaterThan(before); }
+      }
+    }
+  });
+
+  it('rises smoothly up the flight instead of hopping a step at a time', () => {
+    // The drawn head is placed with a translate; the house's own translates never move, so the one that
+    // changes from frame to frame is the climber's head.
+    const rec = recordingCtx();
+    const art = createHouseArt(rec.ctx);
+    const translates = () => rec.sig().split('|').filter(e => e.startsWith('translate'));
+    let prev = new Set<string>(translates());
+    const heads: number[] = [];
+    for (let i = 0; i <= 40; i++) {
+      rec.reset(); art.render(scene(0, [climber(i / 40, true)], 1 + i * 0.05));
+      const now = translates(), fresh = now.filter(e => !prev.has(e));
+      prev = new Set(now);
+      if (fresh.length) heads.push(Math.min(...fresh.map(e => Number(e.slice(9).split(',')[1]))));
+    }
+    expect(heads.length).toBeGreaterThan(30);
+    const jumps = heads.slice(1).map((y, i) => heads[i] - y);
+    expect(Math.max(...jumps), 'no single frame climbs more than a few pixels').toBeLessThan(6);
+    expect(heads[0] - heads[heads.length - 1], 'but over the flight the head rises most of a floor').toBeGreaterThan(50);
+  });
+});
+
 describe('house artwork', () => {
   it('draws every floor from every camera angle, day and night', () => {
     const { ctx, calls } = stubCtx();

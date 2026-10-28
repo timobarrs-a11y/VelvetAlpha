@@ -1549,7 +1549,8 @@ export function createHouseArt(ctx0, opts = {}) {
     let ws = walkStates.get(c.seed);
     if (!ws) { ws = { px: c.x, py: c.y, ph: 0, amp: 0 }; walkStates.set(c.seed, ws); }
     const dd = Math.hypot(c.x - ws.px, c.y - ws.py);
-    if (c.walking && dd < 0.6) ws.ph += dd / (GAIT.cycle / 2) * Math.PI;
+    // Half a cycle per footfall: a stride on the floor, one tread on the stairs.
+    if (c.walking && dd < 0.6) ws.ph += dd / (c.slope ? FL.RUN : GAIT.cycle / 2) * Math.PI;
     ws.amp += ((c.walking ? 1 : 0) - ws.amp) * Math.min(1, rdt * 7);
     ws.px = c.x; ws.py = c.y;
     return ws;
@@ -1935,8 +1936,9 @@ export function createHouseArt(ctx0, opts = {}) {
     const clip = blendClip(c, rig, { drop: rig?.drop || 0, bob: rig?.bob || 0, lean: rig?.lean || 0, head: (rig?.nod || 0) - (rig?.headDown ? 0.05 : 0) + (rig?.lookUp ? 0.03 : 0) });
     // Seated: the hips, knees and feet come from the leg solver, so the shins keep their length on any seat.
     const seat = c.sit ? seatLegs(c.z) : null;
-    const hipZ = (seat ? seat.hip[1] : 0.62 - 0.02 * amp - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
-    const [dx, dy] = c.face, lean = clip.v.lean + 0.025 * amp;
+    const stairs = c.slope || 0;
+    const hipZ = (seat ? seat.hip[1] : 0.62 - 0.02 * amp - (stairs ? 0.06 : 0) - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
+    const [dx, dy] = c.face, lean = clip.v.lean + 0.025 * amp + stairs * 0.03;
     const hip = P3(0, 0, hipZ), sh = P3(dx * lean, dy * lean, shZ), hd = P3(dx * lean * 1.25, dy * lean * 1.25, hdZ);
     // A turned head slides a little toward where it looks, as a neck does.
     const nk1 = P3(hdir[0] * 0.06, hdir[1] * 0.06, 0), nk0 = P3(dx * 0.06, dy * 0.06, 0);
@@ -2115,8 +2117,10 @@ export function createHouseArt(ctx0, opts = {}) {
       const off = side > 0 ? 0 : Math.PI;
       // Turning on the spot: small alternating steps, so the feet carry the body round.
       const tp = poseState(c), shuf = c.walking ? 0 : tp.turn || 0;
-      const gf = gaitFoot(ph + off, amp);
-      const sw = gf[0] + Math.sin(tp.tph + off) * 0.06 * shuf, lift = c.z < 0.05 ? gf[1] + Math.max(0, Math.sin(tp.tph + off)) * 0.045 * shuf : 0;
+      // On the stairs the reach is half a tread, so each footfall lands on the next tread, and the foot
+      // follows the slope of the flight: a tread higher ahead going up, lower going down.
+      const gf = gaitFoot(ph + off, stairs ? amp * (FL.RUN / 2) / GAIT.reach : amp);
+      const sw = gf[0] + Math.sin(tp.tph + off) * 0.06 * shuf, lift = (c.z < 0.05 || stairs ? gf[1] + Math.max(0, Math.sin(tp.tph + off)) * 0.045 * shuf : 0) + stairs * sw;
       const kn = legIK([0, hipZ], [sw, lift]);
       const foot = P3(dx * sw, dy * sw, lift), knee = P3(dx * kn[0], dy * kn[0], kn[1]);
       thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
@@ -2327,14 +2331,14 @@ export function createHouseArt(ctx0, opts = {}) {
       if (c0.stair && !c0.hidden) {
         const st = c0.stair, k = Math.max(0, Math.min(1, st.s)), up = st.up;
         const x = st.bx + (st.tx - st.bx) * k, y = st.by + (st.ty - st.by) * k;
-        const steps = FL.N + 1, step = Math.floor(k * steps), within = k * steps - step;
-        const z = (step + Math.min(1, within * 1.6)) * (FL.TOP / steps);
+        // The body rises smoothly with the flight; the feet do the stepping (see the slope in drawPerson).
+        const z = k * FL.TOP, slope = (up ? 1 : -1) * FL.RISE / FL.RUN;
         const dx = st.tx - st.bx, dy = st.ty - st.by, dl = Math.hypot(dx, dy) || 1, fdir = up ? [dx / dl, dy / dl] : [-dx / dl, -dy / dl];
-        if (lv === st.low) c = Object.assign({}, c0, { level: lv, x, y, z, face: fdir, walking: true });
+        if (lv === st.low) c = Object.assign({}, c0, { level: lv, x, y, z, face: fdir, walking: true, slope });
         else if (lv === st.high && z > FL.TOP * 0.62) {
           const hole = OBJS.find(o => o.level === lv && (o.type === 'holeX' || o.type === 'holeY') && Math.hypot(o.x + (TYPES[o.type].W || 1) / 2 - st.tx, o.y + (TYPES[o.type].D || 1) / 2 - st.ty) < 3);
           if (!hole) return;
-          pit = hole; c = Object.assign({}, c0, { level: lv, x, y, z: z - FL.TOP, face: fdir, walking: true });
+          pit = hole; c = Object.assign({}, c0, { level: lv, x, y, z: z - FL.TOP, face: fdir, walking: true, slope });
         } else return;
       } else if (c0.level !== lv || c0.hidden) return;
       const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && isOutdoor(lv)) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); if (pit) { const W = TYPES[pit.type].W, D = TYPES[pit.type].D, P = [iso(pit.x, pit.y, 0), iso(pit.x + W, pit.y, 0), iso(pit.x + W, pit.y + D, 0), iso(pit.x, pit.y + D, 0)], lo = P.slice().sort((a, b) => a[0] - b[0]), bot = P.reduce((m, q) => (q[1] > m[1] ? q : m)); ctx.save(); ctx.beginPath(); ctx.moveTo(lo[0][0], lo[0][1]); ctx.lineTo(bot[0], bot[1]); ctx.lineTo(lo[3][0], lo[3][1]); ctx.lineTo(lo[3][0], -2000); ctx.lineTo(lo[0][0], -2000); ctx.closePath(); ctx.clip(); }
