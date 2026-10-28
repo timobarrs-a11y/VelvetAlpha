@@ -29,6 +29,7 @@ export function createInteract(g: Game): Partial<Game> {
     const isLight = Boolean(TYPES[obj.type]?.light);
     const acts: TrayAction[] = [];
     if (obj.type === 'pbox' && obj.contents) acts.push({ act: 'unpack', label: 'Unpack', icon: '' });
+    if (obj.type === 'bag' && obj.contents) acts.push({ act: 'unpack', label: 'Open', icon: '' });
     if (isLight) acts.push({ act: 'toggleLight', label: 'Turn light on/off', icon: '' });
     if (spots) {
       const tags = Object.values(spots).map(s => s.tag);
@@ -84,7 +85,7 @@ export function createInteract(g: Game): Partial<Game> {
       g.relearnLayout(obj);
       art.reveal(obj.id);
       art.burst(obj.level, obj.x + (TYPES[type]?.W ?? 0.6) / 2, obj.y + (TYPES[type]?.D ?? 0.5) / 2, 0.8);
-      log(`Unpacked the ${(TYPES[type]?.name ?? "piece").toLowerCase()}.`);
+      log(was === 'bag' ? 'Opened the groceries. Carry them to the fridge.' : `Unpacked the ${(TYPES[type]?.name ?? "piece").toLowerCase()}.`);
       g.scriptEmit({ type: 'obj.unpacked', objId: obj.id, objType: type });
       g.drawer.open('arrange');
       g.selectObject(obj);

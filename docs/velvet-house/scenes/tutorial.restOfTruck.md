@@ -45,7 +45,7 @@ first order.
 | K5 | Dez, before leaving: his card and the store ("anything y'all want, you order it, I'll bring it"). The store card. | Required | lines dismissed; store seen | `did.tab.shop` |
 | F1 | A beat. Maya: the fridge is here and empty; let's order food (`fridgeEmpty`, humor × gender). Card: order groceries from Household. | Required | groceries ordered | `did.groceries.ordered` |
 | F2 | Dez delivers the food in a **brown paper bag** at the door. | Required; the bag is a new asset (§12) | bag at the door | world |
-| F3 | The bag opens into food; the player drags the food into the fridge; the food bar fills. | Required; **not built** (see food-and-consequences.md) | stock > 0 | world |
+| F3 | The bag opens into food; the player drags the food onto the fridge in Arrange, which takes it; the food bar fills. | Required; **built** | event `groceries.putaway` | `did.groceries.putaway` |
 
 ## 4. Presence
 
@@ -81,11 +81,9 @@ a sprig); food items as pieces that can be dragged (not built).
 
 ## 13. Questions for the director (working assumption in brackets)
 
-1. **"Two lamps"**: what did you see, two lamp boxes, or a second floor lamp already in the room? There is one lamp
-   box in the script; the basement has its own lamp from the start. [one box; nothing else changed until I know]
-2. **Which basement item** is in the third box? [the treadmill, since the basement is the gym; the starter treadmill
-   is removed from a new house so it arrives in the box]
-3. **The fridge:** once placed, may the player move it again later, like any piece? It used to be fixed. [yes]
+1. **"Two lamps"**: Answered and fixed: the lamp visit also dropped the plant box; boxes look alike. One box now.
+2. **Which basement item** is in the third box? Answered: the treadmill.
+3. **The fridge:** Answered: nothing is fixed; every piece but the stairs and floor openings can move and change floors.
 4. **The plant:** any lesson, or a plain "you know the drill" with no outline? [no outline; anywhere on the main floor]
 5. **Dez's store card** (today's chapter 8): keep it as the moment before the food order, said while he is still in
    the house after the three boxes? [yes]

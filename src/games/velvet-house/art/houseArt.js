@@ -3,7 +3,7 @@
 import { MATERIAL } from '../engine/gbuffer';
 import { sunLight, gradeTint } from '../engine/deferredLights';
 import { createParticles } from '../engine/particles';
-import { poseRig, idleRig } from './poseAnim.js';
+import { poseRig, idleRig, walkRig, seatLegs, FOOT } from './poseAnim.js';
 import { headFrameFor } from '../state/headSprites';
 import { handImage, HAND_SPRITE } from '../state/bodySprites';
 import { TYPES as STATE_TYPES } from '../state/objects';
@@ -503,6 +503,13 @@ export function createHouseArt(ctx0, opts = {}) {
     pbox: {    
       parts: () => [F(0, 0, 0.62, 0.52, (T, o) => { T.box(0, 0, 0, 0.62, 0.52, 0.55, '#C49A68'); T.line([0.31, 0, 0.551], [0.31, 0.52, 0.551], 'rgba(240,230,200,.9)', 3); T.line([0.31, 0.521, 0.55], [0.31, 0.521, 0.38], 'rgba(240,230,200,.9)', 3);
         const [lx, ly] = T.P(0.31, 0.521, 0.2); ctx.fillStyle = '#3A3340'; ctx.font = '700 7px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.fillText((BOX_LABEL[o.contains && o.contains.type] || 'STUFF'), lx, ly + 2); ctx.textAlign = 'start'; })] },
+    // A brown paper bag of groceries, folded shut, something green poking out; and the groceries once it is opened.
+    bag: {
+      parts: () => [F(0, 0, 0.42, 0.36, (T) => { T.box(0.02, 0.02, 0, 0.38, 0.32, 0.44, '#C8A06A'); T.box(0, 0, 0.44, 0.42, 0.36, 0.07, '#B88D5A'); const [gx, gy] = T.P(0.21, 0.1, 0.56); ell(gx, gy - 2, 3, 6, '#4F9460', null, -0.3); })],
+    },
+    food: {
+      parts: () => [F(0, 0, 0.5, 0.42, (T) => { T.box(0, 0, 0, 0.5, 0.42, 0.22, '#B98A57'); T.box(0.04, 0.04, 0.22, 0.2, 0.16, 0.12, '#F2EEE8'); T.box(0.27, 0.05, 0.22, 0.18, 0.14, 0.09, '#D9593D'); const [gx, gy] = T.P(0.16, 0.3, 0.36); ell(gx, gy, 5, 4, '#4F9460'); const [bx, by] = T.P(0.38, 0.3, 0.3); ell(bx, by, 4, 3, '#E0A43A'); })],
+    },
     // ---- backyard ----
     tree: {      
       parts: () => [F(0.3, 0.3, 1.1, 1.1, (T, o, t) => { const [bx, by] = T.P(0.7, 0.7, 0), [, ty] = T.P(0.7, 0.7, 2.0); ell(bx + 6, by + 2, 46, 20, 'rgba(30,50,20,.18)'); rr(bx - 5, ty, 10, by - ty, 3, '#6B4A35'); limb(bx, ty + 14, bx - 14, ty - 4, '#6B4A35', 4); limb(bx, ty + 10, bx + 16, ty - 8, '#6B4A35', 3.5);
@@ -1311,7 +1318,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (playing) { const a = iso(6.0, 0.01, 1.9), b = iso(8.0, 0.01, 1.9), c = iso(8.0, 0.01, 0.8), d = iso(6.0, 0.01, 0.8); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(190,210,255,.07)'; ctx.beginPath(); ctx.moveTo(px - 5, py + 1); ctx.lineTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.closePath(); ctx.fill(); ctx.restore(); }
   }
 
-  const BOX_LABEL = { flowervase: 'VASE', succulents: 'PLANTS', desklamp: 'LAMP', photoframes: 'PHOTOS', tablelamp: 'LAMP', candelabra: 'CANDLES', blanketladder: 'LADDER', plantstand: 'PLANT', woodstool: 'STOOL', candles: 'CANDLES', basket: 'BASKET', floormirror: 'MIRROR', coatrack: 'COAT RACK', bookstack: 'BOOKS', eucalyptus: 'VASE', bust: 'BUST', umbrella: 'UMBRELLAS', coffeetable: 'TABLE', sidetable: 'TABLE', bookshelf: 'SHELF', armchair: 'CHAIR', rugrect: 'RUG', sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
+  const BOX_LABEL = { flowervase: 'VASE', succulents: 'PLANTS', desklamp: 'LAMP', photoframes: 'PHOTOS', tablelamp: 'LAMP', candelabra: 'CANDLES', blanketladder: 'LADDER', plantstand: 'PLANT', woodstool: 'STOOL', candles: 'CANDLES', basket: 'BASKET', floormirror: 'MIRROR', coatrack: 'COAT RACK', bookstack: 'BOOKS', eucalyptus: 'VASE', bust: 'BUST', umbrella: 'UMBRELLAS', coffeetable: 'TABLE', sidetable: 'TABLE', bookshelf: 'SHELF', armchair: 'CHAIR', rugrect: 'RUG', sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', bed: 'BED', fridge: 'FRIDGE', dining: 'TABLE', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
 
   // Just-placed furniture lands with a squash and a little bounce.
   // Three ways a piece arrives: it lands with a squash (set down), pops out of its box (revealed) or drops from above (delivered).
@@ -1854,27 +1861,34 @@ export function createHouseArt(ctx0, opts = {}) {
     const dance = pose === 'dance' && !rig;
     const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.035 * amp;
     const clip = blendClip(c, rig, { drop: rig?.drop || 0, bob: rig?.bob || 0, lean: rig?.lean || 0, head: (rig?.nod || 0) - (rig?.headDown ? 0.05 : 0) + (rig?.lookUp ? 0.03 : 0) });
-    const hipZ = (c.sit ? 0.03 : 0.62 - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
+    // Seated: the hips, knees and feet come from the leg solver, so the shins keep their length on any seat.
+    const seat = c.sit ? seatLegs(c.z) : null;
+    const hipZ = (seat ? seat.hip[1] : 0.62 - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
     const [dx, dy] = c.face, lean = clip.v.lean;
     const hip = P3(0, 0, hipZ), sh = P3(dx * lean, dy * lean, shZ), hd = P3(dx * lean * 1.25, dy * lean * 1.25, hdZ);
     // The body's own sideways axis, signed so side +1 is screen-right (matching the shoulders).
     let rx = -dy, ry = dx;
     if (P3(rx, ry, 0)[0] < fx) { rx = -rx; ry = -ry; }
     const local = (v, side) => P3(dx * v[0] + rx * side * v[1], dy * v[0] + ry * side * v[1], shZ + v[2]);
-    // Shoes: a dark toe cap that points the way they face, so feet read as feet.
-    const fvx = P3(dx * 0.1, dy * 0.1, 0), shoeDir = Math.atan2(fvx[1] - fy, fvx[0] - fx), shoeLen = f.front ? 1.6 : 0.4;
+    // Shoes: the foot is a short bone from heel to toe along the facing, projected like
+    // every other bone, so it is long seen from the side and short seen head-on, and it
+    // tucks behind the shin when the character faces away.
+    const toe = P3(dx * FOOT.length, dy * FOOT.length, 0), tvx = toe[0] - fx, tvy = toe[1] - fy;
+    const shoeW = Math.abs(tvy) > Math.abs(tvx) ? 3.0 : 2.4, shoeCol = L.shoes || SHOE_COLOR[L.bottomStyle] || '#2B2630';
     const shoeAt = (x, y) => {
-      ell(x + Math.cos(shoeDir) * shoeLen, y + Math.sin(shoeDir) * shoeLen * 0.5 + 0.9, f.front ? 3.5 : 2.9, 1.5, '#E9E4DC', null, shoeDir);
-      ell(x + Math.cos(shoeDir) * shoeLen, y + Math.sin(shoeDir) * shoeLen * 0.5, f.front ? 3.4 : 2.8, 2, L.shoes || SHOE_COLOR[L.bottomStyle] || '#2B2630', null, shoeDir);
-      ell(x + Math.cos(shoeDir) * shoeLen - 0.4, y + Math.sin(shoeDir) * shoeLen * 0.5 - 0.7, 1.5, 0.7, 'rgba(255,255,255,.18)', null, shoeDir);
+      const hx = x - tvx * FOOT.heel, hy = y - tvy * FOOT.heel + 0.6, ex = x + tvx * (1 - FOOT.heel), ey = y + tvy * (1 - FOOT.heel) + 0.6;
+      limb(hx, hy + 1.1, ex, ey + 1.1, '#E9E4DC', shoeW);
+      limb(hx, hy, ex, ey, shoeCol, shoeW);
+      ell(ex - tvx * 0.25, ey - tvy * 0.25 - 0.7, 1.3, 0.6, 'rgba(255,255,255,.18)', null, Math.atan2(tvy, tvx));
     };
+    const shoeFirst = tvy < -0.5;
     // The cut of the pants: bare legs below shorts and skirts, boots under breeches, wide baggy legs, slim leather.
     const bs = L.bottomStyle || 'pants', skirty = bs === 'skirt' || bs === 'cheer_skirt', bareLegs = skirty || bs === 'shorts';
     const thighCol = skirty ? L.skin : L.bottom, tw = bs === 'baggy' ? 6.6 : bs === 'leather' ? 4.2 : 5, sw = bs === 'baggy' ? 6.2 : bs === 'leather' ? 3.8 : 4.5;
     const shinCol = bareLegs ? L.skin : bs === 'breeches' ? (L.bottomAccent || '#2b1d12') : L.bottom;
     const checks = (x1, y1, x2, y2) => { if (bs === 'chef_pants') { ctx.save(); ctx.setLineDash([1.3, 1.3]); limb(x1, y1, x2, y2, L.bottomAccent || '#f4f1ea', 1.5); ctx.restore(); } };
     const BG = L.bottomGarment && !skirty ? L.bottomGarment : null;
-    const shin = (kx, ky, ax, ay) => { limb(kx, ky, ax, ay, shinCol, sw); if (BG && !bareLegs) FAB.paint(ctx, [[kx, ky], [ax, ay]], sw, BG, { hem: 0, hemEnd: true }); checks(kx, ky, ax, ay); shoeAt(ax, ay); };
+    const shin = (kx, ky, ax, ay) => { if (shoeFirst) shoeAt(ax, ay); limb(kx, ky, ax, ay, shinCol, sw); if (BG && !bareLegs) FAB.paint(ctx, [[kx, ky], [ax, ay]], sw, BG, { hem: 0, hemEnd: true }); checks(kx, ky, ax, ay); if (!shoeFirst) shoeAt(ax, ay); };
     const thighLimb = (x1, y1, x2, y2) => { limb(x1, y1, x2, y2, thighCol, tw); if (BG) FAB.paint(ctx, [[x1, y1], [x2, y2]], tw, BG, { hem: 0 }); checks(x1, y1, x2, y2); };
     // Arms: shoulder, elbow and hand, worked out once per frame, then drawn
     // behind the torso (the far arm) or in front of it.
@@ -1893,10 +1907,18 @@ export function createHouseArt(ctx0, opts = {}) {
         if (spec) { const h = local(spec, side); tx = h[0]; ty = h[1]; el = rig.elbows && rig.elbows[side] ? local(rig.elbows[side], side) : null; }
         else { tx = sx0 + side * 2; ty = sy0 + 13; }
       } else {
-        const asw = c.walking ? Math.sin(ph + (side > 0 ? Math.PI : 0)) * 4 * amp : 0;
-        [tx, ty] = dance ? [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3] : ['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose) ? [sh[0] + side * 4 + f.flip * 5, sh[1] + 8] : ['phone', 'read', 'sip', 'eat'].includes(pose) ? [sh[0] + side * 2, sh[1] + 6] : [sh[0] + side * 6 + asw, sh[1] + 13 - Math.abs(asw) * 0.35];
+        if (dance) [tx, ty] = [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3];
+        else if (['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose)) [tx, ty] = [sh[0] + side * 4 + f.flip * 5, sh[1] + 8];
+        else if (['phone', 'read', 'sip', 'eat'].includes(pose)) [tx, ty] = [sh[0] + side * 2, sh[1] + 6];
+        else {
+          // Standing or walking: the arms hang from the shoulders and swing forward and back
+          // in the body's own frame, opposite the legs, so they read the same from every side.
+          const w = walkRig(ph, amp), h = local(w.hands[side], side);
+          tx = h[0]; ty = h[1]; el = local(w.elbows[side], side);
+        }
       }
-      const armRate = rig && rig.hands ? (rig.snap ? 28 : 12) : 9;
+      // Walking arms track the stride closely; a slow ease here leaves them trailing behind the body.
+      const armRate = rig && rig.hands ? (rig.snap ? 28 : 12) : c.walking ? 26 : 9;
       const e = ease2(psA, side, tx, ty, rdt, clip.active ? Math.min(armRate, 4 + 9 * clip.e) : armRate);
       if (!el) el = spec ? [(sx0 + e[0]) / 2 + side * 2.5, (sy0 + e[1]) / 2 + 3] : [(sx0 + e[0]) / 2, (sy0 + e[1]) / 2];
       const held = rig && rig.props ? rig.props.find(q => !NOT_HELD.has(q.kind) && (q.side == null || q.side === side)) : null;
@@ -1948,52 +1970,59 @@ export function createHouseArt(ctx0, opts = {}) {
       ell(hx + px * tn * 1.9 + ax * 0.5, hy + py * tn * 1.9 + ay * 0.5, 1.2, 0.85, L.skin, null, ang);
       if (grip === 'open') [-1, 0, 1].forEach(k => ell(hx + ax * 2.5 + px * k * 1.15, hy + ay * 2.5 + py * k * 1.15, 1.05, 0.75, L.skin, null, ang));
     };
-    [-1, 1].forEach(side => {
+    // The legs sit either side of the body's own sideways axis, projected like the rest, so a
+    // character seen from the side has one leg behind the other; a little screen-x is kept so
+    // the far leg never vanishes entirely. The far leg is drawn first.
+    const legOff = (side) => { const q = P3(rx * side * 0.1, ry * side * 0.1, 0); const ox = q[0] - fx; return [Math.abs(ox) < 1.5 ? side * 1.5 : ox, q[1] - fy]; };
+    const LO = { [-1]: legOff(-1), 1: legOff(1) };
+    const legOrder = LO[1][1] < LO[-1][1] ? [1, -1] : [-1, 1];
+    legOrder.forEach(side => {
+      const [ox, oy] = LO[side];
       if (rig && rig.legs === 'pedal') {
         const p = rig.phase + (side > 0 ? 0 : Math.PI);
         // Pedals sit below a bike seat, or in front when standing on the floor.
-        const footZ = c.sit ? -c.z * 0.55 : 0.16, kneeZ = c.sit ? 0.04 : hipZ * 0.7;
+        const footZ = seat ? Math.max(-c.z, seat.knee[1] - 0.26) : 0.16, kneeZ = seat ? seat.knee[1] + 0.04 : hipZ * 0.7;
         const foot = P3(dx * (0.16 + Math.cos(p) * 0.1), dy * (0.16 + Math.cos(p) * 0.1), footZ + Math.sin(p) * 0.1);
         const knee = P3(dx * 0.3, dy * 0.3, kneeZ + Math.sin(p) * 0.06);
-        thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]);
-        shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
+        thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
+        shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
       }
-      if (c.sit) { const knee = P3(dx * 0.34, dy * 0.34, 0.06), foot = P3(dx * 0.4, dy * 0.4, -c.z); thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]); shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]); return; }
-      if (dance) { const sw = Math.sin(t * 6 + side) * 0.05, foot = P3(dx * sw, dy * sw, 0); shin(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1]); return; }
+      if (seat) { const knee = P3(dx * seat.knee[0], dy * seat.knee[0], seat.knee[1]), foot = P3(dx * seat.foot[0], dy * seat.foot[0], seat.foot[1]); thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy); shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy); return; }
+      if (dance) { const sw = Math.sin(t * 6 + side) * 0.05, foot = P3(dx * sw, dy * sw, 0); shin(hip[0] + ox, hip[1] + oy, foot[0] + ox, foot[1] + oy); return; }
       if (rig && rig.legs === 'crouch') {
         const knee = P3(dx * 0.24, dy * 0.24, hipZ * 0.75), foot = P3(dx * 0.06, dy * 0.06, 0);
-        thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 3, knee[1]);
-        shin(knee[0] + side * 3, knee[1], foot[0] + side * 2.5, foot[1]);
+        thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox * 1.2, knee[1] + oy);
+        shin(knee[0] + ox * 1.2, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
       }
       if (rig && rig.legs === 'swim') return; // underwater
       if (rig && rig.legs === 'jack') {
         // Jumping jacks: feet out to the sides and back together.
         const out = (rig.spread || 0) * side, foot = P3(rx * out, ry * out, 0);
-        shin(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1]);
+        shin(hip[0] + ox, hip[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
       }
 
       if (rig && rig.legs === 'tree' && side > 0) {
         // Tree pose: this foot rests against the other knee.
         const knee = P3(rx * 0.22, ry * 0.22, hipZ * 0.55), foot = P3(rx * 0.02, ry * 0.02, hipZ * 0.45);
-        thighLimb(hip[0] + 2.5, hip[1], knee[0] + 2.5, knee[1]);
-        shin(knee[0] + 2.5, knee[1], foot[0] + 1, foot[1]);
+        thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
+        shin(knee[0] + ox, knee[1] + oy, foot[0] + ox * 0.4, foot[1] + oy);
         return;
       }
       if (rig && rig.legs === 'lunge') {
         const fw = side > 0 ? 0.3 : -0.26, knee = P3(dx * fw * (side > 0 ? 1 : 0.6), dy * fw * (side > 0 ? 1 : 0.6), hipZ * 0.5), foot = P3(dx * fw * 1.1, dy * fw * 1.1, 0);
-        thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]);
-        shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
+        thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
+        shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
       }
       if (rig && (rig.legs === 'run' || rig.legs === 'step')) {
         const big = rig.legs === 'run', off = side > 0 ? 0 : Math.PI, p = rig.phase + off;
         const sw = Math.sin(p) * (big ? 0.22 : 0.12), lift = Math.max(0, Math.sin(p)) * (big ? 0.15 : 0.06);
         const foot = P3(dx * sw, dy * sw, lift), knee = P3(dx * (sw * 0.5 + (big ? lift * 0.9 : 0.02)), dy * (sw * 0.5 + (big ? lift * 0.9 : 0.02)), hipZ * 0.5 + lift);
-        thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]);
-        shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
+        thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
+        shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
       }
       const off = side > 0 ? 0 : Math.PI;
@@ -2002,8 +2031,8 @@ export function createHouseArt(ctx0, opts = {}) {
       const sw = Math.sin(ph + off) * 0.17 * amp + Math.sin(tp.tph + off) * 0.06 * shuf, lift = c.z < 0.05 ? Math.max(0, Math.sin(ph + off)) * 0.075 * amp + Math.max(0, Math.sin(tp.tph + off)) * 0.045 * shuf : 0;
       const foot = P3(dx * sw, dy * sw, lift);
       const knee = P3(dx * sw * 0.55, dy * sw * 0.55, hipZ * 0.5 + lift * 0.7);
-      thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]);
-      shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
+      thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
+      shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
     });
     // Secondary motion: hair and hems trail the body on springs, so they
     // swing when someone moves, turns or bounces, then settle.
