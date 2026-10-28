@@ -603,7 +603,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (style === 'neonring') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.9], NE.steel, 1.4); if (on) ell(px, py, 16, 8, 'rgba(25,230,240,.16)'); ctx.beginPath(); ctx.ellipse(px, py, 13, 5.5, 0, 0, Math.PI * 2); ctx.strokeStyle = on ? NE.cyan : NE.steel; ctx.lineWidth = 2.4; ctx.stroke(); ctx.beginPath(); ctx.ellipse(px, py, 13, 5.5, 0, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 0.8; ctx.stroke(); circle(px, py - 4, 2, NE.steel); return; }
     if (style === 'lollipop') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.92], CA.cream, 1.6); if (on) circle(px, py, 15, 'rgba(255,226,210,.22)'); circle(px, py, 10, on ? '#FFD9E4' : CA.pink, 'rgba(0,0,0,.08)'); ctx.beginPath(); for (let a = 0; a < Math.PI * 4; a += 0.2) { const r = a * 0.72; const x = px + Math.cos(a) * r, y = py + Math.sin(a) * r * 0.9; a ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.4; ctx.stroke(); ell(px - 3, py - 4, 2.5, 1.5, 'rgba(255,255,255,.7)'); return; }
     if (style === 'rainbow') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.98], CC.sky, 1.4); cloud(px, py - 6, 12, on ? '#FFFDF6' : CC.cloud); rainbow(px, py + 2, 11, 1.8, 0, Math.PI); if (on) ell(px, py + 6, 16, 7, 'rgba(255,226,168,.18)'); circle(px, py - 10, 2.2, on ? CC.yellow : CC.cloudShade); return; }
-    if (style === 'cloudlamp') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.96], NA.gold, 1.2); if (on) ell(px, py + 2, 18, 11, 'rgba(255,214,232,.26)'); cloudO(px - 6, py + 2, 8, on ? '#FFF6FA' : NA.white); cloudO(px + 6, py + 2, 8, on ? '#FFF6FA' : '#F6EEF6'); cloudO(px, py - 3, 10, on ? '#FFFFFF' : NA.white); circle(px - 4, py + 8, 1.2, NA.pinkDeep); circle(px + 5, py + 9, 1.2, NA.lilacDeep); return; }
+    if (style === 'cloudlamp') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.96], NA.gold, 1.2); if (on) ell(px, py + 2, 18, 11, 'rgba(255,214,232,.26)'); cloudLight(px, py, 8, on ? '#FFFAFD' : NA.white); circle(px - 5, py + 9, 1.2, NA.pinkDeep); circle(px + 5, py + 10, 1.2, NA.lilacDeep); return; }
     if (style === 'marquee') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.96], AR.chrome, 1.4); const [ax, ay] = T.P(0.4, 1.24, 1.86), [bx, by] = T.P(0.9, 1.24, 1.86); ctx.beginPath(); ctx.moveTo(ax, ay - 7); ctx.lineTo(bx, by - 7); ctx.lineTo(bx, by + 5); ctx.lineTo(ax, ay + 5); ctx.closePath(); ctx.fillStyle = on && power ? AR.yellow : '#5A4A20'; ctx.fill(); ctx.strokeStyle = AR.ink; ctx.lineWidth = 1; ctx.stroke(); chaser(ax + 3, ay - 5, bx - 3, by - 5, 7, o.id, on && power); chaser(ax + 3, ay + 3, bx - 3, by + 3, 7, o.id, on && power); if (on) ell(px, py + 8, 16, 7, 'rgba(244,196,48,.16)'); return; }
     if (style === 'woven') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.95], BE.rope, 1.6); ctx.beginPath(); ctx.ellipse(px, py - 2, 11, 9, 0, Math.PI, 0); ctx.fillStyle = BE.rattan; ctx.fill(); for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(px, py - 2, 11, 9, 0, Math.PI + k * 0.6, Math.PI + k * 0.6 + 0.3); ctx.strokeStyle = 'rgba(90,60,30,.35)'; ctx.lineWidth = 1; ctx.stroke(); } ell(px, py - 2, 11, 4, on ? '#FFF1C9' : '#B9A07A'); return; }
     T.line([0.65, 1.24, WH], [0.65, 1.24, 1.95], '#3A3340', 1.2); ctx.beginPath(); ctx.ellipse(px, py, 10, 9, 0, Math.PI, 0); ctx.fillStyle = '#2B2B30'; ctx.fill(); ell(px, py, 10, 3.8, on ? '#FFF1C9' : '#4A4450');
@@ -1305,35 +1305,50 @@ export function createHouseArt(ctx0, opts = {}) {
       return body; },
   });
 
-  // ---- Nana: the soft-girl era. Pastel pink, lilac and butter, cloud lights, ruffles, bows and daisies ----
-  const NA = { pink: '#F8C8DC', pinkDeep: '#EFA3C4', lilac: '#D9C8F2', lilacDeep: '#B9A2E0', butter: '#FFF1B8', blue: '#C5E3F6', mint: '#CFEBDD', cream: '#FFF8F0', white: '#FFFFFF', peach: '#FFD9C7', gold: '#E8C877', ink: '#6A5470' };
+  // ---- Nana: the soft-girl era. Pastel pink, lilac and butter; ruffles, bows, hearts, daisies, butterflies, pearls, lace and fairy lights ----
+  const NA = { pink: '#F8C8DC', pinkDeep: '#EFA3C4', lilac: '#D9C8F2', lilacDeep: '#B9A2E0', butter: '#FFF1B8', blue: '#C5E3F6', mint: '#CFEBDD', cream: '#FFF8F0', white: '#FFFFFF', peach: '#FFD9C7', gold: '#E8C877', ink: '#6A5470', edge: '#E7A8C4' };
   /** A bow in screen space: two loops, a knot and two short tails. */
   const bow = (sx, sy, s, col) => { ell(sx - s * 0.9, sy, s, s * 0.65, col, 'rgba(0,0,0,.08)', -0.3); ell(sx + s * 0.9, sy, s, s * 0.65, col, 'rgba(0,0,0,.08)', 0.3); limb(sx, sy + s * 0.3, sx - s * 0.5, sy + s * 1.5, shade(col, -0.1), s * 0.45); limb(sx, sy + s * 0.3, sx + s * 0.5, sy + s * 1.5, shade(col, -0.1), s * 0.45); circle(sx, sy, s * 0.42, shade(col, -0.16)); };
   /** A daisy in screen space: white petals round a butter-yellow eye. */
   const daisy = (sx, sy, r) => { for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; ell(sx + Math.cos(a) * r * 0.75, sy + Math.sin(a) * r * 0.75, r * 0.55, r * 0.32, NA.white, 'rgba(0,0,0,.08)', a); } circle(sx, sy, r * 0.42, '#F6D86B'); };
-  /** A row of ruffles along a line in the piece's frame: small half-rounds hanging below it, in two tones. */
-  const ruffle = (T, from, to, n, r, col) => { const pts = []; for (let k = 0; k < n; k++) { const u = (k + 0.5) / n; pts.push(T.P(from[0] + (to[0] - from[0]) * u, from[1] + (to[1] - from[1]) * u, from[2])); } pts.forEach(([sx, sy]) => ell(sx, sy + r * 0.5, r + 1, r * 0.9 + 1, '#EFB4CD')); pts.forEach(([sx, sy]) => ell(sx, sy + r * 0.5, r, r * 0.9, col)); };
-  /** A row of round puffs drawn as one scalloped edge: every outline first, then every fill, so they merge into a single cloudy band rather than a string of beads. */
+  /** A butterfly in screen space: four soft wings, a body and two feelers; `flap` 0..1 opens and closes the wings. */
+  const butterfly = (sx, sy, s, col, col2, flap = 1) => { const w = s * (0.35 + 0.65 * flap); [[-1, -0.55, col], [1, -0.55, col], [-1, 0.5, col2], [1, 0.5, col2]].forEach(([d, v, c]) => ell(sx + d * w * 0.8, sy + v * s * 0.7, w * 0.8, s * 0.6, c, 'rgba(120,70,110,.35)', d * 0.5)); limb(sx, sy - s * 0.7, sx, sy + s * 0.8, '#6A5470', 1); limb(sx, sy - s * 0.7, sx - s * 0.4, sy - s * 1.2, '#6A5470', 0.6); limb(sx, sy - s * 0.7, sx + s * 0.4, sy - s * 1.2, '#6A5470', 0.6); };
+  /**
+   * A scalloped hem along a line in the piece's frame: half-rounds hanging below it, as wide as their spacing so each
+   * meets the next, in one fill with a thin pink edge. This is the ruffle, lace and valance of the pack; it reads as a
+   * trim and never as a row of beads.
+   */
+  const scallopTrim = (T, from, to, n, _r, col, edge = NA.edge) => {
+    let a = T.P(...from), b = T.P(...to); if (b[0] < a[0]) [a, b] = [b, a];
+    const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, ang = Math.atan2(dy, dx), r = L / n / 2;
+    ctx.save(); ctx.fillStyle = col; ctx.strokeStyle = edge; ctx.lineWidth = 0.8;
+    for (let k = 0; k < n; k++) { const cx = a[0] + dx * (k + 0.5) / n, cy = a[1] + dy * (k + 0.5) / n; ctx.beginPath(); ctx.arc(cx, cy, r, ang, ang + Math.PI); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    ctx.restore();
+  };
+  const ruffle = scallopTrim;
+  /** Round puffs drawn as one cloudy shape: every outline first, then every fill, so they merge. Used only for the pack's cloud lights. */
   const puffRow = (pts, r, col, edge = '#EFB4CD') => { pts.forEach(([x, y]) => circle(x, y, r + 1.1, edge)); pts.forEach(([x, y]) => circle(x, y, r, col)); pts.forEach(([x, y]) => circle(x - r * 0.25, y - r * 0.3, r * 0.35, 'rgba(255,255,255,.9)')); };
-  /** A cloud with a soft pink edge, so a white cloud on a pastel piece reads as a shape and not a grey smudge. */
-  const cloudO = (sx, sy, w, col, edge = '#EFB4CD') => { cloud(sx, sy, w + 1.4, edge); cloud(sx, sy, w, col); };
+  /** A cloud light: one soft silhouette of five puffs. */
+  const cloudLight = (sx, sy, w, col) => puffRow([[sx - w * 0.9, sy + w * 0.2], [sx - w * 0.4, sy - w * 0.2], [sx + w * 0.2, sy - w * 0.35], [sx + w * 0.8, sy], [sx + w * 0.1, sy + w * 0.3]], w * 0.5, col);
+  /** Gingham along a band of a vertical face: alternate pink and white squares. */
+  const gingham = (T, x0, x1, y, z0, z1, cols, step = 0.09) => { let i = 0; for (let x = x0; x < x1 - 1e-6; x += step, i++) for (let z = z0, j = 0; z < z1 - 1e-6; z += step, j++) T.poly([[x, y, z], [Math.min(x + step, x1), y, z], [Math.min(x + step, x1), y, Math.min(z + step, z1)], [x, y, Math.min(z + step, z1)]], (i + j) % 2 ? cols[0] : cols[1]); };
   Object.assign(LOOK_DRAWERS.sofa, {
-    // Nana: a plush lilac sofa with a ruffled skirt, pink pillows with a heart and a bow, and a butter throw over one arm.
+    // Nana: a plush lilac sofa with a cream skirt and a scalloped hem, pink pillows with a heart and a bow, and a butter throw over one arm.
     nana: (o, s1, s2) => { const c = cl(o); return [
       B(0, 0, 0, 2.4, 1.0, 0.38, c, { name: 'base' }), B(0, 0, 0.38, 2.4, 0.3, 0.52, c), B(0, 0, 0.38, 0.24, 1.0, 0.3, c), B(2.16, 0, 0.38, 0.24, 1.0, 0.3, c),
       B(0.24, 0.3, 0.38 - s1 * 0.018, 0.96, 0.66, 0.1 - s1 * 0.035, NA.pink), B(1.2, 0.3, 0.38 - s2 * 0.018, 0.96, 0.66, 0.1 - s2 * 0.035, NA.pink),
       F(0, 0, 2.4, 1.0, (T) => {
+        T.poly([[0.02, 1.002, 0.02], [2.38, 1.002, 0.02], [2.38, 1.002, 0.2], [0.02, 1.002, 0.2]], NA.cream, NA.edge, 0.8);
+        scallopTrim(T, [0.02, 1.003, 0.2], [2.38, 1.003, 0.2], 24, 0, NA.cream);
         for (let x = 0.3; x < 2.3; x += 0.4) { const [px, py] = T.P(x, 0.15, 0.9); ell(px, py, 9, 5, shade(c, 0.06), 'rgba(0,0,0,.06)'); }
-        ruffle(T, [0.04, 1.001, 0.12], [2.36, 1.001, 0.12], 14, 4.4, NA.cream);
         const [hx, hy] = T.P(0.7, 0.481, 0.6); heart(hx, hy, 1.4, NA.pinkDeep); const [bx, by] = T.P(1.62, 0.481, 0.64); bow(bx, by, 3.4, NA.lilacDeep);
-        // The throw: butter, over the left arm and down the front, with a fringe.
         T.box(-0.02, 0.02, 0.62, 0.3, 0.96, 0.05, NA.butter); T.box(-0.02, 0.98, 0.18, 0.3, 0.05, 0.49, NA.butter);
         for (let y = 0.1; y < 1.0; y += 0.12) T.line([-0.02, y, 0.62], [-0.02, y, 0.55], shade(NA.butter, -0.12), 1);
         const [sx, sy] = T.P(2.28, 0.5, 0.66); star5(sx, sy, 3, NA.butter);
       }, { onTop: true })]; },
   });
   Object.assign(LOOK_DRAWERS.dining, {
-    // Nana: a tea-party table with a lace-edged cloth, a teapot and cups, chairs with cloud-and-bow backs in pink and lilac, and a cloud lamp overhead.
+    // Nana: a tea-party table in a pink cloth with a lace hem, a lilac runner, a teapot and cups, chairs with padded bow backs, and a cloud light overhead.
     nana: (o) => { const ps = [], c = cl(o);
       const chair = (y0, back, col) => { [[0.39, y0 + 0.04], [0.83, y0 + 0.04], [0.39, y0 + 0.48], [0.83, y0 + 0.48]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.05, 0.05, 0.42, NA.gold)));
         ps.push(B(0.35, y0, 0.42, 0.6, 0.58, 0.07, col, { name: y0 === 0 ? 'seat1' : 'seat2' }));
@@ -1350,62 +1365,67 @@ export function createHouseArt(ctx0, opts = {}) {
       ps.push(B(0.52, 1.11, 0, 0.26, 0.26, 0.7, NA.gold));
       ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, c, { name: 'top' }));
       ps.push(F(0, 0.74, 1.3, 1.74, (T) => {
-        ruffle(T, [0, 1.74, 0.7], [1.3, 1.74, 0.7], 7, 6, NA.white); ruffle(T, [1.3, 0.74, 0.7], [1.3, 1.74, 0.7], 5, 6, shade(NA.white, -0.05));
-        const [px, py] = T.P(0.65, 1.25, 0.772); ell(px, py, 9, 4.5, NA.white, 'rgba(0,0,0,.1)'); ell(px, py - 5, 5.5, 5, NA.pink, 'rgba(0,0,0,.1)'); limb(px + 5, py - 6, px + 9, py - 4, NA.pinkDeep, 1.4); circle(px, py - 11, 1.3, NA.pinkDeep);
+        // The cloth: a pink drop on the two visible sides, a lace hem, a lilac runner down the middle.
+        T.poly([[0, 1.74, 0.7], [1.3, 1.74, 0.7], [1.3, 1.74, 0.5], [0, 1.74, 0.5]], NA.pink, NA.edge, 0.8); T.poly([[1.3, 0.74, 0.7], [1.3, 1.74, 0.7], [1.3, 1.74, 0.5], [1.3, 0.74, 0.5]], shade(NA.pink, -0.06), NA.edge, 0.8);
+        scallopTrim(T, [0, 1.745, 0.5], [1.3, 1.745, 0.5], 13, 0, NA.white); scallopTrim(T, [1.305, 0.74, 0.5], [1.305, 1.74, 0.5], 10, 0, NA.white);
+        T.poly([[0.38, 0.78, 0.772], [0.92, 0.78, 0.772], [0.92, 1.72, 0.772], [0.38, 1.72, 0.772]], NA.lilac, 'rgba(176,96,132,.35)', 1);
+        const [px, py] = T.P(0.65, 1.25, 0.78); ell(px, py, 9, 4.5, NA.white, 'rgba(0,0,0,.1)'); ell(px, py - 5, 5.5, 5, NA.pink, 'rgba(0,0,0,.1)'); limb(px + 5, py - 6, px + 9, py - 4, NA.pinkDeep, 1.4); circle(px, py - 11, 1.3, NA.pinkDeep);
         [[0.2, 1.0], [1.05, 1.5]].forEach(([x, y]) => { const [cx, cy] = T.P(x, y, 0.772); ell(cx, cy, 4, 2, NA.white, 'rgba(0,0,0,.1)'); ell(cx, cy - 2, 2.6, 2.2, NA.lilac, 'rgba(0,0,0,.1)'); });
-        const [dx, dy] = T.P(0.3, 1.5, 0.772); daisy(dx, dy, 3);
+        const [dx, dy] = T.P(0.3, 1.5, 0.772); daisy(dx, dy, 3); const [fx, fy] = T.P(1.0, 1.0, 0.78); butterfly(fx, fy - 2, 3, NA.pinkDeep, NA.lilacDeep, 0.7 + 0.3 * Math.sin(animT * 4));
       }, { onTop: true }));
       ps.push(diningLife(), diningLight('cloudlamp'));
       return ps; },
   });
   Object.assign(LOOK_DRAWERS.lamp, {
-    // Nana: a fluffy cloud shade cluster on a gold stem, a little star on top and a soft pink glow.
+    // Nana: a cloud light: one soft cloud shade on a gold stem with a little star on top and pearls and stars hanging under it.
     nana: (T, o) => { const lit = isLit(o.id), c = cl(o);
-      T.box(0.06, 0.06, 0, 0.28, 0.28, 0.05, NA.gold); const [bx, by] = T.P(0.2, 0.2, 0.05); cloud(bx, by - 2, 7, NA.white); T.line([0.2, 0.2, 0.05], [0.2, 0.2, 1.3], NA.gold, 2.4);
+      T.box(0.06, 0.06, 0, 0.28, 0.28, 0.05, NA.gold); T.line([0.2, 0.2, 0.05], [0.2, 0.2, 1.3], NA.gold, 2.4);
       const [px, py] = T.P(0.2, 0.2, 1.42); if (lit) { ell(px, py + 4, 24, 14, 'rgba(255,214,232,.3)'); ell(px, py + 2, 14, 9, 'rgba(255,241,201,.3)'); }
-      cloudO(px - 7, py + 3, 9, lit ? '#FFF6FA' : c); cloudO(px + 7, py + 3, 9, lit ? '#FFF6FA' : c); cloudO(px, py - 3, 12, lit ? '#FFFFFF' : c);
-      circle(px - 5, py + 9, 1.3, NA.pinkDeep); circle(px + 6, py + 10, 1.3, NA.lilacDeep); star5(px, py - 14, 3.6, lit ? NA.butter : shade(NA.butter, -0.1)); },
+      cloudLight(px, py, 11, lit ? '#FFFAFD' : c);
+      [[-7, 0], [-2, 3], [4, 1], [9, 4]].forEach(([dx, d], k) => { limb(px + dx, py + 8, px + dx, py + 13 + d, NA.gold, 0.7); if (k % 2) star5(px + dx, py + 15 + d, 2.4, NA.butter); else circle(px + dx, py + 14 + d, 1.6, NA.white); });
+      star5(px, py - 14, 3.6, lit ? NA.butter : shade(NA.butter, -0.1)); },
   });
   Object.assign(LOOK_DRAWERS.plant, {
-    // Nana: a pink pot with a ruffled rim, a bow and a few daisies in the leaves.
+    // Nana: a pink pot with a scalloped rim and a bow, daisies in the leaves.
     nana: (T, o) => { const c = cl(o); T.box(0.05, 0.05, 0, 0.4, 0.4, 0.36, c); T.box(0.03, 0.03, 0.36, 0.44, 0.44, 0.06, shade(c, 0.08));
-      ruffle(T, [0.03, 0.47, 0.4], [0.47, 0.47, 0.4], 6, 3.2, shade(c, 0.1)); ruffle(T, [0.47, 0.03, 0.4], [0.47, 0.47, 0.4], 6, 3.2, shade(c, 0.04));
-      const [bx, by] = T.P(0.25, 0.472, 0.22); bow(bx, by, 3, NA.lilacDeep); const [sx, sy] = T.P(0.472, 0.25, 0.22); circle(sx, sy, 1.3, NA.butter); },
+      scallopTrim(T, [0.03, 0.475, 0.36], [0.47, 0.475, 0.36], 7, 0, shade(c, 0.1)); scallopTrim(T, [0.475, 0.03, 0.36], [0.475, 0.47, 0.36], 7, 0, shade(c, 0.04));
+      const [bx, by] = T.P(0.25, 0.476, 0.2); bow(bx, by, 3, NA.lilacDeep); const [sx, sy] = T.P(0.476, 0.25, 0.2); circle(sx, sy, 1.3, NA.butter); },
   });
   Object.assign(LOOK_DRAWERS.counter, {
-    // Nana: cream cabinets with a pink ruffle valance and heart knobs, a butter top scattered with hearts, a lilac basin with a gold tap and a posy.
+    // Nana: cream cabinets with heart knobs under a pink scalloped valance, a butter top scattered with hearts, a lilac basin with a gold tap and a posy.
     nana: (T, o) => { const c = cl(o);
       T.box(0, 0, 0, 2.8, 0.8, 0.86, c); [0.7, 1.4, 2.1].forEach(x => T.line([x, 0.802, 0.1], [x, 0.802, 0.78], 'rgba(120,80,100,.14)', 1.2));
       [0.35, 1.05, 1.75, 2.45].forEach((x) => { const [px, py] = T.P(x, 0.803, 0.46); heart(px, py, 0.9, NA.pinkDeep); [0, 0.7].forEach((d) => { const [kx, ky] = T.P(x + 0.3 + d - 0.35, 0.803, 0.62); circle(kx, ky, 1.2, NA.gold); }); });
-      ruffle(T, [0, 0.801, 0.86], [2.8, 0.801, 0.86], 22, 4.4, NA.pink);
+      T.poly([[0, 0.802, 0.86], [2.8, 0.802, 0.86], [2.8, 0.802, 0.74], [0, 0.802, 0.74]], NA.pink, NA.edge, 0.8); scallopTrim(T, [0, 0.803, 0.74], [2.8, 0.803, 0.74], 28, 0, NA.pink);
       T.box(-0.05, -0.04, 0.86, 2.9, 0.88, 0.07, NA.butter); for (let k = 0; k < 11; k++) { const x = ((k * 0.618 * 5.3) % 2.8), y = (k * 0.414 * 3.1) % 0.8; const [sx, sy] = T.P(x, y, 0.931); heart(sx, sy, 0.5, k % 2 ? NA.pink : NA.lilac); } T.line([-0.05, 0.84, 0.86], [2.85, 0.84, 0.86], shade(NA.butter, -0.15), 1.2);
       T.poly([[0.3, 0.13, 0.932], [1.0, 0.13, 0.932], [1.0, 0.6, 0.932], [0.3, 0.6, 0.932]], NA.lilac, 'rgba(0,0,0,.1)', 1); const [hx, hy] = T.P(0.65, 0.37, 0.933); heart(hx, hy, 1.6, NA.lilacDeep);
       T.line([0.65, 0.04, 0.93], [0.65, 0.04, 1.18], NA.gold, 2.2); T.line([0.65, 0.04, 1.18], [0.65, 0.24, 1.12], NA.gold, 2.2);
       const [vx, vy] = T.P(0.18, 0.22, 0.95); ell(vx, vy, 4, 3, NA.white, 'rgba(0,0,0,.1)'); limb(vx, vy - 2, vx - 1, vy - 11, '#6FA878', 1); limb(vx, vy - 2, vx + 3, vy - 10, '#6FA878', 1); daisy(vx - 1, vy - 12, 2.6); daisy(vx + 3, vy - 11, 2.2); },
   });
-  // Nana: a plush rug. A rounded blush rug with a cream cloud in the middle, a shag of little tufts in two tones, and pom-poms along the short ends.
+  // Nana: a plush rug. A rounded blush rug with a big heart and daisies in the middle, a shag of little tufts in two tones, and pom-poms along the short ends.
   LOOK_DRAWERS.rugwide = LOOK_DRAWERS.rugwide || {};
   LOOK_DRAWERS.rugwide.nana = (T, o) => {
     const c = cl(o), W = 3.3, D = 1.9, r = 0.34, rounded = (x0, y0, x1, y1, rad, z) => { const pts = []; [[x1 - rad, y0 + rad, -90], [x1 - rad, y1 - rad, 0], [x0 + rad, y1 - rad, 90], [x0 + rad, y0 + rad, 180]].forEach(([cx, cy, a0]) => { for (let k = 0; k <= 5; k++) { const a = (a0 + k * 18) * Math.PI / 180; pts.push([cx + Math.cos(a) * rad, cy + Math.sin(a) * rad, z]); } }); return pts; };
     T.poly(rounded(0, 0, W, D, r, 0.01), shade(c, -0.08));
     T.poly(rounded(0.07, 0.07, W - 0.07, D - 0.07, r - 0.05, 0.012), c);
     T.poly(rounded(0.22, 0.22, W - 0.22, D - 0.22, r - 0.12, 0.013), shade(c, 0.1), 'rgba(255,255,255,.55)', 1.2);
-    // The shag: short slanting tufts in light and dark, scattered on a grid with a little jitter.
     for (let i = 0; i < 20; i++) for (let j = 0; j < 11; j++) {
       const x = 0.22 + i * 0.158 + ((j % 2) * 0.07), y = 0.18 + j * 0.15, k = (i * 7 + j * 13) % 5;
       T.line([x, y, 0.014], [x + 0.045, y + 0.035, 0.014], k < 2 ? NA.cream : k === 2 ? shade(c, -0.14) : shade(c, 0.2), 1.5);
     }
-    const [cx, cy] = T.P(W / 2, D / 2, 0.02); cloudO(cx, cy + 3, 22, NA.cream, '#E9B8D0'); heart(cx - 8, cy - 9, 1.2, NA.pinkDeep); heart(cx + 9, cy - 7, 0.9, NA.lilacDeep); star5(cx + 1, cy - 14, 3, NA.butter);
-    for (let y = 0.22; y < D - 0.1; y += 0.24) [0.02, W - 0.02].forEach((x) => { const [px, py] = T.P(x, y, 0.02); circle(px, py, 2.6, NA.cream); circle(px - 0.6, py - 0.6, 1, '#FFFFFF'); });
+    const [cx, cy] = T.P(W / 2, D / 2, 0.02); heart(cx, cy - 2, 3.6, NA.pinkDeep); heart(cx, cy - 3, 2.6, '#F7B6D0');
+    [[-17, 5], [17, 5], [-9, 11], [9, 11]].forEach(([dx, dy]) => daisy(cx + dx, cy + dy, 3.2));
+    for (let y = 0.22; y < D - 0.1; y += 0.24) [0.02, W - 0.02].forEach((x) => { const [px, py] = T.P(x, y, 0.02); circle(px, py, 2.8, NA.edge); circle(px, py, 2.3, NA.cream); circle(px - 0.6, py - 0.6, 0.9, '#FFFFFF'); });
   };
   Object.assign(LOOK_DRAWERS.fridge, {
-    // Nana: a pink fridge with a cream cloud-puff cap, cloud stickers and little frames on the upper door, a bow and a ruffle band on the lower one, lilac heart handles. Returns the open door's colour.
+    // Nana: a pink fridge with a cream scalloped cap, butterflies, hearts and little frames on the upper door, a pink gingham band and a bow on the lower one, lilac heart handles. Returns the open door's colour.
     nana: (T, o) => { const body = cl(o);
-      T.box(0, 0, 0, 0.9, 0.85, 1.87, body); T.box(0, 0, 1.87, 0.9, 0.85, 0.08, NA.cream); for (let x = 0.1; x < 0.9; x += 0.16) { const [px, py] = T.P(x, 0.851, 1.95); circle(px, py, 5, '#EFB4CD'); circle(px, py, 4, NA.cream); }
+      T.box(0, 0, 0, 0.9, 0.85, 1.87, body); T.box(0, 0, 1.87, 0.9, 0.85, 0.08, NA.cream); scallopTrim(T, [0, 0.852, 1.87], [0.9, 0.852, 1.87], 9, 0, NA.cream);
       T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], 'rgba(120,60,90,.16)', 1.2);
-      [[0.22, 1.62, NA.white], [0.62, 1.5, NA.lilac]].forEach(([x, z, col]) => { const [cx, cy] = T.P(x, 0.851, z); cloud(cx, cy, 7, col); });
-      [[0.18, 1.42], [0.5, 1.38], [0.74, 1.44]].forEach(([x, z], k) => { const [px, py] = T.P(x, 0.851, z); ctx.fillStyle = NA.white; ctx.fillRect(px - 4, py - 4.5, 8, 9); ctx.fillStyle = [NA.butter, NA.blue, NA.mint][k]; ctx.fillRect(px - 3, py - 3.5, 6, 5.5); });
-      T.line([0.02, 0.851, 0.9], [0.88, 0.851, 0.9], '#EFB4CD', 1.4); ruffle(T, [0.03, 0.851, 0.87], [0.87, 0.851, 0.87], 10, 3.6, NA.white);
+      [[0.2, 1.62, NA.pinkDeep, NA.lilacDeep], [0.62, 1.52, NA.lilacDeep, NA.pinkDeep]].forEach(([x, z, c1, c2], k) => { const [cx, cy] = T.P(x, 0.851, z); butterfly(cx, cy, 5, c1, c2, 0.75 + 0.25 * Math.sin(animT * 3 + k * 2)); });
+      [[0.18, 1.4], [0.46, 1.38], [0.72, 1.46]].forEach(([x, z], k) => { const [px, py] = T.P(x, 0.851, z); ctx.fillStyle = NA.white; ctx.fillRect(px - 4, py - 4.5, 8, 9); ctx.fillStyle = [NA.butter, NA.blue, NA.mint][k]; ctx.fillRect(px - 3, py - 3.5, 6, 5.5); });
+      const [mx, my] = T.P(0.42, 0.851, 1.62); heart(mx, my, 1.0, NA.pinkDeep);
+      gingham(T, 0.03, 0.87, 0.851, 0.7, 0.88, [NA.pink, NA.white], 0.07); T.line([0.03, 0.852, 0.7], [0.87, 0.852, 0.7], NA.edge, 1); T.line([0.03, 0.852, 0.88], [0.87, 0.852, 0.88], NA.edge, 1);
       const [bx, by] = T.P(0.4, 0.851, 0.5); bow(bx, by, 6.5, NA.lilacDeep); heart(bx, by + 16, 1.3, NA.white);
       [[0.95, 1.1], [1.55, 1.72]].forEach(([z0, z1]) => { T.line([0.78, 0.855, z0], [0.78, 0.855, z1], NA.lilac, 3.2); const [hx, hy] = T.P(0.78, 0.856, (z0 + z1) / 2); heart(hx, hy, 0.8, NA.white); });
       return body; },
@@ -1777,25 +1797,30 @@ export function createHouseArt(ctx0, opts = {}) {
         F(0.92, 0.05, 1.18, 0.3, (T, o) => { T.box(0.98, 0.1, 0.78, 0.14, 0.14, 0.03, '#3A3340'); T.line([1.05, 0.17, 0.81], [1.05, 0.17, 1.02], '#3A3340', 1.5); T.box(0.96, 0.08, 1.0, 0.2, 0.2, 0.1, isLit(o.id) ? '#FFE2A8' : '#EFD9B4'); }, { onTop: true }),
         B(0.3, 0.75, 0.42, 0.6, 0.5, 0.07, '#3A3340', { name: 'seat' }), B(0.3, 1.18, 0.49, 0.6, 0.07, 0.55, '#3A3340')],
         },
-    // Nana: a plush cloud lounger with puffy arms and back, a heart pillow and a butter throw, under a canopy of sheer pink with twinkling fairy lights and hanging stars.
+    // Nana: a plush pink lounger with a tufted back set with pearls, rolled arms, a scalloped skirt, a heart pillow and a butter throw, under a sheer canopy with twinkling fairy lights, hanging stars and butterflies.
     cloudnook: {
       parts: (o) => { const c = cl(o); return [
-        B(0, 0, 0, 1.5, 1.1, 0.36, NA.lilac, { name: 'base' }), B(0, 0, 0.36, 1.5, 0.34, 0.6, NA.pink), B(0, 0.34, 0.36, 0.22, 0.76, 0.34, NA.pink), B(1.28, 0.34, 0.36, 0.22, 0.76, 0.34, NA.pink),
+        B(0, 0, 0, 1.5, 1.1, 0.36, NA.lilac, { name: 'base' }), B(0, 0, 0.36, 1.5, 0.34, 0.66, NA.pink), B(0, 0.34, 0.36, 0.22, 0.76, 0.34, NA.pink), B(1.28, 0.34, 0.36, 0.22, 0.76, 0.34, NA.pink),
         B(0.22, 0.34, 0.36, 1.06, 0.76, 0.12, c),
         F(0, 0, 1.5, 1.1, (T, ob, t) => {
           const lit = isLit(ob.id);
-          // The canopy: two slim gold posts, a sheer arch between them and a scalloped valance.
+          // The skirt: cream, with a scalloped hem all round the front.
+          T.poly([[0.02, 1.102, 0.02], [1.48, 1.102, 0.02], [1.48, 1.102, 0.18], [0.02, 1.102, 0.18]], NA.cream, NA.edge, 0.8); scallopTrim(T, [0.02, 1.103, 0.18], [1.48, 1.103, 0.18], 14, 0, NA.cream);
+          T.poly([[1.502, 0.34, 0.02], [1.502, 1.1, 0.02], [1.502, 1.1, 0.18], [1.502, 0.34, 0.18]], shade(NA.cream, -0.05), NA.edge, 0.8); scallopTrim(T, [1.503, 0.34, 0.18], [1.503, 1.1, 0.18], 8, 0, shade(NA.cream, -0.05));
+          // The canopy: two slim gold posts, sheer pink panels and a scalloped valance.
           [[0.04, 0.04], [1.4, 0.04]].forEach(([x, y]) => T.box(x, y, 0.96, 0.05, 0.05, 0.92, NA.gold));
-          T.poly([[0.02, 0.07, 1.86], [1.48, 0.07, 1.86], [1.48, 0.07, 1.4], [0.02, 0.07, 1.4]], 'rgba(255,226,240,.55)', 'rgba(205,150,185,.35)', 1);
+          T.poly([[0.02, 0.07, 1.86], [1.48, 0.07, 1.86], [1.48, 0.07, 1.42], [0.02, 0.07, 1.42]], 'rgba(255,226,240,.55)', 'rgba(205,150,185,.35)', 1);
           T.poly([[0.02, 0.07, 1.86], [0.3, 0.07, 1.86], [0.3, 0.07, 1.0], [0.02, 0.07, 1.0]], 'rgba(255,214,232,.5)');
           T.poly([[1.2, 0.07, 1.86], [1.48, 0.07, 1.86], [1.48, 0.07, 1.0], [1.2, 0.07, 1.0]], 'rgba(255,214,232,.5)');
-          ruffle(T, [0.02, 0.07, 1.4], [1.48, 0.07, 1.4], 14, 4.4, NA.white);
-          // Fairy lights along the arch, twinkling, with a few stars hanging from it.
+          scallopTrim(T, [0.02, 0.07, 1.42], [1.48, 0.07, 1.42], 16, 0, NA.white);
+          // Fairy lights along the arch, twinkling, with a few stars hanging from it and two butterflies.
           for (let k = 0; k <= 12; k++) { const x = 0.06 + k * 0.1175, z = 1.82 - Math.sin((k / 12) * Math.PI) * 0.12, [bx, by] = T.P(x, 0.075, z), tw = lit ? 0.6 + 0.4 * Math.sin(t * 3 + k * 1.7) : 0.35; if (lit) circle(bx, by, 4.2, `rgba(255,236,170,${0.3 * tw})`); circle(bx, by, 1.7, lit ? `rgba(255,244,190,${0.55 + 0.45 * tw})` : '#F2E4B8'); }
-          [[0.3, 1.62], [0.75, 1.55], [1.2, 1.62]].forEach(([x, z], k) => { const [sx, sy] = T.P(x, 0.075, z); T.line([x, 0.075, z + 0.12], [x, 0.075, z], '#E8C877', 0.8); star5(sx, sy + 1, 3, k === 1 ? NA.butter : NA.pinkDeep); });
-          // The cloud: puffs along the back and the arms, edged in pink so they read as clouds.
-          const backTop = []; for (let x = 0.1; x < 1.42; x += 0.15) backTop.push(T.P(x, 0.17, 0.97 + Math.sin((x - 0.1) * 6) * 0.01)); puffRow(backTop, 6.2, NA.white);
-          puffRow([[0.11, 0.55], [0.11, 0.8], [0.11, 1.05]].map(([x, y]) => T.P(x, y, 0.72)), 5.4, NA.white); puffRow([[1.39, 0.55], [1.39, 0.8], [1.39, 1.05]].map(([x, y]) => T.P(x, y, 0.72)), 5.4, NA.white);
+          [[0.3, 1.64], [0.75, 1.58], [1.2, 1.64]].forEach(([x, z], k) => { const [sx, sy] = T.P(x, 0.075, z); T.line([x, 0.075, z + 0.14], [x, 0.075, z], '#E8C877', 0.8); if (k === 1) butterfly(sx, sy + 2, 4.2, NA.pinkDeep, NA.lilacDeep, 0.6 + 0.4 * Math.sin(t * 4)); else star5(sx, sy + 1, 3, k ? NA.butter : NA.pinkDeep); });
+          // The tufted back: a quilting of diagonal lines with a pearl at every crossing, and a scalloped top edge.
+          const fy = 0.341;
+          for (let k = 0; k <= 4; k++) { T.line([0.1 + k * 0.2, fy, 0.4], [0.1 + k * 0.2 + 0.42, fy, 0.96], 'rgba(176,96,132,.22)', 0.8); T.line([0.1 + k * 0.2 + 0.42, fy, 0.4], [0.1 + k * 0.2, fy, 0.96], 'rgba(176,96,132,.22)', 0.8); }
+          for (let r = 0; r < 3; r++) for (let x = 0.2 + (r % 2) * 0.1; x < 1.42; x += 0.2) { const [px, py] = T.P(x, fy, 0.5 + r * 0.2); circle(px, py, 2.2, NA.edge); circle(px, py, 1.7, NA.white); }
+          scallopTrim(T, [0.02, fy, 1.0], [1.48, fy, 1.0], 22, 0, NA.pink);
           // A heart pillow, a star pillow and the butter throw over one arm.
           T.box(0.26, 0.42, 0.48, 0.34, 0.26, 0.2, NA.lilac); const [hx, hy] = T.P(0.43, 0.68, 0.62); heart(hx, hy, 1.1, NA.white);
           T.box(0.92, 0.46, 0.48, 0.3, 0.22, 0.16, NA.butter); const [sx, sy] = T.P(1.07, 0.68, 0.6); star5(sx, sy, 3.2, NA.pinkDeep);
