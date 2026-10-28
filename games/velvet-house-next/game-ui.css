@@ -652,6 +652,10 @@
   .vh-vitals-title { display: none; }
 }
 
+/* A set in the shop: the price apart, struck through, beside the set's price. */
+.vh-was { display: block; font-size: 11px; color: #A9A1AE; text-decoration: line-through; }
+.vh-set-save { color: #8FD9A8; }
+
 /* Pets on the Household page: who, where, what they are up to, how they are, and what to do for them. */
 .vh-pet { margin: 8px 0; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.05); display: grid; gap: 6px; }
 .vh-pet-head { display: flex; align-items: center; gap: 8px; }

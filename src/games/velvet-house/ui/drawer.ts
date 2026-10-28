@@ -4,7 +4,7 @@ import { createGarmentPreview } from './garmentPreview';
  * Drawer UI — the sidebar/bottom-sheet with pages: Shop, Goals, Do, Partner, You, Home, Log.
  * Pure DOM manipulation, called from main.ts.
  */
-import { CATALOG, TABS, itemsForTab, lockOf, type CatalogEntry } from '../state/catalog';
+import { CATALOG, TABS, itemsForTab, lockOf, setQuote, type CatalogEntry } from '../state/catalog';
 import { SETTLE, LIFE, lifeGoalProgress, type GoalContext } from '../state/goals';
 import { careerTitle } from '../state/career';
 import { paperCss, floorCss, type LookInfo } from './swatch';
@@ -346,6 +346,11 @@ export function createDrawer(cb: DrawerCallbacks): {
     return true;
   }
   function iconStyle(item: CatalogEntry, state: DrawerState): string {
+    // A set shows its wallpaper.
+    if (item.set) {
+      const paper = setQuote(item, new Set()).members.find((m) => m.icon === 'paper');
+      if (paper?.pattern) return `background:${paperCss(state.lookInfo?.('paper', paper.pattern) ?? null).replace(/"/g, "'")}`;
+    }
     if (item.icon === 'paint' && item.color) return `background:${item.color}`;
     if (item.icon === 'paper' && item.pattern) return `background:${paperCss(state.lookInfo?.('paper', item.pattern) ?? null, state.pictureThumbs?.[item.pattern]).replace(/"/g, "'")}`;
     if (item.icon === 'floor' && item.floor) return `background:${floorCss(state.lookInfo?.('floor', item.floor) ?? null)}`;
@@ -367,9 +372,11 @@ export function createDrawer(cb: DrawerCallbacks): {
     const items = itemsForTab(tab);
     const cards = items.map(item => {
       const lock = lockOf(item.id, state.day, state.bond);
-      const owned = state.owned.has(item.id) && !item.repeat;
+      const quote = item.set ? setQuote(item, state.owned) : null;
+      const owned = quote ? quote.missing.length === 0 : state.owned.has(item.id) && !item.repeat;
       const locked = lock?.locked;
-      const tooExpensive = item.price > state.money;
+      const price = quote ? quote.cost : item.price;
+      const tooExpensive = price > state.money;
       const cls = locked ? 'vh-locked' : owned ? 'vh-owned' : tooExpensive ? 'vh-poor' : '';
       const cols = item.cols
         ? `<div class="vh-swatches">${item.cols.map(c => `<span class="vh-swatch" style="background:${c}" data-color="${c}"></span>`).join('')}</div>`
@@ -380,11 +387,12 @@ export function createDrawer(cb: DrawerCallbacks): {
         <div class="vh-shop-info">
           <strong>${item.name}</strong>
           ${item.desc ? `<span class="vh-shop-desc">${item.desc}</span>` : ''}
+          ${quote ? `<span class="vh-shop-desc vh-set-save">${quote.missing.length ? `${quote.missing.length} of ${quote.members.length} pieces to go. Save $${quote.full - quote.cost} against buying them apart.` : 'You have all of it. Change any piece in Arrange.'}</span>` : ''}
           ${cols}
           ${lockHint}
         </div>
         <div class="vh-shop-actions">
-          <span class="vh-price">$${item.price}</span>
+          ${quote && quote.missing.length && quote.full > quote.cost ? `<span class="vh-was">$${quote.full}</span>` : ''}<span class="vh-price">$${price}</span>
           <button data-buy="${item.id}" ${locked || (owned ? 'disabled' : '')}>${owned ? 'Owned' : 'Buy'}</button>
         </div>
       </div>`;
