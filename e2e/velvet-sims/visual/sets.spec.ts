@@ -14,6 +14,10 @@ const SETS: Record<string, string[]> = {
   japandi: ['look-fridge-japandi', 'look-counter-japandi', 'look-dining-japandi', 'look-sofa-japandi', 'look-lamp-japandi', 'look-plant-japandi', 'paper-shoji', 'floor-tatami'],
   boho: ['look-fridge-boho', 'look-counter-boho', 'look-dining-boho', 'look-sofa-boho', 'look-lamp-boho', 'look-plant-boho', 'paper-arches-terracotta', 'floor-jute'],
   space: ['look-fridge-space', 'look-counter-space', 'look-dining-space', 'look-sofa-space', 'look-lamp-space', 'look-plant-space', 'paper-orbit', 'floor-moon'],
+  gothic: ['look-fridge-gothic', 'look-counter-gothic', 'look-dining-gothic', 'look-sofa-gothic', 'look-lamp-gothic', 'look-plant-gothic', 'paper-damask-onyx', 'floor-herringebony'],
+  riad: ['look-fridge-riad', 'look-counter-riad', 'look-dining-riad', 'look-sofa-riad', 'look-lamp-riad', 'look-plant-riad', 'paper-zellige-cobalt', 'floor-zellige'],
+  tropical: ['look-fridge-tropical', 'look-counter-tropical', 'look-dining-tropical', 'look-sofa-tropical', 'look-lamp-tropical', 'look-plant-tropical', 'paper-monstera-night', 'floor-bamboo'],
+  memphis: ['look-fridge-memphis', 'look-counter-memphis', 'look-dining-memphis', 'look-sofa-memphis', 'look-lamp-memphis', 'look-plant-memphis', 'paper-squiggle-pop', 'floor-terrazzopop'],
 };
 
 for (const [set, ids] of Object.entries(SETS)) {

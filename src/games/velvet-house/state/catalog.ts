@@ -135,6 +135,10 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-shoji', 'Shoji screen', 'shoji', 90, ['minimal', 'natural', 'cool']),
   wallpaper('paper-arches-terracotta', 'Terracotta arches', 'arches-terracotta', 100, ['warm', 'natural', 'playful']),
   wallpaper('paper-orbit', 'Orbit', 'orbit', 110, ['modern', 'bold', 'playful']),
+  wallpaper('paper-damask-onyx', 'Onyx damask', 'damask-onyx', 120, ['luxe', 'vintage', 'cozy']),
+  wallpaper('paper-zellige-cobalt', 'Cobalt zellige', 'zellige-cobalt', 110, ['warm', 'bold', 'natural']),
+  wallpaper('paper-monstera-night', 'Monstera at night', 'monstera-night', 100, ['playful', 'natural', 'bold']),
+  wallpaper('paper-squiggle-pop', 'Squiggle pop', 'squiggle-pop', 110, ['playful', 'bold', 'modern']),
   wallpaper('paper-shiplap', 'Shiplap', 'shiplap', 80, ['natural', 'minimal', 'cozy']),
   wallpaper('paper-subway', 'Subway tile', 'subway', 80, ['modern', 'minimal', 'industrial']),
   wallpaper('paper-stars-night', 'Starry night', 'stars-night', 120, ['playful', 'cool', 'bold']),
@@ -173,6 +177,18 @@ export const CATALOG: CatalogEntry[] = [
 
   bundle('set-space', 'Space Age kitchen and living room', 'White moulded plastic, orange and ink: the capsule fridge, moulded pod counter, tulip dining set, pod sofa, saucer lamp and a capsule planter, with an orbit of stars on the walls and moon tile underfoot.',
     ['look-fridge-space', 'look-counter-space', 'look-dining-space', 'look-sofa-space', 'look-lamp-space', 'look-plant-space', 'paper-orbit', 'floor-moon'], ['modern', 'bold', 'playful']),
+
+  bundle('set-gothic', 'Gothic Revival kitchen and living room', 'Ebony, oxblood velvet and brass: the stained-glass icebox, ebony and brass counter, pedestal dining set under a candle chandelier, tufted oxblood sofa, candelabra lamp and a black urn, with onyx damask on the walls and ebony herringbone underfoot.',
+    ['look-fridge-gothic', 'look-counter-gothic', 'look-dining-gothic', 'look-sofa-gothic', 'look-lamp-gothic', 'look-plant-gothic', 'paper-damask-onyx', 'floor-herringebony'], ['luxe', 'vintage', 'cozy']),
+
+  bundle('set-riad', 'Riad kitchen and living room', 'Whitewashed plaster, cobalt zellige and cedar: the zellige fridge, zellige and cedar counter, inlaid table with leather poufs under a pierced lantern, cedar banquette, brass lantern lamp and a cobalt-banded pot, with a tiled dado on the walls and zellige mosaic underfoot.',
+    ['look-fridge-riad', 'look-counter-riad', 'look-dining-riad', 'look-sofa-riad', 'look-lamp-riad', 'look-plant-riad', 'paper-zellige-cobalt', 'floor-zellige'], ['warm', 'bold', 'natural']),
+
+  bundle('set-tropical', 'Tropical kitchen and living room', 'Bamboo, monstera and flamingo pink: the palm fridge, bamboo-slat counter with a pineapple, bamboo dining set with fan-back chairs, bamboo sofa with palm cushions, cone lamp and a slatted planter, with monstera leaves on the walls and bamboo plank underfoot.',
+    ['look-fridge-tropical', 'look-counter-tropical', 'look-dining-tropical', 'look-sofa-tropical', 'look-lamp-tropical', 'look-plant-tropical', 'paper-monstera-night', 'floor-bamboo'], ['playful', 'natural', 'bold']),
+
+  bundle('set-memphis', 'Memphis kitchen and living room', 'White laminate, black squiggles and primary blocks: the squiggle fridge, squiggle counter with a terrazzo top, totem dining set under a sputnik light, block sofa, totem lamp and a stacked planter, with squiggle pop on the walls and pop terrazzo underfoot.',
+    ['look-fridge-memphis', 'look-counter-memphis', 'look-dining-memphis', 'look-sofa-memphis', 'look-lamp-memphis', 'look-plant-memphis', 'paper-squiggle-pop', 'floor-terrazzopop'], ['playful', 'bold', 'modern']),
 
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
@@ -217,6 +233,10 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-tatami', 'Tatami mat', 'tatami', 130, ['minimal', 'natural', 'cool']),
   floor('floor-jute', 'Jute weave', 'jute', 130, ['warm', 'natural', 'playful']),
   floor('floor-moon', 'Moon tile', 'moon', 170, ['modern', 'bold', 'playful']),
+  floor('floor-herringebony', 'Ebony herringbone', 'herringebony', 180, ['luxe', 'vintage', 'cozy']),
+  floor('floor-zellige', 'Zellige mosaic', 'zellige', 160, ['warm', 'bold', 'natural']),
+  floor('floor-bamboo', 'Bamboo plank', 'bamboo', 140, ['playful', 'natural', 'bold']),
+  floor('floor-terrazzopop', 'Pop terrazzo', 'terrazzopop', 170, ['playful', 'bold', 'modern']),
   floor('floor-checker', 'Checkerboard', 'checker', 180, ['bold', 'playful', 'vintage']),
   floor('floor-rose', 'Rose carpet', 'rose', 100, ['soft', 'warm', 'cozy']),
   floor('floor-navy-carpet', 'Navy carpet', 'navy', 100, ['cool', 'modern', 'cozy']),
@@ -332,6 +352,34 @@ export const CATALOG: CatalogEntry[] = [
   look('look-sofa-space', 'sofa', 'space', 'Pod sofa', 'A moulded white pod on an ink ring base with cyan-piped cushions.', 560, ['modern', 'bold', 'playful'], ['#F4F6F8', '#1B1A24', '#5BE3E6']),
   look('look-lamp-space', 'lamp', 'space', 'Saucer lamp', 'An orange saucer shade hovering on a slim white stem over a violet glow.', 160, ['modern', 'bold', 'playful'], ['#F26A2E', '#F4F6F8', '#7A5CFF']),
   look('look-plant-space', 'plant', 'space', 'Capsule planter', 'Your plant in a white capsule pod with a cyan ring, on an ink base.', 110, ['modern', 'bold', 'playful'], ['#F4F6F8', '#1B1A24', '#5BE3E6', '#7A5CFF']),
+
+  look('look-fridge-gothic', 'fridge', 'gothic', 'Stained-glass icebox', 'Ebony with a pointed stained-glass arch in the upper door that glows when the power is on, brass handles and a brass crest.', 520, ['luxe', 'vintage', 'cozy'], ['#2A2224', '#B08D57', '#5E1F2A']),
+  look('look-counter-gothic', 'counter', 'gothic', 'Ebony and brass counter', 'Ebony fronts with pointed-arch panels in brass, a brass rail, a black marble top, a black basin and a candlestick at the end.', 600, ['luxe', 'vintage', 'cozy'], ['#2A2224', '#B08D57', '#2C2B2F']),
+  look('look-dining-gothic', 'dining', 'gothic', 'Ebony pedestal dining set', 'A turned ebony pedestal under a brass-inlaid top, pointed-arch chairs in oxblood velvet, and a brass candle chandelier.', 540, ['luxe', 'vintage', 'cozy'], ['#2A2224', '#5E1F2A', '#B08D57']),
+  look('look-sofa-gothic', 'sofa', 'gothic', 'Oxblood velvet sofa', 'Button-tufted oxblood velvet on an ebony plinth with ball feet, a carved crest and brass nailheads.', 560, ['luxe', 'vintage', 'cozy'], ['#5E1F2A', '#2A2224', '#B08D57']),
+  look('look-lamp-gothic', 'lamp', 'gothic', 'Brass candelabra lamp', 'A brass candelabra on an ebony base; its three candles light as flames.', 160, ['luxe', 'vintage', 'cozy'], ['#B08D57', '#2A2224', '#FFE0A0']),
+  look('look-plant-gothic', 'plant', 'gothic', 'Black urn planter', 'Your plant in a black urn with a brass rim and ring, on a stone plinth.', 110, ['luxe', 'vintage', 'cozy'], ['#2A2224', '#B08D57', '#5E1F2A', '#8E8A84']),
+
+  look('look-fridge-riad', 'fridge', 'riad', 'Zellige fridge', 'Whitewashed plaster with a cobalt zellige band, a cedar arch on the lower door, brass handles and a brass star.', 360, ['warm', 'bold', 'natural'], ['#F3EEE4', '#2E4C9A', '#C9A24A']),
+  look('look-counter-riad', 'counter', 'riad', 'Zellige and cedar counter', 'Whitewashed plaster with a cobalt zellige band, a cedar top, a hammered copper basin, a brass tap and a tagine at the end.', 430, ['warm', 'bold', 'natural'], ['#F3EEE4', '#2E4C9A', '#8A5A3A']),
+  look('look-dining-riad', 'dining', 'riad', 'Inlaid cedar dining set', 'A carved cedar table inlaid with cobalt and cream stars, leather poufs to sit on, and a pierced brass lantern above.', 350, ['warm', 'bold', 'natural'], ['#8A5A3A', '#2E4C9A', '#F1EDE3']),
+  look('look-sofa-riad', 'sofa', 'riad', 'Cedar banquette', 'A low carved cedar banquette with cream cushions, a cobalt back and terracotta bolsters at each end.', 380, ['warm', 'bold', 'natural'], ['#F1EDE3', '#2E4C9A', '#C27A5A']),
+  look('look-lamp-riad', 'lamp', 'riad', 'Pierced brass lantern', 'A pierced brass lantern on a cedar stand; the cutouts glow.', 90, ['warm', 'bold', 'natural'], ['#C9A24A', '#8A5A3A', '#2E4C9A']),
+  look('look-plant-riad', 'plant', 'riad', 'Cobalt-banded clay pot', 'Your plant in a terracotta pot with a cobalt band and cream diamonds.', 60, ['warm', 'bold', 'natural'], ['#C27A5A', '#2E4C9A', '#F1EDE3', '#9FC9B8']),
+
+  look('look-fridge-tropical', 'fridge', 'tropical', 'Palm fridge', 'Palm green with bamboo bands, a monstera leaf on the door, a hibiscus and a flamingo-pink handle.', 350, ['playful', 'natural', 'bold'], ['#2F6B40', '#F08AA0', '#D9BE82']),
+  look('look-counter-tropical', 'counter', 'tropical', 'Bamboo-slat counter', 'Bamboo-slat fronts bound with rattan, a teak top, a white basin, a brass tap and a pineapple at the end.', 420, ['playful', 'natural', 'bold'], ['#D9BE82', '#8A5A3A', '#F7F1E3']),
+  look('look-dining-tropical', 'dining', 'tropical', 'Bamboo dining set', 'A teak top on bamboo legs, bamboo chairs with fan backs of palm leaves and pink cushions, under a woven cone.', 340, ['playful', 'natural', 'bold'], ['#8A5A3A', '#D9BE82', '#F08AA0']),
+  look('look-sofa-tropical', 'sofa', 'tropical', 'Bamboo sofa with palm cushions', 'A bamboo frame with rattan arms, cream cushions, palm-green seats with monstera leaves and pink piping.', 380, ['playful', 'natural', 'bold'], ['#F7F1E3', '#2F6B40', '#F08AA0']),
+  look('look-lamp-tropical', 'lamp', 'tropical', 'Bamboo cone lamp', 'A bamboo pole under a woven cone shade with a pink tassel.', 90, ['playful', 'natural', 'bold'], ['#D2B48C', '#D9BE82', '#F08AA0']),
+  look('look-plant-tropical', 'plant', 'tropical', 'Bamboo-slat planter', 'Your plant in a teak box with bamboo slats and brass corner caps.', 60, ['playful', 'natural', 'bold'], ['#8A5A3A', '#D9BE82', '#C9A24A', '#2F6B40']),
+
+  look('look-fridge-memphis', 'fridge', 'memphis', 'Squiggle fridge', 'White with a black squiggle, a red circle, a yellow triangle and blue bar handles.', 520, ['playful', 'bold', 'modern'], ['#F4F1EA', '#1B1A1F', '#E63946']),
+  look('look-counter-memphis', 'counter', 'memphis', 'Squiggle counter', 'White laminate with squiggles and a circle, a triangle and a bar for handles, a pop terrazzo top, a black basin and a red tap.', 600, ['playful', 'bold', 'modern'], ['#F4F1EA', '#1B1A1F', '#F4C430']),
+  look('look-dining-memphis', 'dining', 'memphis', 'Totem dining set', 'A white top on three coloured legs, chairs with a yellow seat on a red drum and a black half-moon back, under a sputnik light.', 540, ['playful', 'bold', 'modern'], ['#F4F1EA', '#E63946', '#F4C430']),
+  look('look-sofa-memphis', 'sofa', 'memphis', 'Block sofa', 'A white block on a black plinth with a red drum arm, a yellow block arm, blue and mint cushions and a squiggle across the back.', 560, ['playful', 'bold', 'modern'], ['#F4F1EA', '#E63946', '#2E6BD6']),
+  look('look-lamp-memphis', 'lamp', 'memphis', 'Totem lamp', 'A red stepped base, a yellow stem, a blue ball and a black-and-white striped drum.', 160, ['playful', 'bold', 'modern'], ['#F4C430', '#E63946', '#2E6BD6']),
+  look('look-plant-memphis', 'plant', 'memphis', 'Stacked block planter', 'Your plant in a yellow block on a black cube, with a red triangle and blue dots.', 110, ['playful', 'bold', 'modern'], ['#F4C430', '#1B1A1F', '#E63946', '#2E6BD6']),
 
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),

@@ -18,6 +18,10 @@ const THEMES: ThemeSpec[] = [
   { theme: 'japandi', tags: ['minimal', 'natural', 'cool'], materials: ['wood', 'stone', 'metal'], paper: { id: 'paper-shoji', pattern: 'shoji' }, floor: { id: 'floor-tatami', floor: 'tatami' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'boho', tags: ['warm', 'natural', 'playful'], materials: ['wood', 'fabric', 'metal'], paper: { id: 'paper-arches-terracotta', pattern: 'arches-terracotta' }, floor: { id: 'floor-jute', floor: 'jute' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'space', tags: ['modern', 'bold', 'playful'], materials: ['laminate', 'metal'], paper: { id: 'paper-orbit', pattern: 'orbit' }, floor: { id: 'floor-moon', floor: 'moon' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [450, 700] },
+  { theme: 'gothic', tags: ['luxe', 'vintage', 'cozy'], materials: ['metal', 'wood', 'fabric', 'stone'], paper: { id: 'paper-damask-onyx', pattern: 'damask-onyx' }, floor: { id: 'floor-herringebony', floor: 'herringebony' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [450, 700] },
+  { theme: 'riad', tags: ['warm', 'bold', 'natural'], materials: ['metal', 'stone', 'wood', 'fabric'], paper: { id: 'paper-zellige-cobalt', pattern: 'zellige-cobalt' }, floor: { id: 'floor-zellige', floor: 'zellige' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
+  { theme: 'tropical', tags: ['playful', 'natural', 'bold'], materials: ['metal', 'wood', 'fabric'], paper: { id: 'paper-monstera-night', pattern: 'monstera-night' }, floor: { id: 'floor-bamboo', floor: 'bamboo' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
+  { theme: 'memphis', tags: ['playful', 'bold', 'modern'], materials: ['metal', 'laminate', 'fabric'], paper: { id: 'paper-squiggle-pop', pattern: 'squiggle-pop' }, floor: { id: 'floor-terrazzopop', floor: 'terrazzopop' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [450, 700] },
 ];
 const PIECES = ['fridge', 'counter', 'dining', 'sofa', 'lamp', 'plant'];
 // What the household uses on each piece: a look must leave these where they are.
