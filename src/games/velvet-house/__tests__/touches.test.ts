@@ -12,6 +12,9 @@ const BUNDLES: Touches[] = [
   { id: 'touches-arcade', items: ['rug-arcade', 'wobj-marquee', 'wobj-pixelprint', 'cartridges', 'pinball'], tags: ['playful', 'bold', 'vintage'], floor: ['rugarcade', 'cartridges', 'pinball'], walls: [['marquee', '#F4C430'], ['pixelprint', '#19E6F0']], hero: { type: 'pinball', tag: 'pinball' } },
   { id: 'touches-cuddle', items: ['rug-cloud', 'wobj-rainbowarch', 'wobj-cloudlight', 'plushpile', 'cloudswing'], tags: ['soft', 'playful', 'cozy'], floor: ['rugcloud', 'plushpile', 'cloudswing'], walls: [['rainbowarch', '#F58A8A'], ['cloudlight', '#FFFFFF']], hero: { type: 'cloudswing', tag: 'swing' } },
   { id: 'touches-neon', items: ['rug-neon', 'wobj-neonbolt', 'wobj-holoposter', 'serverstack', 'vrpod'], tags: ['bold', 'modern', 'industrial'], floor: ['rugneon', 'serverstack', 'vrpod'], walls: [['neonbolt', '#19E6F0'], ['holoposter', '#111118']], hero: { type: 'vrpod', tag: 'vr' } },
+  { id: 'touches-gothic', items: ['rug-gothic', 'wobj-stainedglass', 'wobj-sconce', 'grimoires', 'fortuneteller'], tags: ['luxe', 'vintage', 'cozy'], floor: ['ruggothic', 'grimoires', 'fortuneteller'], walls: [['stainedglass', '#8E2E3C'], ['sconce', '#2A2224']], hero: { type: 'fortuneteller', tag: 'fortune' } },
+  { id: 'touches-candy', items: ['rug-candy', 'wobj-lollipops', 'wobj-candysign', 'candyjars', 'gumball'], tags: ['soft', 'playful', 'warm'], floor: ['rugcandy', 'candyjars', 'gumball'], walls: [['lollipops', '#F6B7CC'], ['candysign', '#F6B7CC']], hero: { type: 'gumball', tag: 'gumball' } },
+  { id: 'touches-tropical', items: ['rug-tropical', 'wobj-tikimasks', 'wobj-flamingoneon', 'coconuts', 'tikibar'], tags: ['playful', 'natural', 'bold'], floor: ['rugtropical', 'coconuts', 'tikibar'], walls: [['tikimasks', '#8A5A3A'], ['flamingoneon', '#F08AA0']], hero: { type: 'tikibar', tag: 'tiki' } },
 ];
 
 function stubCtx(): CanvasRenderingContext2D {

@@ -223,6 +223,15 @@ export const CATALOG: CatalogEntry[] = [
   bundle('touches-neon', 'Neon finishing touches', 'The rest of the neon: a black grid rug edged in light, a neon bolt that flickers, a holo poster with a rolling scan, a server stack with blinking lights and a VR pod with ring lights and a holo cube that spins while someone is in it.',
     ['rug-neon', 'wobj-neonbolt', 'wobj-holoposter', 'serverstack', 'vrpod'], ['bold', 'modern', 'industrial']),
 
+  bundle('touches-gothic', 'Gothic Revival finishing touches', 'The rest of the gothic: an oxblood damask rug, a stained glass panel that glows, a candle sconce, a stack of grimoires and a fortune-telling machine whose crystal ball glows while you ask.',
+    ['rug-gothic', 'wobj-stainedglass', 'wobj-sconce', 'grimoires', 'fortuneteller'], ['luxe', 'vintage', 'cozy']),
+
+  bundle('touches-candy', 'Candy finishing touches', 'The rest of the sweets: a round lollipop rug, a lollipop wall, a sweet shop sign with chasing bulbs, three jars of sweets and a gumball machine that rattles one down the chute.',
+    ['rug-candy', 'wobj-lollipops', 'wobj-candysign', 'candyjars', 'gumball'], ['soft', 'playful', 'warm']),
+
+  bundle('touches-tropical', 'Tropical finishing touches', 'The rest of the tropics: a palm rug, two tiki masks, a flamingo neon, two coconut drinks and a tiki bar under a thatched roof with torches that flicker and a blender that whirs.',
+    ['rug-tropical', 'wobj-tikimasks', 'wobj-flamingoneon', 'coconuts', 'tikibar'], ['playful', 'natural', 'bold']),
+
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
 
@@ -310,6 +319,9 @@ export const CATALOG: CatalogEntry[] = [
   furn('rug-arcade', 'rugarcade', 'Arcade rug', 110, ['playful', 'bold', 'vintage'], ['#2B2459', '#15121F', '#3A2E73']),
   furn('rug-cloud', 'rugcloud', 'Cloud rug', 110, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F6EEF2', '#DCEEFA']),
   furn('rug-neon', 'rugneon', 'Grid rug', 110, ['bold', 'modern', 'industrial'], ['#111118', '#1E2230', '#2A2F3A']),
+  furn('rug-gothic', 'ruggothic', 'Damask rug', 110, ['luxe', 'vintage', 'cozy'], ['#5E1F2A', '#2E3B57', '#3B2541']),
+  furn('rug-candy', 'rugcandy', 'Lollipop rug', 110, ['soft', 'playful', 'warm'], ['#F6B7CC', '#BFE8D6', '#D6C4F0']),
+  furn('rug-tropical', 'rugtropical', 'Palm rug', 110, ['playful', 'natural', 'bold'], ['#F7F1E3', '#F0E6C8', '#D9BE82']),
   furn('wardrobe', 'wardrobe', 'Wardrobe', 250, ['vintage', 'luxe', 'natural'], ['#E4DDD2', '#9C6B45', '#3A2E2A', '#8E9C96']),
   furn('console', 'console', 'Console table', 130, ['modern', 'minimal', 'luxe'], ['#3A2E2A', '#9C6B45', '#E4DDD2', '#C9A24A']),
   furn('cabinet', 'cabinet', 'Cabinet', 160, ['vintage', 'natural', 'cozy'], ['#B98A6A', '#3F5B4C', '#2E3B57', '#F2EEE8', '#8E5468']),
@@ -486,6 +498,12 @@ export const CATALOG: CatalogEntry[] = [
   wallItem('wobj-cloudlight', 'Cloud night light', 60, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F9E27A']),
   wallItem('wobj-neonbolt', 'Neon bolt', 140, ['bold', 'modern', 'industrial'], ['#19E6F0', '#FF2E9A', '#FFB020']),
   wallItem('wobj-holoposter', 'Holo poster', 60, ['bold', 'modern', 'industrial'], ['#111118', '#19E6F0', '#FF2E9A']),
+  wallItem('wobj-stainedglass', 'Stained glass panel', 140, ['luxe', 'vintage', 'cozy'], ['#8E2E3C', '#2E4C9A', '#C9A24A']),
+  wallItem('wobj-sconce', 'Candle sconce', 60, ['luxe', 'vintage', 'cozy'], ['#2A2224', '#B08D57']),
+  wallItem('wobj-lollipops', 'Lollipop wall', 140, ['soft', 'playful', 'warm'], ['#F6B7CC', '#BFE8D6', '#D6C4F0']),
+  wallItem('wobj-candysign', 'Sweet shop sign', 60, ['soft', 'playful', 'warm'], ['#F6B7CC', '#FFF8F0', '#E04A6A']),
+  wallItem('wobj-tikimasks', 'Tiki masks', 140, ['playful', 'natural', 'bold'], ['#8A5A3A', '#D9BE82', '#F08AA0']),
+  wallItem('wobj-flamingoneon', 'Flamingo neon', 60, ['playful', 'natural', 'bold'], ['#F08AA0', '#19E6F0', '#F9E27A']),
 
   // Decor
   decor('pampas', 'pampas', 'Pampas vase', 40, ['modern', 'minimal', 'natural'], ['#E8DCC8', '#2B2B30', '#C27A5A', '#9EC1C9']),
@@ -496,6 +514,9 @@ export const CATALOG: CatalogEntry[] = [
   decor('cartridges', 'cartridges', 'Game cartridges', 30, ['playful', 'bold', 'vintage'], ['#F4C430', '#E63946', '#39D353', '#7A5CFF']),
   decor('plushpile', 'plushpile', 'Plush pile', 30, ['soft', 'playful', 'cozy'], ['#F6B7CC', '#9CCBF2', '#F9E27A', '#C7A8F0']),
   decor('serverstack', 'serverstack', 'Server stack', 30, ['bold', 'modern', 'industrial'], ['#111118', '#3A3F4A', '#1E2230']),
+  decor('grimoires', 'grimoires', 'Grimoires', 30, ['luxe', 'vintage', 'cozy'], ['#5E1F2A', '#2A2224', '#2E3B57']),
+  decor('candyjars', 'candyjars', 'Candy jars', 30, ['soft', 'playful', 'warm'], ['#F6B7CC', '#BFE8D6', '#D6C4F0']),
+  decor('coconuts', 'coconuts', 'Coconut drinks', 30, ['playful', 'natural', 'bold'], ['#6B4A35', '#8A5A3A']),
   decor('eucalyptus', 'eucalyptus', 'Eucalyptus vase', 55, ['natural', 'modern', 'soft'], ['#F2EEE8', '#2B2B30', '#C27A5A', '#9EC1C9']),
   decor('bust', 'bust', 'Bust on a pedestal', 120, ['luxe', 'vintage', 'bold'], ['#E8DCC8', '#2B2B30', '#9C6B45']),
   decor('tablelamp', 'tablelamp', 'Lamp table', 90, ['cozy', 'warm', 'natural'], ['#9C6B45', '#2B2B30', '#E4DDD2', '#3F5B4C']),
@@ -539,6 +560,9 @@ export const CATALOG: CatalogEntry[] = [
   hobby('pinball', 'pinball', 'Pinball machine', 320, ['playful', 'bold', 'vintage'], ['#E63946', '#1E1A2E', '#2E6BD6', '#F4C430']),
   hobby('cloudswing', 'cloudswing', 'Cloud swing', 320, ['soft', 'playful', 'cozy'], ['#F6B7CC', '#AEDDF7', '#C7A8F0', '#F9E27A']),
   hobby('vrpod', 'vrpod', 'VR pod', 320, ['bold', 'modern', 'industrial'], ['#111118', '#FF2E9A', '#7A5CFF', '#19E6F0']),
+  hobby('fortuneteller', 'fortuneteller', 'Fortune-telling machine', 320, ['luxe', 'vintage', 'cozy'], ['#5E1F2A', '#2A2224', '#2E3B57', '#3B2541']),
+  hobby('gumball', 'gumball', 'Gumball machine', 320, ['soft', 'playful', 'warm'], ['#E04A6A', '#F6B7CC', '#BFE8D6', '#2E6BD6']),
+  hobby('tikibar', 'tikibar', 'Tiki bar', 320, ['playful', 'natural', 'bold'], ['#D9BE82', '#8A5A3A', '#D2B48C']),
   hobby('eggchair', 'eggchair', 'Hanging egg chair', 280, ['modern', 'bold', 'luxe'], ['#E8DCC8', '#2B2B30', '#C27A5A']),
 
   // Outdoor

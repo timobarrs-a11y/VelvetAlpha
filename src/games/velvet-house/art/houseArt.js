@@ -295,6 +295,35 @@ export function createHouseArt(ctx0, opts = {}) {
         for (let u = 0.15; u < 0.8; u += 0.25) W.l([u, 0.05], [u, 1.05], on ? hexA(NE.cyan, 0.5) : 'rgba(25,230,240,.15)', 1); for (let z = 0.2; z < 1.05; z += 0.3) W.l([0.05, z], [0.75, z], on ? hexA(NE.cyan, 0.5) : 'rgba(25,230,240,.15)', 1);
         if (on) { const yy = 0.15 + ((t * 0.15) % 0.8); W.r(0.04, yy, 0.76, yy + 0.04, 'rgba(25,230,240,.25)'); }
         W.e(0.4, 0.6, 0.18, 0.18, null, on ? NE.magenta : shade(NE.magenta, -0.5)); W.e(0.4, 0.6, 0.1, 0.1, on ? hexA(NE.magenta, 0.5) : '#2A1A24'); W.p([[0.4, 0.35], [0.56, 0.6], [0.4, 0.85], [0.24, 0.6]], null, on ? NE.cyan : shade(NE.cyan, -0.5)); } },
+    stainedglass: { name: 'Stained glass panel', w: 0.7, h: 1.1, cols: ['#8E2E3C', '#2E4C9A', '#C9A24A'], tags: 'luxe vintage cozy',
+      // A pointed-arch panel of coloured panes with lead lines; the panes glow with the power on.
+      draw: (W) => { const on = power, pts = [[0.05, 0.05], [0.65, 0.05], [0.65, 0.7]]; for (let k = 1; k <= 8; k++) { const a = Math.PI * k / 8; pts.push([0.35 + Math.cos(a) * 0.3, 0.7 + Math.sin(a) * 0.36]); } pts.push([0.05, 0.7]);
+        W.p(pts, '#2A2224'); const pane = (poly, col) => W.p(poly, on ? col : shade(col, -0.45), 'rgba(20,15,20,.8)');
+        pane([[0.1, 0.1], [0.35, 0.1], [0.35, 0.45], [0.1, 0.45]], GO.panes[0]); pane([[0.35, 0.1], [0.6, 0.1], [0.6, 0.45], [0.35, 0.45]], GO.panes[1]); pane([[0.1, 0.45], [0.35, 0.45], [0.35, 0.72], [0.1, 0.72]], GO.panes[2]); pane([[0.35, 0.45], [0.6, 0.45], [0.6, 0.72], [0.35, 0.72]], GO.panes[3]);
+        pane([[0.1, 0.72], [0.6, 0.72], [0.6, 0.8], [0.35, 1.0], [0.1, 0.8]], GO.panes[1]); W.e(0.35, 0.78, 0.1, 0.1, on ? GO.panes[2] : shade(GO.panes[2], -0.45), 'rgba(20,15,20,.8)'); W.e(0.35, 0.78, 0.04, 0.04, on ? '#FFF1C9' : GO.panes[0]);
+        W.l([0.1, 0.28], [0.6, 0.28], 'rgba(20,15,20,.6)', 1); W.l([0.22, 0.1], [0.22, 0.72], 'rgba(20,15,20,.6)', 1); W.l([0.48, 0.1], [0.48, 0.72], 'rgba(20,15,20,.6)', 1); if (on) W.p(pts, 'rgba(255,230,180,.08)'); } },
+    sconce: { name: 'Candle sconce', w: 0.4, h: 0.6, cols: ['#2A2224', '#B08D57'], tags: 'luxe vintage cozy',
+      // An iron bracket holding two candles whose flames waver.
+      draw: (W, o, t) => { const c = o.col || '#2A2224'; W.l([0.2, 0.0], [0.2, 0.3], c, 2.4); W.pl([[0.2, 0.3], [0.08, 0.34], [0.06, 0.4]], c, 2); W.pl([[0.2, 0.3], [0.32, 0.34], [0.34, 0.4]], c, 2); W.e(0.2, 0.05, 0.05, 0.03, GO.brass);
+        [0.06, 0.34].forEach((u, k) => { W.r(u - 0.03, 0.4, u + 0.03, 0.52, '#F6EFE0'); const fl = Math.sin(t * 9 + k * 2) * 0.008; W.e(u, 0.55 + fl, 0.02, 0.035 + fl, 'rgba(255,190,80,.95)'); W.e(u, 0.545, 0.01, 0.018, 'rgba(255,246,210,.95)'); W.e(u, 0.55, 0.06, 0.07, 'rgba(255,200,120,.14)'); }); } },
+    lollipops: { name: 'Lollipop wall', w: 1.0, h: 0.8, cols: ['#F6B7CC', '#BFE8D6', '#D6C4F0'], tags: 'soft playful warm',
+      // Three lollipops crossed, each with a white swirl.
+      draw: (W) => { [[0.22, 0.6, CA.pink, 0.1], [0.5, 0.65, CA.mint, 0], [0.78, 0.6, CA.lilac, -0.1]].forEach(([u, z, col, lean]) => { W.l([u + lean * 2, 0.02], [u, z], '#FFFFFF', 3); W.e(u, z, 0.14, 0.14, col, 'rgba(0,0,0,.08)'); const pts = []; for (let a = 0; a < Math.PI * 4; a += 0.25) pts.push([u + Math.cos(a) * a * 0.01, z + Math.sin(a) * a * 0.01]); W.pl(pts, 'rgba(255,255,255,.85)', 1.6); W.e(u - 0.05, z + 0.05, 0.03, 0.02, 'rgba(255,255,255,.6)'); }); } },
+    candysign: { name: 'Sweet shop sign', w: 1.1, h: 0.5, cols: ['#F6B7CC', '#FFF8F0', '#E04A6A'], tags: 'soft playful warm',
+      // A pink sign with a scalloped top, a cupcake on it and bulbs that chase along the bottom.
+      draw: (W, o, t) => { const c = o.col || '#F6B7CC', on = power; W.r(0, 0.08, 1.1, 0.42, c, 'rgba(0,0,0,.08)'); for (let u = 0.08; u < 1.1; u += 0.16) W.e(u, 0.42, 0.08, 0.06, c);
+        W.r(0.38, 0.14, 0.52, 0.26, CA.butter); W.e(0.45, 0.3, 0.09, 0.06, '#FFFFFF'); W.e(0.45, 0.34, 0.06, 0.05, '#FFFFFF'); W.circ(0.45, 0.4, 0.02, CA.cherry);
+        W.e(0.72, 0.26, 0.09, 0.09, CA.mint, 'rgba(0,0,0,.08)'); W.e(0.72, 0.26, 0.04, 0.04, 'rgba(255,255,255,.7)'); W.r(0.12, 0.18, 0.26, 0.34, CA.lilac, 'rgba(0,0,0,.08)'); W.l([0.12, 0.26], [0.26, 0.26], 'rgba(255,255,255,.6)', 1);
+        const step = Math.floor(t * 6); for (let k = 0; k <= 10; k++) { const u = 0.05 + k * 0.1, lit = on && (k + step) % 3 === 0; W.circ(u, 0.04, 0.018, lit ? '#FFF6C8' : on ? CA.butter : '#C9B8A8'); } } },
+    tikimasks: { name: 'Tiki masks', w: 0.9, h: 0.9, cols: ['#8A5A3A', '#D9BE82', '#F08AA0'], tags: 'playful natural bold',
+      // Two carved wooden masks with cream eyes and a pink feather each.
+      draw: (W, o) => { const c = o.col || '#8A5A3A'; [[0.24, 0.0], [0.66, 0.1]].forEach(([u, dz], k) => { const z = 0.1 + dz; W.p([[u - 0.18, z], [u + 0.18, z], [u + 0.2, z + 0.5], [u, z + 0.62], [u - 0.2, z + 0.5]], c, 'rgba(0,0,0,.25)'); W.p([[u - 0.1, z + 0.36], [u - 0.03, z + 0.4], [u - 0.1, z + 0.44]], '#F7F1E3'); W.p([[u + 0.1, z + 0.36], [u + 0.03, z + 0.4], [u + 0.1, z + 0.44]], '#F7F1E3');
+        W.r(u - 0.1, z + 0.12, u + 0.1, z + 0.2, '#F7F1E3'); for (let x = u - 0.08; x < u + 0.1; x += 0.04) W.l([x, z + 0.12], [x, z + 0.2], c, 1); W.l([u - 0.14, z + 0.28], [u + 0.14, z + 0.28], 'rgba(0,0,0,.3)', 1); W.e(u + (k ? -0.1 : 0.1), z + 0.68, 0.03, 0.09, TR.pink, null); W.e(u, z + 0.66, 0.03, 0.08, TR.coral, null); }); } },
+    flamingoneon: { name: 'Flamingo neon', w: 0.7, h: 0.9, cols: ['#F08AA0', '#19E6F0', '#F9E27A'], tags: 'playful natural bold',
+      // A flamingo in pink neon tube on a dark board, glowing with the power on.
+      draw: (W, o, t) => { const c = o.col || '#F08AA0', on = power && Math.sin(t * 11) > -0.95; W.r(0.02, 0.02, 0.68, 0.88, 'rgba(0,0,0,.25)');
+        const body = [[0.2, 0.3], [0.28, 0.22], [0.42, 0.22], [0.5, 0.32], [0.46, 0.42], [0.34, 0.46], [0.22, 0.42], [0.18, 0.36], [0.2, 0.3]], neck = [[0.44, 0.42], [0.5, 0.56], [0.48, 0.7], [0.4, 0.78], [0.3, 0.78], [0.26, 0.72]], legs = [[0.32, 0.22], [0.32, 0.08], [0.26, 0.04]], leg2 = [[0.38, 0.22], [0.38, 0.12]];
+        [body, neck, legs, leg2].forEach((pts) => { if (on) W.pl(pts, hexA(c, 0.35), 6); W.pl(pts, on ? c : shade(c, -0.5), 2); if (on) W.pl(pts, 'rgba(255,255,255,.6)', 0.8); }); W.e(0.42, 0.75, 0.025, 0.025, on ? '#111118' : '#2A2F3A'); W.l([0.26, 0.72], [0.22, 0.66], on ? '#111118' : '#2A2F3A', 2); } },
     // ---- rotation and seasonal pieces (only in the daily shop) ----
     neon: { name: 'Neon heart', w: 0.9, h: 0.7, cols: ['#FF5FA2', '#5FE3FF', '#FFD25F'], tags: 'bold playful modern', rot: 'rare',
       draw: (W, o, t) => { const c = o.col || '#FF5FA2', pts = []; for (let k = 0; k <= 30; k++) { const a = k / 30 * Math.PI * 2, x = 16 * Math.pow(Math.sin(a), 3), y = 13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a); pts.push([0.45 + x * 0.025, 0.38 + y * 0.025]); } ctx.save(); ctx.shadowColor = c; ctx.shadowBlur = 10 + Math.sin(t * 3) * 2; W.pl(pts, c, 3); ctx.restore(); W.pl(pts, '#FFFFFF', 1); } },
@@ -2152,6 +2181,60 @@ export function createHouseArt(ctx0, opts = {}) {
           // The holo cube.
           if (using && power) { const [hx, hy] = T.P(0.5, 0.8, 1.75); circle(hx, hy, 14, hexA(NE.cyan, 0.12 + pulse * 0.1)); const a = t * 2, r = 7; [[0, NE.cyan], [-8, NE.magenta]].forEach(([dy, col]) => { ctx.beginPath(); for (let k = 0; k <= 4; k++) { const ang = a + k * Math.PI / 2; const x = hx + Math.cos(ang) * r, y = hy + dy + Math.sin(ang) * r * 0.5; k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.strokeStyle = col; ctx.lineWidth = 1.3; ctx.stroke(); }); for (let k = 0; k < 4; k++) { const ang = a + k * Math.PI / 2; limb(hx + Math.cos(ang) * r, hy + Math.sin(ang) * r * 0.5, hx + Math.cos(ang) * r, hy - 8 + Math.sin(ang) * r * 0.5, hexA(NE.cyan, 0.7), 1); } }
         }, { onTop: true })]; } },
+    ruggothic: {
+      // An oxblood rug with an ebony border and brass damask motifs.
+      parts: (o) => [F(0, 0, 2.4, 1.6, (T) => { const c = cl(o); T.poly([[0, 0, 0.008], [2.4, 0, 0.008], [2.4, 1.6, 0.008], [0, 1.6, 0.008]], GO.ebony); T.poly([[0.12, 0.12, 0.009], [2.28, 0.12, 0.009], [2.28, 1.48, 0.009], [0.12, 1.48, 0.009]], c); T.poly([[0.2, 0.2, 0.0095], [2.2, 0.2, 0.0095], [2.2, 1.4, 0.0095], [0.2, 1.4, 0.0095]], null, GO.brass, 1);
+        for (let y = 0.5, r = 0; y < 1.3; y += 0.4, r++) for (let x = 0.5 + (r % 2) * 0.3; x < 2.0; x += 0.6) { T.poly([[x, y - 0.14, 0.01], [x + 0.08, y, 0.01], [x, y + 0.14, 0.01], [x - 0.08, y, 0.01]], GO.brass); const [sx, sy] = T.P(x, y, 0.01); ell(sx - 6, sy, 2, 4, GO.brass, null, 0.5); ell(sx + 6, sy, 2, 4, GO.brass, null, -0.5); } }, { decal: true })] },
+    rugcandy: {
+      // A round lollipop rug: pink and white rings with a swirl.
+      parts: (o) => [F(0, 0, 1.8, 1.8, (T) => { const c = cl(o); [[0.9, c], [0.72, '#FFFFFF'], [0.54, c], [0.36, '#FFFFFF'], [0.18, c]].forEach(([r, col]) => { const pts = []; for (let k = 0; k < 28; k++) { const a = k / 28 * Math.PI * 2; pts.push([0.9 + Math.cos(a) * r, 0.9 + Math.sin(a) * r, 0.009]); } T.poly(pts, col); });
+        const sw = []; for (let a = 0; a < Math.PI * 6; a += 0.2) sw.push(T.P(0.9 + Math.cos(a) * a * 0.045, 0.9 + Math.sin(a) * a * 0.045, 0.01)); ctx.beginPath(); sw.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.strokeStyle = CA.cherry; ctx.lineWidth = 1.4; ctx.stroke(); }, { decal: true })] },
+    rugtropical: {
+      // A cream rug with a pink border and big monstera leaves.
+      parts: (o) => [F(0, 0, 2.4, 1.6, (T) => { const c = cl(o); T.poly([[0, 0, 0.008], [2.4, 0, 0.008], [2.4, 1.6, 0.008], [0, 1.6, 0.008]], c); T.poly([[0.1, 0.1, 0.009], [2.3, 0.1, 0.009], [2.3, 1.5, 0.009], [0.1, 1.5, 0.009]], null, TR.pink, 2.2);
+        [[0.6, 0.6, TR.leaf, 0.3], [1.3, 1.0, TR.leafLight, -0.4], [1.9, 0.5, TR.leaf, 0.9], [0.9, 1.25, TR.leafLight, 2.2]].forEach(([x, y, col, rot]) => { const [sx, sy] = T.P(x, y, 0.01); monstera(sx, sy, 11, col, c, rot); }); }, { decal: true })] },
+    grimoires: {
+      // Three dark tomes with brass clasps, and a quill.
+      parts: (o) => [B(0.02, 0.04, 0, 0.36, 0.28, 0.08, cl(o)), B(0.05, 0.03, 0.08, 0.34, 0.27, 0.07, '#2E3B57'), B(0.0, 0.05, 0.15, 0.36, 0.26, 0.08, GO.ebony),
+        F(0.0, 0.03, 0.38, 0.33, (T) => { [[0.04, 0.38], [0.11, 0.39], [0.19, 0.36]].forEach(([z, x]) => { T.line([x, 0.05, z], [x, 0.3, z], GO.brass, 2); const [bx, by] = T.P(x, 0.18, z); circle(bx, by, 1.2, GO.brassLight); }); T.line([0.02, 0.321, 0.02], [0.02, 0.321, 0.22], GO.brassLight, 1); const [qx, qy] = T.P(0.3, 0.1, 0.23); limb(qx, qy, qx + 6, qy - 14, '#F6EFE0', 1.2); ell(qx + 5, qy - 12, 2.2, 6, '#F6EFE0', null, 0.4); }, { onTop: true })] },
+    candyjars: {
+      // Three glass jars of sweets with pink lids.
+      parts: (o) => [B(0.0, 0.04, 0, 0.5, 0.32, 0.03, '#FFFFFF'), F(0.0, 0.04, 0.5, 0.36, (T) => { const c = cl(o); [[0.06, 0.08, 0.3, CA.cherry], [0.22, 0.1, 0.22, CA.mint], [0.36, 0.08, 0.26, CA.lilac]].forEach(([x, y, h, col]) => { T.box(x, y, 0.03, 0.13, 0.13, h, 'rgba(225,240,250,.55)'); for (let k = 0; k < 5; k++) { const [px, py] = T.P(x + 0.03 + (k % 3) * 0.04, y + 0.131, 0.07 + Math.floor(k / 3) * 0.06 + (k % 2) * 0.02); circle(px, py, 1.5, [col, CA.butter, c][k % 3]); } T.box(x - 0.01, y - 0.01, 0.03 + h, 0.15, 0.15, 0.03, c); }); }, { onTop: true })] },
+    coconuts: {
+      // Two coconut drinks with straws and paper umbrellas.
+      parts: (o) => [B(0.05, 0.05, 0, 0.4, 0.3, 0.02, TR.rattan), F(0.05, 0.05, 0.45, 0.35, (T) => { const c = cl(o); [[0.16, 0.2, 0.3], [0.34, 0.18, -0.3]].forEach(([x, y, lean], k) => { const [px, py] = T.P(x, y, 0.12); ell(px, py, 7, 6, c, 'rgba(0,0,0,.2)'); ell(px, py - 4, 5, 2.5, '#F7F1E3'); limb(px + 2, py - 4, px + 4 + lean * 6, py - 16, k ? TR.pink : TR.coral, 1.4); ctx.beginPath(); ctx.moveTo(px - 3 - lean * 10, py - 14); ctx.lineTo(px - 11 - lean * 10, py - 10); ctx.lineTo(px + 5 - lean * 10, py - 10); ctx.closePath(); ctx.fillStyle = k ? CA.butter : TR.pink; ctx.fill(); limb(px - 3 - lean * 10, py - 14, px - 3 - lean * 10, py - 6, '#F7F1E3', 1); }); }, { onTop: true })] },
+    fortuneteller: {
+      // A fortune-telling machine: an oxblood cabinet with brass trim, a glass case with a turbaned teller over a crystal ball that glows
+      // while someone asks, and a card that drops from the slot.
+      parts: (o) => { const c = cl(o); return [B(0, 0, 0, 0.8, 0.6, 0.9, c), B(0.05, 0.05, 0.9, 0.7, 0.5, 0.8, 'rgba(180,230,255,.14)'), B(0, 0, 1.7, 0.8, 0.6, 0.2, GO.brass),
+        F(0, 0, 0.8, 0.6, (T, ob, t) => { const asking = usingSlot(ob.id + ':f') || live(ob.id), glow = power ? (asking ? 0.5 + Math.sin(t * 5) * 0.3 : 0.2) : 0;
+          T.line([0, 0.601, 0.9], [0.8, 0.601, 0.9], GO.brass, 1.6); T.line([0, 0.601, 0.05], [0.8, 0.601, 0.05], GO.brass, 1.6); [[0.05, 0.05], [0.75, 0.05], [0.05, 0.55], [0.75, 0.55]].forEach(([x, y]) => T.line([x, y, 0.9], [x, y, 1.7], GO.brass, 1.4));
+          const [ax, ay] = T.P(0.4, 0.601, 0.5); arch(ax, ay, 9, 18, null, GO.brass, 1); T.poly([[0.28, 0.602, 0.22], [0.52, 0.602, 0.22], [0.52, 0.602, 0.26], [0.28, 0.602, 0.26]], GO.ebony); if (asking) T.poly([[0.32, 0.603, 0.14], [0.48, 0.603, 0.14], [0.48, 0.603, 0.24], [0.32, 0.603, 0.24]], '#F6EFE0');
+          const [bx, by] = T.P(0.4, 0.42, 1.0); if (glow) circle(bx, by - 2, 12, `rgba(201,162,74,${glow.toFixed(2)})`); circle(bx, by - 2, 6, power ? '#E8DCC8' : '#8E8A84'); circle(bx - 2, by - 4, 2, 'rgba(255,255,255,.7)'); ell(bx, by + 4, 7, 2.5, GO.brass);
+          const [hx, hy] = T.P(0.4, 0.3, 1.42); ell(hx, hy + 10, 11, 9, GO.oxblood); ell(hx, hy, 6, 7, '#C68E62'); ell(hx, hy - 7, 8, 5, '#2E4C9A'); circle(hx, hy - 10, 2, GO.brass); limb(hx - 4, hy + 2, hx + 4, hy + 2, '#2A2224', 1.4); circle(hx - 2.5, hy - 1, 0.8, '#2A2224'); circle(hx + 2.5, hy - 1, 0.8, '#2A2224');
+          const sway = asking ? Math.sin(t * 4) * 3 : 0; ell(bx - 9 + sway, by - 6, 3, 2, '#C68E62'); ell(bx + 9 - sway, by - 6, 3, 2, '#C68E62');
+          const [mx, my] = T.P(0.4, 0.601, 1.8); sunburst(mx, my + 2, 10, 7, GO.brassLight, 1); for (let k = 0; k < 5; k++) { const [sx, sy] = T.P(0.1 + k * 0.15, 0.601, 1.75); star5(sx, sy, 2, power && (Math.floor(t * 4) + k) % 2 ? '#FFF1C9' : GO.ebony); }
+        }, { onTop: true })]; } },
+    gumball: {
+      // A gumball machine: a red base with a chrome dial, a glass globe full of gumballs and a chrome cap; a gumball rattles down the chute when used.
+      parts: (o) => { const c = cl(o); return [B(0.1, 0.1, 0, 0.3, 0.3, 0.5, c), F(0.1, 0.1, 0.4, 0.4, (T, ob, t) => { const using = usingSlot(ob.id + ':g') || live(ob.id);
+          T.line([0.1, 0.401, 0.48], [0.4, 0.401, 0.48], '#B9BEC3', 1.4); const [dx, dy] = T.P(0.25, 0.402, 0.3); circle(dx, dy, 3.5, '#B9BEC3'); limb(dx - 2.5, dy, dx + 2.5, dy, '#6B7078', 1.4); T.poly([[0.18, 0.402, 0.1], [0.32, 0.402, 0.1], [0.32, 0.402, 0.2], [0.18, 0.402, 0.2]], '#2B2B30'); if (using) { const [gx, gy] = T.P(0.25, 0.403, 0.15 - ((t * 2) % 1) * 0.08); circle(gx, gy, 2, [CA.cherry, CA.mint, CA.lilac, CA.butter][Math.floor(t) % 4]); }
+          const [px, py] = T.P(0.25, 0.25, 0.78); circle(px, py, 15, 'rgba(225,240,250,.45)', 'rgba(255,255,255,.7)'); for (let k = 0; k < 22; k++) { const a = k * 2.4, r = 3 + (k * 0.618 % 1) * 9, jig = using ? Math.sin(t * 20 + k) * 0.8 : 0; circle(px + Math.cos(a) * r, py + Math.sin(a) * r * 0.9 + 2 + jig, 2.2, [CA.cherry, CA.mint, CA.lilac, CA.butter, CA.sky, CA.pinkDeep][k % 6]); } circle(px - 5, py - 6, 3, 'rgba(255,255,255,.5)');
+          const [tx, ty] = T.P(0.25, 0.25, 1.12); ell(tx, ty, 6, 3, '#B9BEC3'); ell(tx, ty - 3, 3, 2.5, c);
+        }, { onTop: true })]; } },
+    tikibar: {
+      // A tiki bar: a bamboo counter under a thatched roof on bamboo posts, bottles on the back shelf, a blender, and a torch at each end that
+      // flickers with the power on. Someone stands at the front to mix a drink.
+      parts: (o) => { const c = cl(o); return [B(0, 0, 0, 2.0, 0.8, 0.9, c), B(-0.1, -0.05, 1.7, 2.2, 0.9, 0.2, TR.rattan),
+        F(0, 0, 2.0, 0.8, (T, ob, t) => { const mixing = usingSlot(ob.id + ':t') || live(ob.id);
+          for (let x = 0.04; x < 2.0; x += 0.08) bambooPole(T, [x, 0.801, 0.03], [x, 0.801, 0.86], 2.4, shade(c, (Math.round(x * 25) % 3) * 0.04 - 0.04)); T.line([0, 0.802, 0.3], [2.0, 0.802, 0.3], TR.teak, 1.6); T.line([0, 0.802, 0.62], [2.0, 0.802, 0.62], TR.teak, 1.6);
+          T.box(-0.05, -0.04, 0.9, 2.1, 0.88, 0.06, TR.teak); bambooPole(T, [0.08, 0.08, 0.96], [0.08, 0.08, 1.7], 4); bambooPole(T, [1.92, 0.08, 0.96], [1.92, 0.08, 1.7], 4);
+          fringe(T, [-0.1, 0.851, 1.7], [2.1, 0.851, 1.7], 44, 0.14, TR.bambooDark); fringe(T, [2.101, -0.05, 1.7], [2.101, 0.85, 1.7], 18, 0.14, TR.bambooDark); for (let k = 0; k < 6; k++) T.line([-0.1, -0.05 + k * 0.17, 1.901], [2.1, -0.05 + k * 0.17, 1.901], 'rgba(90,60,30,.25)', 1);
+          [[0.3, TR.pink], [0.5, TR.leafLight], [0.7, CA.butter], [0.9, TR.coral], [1.1, TR.cream]].forEach(([x, col]) => { T.box(x, 0.06, 0.96, 0.1, 0.1, 0.26, col); T.box(x + 0.03, 0.09, 1.22, 0.04, 0.04, 0.08, '#2B2B30'); });
+          T.box(1.45, 0.35, 0.96, 0.22, 0.22, 0.12, '#2B2B30'); T.box(1.47, 0.37, 1.08, 0.18, 0.18, 0.3, 'rgba(225,240,250,.5)'); if (mixing) { const [jx, jy] = T.P(1.56, 0.46, 1.22); for (let k = 0; k < 6; k++) circle(jx + Math.cos(t * 30 + k) * 3, jy + Math.sin(t * 30 + k) * 2, 1.4, k % 2 ? TR.pink : CA.butter); }
+          const [px, py] = T.P(1.0, 0.4, 0.96); ell(px, py - 7, 5, 7, '#E3B23C'); [[-3, -0.4], [0, 0], [3, 0.4]].forEach(([dx, rot]) => ell(px + dx, py - 18, 1.6, 5, TR.leaf, null, rot));
+          [[-0.08, 0.9], [2.08, 0.9]].forEach(([x, y], k) => { bambooPole(T, [x, y, 0.0], [x, y, 1.4], 3); const [fx, fy] = T.P(x, y, 1.42); if (power) { const fl = Math.sin(t * 9 + k * 2) * 1.2; ell(fx, fy - 5, 3 + fl * 0.3, 7 + fl, 'rgba(255,170,60,.95)'); ell(fx, fy - 4, 1.5, 3.5, 'rgba(255,246,210,.95)'); ell(fx, fy - 4, 12, 12, 'rgba(255,190,90,.14)'); } else ell(fx, fy - 2, 2, 2.5, '#2B2B30'); });
+        }, { onTop: true })]; } },
     clawmachine: {
       // A claw machine: a cabinet in the piece's colour, a glass case full of plushies, a marquee on top with chasing bulbs,
       // and a claw that swings out and drops while someone plays (or the player pokes it).
@@ -3936,6 +4019,9 @@ export function createHouseArt(ctx0, opts = {}) {
       case 'pinball': return run(8, 'The ball rockets off the plunger. Bumpers everywhere.');
       case 'cloudswing': return run(6, 'The swing rocks and the cloud bobs along.');
       case 'vrpod': return run(8, 'The pod lights up and a world loads.');
+      case 'fortuneteller': return run(8, 'The crystal ball glows. A card drops: something good is coming.');
+      case 'gumball': return run(4, 'A gumball rattles down the chute.');
+      case 'tikibar': return run(8, 'The blender whirs and the torches flare.');
       case 'tread': return run(8, 'The treadmill belt whirs to life.');
       case 'shower': return run(8, 'The shower hisses on, then off.');
       case 'bathtub': return run(10, 'The tub fills with steaming water.');
