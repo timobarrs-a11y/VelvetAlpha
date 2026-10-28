@@ -2,18 +2,26 @@ import type { Question, QuestionnaireDefinition } from './types';
 import { tpl } from './pronouns';
 import type { QuestionContext } from './types';
 
+/** Dez's remark for a pick: a line per answer (the same for everybody), with the companion's pronouns filled in. */
+const remarks = (lines: Record<string, string>) =>
+  (answer: string | string[], ctx: QuestionContext): string | null => {
+    const key = Array.isArray(answer) ? answer[0] : answer;
+    const line = lines[key];
+    return line ? tpl(line, ctx) : null;
+  };
+
 export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 20,
   chapters: [
     { id: 'connection', label: 'How you connect', questionIds: ['relationshipType', 'connectionType'] },
-    { id: 'energy', label: 'Who {she} is', questionIds: ['energy', 'humor', 'beat1'] },
+    { id: 'energy', label: 'Who {she} is', questionIds: ['energy', 'humor'] },
     { id: 'treats', label: 'How {she} treats you', questionIds: ['directness', 'openness', 'care'] },
     { id: 'warmth', label: 'How {she} loves', questionIds: ['warmth', 'interests'] },
     // Six dials, each one thing the companion visibly does differently (docs/onboarding/voice-audit.md): energy,
     // humor, how straight {she} is, how open, fix-or-listen, and (companions only) how bold. Everything else a person
     // could be asked is learned in conversation: love language and "when it's hard" in the first week
     // (supabase/functions/_shared/companionWeekOne.ts).
-    { id: 'depth', label: 'The bond', questionIds: ['companionName', 'beat2'] },
+    { id: 'depth', label: 'The bond', questionIds: ['companionName'] },
   ],
   questions: [
     {
@@ -21,6 +29,7 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       archetype: 'tap',
       chapter: 'connection',
       question: 'Who are you looking for?',
+      reaction: remarks({ Female: "A woman, then. I know a few worth meeting.", Male: "A fella, then. I know a few of those too." }),
       confidence: 'tapped',
       autoAdvance: true,
       options: [
@@ -36,6 +45,7 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
         const word = ctx.subject === 'friend' ? 'friendship' : 'relationship';
         return `What kind of ${word} do you want?`;
       },
+      reaction: remarks({ friend: "A friend first. Best way to start anything.", romantic: "Something more. Now we're talking." }),
       confidence: 'tapped',
       autoAdvance: true,
       options: [
@@ -48,6 +58,12 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       archetype: 'scrub',
       chapter: 'energy',
       question: (ctx) => tpl(`Picture {her} walking into a party. Does {she} work the room, or find the quiet corner?`, ctx),
+      reaction: remarks({
+        'Life of the party': "Hoo, {she}'s the loud one. No dull nights with {her}.",
+        'Somewhere in between': "Could go either way, depending on the day. Smart.",
+        'In her own world': "The quiet type. Bet {she}'s thinking about something good.",
+        'In his own world': "The quiet type. Bet {she}'s thinking about something good.",
+      }),
       confidence: 'tapped',
       config: {
         min: 0,
@@ -68,6 +84,16 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       archetype: 'preview',
       chapter: 'energy',
       question: (ctx) => tpl(`You burn the toast and set off the smoke alarm. What does {she} say?`, ctx),
+      reaction: (answer, ctx) => {
+        const picks = Array.isArray(answer) ? answer : [answer];
+        if (picks.length > 1) return tpl("A mix. That's how real folks are.", ctx);
+        return remarks({
+          witty: "Sharp. Hope you've had your coffee.",
+          goofy: "A clown. I respect that.",
+          dry: "Deadpan. Takes you a second, then you're gone.",
+          warm: "Kind humor. Rare as hen's teeth.",
+        })(picks[0], ctx);
+      },
       confidence: 'tapped',
       pickUpTo: 2,
       pickHint: 'Pick the one that sounds most like them. Add a second if they are a mix.',
@@ -79,23 +105,15 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       ],
     },
     {
-      id: 'beat1',
-      archetype: 'beat',
-      chapter: 'energy',
-      beat: {
-        template: (ctx) => {
-          const name = ctx.answers.companionName as string;
-          if (name) return tpl(`Got it. ${name} is taking shape.`, ctx);
-          return tpl(`Got it. {She}'s taking shape.`, ctx);
-        },
-        durationMs: 1500,
-      },
-    },
-    {
       id: 'directness',
       archetype: 'scrub',
       chapter: 'treats',
       question: (ctx) => tpl(`You ask {her} how the new haircut looks, and it is not great. What happens?`, ctx),
+      reaction: remarks({
+        'Very Direct & Straightforward': "A straight shooter. You'll always know where you stand.",
+        'Diplomatic & Tactful': "Tactful but honest. The hardest kind to be.",
+        'Playfully Indirect': "Hints and teasing. You'll be guessing, and loving it.",
+      }),
       confidence: 'tapped',
       config: {
         min: 0, max: 2, step: 1, default: 1,
@@ -110,6 +128,11 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       archetype: 'scrub',
       chapter: 'treats',
       question: (ctx) => tpl(`{She} has had a rough week. Does {she} tell you about it?`, ctx),
+      reaction: remarks({
+        'Private & Guarded': "Hard to crack. Worth the effort, though.",
+        'Opens Up Over Time': "{She}'ll open up in {their} own time. Can't rush that.",
+        'Open Book': "Wears {their} heart on {their} sleeve. That takes nerve.",
+      }),
       confidence: 'tapped',
       config: {
         min: 0, max: 2, step: 1, default: 1,
@@ -124,6 +147,11 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       archetype: 'scrub',
       chapter: 'treats',
       question: (ctx) => tpl(`You come home wrecked after a bad day. What does {she} do?`, ctx),
+      reaction: remarks({
+        'Offers Solutions & Helps You Fix It': "A fixer. Sleeves up first, questions after.",
+        'Listens First, Then Helps': "Listens first, then helps. That's the order that works.",
+        'Just Listens & Validates': "Just stays with you. Sometimes that's all anybody needs.",
+      }),
       confidence: 'tapped',
       config: {
         min: 0, max: 2, step: 1, default: 1,
@@ -140,6 +168,12 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       // Friends do not flirt: this is the one question only a companion is asked.
       skipIf: (ctx) => ctx.subject === 'friend' || ctx.answers.connectionType === 'friend',
       question: (ctx) => tpl(`Now the fun part. How does {she} let you know {she}'s into you?`, ctx),
+      reaction: remarks({
+        bold: "Bold. No guesswork there.",
+        sweet: "Sweet and subtle. It's the little things.",
+        banter: "Banter. Flirting with a sharp edge.",
+        deep: "Quiet and deep. Notices everything.",
+      }),
       confidence: 'tapped',
       bubbles: [
         {
@@ -181,6 +215,7 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       archetype: 'grid',
       chapter: 'warmth',
       question: (ctx) => tpl(`What is {she} into? Pick a few.`, ctx),
+      reaction: () => "Good taste. Never a shortage to talk about.",
       confidence: 'tapped',
       multiSelect: true,
       minSelections: 1,
@@ -203,21 +238,9 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
         if (userName) return `Last thing ${userName} -- what's the perfect name?`;
         return "What's the perfect name?";
       },
+      reaction: (answer, ctx) => (typeof answer === 'string' && answer ? tpl(`${answer}. That suits {her}. Let me go and fetch {her}.`, ctx) : null),
       confidence: 'confirmed',
       placeholder: 'Type a name...',
-    },
-    {
-      id: 'beat2',
-      archetype: 'beat',
-      chapter: 'depth',
-      beat: {
-        template: (ctx) => {
-          const name = ctx.answers.companionName as string;
-          if (name) return `${name}. It suits ${ctx.pronouns.her}.`;
-          return tpl(`{She}'s ready.`, ctx);
-        },
-        durationMs: 1500,
-      },
     },
   ],
 };
@@ -250,6 +273,7 @@ export const COMPANION_START: QuestionnaireDefinition = {
       archetype: 'tap',
       chapter: 'start',
       question: (ctx) => `Do you want to build your ${ctx.subject === 'friend' ? 'friend' : 'companion'}, or be surprised?`,
+      reaction: remarks({ own: "A builder. I like it. Let's make {her} just right.", random: "Feeling lucky. Hold onto your hat." }),
       confidence: 'tapped',
       autoAdvance: true,
       options: [

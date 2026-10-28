@@ -81,6 +81,9 @@ export function QuestionnaireShell({
   const [beatVisible, setBeatVisible] = useState(false);
   // With a host, the answer controls wait until the line has been said.
   const [lineDone, setLineDone] = useState(!host);
+  // The host's remark on the answer just given, shown before the next question comes up.
+  const [reaction, setReaction] = useState<{ text: string; answers: Record<string, string | string[]> } | null>(null);
+  const [reactionDone, setReactionDone] = useState(false);
   useEffect(() => { setLineDone(!host); }, [currentIdx, host]);
   const dragStartRef = useRef<number | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -173,12 +176,30 @@ export function QuestionnaireShell({
     const newAnswers = { ...answers, [question.id]: answer };
     setAnswers(newAnswers);
     onAnswer?.(question.id, answer, newAnswers);
+    const remark = host ? question.reaction?.(answer, { ...context, answers: newAnswers }) : null;
+    if (remark) {
+      setTimeout(() => { setReactionDone(false); setReaction({ text: remark, answers: newAnswers }); }, question.archetype === 'tap' ? 350 : 100);
+      return;
+    }
     setTimeout(() => advance(newAnswers), question.archetype === 'tap' ? 350 : 100);
   };
 
   handleAnswerRef.current = handleAnswer;
 
+  // Once the host has finished the remark, give it a moment to land, then go on.
+  useEffect(() => {
+    if (!reaction || !reactionDone) return;
+    const timer = setTimeout(() => {
+      const next = reaction.answers;
+      setReaction(null);
+      setReactionDone(false);
+      advance(next);
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [reaction, reactionDone, advance]);
+
   const handleBack = () => {
+    if (reaction) return;
     if (currentIdx > 0) {
       let prevIdx = currentIdx - 1;
       while (prevIdx > 0 && (questions[prevIdx].archetype === 'beat' || questions[prevIdx].skipIf?.(ctx))) {
@@ -379,7 +400,9 @@ export function QuestionnaireShell({
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
-              {host ? (
+              {host && reaction ? (
+                <HostDialogue key={`reaction-${currentIdx}`} host={host} text={reaction.text} accentColor={accentColor} onDone={() => setReactionDone(true)} />
+              ) : host ? (
                 <HostDialogue key={currentIdx} host={host} text={questionText} accentColor={accentColor} onDone={() => setLineDone(true)} />
               ) : (
                 <motion.h2
@@ -395,8 +418,8 @@ export function QuestionnaireShell({
 
               <div
                 className={host ? 'transition-opacity duration-300' : undefined}
-                style={host ? { opacity: lineDone ? 1 : 0, pointerEvents: lineDone ? 'auto' : 'none' } : undefined}
-                aria-hidden={host && !lineDone ? true : undefined}
+                style={host ? { opacity: lineDone && !reaction ? 1 : 0, pointerEvents: lineDone && !reaction ? 'auto' : 'none' } : undefined}
+                aria-hidden={host && (!lineDone || reaction) ? true : undefined}
               >
 
               {question.archetype === 'tap' && !(question as TapQuestion).options && (

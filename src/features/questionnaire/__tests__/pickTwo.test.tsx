@@ -46,3 +46,24 @@ describe('the humor question', () => {
     expect(onComplete.mock.calls[0][0].humor).toEqual(['dry', 'warm']);
   });
 });
+
+describe('Dez\'s remark after an answer', () => {
+  const host = { name: 'Dez', title: 'Mayor of Town', portrait: null };
+  const def = {
+    startProgress: 0,
+    chapters: [{ id: 'c', label: 'Who', questionIds: ['directness', 'care'] }],
+    questions: ['directness', 'care'].map(id => COMPANION_QUESTIONNAIRE.questions.find(q => q.id === id)!),
+  };
+
+  it('is said, then the next question comes up; and without a host there is no remark', async () => {
+    vi.setConfig({ testTimeout: 30000 });
+    const onComplete = vi.fn();
+    render(<QuestionnaireShell definition={def} host={host} context={makeContext({}, 'Female', 'companion')} onComplete={onComplete} />);
+    // the first question, and its slider answer
+    expect((await screen.findAllByText(/haircut/, {}, { timeout: 8000 })).length).toBeGreaterThan(0);
+    fireEvent.click(await screen.findByText('Next', {}, { timeout: 8000 }));
+    // the remark for "tactful, but honest" (the slider's middle), then the next question
+    expect((await screen.findAllByText(/Tactful but honest/, {}, { timeout: 8000 })).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/wrecked after a bad day/, {}, { timeout: 12000 })).length).toBeGreaterThan(0);
+  });
+});

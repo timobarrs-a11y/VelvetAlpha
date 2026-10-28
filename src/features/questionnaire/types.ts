@@ -72,6 +72,11 @@ export interface BaseQuestion {
   required?: boolean;
   /** Skip this question when true, going forward and back (a cusp question off a cusp, a birthday we already have). */
   skipIf?: (ctx: QuestionContext) => boolean;
+  /**
+   * What the host says after it is answered, before the next question (null for nothing). Only a questionnaire with a
+   * host uses it; the context already holds the answer just given.
+   */
+  reaction?: (answer: string | string[], ctx: QuestionContext) => string | null;
   /** Its answer starts out filled in from the profile (the sign-up birthday), so it says nothing about how far they got. */
   prefilled?: boolean;
 }
