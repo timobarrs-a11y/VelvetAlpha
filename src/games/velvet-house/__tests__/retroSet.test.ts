@@ -156,6 +156,17 @@ describe('the Sets tab', () => {
     expect(owned.has('set-retro')).toBe(true);
   });
 
+  it('an owned set is an Apply button: it puts the whole set back on, free, and is not a story moment', () => {
+    const { objs, paid, applied, emitted, logs, buy } = shopWith(5000, set().set!.items.concat(['set-retro']));
+    objs.find((o) => o.id === 'fridge')!.skin = undefined;
+    buy(set());
+    expect(paid).toEqual([]);
+    expect(objs.find((o) => o.id === 'fridge')!.skin).toBe('retro');
+    expect(applied).toEqual(['paper:starburst-mint', 'floor:linoleum']);
+    expect(emitted.filter((e) => (e as { type: string }).type === 'room.styled')).toHaveLength(0);
+    expect(logs.some((l) => /is on\./.test(l))).toBe(true);
+  });
+
   it('with too little money, or standing on the backyard, nothing is bought or changed', () => {
     const poor = shopWith(100);
     poor.buy(set());

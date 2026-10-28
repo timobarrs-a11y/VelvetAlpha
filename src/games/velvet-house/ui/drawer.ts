@@ -4,7 +4,7 @@ import { createGarmentPreview } from './garmentPreview';
  * Drawer UI — the sidebar/bottom-sheet with pages: Shop, Goals, Do, Partner, You, Home, Log.
  * Pure DOM manipulation, called from main.ts.
  */
-import { CATALOG, TABS, itemsForTab, lockOf, setQuote, type CatalogEntry } from '../state/catalog';
+import { CATALOG, TABS, itemsForTab, visibleItems, lockOf, setQuote, type CatalogEntry } from '../state/catalog';
 import { SETTLE, LIFE, lifeGoalProgress, type GoalContext } from '../state/goals';
 import { careerTitle } from '../state/career';
 import { paperCss, floorCss, type LookInfo } from './swatch';
@@ -147,6 +147,26 @@ const SALON_TAB = 'Salon';
 
 // Each bottom-bar tab has its own colour and a little icon, so you know where you are at a glance.
 const svg = (d: string) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+// Little 16px icons for the Arrange buttons.
+const ico = (d: string) => `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ARR_ICON = {
+  set: ico('<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
+  rotate: ico('<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4.5V11h-6.5"/>'),
+  store: ico('<path d="M4 8h16v11H4z"/><path d="M3 4.5h18V8H3zM10 12.5h4"/>'),
+  back: ico('<path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12"/>'),
+  colour: ico('<path d="M12 3.5s6 6.2 6 10.5a6 6 0 0 1-12 0c0-4.3 6-10.5 6-10.5z"/>'),
+  look: ico('<path d="m12 3 2.4 5 5.6.8-4 3.9.9 5.5L12 15.5 7.1 18.2 8 12.7 4 8.8l5.6-.8z"/>'),
+  hand: ico('<path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1.5A5.5 5.5 0 0 1 6 17.5L4.5 13.5a1.5 1.5 0 0 1 2.6-1.4L9 14.5"/>'),
+};
+
+/** Dark or light text, whichever reads on a swatch of this colour. */
+function readableOn(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return '#F2EEE8';
+  const n = parseInt(m[1], 16), lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return lum > 0.62 ? '#241B25' : '#FFFFFF';
+}
+
 export const DOCK_TABS: Record<string, { color: string; label?: string; icon: string }> = {
   people: { color: '#4FC3C9', icon: svg('<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.4 2.7-5.6 6-5.6s6 2.2 6 5.6"/><circle cx="17.2" cy="9" r="2.3"/><path d="M16.5 14.6c2.7-.3 4.6 1.3 4.8 4.2"/>') },
   shop: { color: '#F5A83B', icon: svg('<path d="M5 8.5h14l-1.2 11.5H6.2z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>') },
@@ -218,6 +238,10 @@ export function createDrawer(cb: DrawerCallbacks): {
     .map(pg => `<button data-open="${pg}" aria-pressed="false" style="--tab:${DOCK_TABS[pg].color}">${dockTabHtml(pg, DOCK_TABS[pg].label ?? PAGE_TITLES[pg])}</button>`)
     .join('');
 
+  // The title bar with the close button. Arrange has none (the Arrange button in the bottom bar turns it on and off), so it
+  // is taken out of the panel while Arrange is open and put back for every other page.
+  const head = el.querySelector<HTMLElement>('.vh-drawer-head')!;
+  const titleEl = el.querySelector('[data-title]')!;
   const closeBtn = el.querySelector('.vh-drawer-close')!;
   closeBtn.addEventListener('click', (e) => { e.stopPropagation(); cb.onClose(); openPage(''); });
 
@@ -231,8 +255,8 @@ export function createDrawer(cb: DrawerCallbacks): {
     currentPage = pg;
     el.hidden = pg === '';
     el.dataset.open = pg;
-    const titleEl = el.querySelector('[data-title]')!;
     titleEl.textContent = pg ? PAGE_TITLES[pg] : '';
+    if (pg === 'arrange') head.remove(); else if (!head.isConnected) el.prepend(head);
     if (pg) el.style.setProperty('--tab', DOCK_TABS[pg]?.color ?? '#E0A43A');
     dock.querySelectorAll<HTMLButtonElement>('button[data-open]').forEach(b => {
       b.setAttribute('aria-pressed', String(b.dataset.open === pg));
@@ -282,18 +306,18 @@ export function createDrawer(cb: DrawerCallbacks): {
           <div class="vh-arr-top">
           <div class="vh-arr-what"><strong>${esc(sel.name)}</strong><small>${esc(sel.where)}</small></div>
           <div class="vh-arr-acts">
-            <button data-arr="set" class="vh-arr-primary" title="Set it down (Enter)">Set it down</button>
-            <button data-arr="rotate" title="Turn it (R)">Rotate</button>
-            ${sel.loose ? '<button data-arr="back" title="Put it back where it was (Esc)">Put it back</button>' : ''}
-            ${sel.canColour ? '<button data-arr="colour" title="Change colour (C)">Colour</button>' : ''}
-            ${sel.canStore ? '<button data-arr="store" title="Put it in storage">Store</button>' : ''}
+            <button data-arr="set" class="vh-arr-primary" title="Set it down (Enter)">${ARR_ICON.set}<span>Set it down</span></button>
+            <button data-arr="rotate" title="Turn it (R)">${ARR_ICON.rotate}<span>Rotate</span></button>
+            ${sel.loose ? `<button data-arr="back" title="Put it back where it was (Esc)">${ARR_ICON.back}<span>Put it back</span></button>` : ''}
+            ${sel.canColour ? `<button data-arr="colour" title="Change colour (C)">${ARR_ICON.colour}<span>Colour</span></button>` : ''}
+            ${sel.canStore ? `<button data-arr="store" title="Put it in storage">${ARR_ICON.store}<span>Store</span></button>` : ''}
           </div>
           </div>
-          ${sel.looks.length > 1 ? `<div class="vh-arr-looks"><span>Look</span>${sel.looks.map(l => `<button data-arr-look="${esc(l.id)}" aria-pressed="${l.active}">${esc(l.name)}</button>`).join('')}</div>` : ''}
+          ${sel.looks.length > 1 ? `<div class="vh-arr-looks"><span>${ARR_ICON.look}Look</span>${sel.looks.map(l => `<button data-arr-look="${esc(l.id)}" aria-pressed="${l.active}">${esc(l.name)}</button>`).join('')}</div>` : ''}
           ${sel.moveTo.length ? `<div class="vh-arr-floors"><span>Carry to</span>${sel.moveTo.map(l => `<button data-arr-floor="${l}">${esc(a.floors[l])}</button>`).join('')}</div>` : ''}
           ${sel.loose && !sel.fits ? `<p class="vh-arr-why">${esc(sel.reason ?? "It doesn't fit there.")} Move it, or put it back.</p>` : sel.loose ? '<p class="vh-arr-why vh-arr-ok">Drag it, turn it, then tap Set it down.</p>' : ''}
         </div>`
-      : `<p class="vh-arr-hint">Tap a piece below, or tap one in the house, then drag it where you want it.</p>`;
+      : `<p class="vh-arr-hint">${ARR_ICON.hand}<span>Tap a piece below, or tap one in the house, then drag it where you want it.</span></p>`;
     const order = [a.level, ...a.order.filter(l => l !== a.level)];
     const groups = order.map((level) => {
       const name = a.floors[level];
@@ -301,14 +325,14 @@ export function createDrawer(cb: DrawerCallbacks): {
       if (!items.length) return '';
       return `<div class="vh-arr-group"><h4 class="vh-order-floor">${esc(name)}</h4><div class="vh-arr-items">${
         items.map(i => `<button class="vh-arr-item${i.id === sel?.id ? ' vh-sel' : ''}" data-arr-pick="${i.id}" aria-pressed="${i.id === sel?.id}">
-          <span class="vh-arr-dot"${i.color ? ` style="background:${i.color}"` : ''}></span>
+          <span class="vh-arr-dot"${i.color ? ` style="background:${i.color};color:${readableOn(i.color)}"` : ''}>${esc(i.name.charAt(0).toUpperCase())}</span>
           <span class="vh-arr-name"><strong>${esc(i.name)}</strong><small>${esc(i.room)}</small></span>
         </button>`).join('')}</div></div>`;
     }).join('');
     const stash = a.stored.length
       ? `<div class="vh-arr-group"><h4 class="vh-order-floor">In storage (${a.stored.length})</h4><div class="vh-arr-items">${
         a.stored.map(i => `<button class="vh-arr-item vh-stored" data-arr-unstore="${i.id}" title="Put it in the house">
-          <span class="vh-arr-dot"${i.color ? ` style="background:${i.color}"` : ''}></span>
+          <span class="vh-arr-dot"${i.color ? ` style="background:${i.color};color:${readableOn(i.color)}"` : ''}>${esc(i.name.charAt(0).toUpperCase())}</span>
           <span class="vh-arr-name"><strong>${esc(i.name)}</strong><small>Tap to place</small></span>
         </button>`).join('')}</div></div>` : '';
     sec.innerHTML = `<div class="vh-arr">${bar}<div class="vh-arr-list">${groups}${stash}${groups || stash ? '' : '<p class="vh-empty">Nothing here can be moved.</p>'}</div></div>`;
@@ -369,7 +393,7 @@ export function createDrawer(cb: DrawerCallbacks): {
       return;
     }
 
-    const items = itemsForTab(tab);
+    const items = visibleItems(itemsForTab(tab), state.owned);
     const cards = items.map(item => {
       const lock = lockOf(item.id, state.day, state.bond);
       const quote = item.set ? setQuote(item, state.owned) : null;
@@ -377,7 +401,7 @@ export function createDrawer(cb: DrawerCallbacks): {
       const locked = lock?.locked;
       const price = quote ? quote.cost : item.price;
       const tooExpensive = price > state.money;
-      const cls = locked ? 'vh-locked' : owned ? 'vh-owned' : tooExpensive ? 'vh-poor' : '';
+      const cls = locked ? 'vh-locked' : owned && !quote ? 'vh-owned' : tooExpensive && !owned ? 'vh-poor' : '';
       const cols = item.cols
         ? `<div class="vh-swatches">${item.cols.map(c => `<span class="vh-swatch" style="background:${c}" data-color="${c}"></span>`).join('')}</div>`
         : '';
@@ -387,13 +411,13 @@ export function createDrawer(cb: DrawerCallbacks): {
         <div class="vh-shop-info">
           <strong>${item.name}</strong>
           ${item.desc ? `<span class="vh-shop-desc">${item.desc}</span>` : ''}
-          ${quote ? `<span class="vh-shop-desc vh-set-save">${quote.missing.length ? `${quote.missing.length} of ${quote.members.length} pieces to go. Save $${quote.full - quote.cost} against buying them apart.` : 'You have all of it. Change any piece in Arrange.'}</span>` : ''}
+          ${quote ? `<span class="vh-shop-desc vh-set-save">${quote.missing.length ? `${quote.missing.length} of ${quote.members.length} pieces to go. Save $${quote.full - quote.cost} against buying them apart.` : 'You have all of it. Tap Apply to put it all on; Arrange can switch single pieces.'}</span>` : ''}
           ${cols}
           ${lockHint}
         </div>
         <div class="vh-shop-actions">
-          ${quote && quote.missing.length && quote.full > quote.cost ? `<span class="vh-was">$${quote.full}</span>` : ''}<span class="vh-price">$${price}</span>
-          <button data-buy="${item.id}" ${locked || (owned ? 'disabled' : '')}>${owned ? 'Owned' : 'Buy'}</button>
+          ${quote && quote.missing.length && quote.full > quote.cost ? `<span class="vh-was">$${quote.full}</span>` : ''}${quote && owned ? '' : `<span class="vh-price">$${price}</span>`}
+          <button data-buy="${item.id}" ${locked || (owned && !quote ? 'disabled' : '')}>${quote ? (owned ? 'Apply' : 'Buy') : owned ? 'Owned' : 'Buy'}</button>
         </div>
       </div>`;
     }).join('');
