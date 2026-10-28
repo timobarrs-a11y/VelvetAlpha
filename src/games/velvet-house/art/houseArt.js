@@ -699,7 +699,8 @@ export function createHouseArt(ctx0, opts = {}) {
         if (on) { steamAt(T, 0.6, 0.6, 0.9, 0, 9, 1.3); steamAt(T, 0.4, 0.8, 1.5, 0, 6, 1.1); steamAt(T, 0.8, 0.4, 1.2, 0, 6, 1.1); const [wx, wy] = T.W(0.6, 0.5); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
         T.box(1.0, 1.0, 0.06, 0.14, 0.14, 0.18, SP.stoneDark); [[1.05, 0.0], [1.09, 0.25], [1.12, 0.1]].forEach(([x, dz]) => { T.line([x, 1.07, 0.24], [x, 1.07, 1.5 + dz], '#7FA06A', 2.2); [0.7, 1.0, 1.3].forEach((z) => { const [lx, ly] = T.P(x, 1.07, z + dz); ell(lx - 4, ly - 1, 5, 1.6, '#8DB06E', null, -0.4); }); });
       }, { name: 'tray' }),
-      F(0, 1.16, 1.18, 1.2, (T) => { const fog = usingSlot(T.o.id + ':s') || live(T.o.id); T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.08], [0, 1.18, 2.08]], fog ? 'rgba(235,240,240,.55)' : 'rgba(200,226,232,.2)', 'rgba(185,190,195,.8)', 1); T.line([0.2, 1.18, 1.9], [0.65, 1.18, 1.2], 'rgba(255,255,255,.55)', 2); })],
+      F(0, 1.16, 1.18, 1.2, (T) => { const fog = usingSlot(T.o.id + ':s') || live(T.o.id); T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.08], [0, 1.18, 2.08]], fog ? 'rgba(235,240,240,.55)' : 'rgba(200,226,232,.2)', 'rgba(185,190,195,.8)', 1); T.line([0.2, 1.18, 1.9], [0.65, 1.18, 1.2], 'rgba(255,255,255,.55)', 2); T.line([0, 1.18, 2.08], [1.18, 1.18, 2.08], 'rgba(185,190,195,.9)', 1.6); }),
+      F(1.16, 0, 1.2, 1.18, (T) => { const fog = usingSlot(T.o.id + ':s') || live(T.o.id); T.poly([[1.18, 0.08, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.08], [1.18, 0.08, 2.08]], fog ? 'rgba(235,240,240,.5)' : 'rgba(200,226,232,.18)', 'rgba(185,190,195,.8)', 1); T.line([1.18, 0.08, 2.08], [1.18, 1.18, 2.08], 'rgba(185,190,195,.9)', 1.6); }, { onTop: true })],
   });
 
   // Grand Hotel: walnut, veined marble, brass and velvet, with crisp white linen.
@@ -926,7 +927,8 @@ export function createHouseArt(ctx0, opts = {}) {
         if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.32); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.85, 1); }
       }, { name: 'tray' }),
       F(0, 1.16, 1.18, 1.2, (T) => { const open = usingSlot(T.o.id + ':s') ? 0.55 : 0; T.line([0, 1.18, 2.02], [1.18, 1.18, 2.02], MC.chrome, 2);
-        [[0, 0.6], [0.58, 1.18]].forEach(([a, b], k) => { const s0 = k ? a - open : a, s1 = k ? b - open : b; T.poly([[s0, 1.18, 0.06], [s1, 1.18, 0.06], [s1, 1.18, 2.0], [s0, 1.18, 2.0]], 'rgba(220,235,238,.55)', MC.chrome, 1.2); for (let u = s0 + 0.03; u < s1; u += 0.04) T.line([u, 1.18, 0.1], [u, 1.18, 1.96], 'rgba(255,255,255,.35)', 0.7); }); })],
+        [[0, 0.6], [0.58, 1.18]].forEach(([a, b], k) => { const s0 = k ? a - open : a, s1 = k ? b - open : b; T.poly([[s0, 1.18, 0.06], [s1, 1.18, 0.06], [s1, 1.18, 2.0], [s0, 1.18, 2.0]], 'rgba(220,235,238,.55)', MC.chrome, 1.2); for (let u = s0 + 0.03; u < s1; u += 0.04) T.line([u, 1.18, 0.1], [u, 1.18, 1.96], 'rgba(255,255,255,.35)', 0.7); }); }),
+      F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0.06, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.02], [1.18, 0.06, 2.02]], 'rgba(220,235,238,.5)', MC.chrome, 1.2); for (let v = 0.09; v < 1.18; v += 0.04) T.line([1.18, v, 0.1], [1.18, v, 1.98], 'rgba(255,255,255,.3)', 0.7); T.line([1.18, 0.06, 2.02], [1.18, 1.18, 2.02], MC.chrome, 2); }, { onTop: true })],
   });
 
   // Hollywood Regency: blush velvet, black lacquer, mirror, gold and a white orchid.
@@ -1058,7 +1060,10 @@ export function createHouseArt(ctx0, opts = {}) {
         T.line([0.6, 0.08, 0.9], [0.6, 0.08, 2.08], AL.iron, 2.2); T.line([0.6, 0.08, 2.08], [0.6, 0.45, 2.08], AL.iron, 2.2); const [hx, hy] = T.P(0.6, 0.5, 2.05); ell(hx, hy, 10, 5, AL.iron); [[0.48, 1.0], [0.72, 1.0]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.082, z); circle(kx, ky, 2.6, AL.iron); });
         if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.5); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
       }, { name: 'tray' }),
-      F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.04], [0, 1.18, 2.04]], 'rgba(235,240,240,.5)', AL.iron, 1.6); T.line([0.59, 1.18, 0.06], [0.59, 1.18, 2.04], AL.iron, 1.2); T.line([0.5, 1.18, 1.0], [0.5, 1.18, 1.3], AL.iron, 2.2); })],
+      // A frosted glass enclosure in black iron frames: the door on the front, a fixed pane on the open side, and a header
+      // rail round the top tying both to the stone wall.
+      F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.04], [0, 1.18, 2.04]], 'rgba(235,240,240,.5)', AL.iron, 1.6); T.line([0.59, 1.18, 0.06], [0.59, 1.18, 2.04], AL.iron, 1.2); T.line([0.5, 1.18, 1.0], [0.5, 1.18, 1.3], AL.iron, 2.2); T.line([0, 1.18, 2.04], [1.18, 1.18, 2.04], AL.iron, 2.6); }),
+      F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0.08, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.04], [1.18, 0.08, 2.04]], 'rgba(235,240,240,.45)', AL.iron, 1.6); T.line([1.18, 0.08, 2.04], [1.18, 1.18, 2.04], AL.iron, 2.6); T.line([1.18, 0.6, 0.06], [1.18, 0.6, 2.04], AL.iron, 1); }, { onTop: true })],
   });
   const diningLife = () => F(0, 0.74, 1.3, 1.74, (T, o) => {
     ['c1', 'c2'].forEach((s, i) => { const sid = o.id + ':' + s, who = reserved[sid]; if (who && who.task && who.task.slot === sid && (doing(who, 'eat') || doing(who, 'eatOut') || doing(who, 'sip'))) { const [px, py] = T.P(0.65, i ? 1.5 : 0.98, 0.775); if (doing(who, 'eatOut')) { rr(px - 5, py - 7, 10, 7, 1.5, '#F2EEE8'); } else if (doing(who, 'sip')) { rr(px - 3, py - 6, 6, 6, 1.2, '#F2EEE8'); } else { ell(px, py, 10, 5, '#F5F2EC', 'rgba(0,0,0,.15)'); ell(px, py - 1, 6, 2.8, who.mealFresh ? '#7FB069' : '#D9822B'); circle(px + 3, py - 2, 1.8, '#4F9460'); } } });
