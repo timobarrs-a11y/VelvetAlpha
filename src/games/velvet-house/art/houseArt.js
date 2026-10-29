@@ -16,7 +16,7 @@ import { SLEEVE_BY_CUT } from '../state/garment';
 import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR } from '../state/house';
 import { stageAt } from '../state/plantGrowth';
 import { drawCrop, drawGroundSpot } from './cropArt.js';
-import { createWeatherFx } from './weatherFx.js';
+import { createWeatherFx, hull } from './weatherFx.js';
 const wfx = createWeatherFx();
 import { CROPS } from '../state/crops';
 import { defaultWallLamps, lampRoom } from '../state/wallLamps';
@@ -4204,7 +4204,7 @@ export function createHouseArt(ctx0, opts = {}) {
     });
     // Puddles, splashes and the falling rain all go in the ground pass, so the house and furniture cover them.
     wfx.drawGround(ctx, iso, YARD.tiles);
-    wfx.drawAir(ctx, iso);
+    wfx.drawAir(ctx, iso, lotOutline());
     { const vw = viewW(), vd = viewD(); polyV([[0, vd, 0], [vw, vd, 0], [vw, vd, -0.25], [0, vd, -0.25]], '#6B4A35'); polyV([[vw, 0, 0], [vw, vd, 0], [vw, vd, -0.25], [vw, 0, -0.25]], '#5A3E2E'); }
   }
   function drawYardBack() {
@@ -4218,6 +4218,18 @@ export function createHouseArt(ctx0, opts = {}) {
     }
     back.filter(pl => pl !== 'L').forEach(pl => { const len = planeLen(pl); for (let u = 0; u <= len + 0.01; u += 0.2) poly([wallPoint(pl, u, 0), wallPoint(pl, u + 0.13, 0), wallPoint(pl, u + 0.13, 1.15), wallPoint(pl, u + 0.065, 1.25), wallPoint(pl, u, 1.15)], '#EFE6D8', 'rgba(0,0,0,.12)', 0.6); [0.3, 0.85].forEach(z => poly([wallPoint(pl, 0, z), wallPoint(pl, len, z), wallPoint(pl, len, z + 0.08), wallPoint(pl, 0, z + 0.08)], '#DCD2C2')); });
     drawWallLights(3);
+  }
+  // How many drops the quality tier allows, scaled by how heavy the rain is (light, medium, heavy).
+  function dropCaps() {
+    const base = tier() === 'high' ? { rain: 700, snow: 500 } : tier() === 'medium' ? { rain: 400, snow: 300 } : { rain: 200, snow: 150 };
+    const k = { light: 0.2, medium: 0.45, heavy: 1 }[weatherNow.level] ?? 0.45;
+    return { rain: Math.round(base.rain * k), snow: Math.round(base.snow * k) };
+  }
+  // The lot's outline on screen: its floor and the top of its walls, so the weather is clipped to the yard.
+  function lotOutline() {
+    const pts = [];
+    for (const z of [0, WH]) for (const [x, y] of [[0, 0], [WX, 0], [WX, WY], [0, WY]]) pts.push(iso(x, y, z));
+    return hull(pts);
   }
   function drawRain() { return; if (weatherNow.snow ?? seasonIdx() === 3) { ctx.save(); for (let k = 0; k < 80; k++) { const x = ((k * 97.3 + Math.sin(animT + k) * 20 + animT * 8) % W + W) % W, y = ((k * 53.7 + animT * 30) % H); circle(x, y, 1.2 + (k % 3) * 0.5, 'rgba(255,255,255,.85)'); } ctx.restore(); return; } ctx.save(); ctx.strokeStyle = 'rgba(200,215,235,.55)'; ctx.lineWidth = 1; ctx.beginPath(); for (let k = 0; k < 90; k++) { const x = ((k * 97.3 + animT * 40) % W), y = ((k * 53.7 + animT * 420) % H); ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 10); } ctx.stroke(); ctx.restore(); }
 
@@ -5475,8 +5487,8 @@ export function createHouseArt(ctx0, opts = {}) {
     PFX.step(rdt, isOutdoor(lv) ? [0.16 + (raining() ? 0.2 : 0), 0.06] : [0.015, 0], tier() === 'low' ? 0.5 : 1);
     // Winter snow builds up on the lawn while it snows, and only melts once spring comes.
     // Rain and snow fall in the yard's own space and land on the ground (see weatherFx.js).
-    if (isOutdoor(lv)) wfx.step(rdt, { raining: raining(), snow: !!(weatherNow.snow ?? seasonIdx() === 3) }, YARD.tiles, tier() === 'high' ? { rain: 700, snow: 500 } : tier() === 'medium' ? { rain: 400, snow: 300 } : { rain: 200, snow: 150 });
-    if (isOutdoor(lv)) { const winter = seasonIdx() === 3; for (const tt of YARD.tiles) { const sn = tt.snow || 0; tt.snow = winter && raining() ? Math.min(1, sn + rdt * 0.05) : (seasonIdx() !== 3 ? Math.max(0, sn - rdt * 0.03) : sn); } }
+    if (isOutdoor(lv)) wfx.step(rdt, { raining: raining(), snow: !!(weatherNow.snow ?? seasonIdx() === 3) }, YARD.tiles, dropCaps());
+    if (isOutdoor(lv)) { const snowing = !!(weatherNow.snow ?? seasonIdx() === 3); for (const tt of YARD.tiles) { const sn = tt.snow || 0; tt.snow = snowing ? sn : Math.max(0, sn - rdt * 0.03); } }
     // Fall: leaves blow across the yard from the trees' side.
     if (isOutdoor(lv) && seasonIdx() === 2 && tier() !== 'low') {
       for (let i = 0; i < 3; i++) PFX.emit('leaves' + i, 'leaf', 3, 1 + i * 3.2, 0.6 + (i % 2) * 2.4, 2.2 + i * 0.3, 1);

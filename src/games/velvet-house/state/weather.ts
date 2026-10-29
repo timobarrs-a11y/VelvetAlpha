@@ -9,6 +9,10 @@ export const SEASON_RAIN_CHANCE = [0.3, 0.15, 0.22, 0.32];
 export const RAIN_MIN_MIN = 120;
 export const RAIN_MAX_MIN = 360;
 
+/** How heavy the rain is: light, medium (the default) or heavy. */
+export type RainLevel = 'light' | 'medium' | 'heavy';
+export const RAIN_LEVELS: RainLevel[] = ['light', 'medium', 'heavy'];
+
 export interface WeatherState {
   /** The game day rolled for last, so each day is rolled once. */
   day: number;
@@ -17,6 +21,8 @@ export interface WeatherState {
   rainUntil: number;
   /** Whether it was raining at the last tick, so starts and stops are said once. */
   on: boolean;
+  /** How heavy the rain is right now. */
+  level?: RainLevel;
   /** Whether the rain falls as snow (winter, or forced on by the demo's weather button). */
   snow?: boolean;
 }
@@ -32,7 +38,8 @@ export function seasonOf(day: number): number {
 }
 
 export function weatherOf(flags: Record<string, unknown>): WeatherState {
-  return { ...NO_WEATHER, ...((flags.weather ?? {}) as Partial<WeatherState>) };
+  const level = RAIN_LEVELS.includes(flags.rainLevel as RainLevel) ? (flags.rainLevel as RainLevel) : 'medium';
+  return { ...NO_WEATHER, ...((flags.weather ?? {}) as Partial<WeatherState>), level };
 }
 
 export function isRaining(w: WeatherState, absMin: number): boolean {
