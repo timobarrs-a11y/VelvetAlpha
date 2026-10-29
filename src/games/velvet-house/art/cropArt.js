@@ -43,9 +43,10 @@ function pumpkin(c) {
 }
 
 /** Draws one crop at (x, y), its base on the ground, `s` times its normal size. */
-export function drawCrop(ctx, x, y, s, crop) {
+export function drawCrop(ctx, x, y, s, crop, angle = 0) {
   ctx.save();
   ctx.translate(x, y);
+  ctx.rotate(angle);
   ctx.scale(s, s);
   if (crop === 'flower') tulip(ctx);
   else if (crop === 'fruit') apple(ctx);
