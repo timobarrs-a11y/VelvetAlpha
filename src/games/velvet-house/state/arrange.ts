@@ -2,6 +2,7 @@ import { TYPES, blocksOf, isRug, isMount, isFixed, footprint, colsOf, kindOf, ty
 import { LEVELS, STAIRS, WX, WY } from './house';
 import { buildWorld } from './agents';
 import { cellOf, reachableSet, NY } from './pathfinding';
+import { isOutdoor } from './scenes';
 
 // Arrange mode's rules: where a piece of furniture may go. Pure, so it can
 // be tested; main.ts moves the piece and asks before placing it.
@@ -39,6 +40,10 @@ function rectsOf(o: ObjectInstance): Rect[] {
 
 const overlaps = (a: Rect, b: Rect, gap = 0.02) => a[0] < b[2] - gap && a[2] > b[0] + gap && a[1] < b[3] - gap && a[3] > b[1] + gap;
 
+// How far a piece must keep from the edge of the floor: a hair off a house wall, which has a thickness, but none in the yard, where
+// the edge is a fence with no thickness. Pieces there can sit flush against it and against each other.
+const margin = (level: number): { lo: number; hi: number } => (isOutdoor(level) ? { lo: 0, hi: 0 } : { lo: 0.08, hi: 0.05 });
+
 export interface PlacementCheck {
   ok: boolean;
   // Why not, in words for the player.
@@ -52,7 +57,8 @@ export interface PlacementCheck {
 export function checkPlacement(objs: ObjectInstance[], held: ObjectInstance, people: Array<{ level: number; x: number; y: number }> = []): PlacementCheck {
   if (held.on) return checkOnSurface(objs, held);
   const [fw, fd] = footprint(held);
-  if (held.x < 0.08 || held.y < 0.08 || held.x + fw > WX - 0.05 || held.y + fd > WY - 0.05) {
+  const m = margin(held.level), eps = 1e-6;
+  if (held.x < m.lo - eps || held.y < m.lo - eps || held.x + fw > WX - m.hi + eps || held.y + fd > WY - m.hi + eps) {
     return { ok: false, reason: 'That would poke through the wall.' };
   }
   const mine = rectsOf(held);
@@ -204,6 +210,50 @@ export function carryOnTop(objs: ObjectInstance[], host: ObjectInstance, from: P
     centreAt(k, c1[0] + rel[0], c1[1] + rel[1]);
     putOn(k, host);
   }
+}
+
+/**
+ * Pull a piece being carried flush to what is near it, so edges meet without a hunt for the right quarter tile: the edge of the
+ * floor, a wall inside the house, or another piece (touching it, or lined up with its edge). Only what is within `reach` of it
+ * along the other direction counts, so a piece far along a wall does not tug. Each direction snaps on its own, to the nearest.
+ */
+export function snapEdges(objs: ObjectInstance[], o: ObjectInstance, reach = 0.3): void {
+  if (o.on || !TYPES[o.type] || isMount(o.type) || TYPES[o.type].small) return;
+  const [fw, fd] = footprint(o), m = margin(o.level);
+  const xs = [m.lo, WX - m.hi - fw], ys = [m.lo, WY - m.hi - fd];
+  for (const q of objs) {
+    if (q === o || q.on || q.level !== o.level || !TYPES[q.type] || isRug(q.type) || isMount(q.type) || TYPES[q.type].wall) continue;
+    const [qw, qd] = footprint(q);
+    if (o.y < q.y + qd + reach && o.y + fd > q.y - reach) xs.push(q.x + qw, q.x - fw, q.x, q.x + qw - fw);
+    if (o.x < q.x + qw + reach && o.x + fw > q.x - reach) ys.push(q.y + qd, q.y - fd, q.y, q.y + qd - fd);
+  }
+  for (const w of LEVELS[o.level].walls) {
+    if (w.x !== undefined) { if (o.y < w.b + reach && o.y + fd > w.a - reach) xs.push(w.x + 0.06, w.x - 0.06 - fw); }
+    else if (o.x < w.b + reach && o.x + fw > w.a - reach) ys.push(w.y! + 0.06, w.y! - 0.06 - fd);
+  }
+  const pick = (v: number, cs: number[]): number => cs.reduce((best, c) => (Math.abs(c - v) < Math.abs(best - v) ? c : best), cs[0]);
+  const nx = pick(o.x, xs), ny = pick(o.y, ys);
+  if (Math.abs(nx - o.x) <= reach) o.x = nx;
+  if (Math.abs(ny - o.y) <= reach) o.y = ny;
+}
+
+/**
+ * The nearest place around where `o` is now that it fits (flush to what is there, as `snapEdges` would leave it), or null when nothing
+ * within `radius` does. `o` itself is left as it was.
+ */
+export function nearestFit(objs: ObjectInstance[], o: ObjectInstance, people: Array<{ level: number; x: number; y: number }> = [], radius = 2): { x: number; y: number } | null {
+  const ox = o.x, oy = o.y, offs: Array<[number, number, number]> = [];
+  for (let dx = -radius; dx <= radius + 1e-9; dx += 0.25) for (let dy = -radius; dy <= radius + 1e-9; dy += 0.25) if (dx || dy) offs.push([dx, dy, Math.hypot(dx, dy)]);
+  offs.sort((a, b) => a[2] - b[2]);
+  try {
+    // The nearest 160 spots are tried: a fit that close is the one the player meant, and each try walks the whole floor.
+    for (const [dx, dy] of offs.slice(0, 160)) {
+      o.x = ox + dx; o.y = oy + dy;
+      snapEdges(objs, o);
+      if (checkPlacement(objs, o, people).ok) return { x: o.x, y: o.y };
+    }
+    return null;
+  } finally { o.x = ox; o.y = oy; }
 }
 
 // Move a held piece so its centre sits under the pointer, snapped to a

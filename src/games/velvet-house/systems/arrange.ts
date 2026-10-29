@@ -1,4 +1,4 @@
-import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, surfaceUnder, putOn, takeOff, carryOnTop, fridgeUnder, swapModel, type PlacementCheck, type Pose } from '../state/arrange';
+import { checkPlacement, snapEdges, nearestFit, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, surfaceUnder, putOn, takeOff, carryOnTop, fridgeUnder, swapModel, type PlacementCheck, type Pose } from '../state/arrange';
 import { looksFor, changeLook, parseLook } from '../state/skins';
 import { TYPES, footprint, displayName, type ObjectInstance } from '../state/objects';
 import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, WX, WY, roomName } from '../state/house';
@@ -73,6 +73,15 @@ export function createArrange(g: Game): Partial<Game> {
     if (!heldObj) return;
     heldCheck = heldObj.type === 'food' && fridgeUnder(world.objs, heldObj) ? { ok: true } : checkPlacement(world.objs, heldObj, peopleOnFloor());
   }
+  // Put somewhere it does not fit: slide it to the nearest place close by that it does, if there is one.
+  function fitNearby(o: ObjectInstance, radius = 2): boolean {
+    const f = nearestFit(world.objs, o, peopleOnFloor(), radius);
+    if (!f) return false;
+    const prev: Pose = { x: o.x, y: o.y, rot: o.rot };
+    o.x = f.x; o.y = f.y;
+    carryOnTop(world.objs, o, prev);
+    return true;
+  }
   const movableHere = (): string[] => world.objs.filter(o => o.level === view.level && isMovable(o)).map(o => o.id);
   // Select a piece: jump to its floor, outline it, and bring it into frame.
   function selectObject(o: ObjectInstance | null): void {
@@ -130,7 +139,8 @@ export function createArrange(g: Game): Partial<Game> {
     if (o.type === 'food') { const fridge = fridgeUnder(world.objs, o); if (fridge) { floating = null; floatOrig = null; floatKids = []; floatCheck = { ok: true }; g.putFoodAway(o, fridge); return; } }
     const was = { x: o.x, y: o.y };
     snapToOutline(o, 2.5);
-    const check = checkPlacement(world.objs, o, peopleOnFloor());
+    let check = checkPlacement(world.objs, o, peopleOnFloor());
+    if (!check.ok && !o.on && fitNearby(o)) { check = checkPlacement(world.objs, o, peopleOnFloor()); if (check.ok) log(`Slid the ${nameOf(o)} to the nearest spot it fits.`); }
     if (!check.ok) { Object.assign(o, was); floatCheck = check; log(`${check.reason ?? "It doesn't fit there."} Move it, or tap Put it back.`); return; }
     floating = null; floatOrig = null; floatKids = []; floatCheck = { ok: true };
     commitMove(o, 'Set down');
@@ -182,6 +192,8 @@ export function createArrange(g: Game): Partial<Game> {
     const prev: Pose = { x: o.x, y: o.y, rot: o.rot };
     rotateAboutCentre(o);
     carryOnTop(world.objs, o, prev);
+    // Turned into something in the way: nudge it to where it fits, if that is close.
+    if (!o.on && !checkPlacement(world.objs, o, peopleOnFloor()).ok) fitNearby(o, 1.5);
     if (o === heldObj) recheck(); else floatCheck = checkPlacement(world.objs, o, peopleOnFloor());
   }
   function recolourHeld(): void {
@@ -402,6 +414,8 @@ export function createArrange(g: Game): Partial<Game> {
       const [wx, wy] = worldAt(sx, sy);
       const prev: Pose = { x: heldObj.x, y: heldObj.y, rot: heldObj.rot };
       centreAt(heldObj, wx - heldGrab[0], wy - heldGrab[1]);
+      // Edges meet without a hunt for the right quarter tile: flush to the wall or fence, and to the pieces beside it.
+      snapEdges(world.objs, heldObj);
       // A small piece over a table or shelf sits on it; anything on a piece being carried goes along.
       if (TYPES[heldObj.type].small) {
         const host = surfaceUnder(world.objs, heldObj, wx, wy);
@@ -429,6 +443,7 @@ export function createArrange(g: Game): Partial<Game> {
     // A tap (no drag) on a moving box opens it, even while arranging: boxes are for opening.
     if (!o) { if ((tapped.type === 'pbox' || tapped.type === 'bag') && tapped.contents) g.handleObjectAction(tapped, 'unpack'); return; }
     recheck();
+    if (!heldCheck.ok && !o.on && fitNearby(o)) { recheck(); if (heldCheck.ok) log(`Slid the ${nameOf(o)} to the nearest spot it fits.`); }
     // Food let go of on the fridge goes straight in: the door swings open and the groceries are put away.
     if (o.type === 'food') { const fridge = fridgeUnder(world.objs, o); if (fridge) { heldObj = null; heldOrig = null; heldKids = []; heldCheck = { ok: true }; g.putFoodAway(o, fridge); return; } }
     // Let go: the piece stays where it is, loose, until Set it down. Red means it does not fit yet.
