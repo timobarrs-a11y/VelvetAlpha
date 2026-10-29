@@ -1,20 +1,35 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Undo2, BellOff } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../shared/supabase/client';
 
 const STORAGE_KEY = 'first-progress-post-seen';
 
+// Velvet Sims is a full-screen game: the popup must never float over it.
+const GAME_PATH_PREFIXES = ['/velvet-house'];
+
 export function FirstPostWatcher() {
   const [popup, setPopup] = useState<{ postId: string; title: string } | null>(null);
   const knownPostRef = useRef<string | null>(null);
+  const { pathname } = useLocation();
+  const inGame = GAME_PATH_PREFIXES.some(p => pathname.startsWith(p));
+
+  // The notice slides in, stays for a few seconds, then slides back up and out on its own.
+  useEffect(() => {
+    if (!popup) return;
+    const timer = setTimeout(() => setPopup(null), 5000);
+    return () => clearTimeout(timer);
+  }, [popup]);
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    // The lookups below are async: if the component unmounts first, don't open a channel nobody will close.
+    let cancelled = false;
 
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || cancelled) return;
 
       // Check for existing posts the user hasn't been notified about
       const alreadySeen = sessionStorage.getItem(STORAGE_KEY) === 'true';
@@ -26,6 +41,7 @@ export function FirstPostWatcher() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1);
+      if (cancelled) return;
 
       if (existing && existing.length > 0) {
         const first = existing[0];
@@ -53,6 +69,7 @@ export function FirstPostWatcher() {
     })();
 
     return () => {
+      cancelled = true;
       if (channel) supabase.removeChannel(channel);
     };
   }, []);
@@ -77,24 +94,29 @@ export function FirstPostWatcher() {
     setPopup(null);
   };
 
+  // Drops in from the top edge, smaller than before: it is a notice, not a dialog.
+  // framer-motion writes its own transform onto the animated element, which replaces the Tailwind
+  // translate-x-1/2 that centred it: the card then started at the middle and ran off the right edge.
+  // The -50% goes through framer's `x` so the transforms compose.
   return (
     <AnimatePresence>
-      {popup && (
+      {popup && !inGame && (
         <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+          key="first-post-popup"
+          initial={{ opacity: 0, x: '-50%', y: -16, scale: 0.95 }}
+          animate={{ opacity: 1, x: '-50%', y: 0, scale: 1 }}
+          exit={{ opacity: 0, x: '-50%', y: -120, scale: 0.95 }}
           transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9998] w-[380px] max-w-[calc(100vw-2rem)]"
+          className="fixed top-4 left-1/2 z-[9998] w-[190px] max-w-[calc(100vw-2rem)]"
         >
-          <div className="rounded-2xl border border-amber-200/60 bg-white shadow-xl overflow-hidden">
-            <div className="flex items-start gap-3 px-4 pt-4 pb-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-4.5 h-4.5 text-amber-600" />
+          <div className="rounded-xl border border-amber-200/60 bg-white shadow-lg overflow-hidden">
+            <div className="flex items-start gap-2 px-2.5 pt-2.5 pb-2">
+              <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-3 h-3 text-amber-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-ink">We shared your progress to your profile</p>
-                <p className="text-xs text-ink-subtle mt-0.5">
+                <p className="text-xs font-semibold text-ink leading-snug">We shared your progress to your profile</p>
+                <p className="text-[10px] text-ink-subtle leading-snug mt-0.5">
                   No details were included — just a note that you completed something. Your profile visitors can see it.
                 </p>
               </div>
@@ -103,21 +125,21 @@ export function FirstPostWatcher() {
                 className="text-ink-subtle hover:text-ink p-0.5 rounded-lg hover:bg-surface-100 transition-colors flex-shrink-0"
                 aria-label="Dismiss"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3 h-3" />
               </button>
             </div>
-            <div className="flex items-center gap-2 px-4 pb-4">
+            <div className="flex flex-col items-start gap-1 px-2.5 pb-2.5">
               <button
                 onClick={handleUndo}
-                className="flex items-center gap-1.5 text-xs font-semibold text-ink px-3 py-2 rounded-lg bg-surface-100 hover:bg-surface-200 transition-colors"
+                className="flex items-center gap-1 text-[10px] font-semibold text-ink px-2 py-1 rounded-md bg-surface-100 hover:bg-surface-200 transition-colors"
               >
-                <Undo2 className="w-3.5 h-3.5" /> Undo
+                <Undo2 className="w-2.5 h-2.5" /> Undo
               </button>
               <button
                 onClick={handleTurnOff}
-                className="flex items-center gap-1.5 text-xs font-semibold text-ink-subtle px-3 py-2 rounded-lg hover:bg-surface-100 transition-colors"
+                className="flex items-center gap-1 text-[10px] font-semibold text-ink-subtle px-2 py-1 rounded-md hover:bg-surface-100 transition-colors"
               >
-                <BellOff className="w-3.5 h-3.5" /> Turn off auto-posts
+                <BellOff className="w-2.5 h-2.5" /> Turn off auto-posts
               </button>
             </div>
           </div>

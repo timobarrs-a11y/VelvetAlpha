@@ -240,23 +240,13 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
     return list;
   }, []);
 
-  // Welcome back: a note says who messaged while you were away.
+  // The tray's list and unread counts load on sign-in and refresh each minute. No alert is raised for messages that
+  // arrived while you were away: the tray already shows who messaged, and the unread counts show how many.
   useEffect(() => {
     if (!userId) return;
-    let cancelled = false;
-    refreshRecent().then(list => {
-      if (cancelled || !list) return;
-      const waiting = list.filter(c => c.unread_count > 0);
-      if (waiting.length === 0) return;
-      const first = waiting[0];
-      const total = waiting.reduce((n, c) => n + c.unread_count, 0);
-      const text = waiting.length === 1
-        ? `sent you ${total === 1 ? 'a message' : `${total} messages`} while you were away`
-        : `and ${waiting.length - 1} other${waiting.length > 2 ? 's' : ''} messaged you while you were away`;
-      setToast({ friend: { conversationId: first.id, peerId: first.peer_id, peerName: first.peer_name || 'A friend', peerAvatarUrl: first.peer_avatar_url }, text, nonce: Date.now(), sticky: true });
-    });
+    refreshRecent();
     const poll = setInterval(refreshRecent, 60000);
-    return () => { cancelled = true; clearInterval(poll); };
+    return () => clearInterval(poll);
   }, [userId, refreshRecent]);
 
   // Messages from friends: ding, pop up, and add their tab, unless their chat is
