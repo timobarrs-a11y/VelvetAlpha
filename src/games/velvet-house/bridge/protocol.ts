@@ -3,6 +3,8 @@
  * All messages are validated on receipt.
  */
 
+import { IS_DEMO } from '../kernel/config';
+
 export type BridgeMessageType =
   | 'velvet:ready'
   | 'velvet:profile'
@@ -390,6 +392,8 @@ export function isAccountPromosMessage(data: unknown): data is AccountPromosMess
  * only when referrer is empty (standalone testing).
  */
 export function postToParent(msg: BridgeMessage): void {
+  // The demo is not part of the account: nothing it does (saves, promo codes, restarts) goes up to the host.
+  if (IS_DEMO) return;
   try {
     if (!window.parent || window.parent === window) return;
     let origin = '*';
