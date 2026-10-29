@@ -3,6 +3,7 @@ import { checkPlacement } from '../state/arrange';
 import { CATALOG } from '../state/catalog';
 import { checkLamp, type WallLamp } from '../state/wallLamps';
 import { isWalking, poseOf, startGoto, startChain } from '../state/agents';
+import { bossLeave } from '../state/boss';
 import { type SampleFn } from '../state/companionAI';
 import { MARKS } from '../content/marks';
 import type { Game } from '../kernel/game';
@@ -22,7 +23,8 @@ export function installDevHooks(g: Game): void {
       // Jump to a day, so each season can be looked at (a week each: spring 1-7, summer 8-14, autumn 15-21, winter 22-28).
       setDay: (d: number) => { world.day = d; },
       // Put someone on a floor (without the stairs), and start an activity chain for them: to see the office's desks used.
-      placePerson: (who: 'jordan' | 'maya', level: number, x: number, y: number) => { const p = who === 'maya' ? people[1] : people[0]; p.level = level; p.x = x; p.y = y; p.task = null; },
+      placePerson: (who: 'jordan' | 'maya', level: number, x: number, y: number) => { const p = who === 'maya' ? people[1] : people[0]; p.level = level; p.x = x; p.y = y; p.task = null; p.scripted = true; },
+      bossLeave: (minutes = 8) => { const d = people.find((q) => q.id === 'dale'); if (d) bossLeave(g.house, d, world.day * 1440 + world.minutes, minutes); },
       startChain: (who: 'jordan' | 'maya', chain: string) => { const p = who === 'maya' ? people[1] : people[0]; p.scripted = true; return startChain(g.house, p, chain, null, () => Math.random()); },
       // The office: unlock it (it joins the floor bar), and light or clear the meeting-room sign.
       unlockOffice: () => { g.flags.officeUnlocked = true; g.setLevel(view.level); },

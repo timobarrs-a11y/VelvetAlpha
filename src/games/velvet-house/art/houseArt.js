@@ -3026,22 +3026,52 @@ export function createHouseArt(ctx0, opts = {}) {
     treeapple: { parts: () => [F(0.2, 0.2, 1.0, 1.0, treeAt('apple', 0.6, 0.6, { 0: ['#FBF3F5', 8, 34, 60], 2: ['#B6A23A', 4, 34, 60] }))] },
     // ---- the office ----
     officedesk: {
-      // A 1.4 x 0.62 top on side panels, a low partition behind it, a monitor (its screen lights while someone works), keyboard, mouse, mug and papers, and the chair
+      // A 1.2 x 0.62 top on side panels, a low partition behind it, a monitor (its screen lights while someone works), keyboard, mouse, mug and papers, and the chair
       // behind it. Same proportions as the home desk, so the avatar sits and stands with the game's own animation.
-      parts: () => [B(0.03, 0.05, 0, 0.05, 0.55, 0.72, '#B9B09A'), B(1.32, 0.05, 0, 0.05, 0.55, 0.72, '#B9B09A'), B(0.08, 0.05, 0.12, 1.24, 0.03, 0.6, '#A59C86'),
-        B(0, 0, 0.72, 1.4, 0.62, 0.05, '#CDBFA3', { name: 'top' }), B(0, 0, 0.77, 1.4, 0.04, 0.46, '#8E98A6'),
-        F(0.4, 0.05, 1.0, 0.3, (T, o) => {
+      parts: () => [B(0.03, 0.05, 0, 0.05, 0.55, 0.72, '#B9B09A'), B(1.12, 0.05, 0, 0.05, 0.55, 0.72, '#B9B09A'), B(0.08, 0.05, 0.12, 1.04, 0.03, 0.6, '#A59C86'),
+        B(0, 0, 0.72, 1.2, 0.62, 0.05, '#CDBFA3', { name: 'top' }), B(0, 0, 0.77, 1.2, 0.04, 0.46, '#8E98A6'),
+        F(0.3, 0.05, 0.9, 0.3, (T, o) => {
           const on = usingSlot(o.id + ':d');
-          T.box(0.62, 0.12, 0.77, 0.1, 0.08, 0.14, '#2B2F38'); T.box(0.45, 0.09, 0.9, 0.5, 0.05, 0.3, '#23272F');
-          T.poly([[0.48, 0.141, 0.93], [0.92, 0.141, 0.93], [0.92, 0.141, 1.17], [0.48, 0.141, 1.17]], on ? '#9FD0FF' : '#1B2230');
-          if (on) [1.12, 1.07, 1.02, 0.97].forEach((z, i) => T.line([0.52, 0.142, z], [0.52 + (i % 2 ? 0.26 : 0.34), 0.142, z], '#FFFFFF', 1));
+          T.box(0.52, 0.12, 0.77, 0.1, 0.08, 0.14, '#2B2F38'); T.box(0.35, 0.09, 0.9, 0.5, 0.05, 0.3, '#23272F');
+          T.poly([[0.38, 0.141, 0.93], [0.82, 0.141, 0.93], [0.82, 0.141, 1.17], [0.38, 0.141, 1.17]], on ? '#9FD0FF' : '#1B2230');
+          if (on) [1.12, 1.07, 1.02, 0.97].forEach((z, i) => T.line([0.42, 0.142, z], [0.42 + (i % 2 ? 0.26 : 0.34), 0.142, z], '#FFFFFF', 1));
         }, { onTop: true }),
-        B(0.5, 0.38, 0.77, 0.4, 0.14, 0.02, '#3A3F4A'), B(0.95, 0.4, 0.77, 0.06, 0.09, 0.02, '#3A3F4A'), B(1.22, 0.14, 0.77, 0.09, 0.09, 0.11, '#C2413A'), B(0.08, 0.2, 0.77, 0.24, 0.3, 0.01, '#E8E2D6'),
-        B(0.67, 0.98, 0.05, 0.06, 0.06, 0.37, '#2B2F38'), B(0.52, 0.9, 0.0, 0.36, 0.22, 0.05, '#2B2F38'),
-        B(0.45, 0.75, 0.42, 0.5, 0.45, 0.07, '#3A4150', { name: 'seat' }), B(0.45, 1.17, 0.49, 0.5, 0.06, 0.5, '#3A4150')],
+        B(0.4, 0.38, 0.77, 0.4, 0.14, 0.02, '#3A3F4A'), B(0.86, 0.4, 0.77, 0.06, 0.09, 0.02, '#3A3F4A'), B(1.0, 0.14, 0.77, 0.09, 0.09, 0.11, '#C2413A'), B(0.08, 0.2, 0.77, 0.2, 0.3, 0.01, '#E8E2D6'),
+        B(0.57, 0.98, 0.05, 0.06, 0.06, 0.37, '#2B2F38'), B(0.42, 0.9, 0.0, 0.36, 0.22, 0.05, '#2B2F38'),
+        B(0.35, 0.75, 0.42, 0.5, 0.45, 0.07, '#3A4150', { name: 'seat' }), B(0.35, 1.17, 0.49, 0.5, 0.06, 0.5, '#3A4150')],
+    },
+    // The boss's desk: dark walnut, twice the size, drawer pedestals either side, a green leather blotter, a brass lamp and nameplate, and a deep burgundy leather
+    // chair behind it. Drawn facing the way a desk faces (the chair on the +y side); the piece is placed turned (rot 2) so he faces the room.
+    bossdesk: {
+      parts: () => [B(0.05, 0.05, 0, 0.5, 0.8, 0.72, '#4E3224'), B(1.45, 0.05, 0, 0.5, 0.8, 0.72, '#4E3224'), B(0.55, 0.05, 0.1, 0.9, 0.04, 0.6, '#43281C'),
+        B(0, 0, 0.72, 2.0, 0.9, 0.07, '#6B4630', { name: 'top' }),
+        B(0.62, 0.22, 0.79, 0.76, 0.46, 0.012, '#2B3A2F'),
+        F(0.8, 0.04, 1.3, 0.3, (T, o) => { const on = usingSlot(o.id + ':d'); T.box(0.95, 0.12, 0.79, 0.1, 0.08, 0.15, '#1E2128'); T.box(0.78, 0.09, 0.93, 0.44, 0.05, 0.3, '#1E2128'); T.poly([[0.81, 0.141, 0.96], [1.19, 0.141, 0.96], [1.19, 0.141, 1.2], [0.81, 0.141, 1.2]], on ? '#9FD0FF' : '#1B2230'); }, { onTop: true }),
+        F(0.1, 0.1, 0.5, 0.5, (T, o) => { T.box(0.14, 0.14, 0.79, 0.14, 0.14, 0.03, '#C9A24A'); T.line([0.21, 0.21, 0.82], [0.21, 0.21, 1.05], '#C9A24A', 2); T.box(0.1, 0.1, 1.04, 0.22, 0.22, 0.1, '#2F6B4F'); }, { onTop: true }),
+        B(1.55, 0.55, 0.79, 0.34, 0.07, 0.07, '#C9A24A'), B(1.6, 0.2, 0.79, 0.28, 0.2, 0.06, '#1E2128'),
+        B(0.6, 1.05, 0.42, 0.8, 0.62, 0.1, '#6A2A2E', { name: 'seat' }), B(0.6, 1.62, 0.52, 0.8, 0.12, 1.0, '#6A2A2E'), B(0.55, 1.05, 0.5, 0.06, 0.55, 0.28, '#3B1B1E'), B(1.39, 1.05, 0.5, 0.06, 0.55, 0.28, '#3B1B1E'),
+        B(0.95, 1.3, 0.04, 0.1, 0.1, 0.38, '#1E2128'), B(0.75, 1.2, 0.0, 0.5, 0.35, 0.05, '#1E2128')],
+    },
+    visitorchair: {
+      // An upholstered chair for the visitor, its back toward the room and its seat toward the boss's desk.
+      parts: () => [B(0.05, 0.05, 0, 0.05, 0.05, 0.4, '#2B2F38'), B(0.5, 0.05, 0, 0.05, 0.05, 0.4, '#2B2F38'), B(0.05, 0.5, 0, 0.05, 0.05, 0.4, '#2B2F38'), B(0.5, 0.5, 0, 0.05, 0.05, 0.4, '#2B2F38'),
+        B(0.02, 0.1, 0.4, 0.56, 0.46, 0.08, '#6A2A2E', { name: 'seat' }), B(0.02, 0.52, 0.48, 0.56, 0.07, 0.5, '#6A2A2E')],
+    },
+    officerug: {
+      // The boss's rug: deep red with a gold border.
+      parts: () => [F(0, 0, 3.0, 3.0, (T) => { const q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1); q(0, 0, 3.0, 3.0, 0.01, '#6A2A2E'); q(0.12, 0.12, 2.88, 2.88, 0.012, null, '#C9A24A'); q(0.25, 0.25, 2.75, 2.75, 0.012, null, 'rgba(201,162,74,.5)'); })],
     },
     officeprinter: {
-      parts: () => [B(0, 0, 0, 1.6, 0.6, 0.8, '#C9C3B8'), B(0.3, 0.08, 0.8, 1.0, 0.46, 0.4, '#F1EEE8'), B(0.38, 0.14, 1.2, 0.84, 0.26, 0.03, '#6E7686')],
+      // A floor-standing copier: a cabinet with two paper drawers, a white body, a scanner lid with a glass top, an angled control panel with buttons, and a tray with paper.
+      parts: () => [B(0.05, 0.05, 0, 1.5, 0.6, 0.5, '#8E98A6'), B(0, 0, 0.5, 1.6, 0.7, 0.5, '#F1EEE8'), B(0.04, 0.04, 1.0, 1.1, 0.62, 0.07, '#DDE1E7'),
+        F(0, 0, 1.6, 0.75, (T) => {
+          T.poly([[0.12, 0.12, 1.075], [1.02, 0.12, 1.075], [1.02, 0.6, 1.075], [0.12, 0.6, 1.075]], '#9FC4DA', 'rgba(0,0,0,.25)');   // the scanner glass
+          T.box(1.18, 0.06, 1.0, 0.36, 0.42, 0.14, '#3A3F4A');                                                                         // the control panel
+          [['#3F9A5A', 1.24], ['#C2413A', 1.32], ['#E0B64A', 1.4]].forEach(([c, x]) => T.box(x, 0.12, 1.14, 0.05, 0.05, 0.015, c));
+          T.box(1.22, 0.24, 1.14, 0.28, 0.12, 0.012, '#7FC0E6');
+          [0.1, 0.3].forEach(z => { T.poly([[0.12, 0.701, z + 0.04], [1.48, 0.701, z + 0.04], [1.48, 0.701, z + 0.17], [0.12, 0.701, z + 0.17]], '#A5AEBA', 'rgba(0,0,0,.3)'); T.box(0.7, 0.702, z + 0.1, 0.2, 0.012, 0.03, '#3A3F4A'); });
+          T.box(0.1, 0.7, 0.55, 0.62, 0.15, 0.025, '#C9CED6'); T.box(0.14, 0.72, 0.575, 0.54, 0.11, 0.03, '#FFFFFF');                  // the output tray and its paper
+        })],
     },
     officecooler: {
       parts: () => [B(0, 0, 0, 0.4, 0.4, 0.9, '#E8EEF2'), B(0.05, 0.05, 0.9, 0.3, 0.3, 0.55, '#7FC0E6')],
@@ -5641,6 +5671,13 @@ export function createHouseArt(ctx0, opts = {}) {
           tri([[hl, -3.4], [hl, 3.4], [hl - 6, 0]], L.skin);
           line([hl, -3.6], [hl - 6.4, 0], A || '#f4f1ea', 0.9); line([hl, 3.6], [hl - 6.4, 0], A || '#f4f1ea', 0.9);
           line([-hl + 4, -5.5], [-hl + 4, 5.5], A || '#f4f1ea', 1.6);
+        } else if (pat === 'bosssuit') {
+          // The boss: white collar, a broad gold tie, wide lapels, two columns of gold buttons and a white pocket square.
+          tri([[hl, -3.2], [hl, 3.2], [hl - 9.5, 0]], '#f2efe8');
+          ctx.fillStyle = A || '#C9A24A'; ctx.fillRect(hl - 11, -1.3, 10.5, 2.6);
+          line([hl, -4], [hl - 11, -1.6], 'rgba(0,0,0,.45)', 1); line([hl, 4], [hl - 11, 1.6], 'rgba(0,0,0,.45)', 1);
+          ctx.fillStyle = '#E0B64A'; [hl - 4, hl - 7.5, hl - 11].forEach(x => [-2.6, 2.6].forEach(y => { ctx.beginPath(); ctx.arc(x, y, 0.85, 0, 7); ctx.fill(); }));
+          ctx.fillStyle = '#f4f4f2'; ctx.fillRect(hl - 8.4, -5.2, 2.6, 1.7);
         } else if (pat === 'president') {
           tri([[hl, -2.8], [hl, 2.8], [hl - 9, 0]], '#f2efe8');
           ctx.fillStyle = A || '#b3202f'; ctx.fillRect(hl - 11, -0.8, 10, 1.6);

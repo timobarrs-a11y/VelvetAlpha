@@ -5,6 +5,7 @@ import { sideJobsTick } from '../state/sideJobs';
 import { rollDay, nightStart, wakeHour } from '../state/routine';
 import { gardenTick, treeTick } from '../state/crops';
 import { weatherTick, weatherOf, seasonOf } from '../state/weather';
+import { bossTick } from '../state/boss';
 import { advanceClock } from '../engine/loop';
 import { startFixedLoop } from '../engine/fixedLoop';
 import { createFpsMeter } from '../engine/fpsMeter';
@@ -92,6 +93,8 @@ export function startGameLoop(g: Game): void {
       g.deliveriesTick();
       // Visitors a script has brought in (people after the two who live here).
       for (const npc of people.slice(2)) tickAgent(house, npc, null, dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
+      const dale = people.find((p) => p.id === 'dale');
+      if (dale) bossTick(house, dale, world.day * 1440 + world.minutes, hourF, gameMin, () => rng.next());
       const followed = view.follow && people.find((p) => p.id === view.follow);
       if (followed && !followed.onStairs && followed.level !== view.level) g.setLevel(followed.level, true);
 

@@ -206,6 +206,17 @@ inside it, a seat spot (`pos` where the avatar sits, `stand` 0.6 tile in front w
 with the screen lit, and standing, using the existing animation. The rest of the pieces have **no jobs yet**: no tap targets, no states, no people. A house saved before the office is given the pieces
 once on load (`kernel/config.ts`), with the content version unchanged.
 
+## The boss and the work clothes
+
+- **Dale, the boss,** is a character who lives on the office floor (`state/boss.ts`, `content/characters.ts`). His desk is big, dark walnut, turned to face the room, with a rug under it
+  in the back-right corner and a visitor's chair in front. He **hardly ever leaves his seat**: in office hours there is about a 2 percent chance an hour that he walks to the water
+  cooler for five to ten minutes and comes back. **Nobody may sit in the visitor chair unless he is at his desk** (`world.bossIn`): the seat is refused while he is away.
+- **Work clothes:** anyone from the household on the office floor is drawn in a navy blazer, burgundy tie and dark trousers (their saved wardrobe is untouched). Dale has a
+  suit of his own, `bosssuit`: charcoal, double-breasted, gold buttons, a gold tie and a pocket square, with grey hair, so he is never mistaken for anyone else.
+- **Layout (version 2):** four narrow desks in two rows with a 1.3 tile aisle between them, the whiteboard wall kept clear, a copier-style printer beside it, the water cooler beside the meeting
+  door, the boss's corner at the back right, and the break area (counter, fridge, vending machine, table) at the front right. A house saved with an older layout has only its office pieces replaced
+  once on load (`OFFICE_LAYOUT`).
+
 ## Build order (pieces first; scenarios last)
 
 Scenarios are built from the pieces, so they wait until the pieces exist. Each step is its own small change, checked in the real game on desktop and

@@ -1,7 +1,8 @@
 import type { ArrivalPlot } from '../ui/arrivalIntro';
-import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
+import { ATTIC_STAIR_OBJS, OFFICE_LAYOUT, type ObjectInstance } from '../state/objects';
 import { RNG, setGlobalRNG } from '../state/rng';
-import { buildWorld, createAgent, type Agent, type AgentId } from '../state/agents';
+import { buildWorld, createAgent, createNpc, type Agent, type AgentId } from '../state/agents';
+import { npcDef } from '../content/characters';
 import { type CharacterNeeds } from '../state/types';
 import { createHouseArt, type PersonFrame, type PetFrame } from '../art/houseArt.js';
 import { createGpuLights } from '../engine/gpuLights.js';
@@ -300,6 +301,9 @@ export function createGame(app: HTMLElement): Game | null {
     createAgent('jordan', simName, (save?.jordan as { needs?: Partial<CharacterNeeds> })?.needs, lookFrom(save?.look, DEFAULT_LOOKS.jordan)),
     createAgent('maya', partnerName, (save?.maya as { needs?: Partial<CharacterNeeds> })?.needs, lookFrom(save?.mayaLook, DEFAULT_LOOKS.maya)),
   ];
+  // Dale, the boss, lives on the office floor and is not part of the household (see state/boss.ts).
+  const daleDef = npcDef('dale');
+  if (daleDef) people.push(createNpc(daleDef.id, daleDef.name, { ...daleDef.look }, { level: 5, x: 8.7, y: 0.3 }));
   const house = buildWorld(world.objs);
   const rngSeed = typeof save?.rngSeed === 'number' ? save.rngSeed : Date.now() & 0xffffffff;
   const rng = new RNG(rngSeed);
@@ -327,6 +331,7 @@ export function createGame(app: HTMLElement): Game | null {
   flags.rugObjects = true;
   flags.tvObject = true;
   flags.officeObjects = true;
+  flags.officeLayout = OFFICE_LAYOUT;
   // The office stays out of the floor bar until the player first takes control of a workday; the demo shows it straight away.
   if (IS_DEMO && flags.officeUnlocked === undefined) flags.officeUnlocked = true;
   if (!flags.settleSeen) flags.settleSeen = [];

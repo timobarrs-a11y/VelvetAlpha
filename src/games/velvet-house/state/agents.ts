@@ -99,6 +99,8 @@ export interface HouseWorld {
   grids: Grid[];
   /** Where the TVs are: the middle of each picture, on its floor. */
   screens: Array<{ level: number; x: number; y: number }>;
+  /** The boss is at his desk: only then may anyone sit in the chair in front of it (see state/boss.ts). */
+  bossIn?: boolean;
 }
 
 const WALK_SPEED = 1.5;
@@ -136,7 +138,7 @@ const ACT_TAGS: Record<string, string[]> = {
   massage: ['massage'], hammock: ['hammock'], jukebox: ['jukebox'], bike: ['bike'],
   boxing: ['boxbag'], stargaze: ['stars'], fire: ['fireside'], swim: ['swim'],
   // Everyday life (see activities.ts); `open` ones need no object.
-  newspaper: ['seat'], snack: ['fridge'], wipeCounter: ['sink'], journal: ['desk'], freelance: ['desk'], officework: ['officework'],
+  newspaper: ['seat'], snack: ['fridge'], wipeCounter: ['sink'], journal: ['desk'], freelance: ['desk'], officework: ['officework'], bosswork: ['bosswork'], bossvisit: ['bossvisit'],
   mirror: ['mirror'], foldClothes: ['dresser'], makeBed: ['makebed'], laundry: ['washer'],
   rummage: ['rummage'], tend: ['garden'],
   feedPet: ['bowl'], scoop: ['litter'],
@@ -274,6 +276,8 @@ function freeSlot(world: HouseWorld, ch: Agent, act: string, taken: Set<string>)
     let bd = Infinity;
     for (const s of world.slots) {
       if (s.tag !== tag || taken.has(s.id) || (lvReq !== undefined && s.level !== lvReq)) continue;
+      // The chair in front of the boss's desk is only for when he is in it.
+      if (tag === 'bossvisit' && !world.bossIn) continue;
       // Watching TV: only on a floor with a TV, and a seat near one beats a seat nearer the person.
       const tvs = screen ? world.screens.filter((v) => v.level === s.level) : [];
       if (screen && !tvs.length) continue;

@@ -1,7 +1,7 @@
 import { revivePet, type Pet } from '../state/pets';
 import { validateGarment } from '../state/garment';
 import { migrateSave, isCurrentContent } from '../state/saveMigration';
-import { INITIAL_OBJS, STARTER_RUG_IDS, STARTER_TV_IDS, STARTER_OFFICE_IDS, type ObjectInstance } from '../state/objects';
+import { INITIAL_OBJS, STARTER_RUG_IDS, STARTER_TV_IDS, STARTER_OFFICE_IDS, OFFICE_LAYOUT, type ObjectInstance } from '../state/objects';
 import { type AgentId, type AgentLook } from '../state/agents';
 import { type CharacterLook } from '../state/types';
 import { type WallMode } from '../art/houseArt.js';
@@ -114,7 +114,7 @@ export function loadWorld(): World {
       if (!saved.flags?.rugObjects) once(STARTER_RUG_IDS);
       if (!saved.flags?.tvObject) once(STARTER_TV_IDS);
       // The office came later: a house saved before it is given its pieces once (no content-version change, nothing of the player's is touched).
-      if (!saved.flags?.officeObjects) once(STARTER_OFFICE_IDS);
+      if (saved.flags?.officeLayout !== OFFICE_LAYOUT) { objs = objs.filter((o) => o.level !== 5); once(STARTER_OFFICE_IDS); }
       // A small piece whose table is gone goes back on the floor.
       for (const o of objs) if (o.on && !objs.some((h) => h.id === o.on)) { delete o.on; delete o.z; }
     }
