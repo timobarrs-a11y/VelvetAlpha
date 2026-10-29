@@ -684,6 +684,10 @@
 .vh-vital-value { font-variant-numeric: tabular-nums; color: #A9A1AE; min-width: 44px; text-align: right; white-space: nowrap; }
 .vh-vital[data-overdue="1"] .vh-vital-value { color: #F2A7A0; font-weight: 700; }
 .vh-log { bottom: 200px !important; }
+/* Notices stay out of the way of the game: the two newest show in the house, the four newest in the backyard (where they sit over the lawn,
+   not over anything you play on). */
+.vh-log li:nth-child(n+3) { display: none; }
+[data-outdoor="1"] .vh-log li:nth-child(-n+4) { display: list-item; }
 .vh-stage.vh-arranging .vh-vitals, .vh-stage[data-script="cutscene"] .vh-vitals, .vh-stage.vh-attract .vh-vitals { display: none; }
 @media (max-width: 760px) {
   .vh-vitals { left: 8px; right: auto; bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 136px); width: 168px; padding: 8px 10px 6px; }

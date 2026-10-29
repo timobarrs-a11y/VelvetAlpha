@@ -20,6 +20,8 @@ export function createControls(g: Game): Partial<Game> {
       b.setAttribute('aria-selected', String(Number(b.dataset.level) === view.level));
       if (Number(b.dataset.level) === ATTIC) b.hidden = !hasAttic();
     });
+    // Notices: the newest two show in the house and the newest four in the yard (see .vh-log in game-ui.css).
+    app.dataset.outdoor = isOutdoor(view.level) ? '1' : '';
     btn('walls').textContent = WALL_MODES[view.wallIdx].label;
     btn('speed').textContent = `${SPEEDS[view.speedIdx]}x`;
     if (IS_DEMO) {
