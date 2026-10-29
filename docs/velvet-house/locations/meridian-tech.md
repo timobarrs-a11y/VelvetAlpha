@@ -81,7 +81,29 @@ draw from the rest and avoid repeating yesterday's.
 - **Finishing a scenario** is a good day: a bonus, and progress up the career ladder. Each rung unlocks something in the office (a better desk, a
   window seat, a bigger meeting room).
 
-Objective types (the library to build): `fix` (tap a prop), `answer` (tap the phone), `sign` (tap the desk), `work` (computer, timed), `print` (needs
+### The objective library (13 types)
+
+| # | Type | Kind | Prop | Needs / notes |
+|---|---|---|---|---|
+| 1 | `fix` | Tap | Printer | Fix the jam |
+| 2 | `print` | Tap | Printer | Needs a finished `work`; needs paper (see `restock`) |
+| 3 | `answer` | Tap | Desk phone | The phone rings and a light shows |
+| 4 | `sign` | Tap | Desk | Sign the contract |
+| 5 | `work` | Timed, at the desk | Computer | Write the report or prepare the slides |
+| 6 | `reply` | Timed, at the desk | Computer | Short: answer a message or email |
+| 7 | `meeting` | Timed, unseen | Door under the sign | The team meeting, the presentation or the client |
+| 8 | `lunch` | Timed, unseen | Break room | Lunch with a coworker |
+| 9 | `coffee` | Timed, short | Coffee machine | A coffee run; the break room, in view, the machine fills a cup |
+| 10 | `chat` | Timed, short | Water cooler | A cooler chat that builds a relationship with a coworker |
+| 11 | `restock` | Tap | Printer paper | Must be done before a big `print`, or the printer runs out |
+| 12 | `file` | Tap | Filing cabinet | Find a missing document that another objective needs |
+| 13 | `scan` | Tap | Printer | Scan or fax: a second use for the printer |
+
+- **Short timers** (`coffee`, `chat`, `reply`) are 30 to 60 seconds; **long** ones (`work`, `meeting`, `lunch`) are one to three minutes.
+- **Seen vs unseen:** only `meeting` and `lunch` take Jordan out of sight. The short ones happen in view, in the break room or at the desk, and need small
+  animations (a cup filling, a typing loop).
+- **Dependencies** are the planning the player does: `print` needs a finished `work` and paper, a big `meeting` goes better after `print`, and a `file` can
+  unlock a `work`. Each dependency is only a requirement to start, never a clock.
 a finished `work`), `meeting` (unseen, timed), `lunch` (unseen, timed). A scenario is a list of these with their order and any dependency.
 
 ## Layout: one meeting room, behind the sign
@@ -116,8 +138,11 @@ longest wall, the player sees exactly where they went. Nothing inside is drawn o
 | Printer | 1.2 x 0.8 | Idle, printing (paper slides out), jammed. The tap target for `fix` and `print` |
 | Desk phone | on the desk | Ringing (a light, a small shake), idle. The tap target for `answer` |
 | Meeting-room door and sign | in the back wall | Closed, open (someone walking through), the sign lit red while a meeting is on |
-| Coffee machine and fridge | counter | Reuse the kitchen counter pieces |
-| Water cooler, plant, clock, notice board | small | Set dressing |
+| Coffee machine and fridge | counter | Reuse the kitchen counter pieces. The machine fills a cup for `coffee` |
+| Filing cabinet | 0.5 x 0.6 | Drawer opens for `file`. Already in the mockup |
+| Printer paper | on the printer | A tray that empties and a ream to refill, for `restock` |
+| Water cooler | 0.4 x 0.4 | The prop for `chat`: a coworker stands beside it |
+| Plant, clock, notice board | small | Set dressing |
 | Ceiling lights | | Flat office light, not lamp pools |
 
 Static props like the printer, cooler and coffee machine are good candidates for the Meshy route (rendered to flat pictures). The printer's states need
@@ -148,7 +173,8 @@ phone at all four camera turns before the next. A mockup of the target room is i
 3. **Light and weather:** ceiling light, window wall by day and night, dusk at a late finish, rain on the glass.
 4. **People:** Jordan walking, sitting, typing, using the printer and the phone, and walking to a door and going out of sight; a few coworkers sitting still.
 5. **The objective engine:** the timed-objective state, the tick, the bar on Orders and Goals, save and load. Tested with a fake objective.
-6. **Objective types:** `fix`, `answer`, `sign`, `work`, `print`, `meeting`, `lunch`, each on its prop.
+6. **Objective types:** the thirteen in the library above, each on its prop. Start with the tap ones (`fix`, `answer`, `sign`, `file`, `restock`, `scan`), then
+   the short timers (`coffee`, `chat`, `reply`), then the long ones (`work`, `print`, `meeting`, `lunch`).
 7. **Scenarios:** the outlines that combine them, and how a day is chosen.
 8. **Taking control:** the prompt at the leave hour, the scene switch, the companion staying home, and the return.
 
