@@ -81,6 +81,8 @@ export const ACTIVITIES: Record<string, ActivityMeta> = {
   plants: { pose: 'water', dur: 15, gives: { fun: 15, comfort: 5 }, verb: 'Watering the plants' },
   window: { pose: 'stand', dur: 10, gives: { comfort: 10 }, verb: 'Looking out the window' },
   freelance: { pose: 'desk', dur: 90, gives: { fun: 10 }, verb: 'Freelancing' },
+  // At a desk in the office (level 5 only, so nobody at home ever walks there). The same sit-at-the-desk animation as freelancing.
+  officework: { pose: 'desk', dur: 60, gives: {}, verb: 'Working at the computer', level: 5 },
   // Side jobs (sideJobs.ts): until the job's done or the player stops; main.ts ends them.
   sideDesk: { pose: 'desk', dur: Infinity, gives: {}, verb: 'Working on a side job' },
   sideBake: { pose: 'cook', dur: Infinity, gives: {}, verb: 'Baking for the café' },

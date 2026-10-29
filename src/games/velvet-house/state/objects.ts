@@ -148,7 +148,10 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   pool: { W: 3.2, D: 2.0, h: 0.2, fixed: true, name: 'Pool',
     spots: { w: { stand: [1.6, 2.45], pos: [1.6, 1.0, 0.0], dir: [0, 1], tag: 'swim', base: 'water' } } },
   // The office's pieces (set dressing for now; each gets its job from the objectives, see docs/velvet-house/locations/meridian-tech.md).
-  officedesk: { W: 1.8, D: 1.8, h: 1.2, fixed: true, name: 'Office desk' },
+  // The same proportions as the home desk (1.2 x 1.25 tiles, the chair inside the footprint): a 1.4 wide top, 0.62 deep, and the chair behind it. The seat is a
+  // spot like every other seat, so the existing sit-down and stand-up animation applies; `stand` is the clear tile in front where the chair is pulled out.
+  officedesk: { W: 1.4, D: 1.3, h: 1.25, fixed: true, name: 'Office desk',
+    spots: { d: { stand: [0.7, 1.9], pos: [0.7, 1.0, 0.49], dir: [0, -1], tag: 'officework', base: 'seat' } } },
   officeprinter: { W: 1.6, D: 0.6, h: 1.25, fixed: true, name: 'Printer' },
   officecooler: { W: 0.4, D: 0.4, h: 1.45, fixed: true, name: 'Water cooler' },
   officecabinet: { W: 0.5, D: 0.6, h: 1.2, fixed: true, name: 'Filing cabinet' },
@@ -393,10 +396,10 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   // The office (level 5). Desks in two columns along the window wall, the printer and the cooler on the back wall either side of the meeting door,
   // the break room along the right.
   { id: 'off-desk1', type: 'officedesk', level: 5, x: 0.5, y: 1.0, rot: 0 },
-  { id: 'off-desk2', type: 'officedesk', level: 5, x: 0.5, y: 2.8, rot: 0 },
-  { id: 'off-desk3', type: 'officedesk', level: 5, x: 0.5, y: 4.6, rot: 0 },
-  { id: 'off-desk4', type: 'officedesk', level: 5, x: 2.6, y: 2.8, rot: 0 },
-  { id: 'off-desk5', type: 'officedesk', level: 5, x: 2.6, y: 4.6, rot: 0 },
+  { id: 'off-desk2', type: 'officedesk', level: 5, x: 0.5, y: 3.2, rot: 0 },
+  { id: 'off-desk3', type: 'officedesk', level: 5, x: 0.5, y: 5.4, rot: 0 },
+  { id: 'off-desk4', type: 'officedesk', level: 5, x: 2.7, y: 3.2, rot: 0 },
+  { id: 'off-desk5', type: 'officedesk', level: 5, x: 2.7, y: 5.4, rot: 0 },
   { id: 'off-printer', type: 'officeprinter', level: 5, x: 2.6, y: 0.1, rot: 0 },
   { id: 'off-cooler', type: 'officecooler', level: 5, x: 6.15, y: 0.2, rot: 0 },
   { id: 'off-cabinet', type: 'officecabinet', level: 5, x: 0.2, y: 7.2, rot: 0 },

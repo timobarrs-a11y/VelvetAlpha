@@ -136,7 +136,7 @@ const ACT_TAGS: Record<string, string[]> = {
   massage: ['massage'], hammock: ['hammock'], jukebox: ['jukebox'], bike: ['bike'],
   boxing: ['boxbag'], stargaze: ['stars'], fire: ['fireside'], swim: ['swim'],
   // Everyday life (see activities.ts); `open` ones need no object.
-  newspaper: ['seat'], snack: ['fridge'], wipeCounter: ['sink'], journal: ['desk'], freelance: ['desk'],
+  newspaper: ['seat'], snack: ['fridge'], wipeCounter: ['sink'], journal: ['desk'], freelance: ['desk'], officework: ['officework'],
   mirror: ['mirror'], foldClothes: ['dresser'], makeBed: ['makebed'], laundry: ['washer'],
   rummage: ['rummage'], tend: ['garden'],
   feedPet: ['bowl'], scoop: ['litter'],

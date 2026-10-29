@@ -200,7 +200,10 @@ HUD). The objective timer is the same shape as `gardenTick`: a list of items wit
 **Step 1 and a first slice of step 2 are built** (the level and its pieces, as set dressing): a level 5 scene called Office in `state/scenes.ts`, its walls, four windows,
 the whiteboard and the meeting door with its sign in `state/house.ts`, and nine pieces (desks, printer, cooler, cabinet, plant, counter, fridge, vending
 machine, table) in `state/objects.ts` and `art/houseArt.js`. It is hidden from the floor bar until `flags.officeUnlocked`, which the demo sets. The camera is locked to
-the one angle the room is designed for. The pieces have **no jobs yet**: no tap targets, no states, no people. A house saved before the office is given the pieces
+the one angle the room is designed for. **Scale and seats:** pieces are sized in tiles (`W`, `D`, `h` in `objects.ts`) and the office desk uses the home desk's own proportions: a 1.4 x 1.3 footprint with the chair
+inside it, a seat spot (`pos` where the avatar sits, `stand` 0.6 tile in front where the chair is pulled out) and the game's `desk` pose. Each workstation needs about
+1.9 tiles of depth, so five fit in two columns with an aisle. A `officework` activity (level 5 only, never picked on its own) shows Jordan walking up, sitting, working
+with the screen lit, and standing, using the existing animation. The rest of the pieces have **no jobs yet**: no tap targets, no states, no people. A house saved before the office is given the pieces
 once on load (`kernel/config.ts`), with the content version unchanged.
 
 ## Build order (pieces first; scenarios last)
