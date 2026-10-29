@@ -81,7 +81,7 @@ draw from the rest and avoid repeating yesterday's.
 - **Finishing a scenario** is a good day: a bonus, and progress up the career ladder. Each rung unlocks something in the office (a better desk, a
   window seat, a bigger meeting room).
 
-### The objective library (13 types)
+### The objective library (20 types)
 
 | # | Type | Kind | Prop | Needs / notes |
 |---|---|---|---|---|
@@ -98,8 +98,20 @@ draw from the rest and avoid repeating yesterday's.
 | 11 | `restock` | Tap | Printer paper | Must be done before a big `print`, or the printer runs out |
 | 12 | `file` | Tap | Filing cabinet | Find a missing document that another objective needs |
 | 13 | `scan` | Tap | Printer | Scan or fax: a second use for the printer |
+| 14 | `plan` | Timed, short | Whiteboard | Brainstorm at the whiteboard; Jordan writes and draws on it |
+| 15 | `snack` | Timed, short | Vending machine | Walk over, pick a snack; restores a little food, a pick of three |
+| 16 | `shred` | Tap | Shredder | Shred the old papers; a quick satisfying tap, and some `sign` or `file` tasks leave papers to shred |
+| 17 | `mail` | Tap | Mail cart | Sort and deliver the mail; the letters become a `reply` or `sign` later |
+| 18 | `water` | Tap | Office plant | Water the plant; it grows or wilts like the garden (see below) |
+| 19 | `blinds` | Tap | Window blinds | Fix the afternoon glare on the screens; uses the real sun (see below) |
+| 20 | `thermostat` | Tap | Thermostat | Settle the argument about the temperature; a small comedy beat |
 
-- **Short timers** (`coffee`, `chat`, `reply`) are 30 to 60 seconds; **long** ones (`work`, `meeting`, `lunch`) are one to three minutes.
+- **The office plant uses the garden's rules** (`water`): the same wetness and drying, slowed by night, so a plant left alone through a long weekend is droopy
+  on Monday. It is the cheapest tie-in between the work week and the garden at home.
+- **The blinds use the day and night system** (`blinds`): on a clear afternoon the sun on the window wall glares on the monitors, which is when the
+  objective appears; on a rainy or evening shift it never does.
+- **Vending and paper stock run out** and are refilled by `restock`, so one objective keeps coming back for a reason.
+- **Short timers** (`coffee`, `chat`, `reply`, `plan`, `snack`) are 30 to 60 seconds; **long** ones (`work`, `meeting`, `lunch`) are one to three minutes.
 - **Seen vs unseen:** only `meeting` and `lunch` take Jordan out of sight. The short ones happen in view, in the break room or at the desk, and need small
   animations (a cup filling, a typing loop).
 - **Dependencies** are the planning the player does: `print` needs a finished `work` and paper, a big `meeting` goes better after `print`, and a `file` can
@@ -142,6 +154,13 @@ longest wall, the player sees exactly where they went. Nothing inside is drawn o
 | Filing cabinet | 0.5 x 0.6 | Drawer opens for `file`. Already in the mockup |
 | Printer paper | on the printer | A tray that empties and a ream to refill, for `restock` |
 | Water cooler | 0.4 x 0.4 | The prop for `chat`: a coworker stands beside it |
+| Whiteboard | wall, 2 x 1.2 | Blank, then written on while `plan` runs; saved scribbles stay on it |
+| Vending machine | 0.7 x 0.7 x 1.8 | Lit front, a snack drops when used (`snack`); stock runs out and `restock` refills it too |
+| Shredder | 0.5 x 0.4 | A tray that fills with strips (`shred`) |
+| Mail cart | 0.7 x 0.5 | Letters on top (`mail`); the pile shrinks as it is sorted |
+| Office plant | 0.5 x 0.5 | Wilts without water, perks up when watered (`water`) |
+| Window blinds | on the window wall | Open, half drawn, shut (`blinds`) |
+| Thermostat | on the window wall | A dial that the coworkers fight over (`thermostat`) |
 | Plant, clock, notice board | small | Set dressing |
 | Ceiling lights | | Flat office light, not lamp pools |
 
@@ -173,8 +192,8 @@ phone at all four camera turns before the next. A mockup of the target room is i
 3. **Light and weather:** ceiling light, window wall by day and night, dusk at a late finish, rain on the glass.
 4. **People:** Jordan walking, sitting, typing, using the printer and the phone, and walking to a door and going out of sight; a few coworkers sitting still.
 5. **The objective engine:** the timed-objective state, the tick, the bar on Orders and Goals, save and load. Tested with a fake objective.
-6. **Objective types:** the thirteen in the library above, each on its prop. Start with the tap ones (`fix`, `answer`, `sign`, `file`, `restock`, `scan`), then
-   the short timers (`coffee`, `chat`, `reply`), then the long ones (`work`, `print`, `meeting`, `lunch`).
+6. **Objective types:** the twenty in the library above, each on its prop. Start with the tap ones (`fix`, `answer`, `sign`, `file`, `restock`, `scan`, `shred`,
+   `mail`, `water`, `blinds`, `thermostat`), then the short timers (`coffee`, `chat`, `reply`, `plan`, `snack`), then the long ones (`work`, `print`, `meeting`, `lunch`).
 7. **Scenarios:** the outlines that combine them, and how a day is chosen.
 8. **Taking control:** the prompt at the leave hour, the scene switch, the companion staying home, and the return.
 
