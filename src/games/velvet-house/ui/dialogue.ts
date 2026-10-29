@@ -192,6 +192,12 @@ export function createTray(): {
     if (timer) clearTimeout(timer);
   }
 
+  // The hover handlers are attached once, not per show: each show used to stack two more listeners on the tray.
+  const pause = (): void => { if (timer) clearTimeout(timer); };
+  const resume = (): void => { timer = setTimeout(hide, 6000); };
+  el.addEventListener('mouseenter', pause);
+  el.addEventListener('mouseleave', resume);
+
   function show(actions: TrayAction[], x: number, y: number, onPick: (a: TrayAction) => void): void {
     hide();
     el.style.left = `${x}px`;
@@ -212,8 +218,6 @@ export function createTray(): {
       });
     });
     timer = setTimeout(hide, 6000);
-    el.addEventListener('mouseenter', () => { if (timer) clearTimeout(timer); });
-    el.addEventListener('mouseleave', () => { timer = setTimeout(hide, 6000); });
   }
 
   function handleOutsideClick(e: MouseEvent): void {
