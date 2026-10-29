@@ -832,6 +832,8 @@ export const CATALOG: CatalogEntry[] = [
   seed('seed-flower', 'flower', 'Tulip seeds', 6, 'A packet of tulip seeds. Picked blooms brighten the living room.'),
   seed('seed-fruit', 'fruit', 'Apple seeds', 8, 'A packet of apple seeds. Two meals of fruit when ripe.'),
   seed('seed-vegetable', 'vegetable', 'Pumpkin seeds', 5, 'A packet of pumpkin seeds. Two meals of vegetables when ripe.'),
+  seed('seed-carrot', 'carrot', 'Carrot seeds', 5, 'A packet of carrot seeds. Two meals of vegetables when pulled up.'),
+  seed('seed-lettuce', 'lettuce', 'Lettuce seeds', 4, 'A packet of lettuce seeds. One meal of vegetables when cut.'),
   outdoor('sprinkler', 'sprinkler', 'Sprinkler', 20, ['natural', 'playful']),
 
   // Pets

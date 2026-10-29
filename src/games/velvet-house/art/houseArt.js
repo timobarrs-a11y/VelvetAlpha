@@ -15,7 +15,8 @@ import { createFabric } from './fabric.js';
 import { SLEEVE_BY_CUT } from '../state/garment';
 import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR } from '../state/house';
 import { stageAt } from '../state/plantGrowth';
-import { drawCrop } from './cropArt.js';
+import { drawCrop, drawGroundSpot } from './cropArt.js';
+import { CROPS } from '../state/crops';
 import { defaultWallLamps, lampRoom } from '../state/wallLamps';
 
 const GLOSS_FLOORS = new Set(['plank', 'check', 'marble', 'herring', 'parquet', 'tile', 'hex', 'mosaic']);
@@ -2996,7 +2997,13 @@ export function createHouseArt(ctx0, opts = {}) {
       parts: () => [F(0, 0, 2.0, 1.0, (T, o, t) => { T.box(0, 0, 0, 2.0, 1.0, 0.28, '#8A6A50'); T.poly([[0.08, 0.08, 0.281], [1.92, 0.08, 0.281], [1.92, 0.92, 0.281], [0.08, 0.92, 0.281]], (o.wet || 0) > 0.3 ? '#4A3426' : '#7A5E44');
         if (usingSlot(o.id + ':t')) { const [gx, gy] = T.W(1.0, 0.5); PFX.emit(o.id + ':splash', 'splash', o.level, gx, gy, 0.55, 1); }
         if (seasonIdx() === 3) { T.poly([[0.08, 0.08, 0.282], [1.92, 0.08, 0.282], [1.92, 0.92, 0.282], [0.08, 0.92, 0.282]], 'rgba(244,246,248,.9)'); return; }
-        const g = o.grow || 0; const stage = stageAt(g).name; const dead = !!o.dead; for (let k = 0; k < 6; k++) { const [sx, sy] = T.P(0.3 + (k % 3) * 0.7, 0.3 + Math.floor(k / 3) * 0.42, 0.29), hh = 4 + g * 18, sw = Math.sin(t * 2.2 + k * 0.9) * 2.2; limb(sx, sy, sx + sw, sy - hh, dead ? '#8A6A3A' : '#3F7D4E', 1.6); ell(sx - 3 + sw, sy - hh * 0.55, 3.5 + g * 2, 1.8 + g, dead ? '#9A7A44' : '#4F9460', null, -0.5); ell(sx + 3 + sw, sy - hh * 0.75, 3.5 + g * 2, 1.8 + g, dead ? '#A8864E' : '#5BA36C', null, 0.5); if (o.crop) { if (stage !== 'seed' && !dead) drawCrop(ctx, sx + sw, sy - hh, stage === 'final' ? 0.9 : 0.55, o.crop, Math.sin(t * 2.2 + k * 0.9) * 0.16); } else if (g >= 1) { circle(sx - 2 + sw, sy - hh * 0.45, 2.4, '#C2413A'); circle(sx + 3 + sw, sy - hh * 0.65, 2.2, k % 2 ? '#E0A43A' : '#C2413A'); } } })],
+        const g = o.grow || 0; const stage = stageAt(g).name; const dead = !!o.dead;
+        // A ground vine lies on the soil instead of standing up on stems.
+        // Ground crops (vines, roots, rosettes) lie on the soil instead of standing up on stems.
+        const groundForm = o.crop ? CROPS[o.crop]?.form : null;
+        const ground = groundForm === 'ground-vine' || groundForm === 'root' || groundForm === 'rosette';
+        if (ground) for (let k = 0; k < 6; k++) { const [vx, vy] = T.P(0.3 + (k % 3) * 0.7, 0.3 + Math.floor(k / 3) * 0.42, 0.29); drawGroundSpot(ctx, vx, vy, groundForm, o.crop, stage, dead, t, k); }
+        for (let k = 0; k < (ground ? 0 : 6); k++) { const [sx, sy] = T.P(0.3 + (k % 3) * 0.7, 0.3 + Math.floor(k / 3) * 0.42, 0.29), hh = 4 + g * 18, sw = Math.sin(t * 2.2 + k * 0.9) * 2.2; limb(sx, sy, sx + sw, sy - hh, dead ? '#8A6A3A' : '#3F7D4E', 1.6); ell(sx - 3 + sw, sy - hh * 0.55, 3.5 + g * 2, 1.8 + g, dead ? '#9A7A44' : '#4F9460', null, -0.5); ell(sx + 3 + sw, sy - hh * 0.75, 3.5 + g * 2, 1.8 + g, dead ? '#A8864E' : '#5BA36C', null, 0.5); if (o.crop) { if (stage !== 'seed' && !dead) drawCrop(ctx, sx + sw, sy - hh, stage === 'final' ? 0.9 : 0.55, o.crop, Math.sin(t * 2.2 + k * 0.9) * 0.16, stage); } else if (g >= 1) { circle(sx - 2 + sw, sy - hh * 0.45, 2.4, '#C2413A'); circle(sx + 3 + sw, sy - hh * 0.65, 2.2, k % 2 ? '#E0A43A' : '#C2413A'); } } })],
        },
     sprinkler: {    
       parts: () => [F(0, 0, 0.4, 0.4, (T, o, t) => { T.box(0.1, 0.1, 0, 0.2, 0.2, 0.1, '#4A88B8'); T.line([0.2, 0.2, 0.1], [0.2, 0.2, 0.3], '#9AA3A8', 2); const on = o.runUntil && absMin() < o.runUntil; if (on) { const [cx, cy] = T.P(0.2, 0.2, 0.3), sw = Math.sin(t * 2) * 0.9; ctx.strokeStyle = 'rgba(170,215,240,.55)'; ctx.lineWidth = 1.2; for (let k = -3; k <= 3; k++) { const a = sw + k * 0.12; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.quadraticCurveTo(cx + Math.sin(a) * 60, cy - 50, cx + Math.sin(a) * 95, cy + 18 + Math.cos(a) * 20); ctx.stroke(); } for (let k = 0; k < 14; k++) { const ph = (t * 1.2 + k / 14) % 1, a = sw + ((k % 7) - 3) * 0.12; circle(cx + Math.sin(a) * 95 * ph, cy - Math.sin(ph * Math.PI) * 50 + 18 * ph, 1.3, 'rgba(200,230,250,.8)'); } } })],
@@ -4166,7 +4173,9 @@ export function createHouseArt(ctx0, opts = {}) {
   for (let i = 0; i < 10; i++) for (let j = 0; j < 8; j++) YARD.tiles.push({ i, j, len: 0.3 + rand() * 0.15, water: 0.6 + rand() * 0.2, weed: 0, seed: rand(), burn: 0, mowedAt: -9999, leaves: 0, snow: 0 });
   const isPatio = (i, j) => i <= 2 && j >= 2 && j <= 4;
   const tileAt = (x, y) => YARD.tiles[Math.min(9, Math.max(0, Math.floor(x))) * 8 + Math.min(7, Math.max(0, Math.floor(y)))];
-  const raining = () => absMin() >= YARD.rainAt && absMin() < YARD.rainUntil;
+  // The weather comes in with every frame from the game's state (see state/weather.ts), so the art and the garden agree.
+  let weatherNow = { on: false, rainAt: 0, rainUntil: 0 };
+  const raining = () => absMin() >= weatherNow.rainAt && absMin() < weatherNow.rainUntil;
 
   function grassColor(t) {
     const w = Math.min(1, t.water * 1.4), dry = [194, 176, 96], wet = [94, 158, 69];
@@ -4205,7 +4214,7 @@ export function createHouseArt(ctx0, opts = {}) {
     back.filter(pl => pl !== 'L').forEach(pl => { const len = planeLen(pl); for (let u = 0; u <= len + 0.01; u += 0.2) poly([wallPoint(pl, u, 0), wallPoint(pl, u + 0.13, 0), wallPoint(pl, u + 0.13, 1.15), wallPoint(pl, u + 0.065, 1.25), wallPoint(pl, u, 1.15)], '#EFE6D8', 'rgba(0,0,0,.12)', 0.6); [0.3, 0.85].forEach(z => poly([wallPoint(pl, 0, z), wallPoint(pl, len, z), wallPoint(pl, len, z + 0.08), wallPoint(pl, 0, z + 0.08)], '#DCD2C2')); });
     drawWallLights(3);
   }
-  function drawRain() { if (!raining()) return; if (seasonIdx() === 3) { ctx.save(); for (let k = 0; k < 80; k++) { const x = ((k * 97.3 + Math.sin(animT + k) * 20 + animT * 8) % W + W) % W, y = ((k * 53.7 + animT * 30) % H); circle(x, y, 1.2 + (k % 3) * 0.5, 'rgba(255,255,255,.85)'); } ctx.restore(); return; } ctx.save(); ctx.strokeStyle = 'rgba(200,215,235,.55)'; ctx.lineWidth = 1; ctx.beginPath(); for (let k = 0; k < 90; k++) { const x = ((k * 97.3 + animT * 40) % W), y = ((k * 53.7 + animT * 420) % H); ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 10); } ctx.stroke(); ctx.restore(); }
+  function drawRain() { if (!raining()) return; if (weatherNow.snow ?? seasonIdx() === 3) { ctx.save(); for (let k = 0; k < 80; k++) { const x = ((k * 97.3 + Math.sin(animT + k) * 20 + animT * 8) % W + W) % W, y = ((k * 53.7 + animT * 30) % H); circle(x, y, 1.2 + (k % 3) * 0.5, 'rgba(255,255,255,.85)'); } ctx.restore(); return; } ctx.save(); ctx.strokeStyle = 'rgba(200,215,235,.55)'; ctx.lineWidth = 1; ctx.beginPath(); for (let k = 0; k < 90; k++) { const x = ((k * 97.3 + animT * 40) % W), y = ((k * 53.7 + animT * 420) % H); ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 10); } ctx.stroke(); ctx.restore(); }
 
   const video = { id: null, screen: null, theater: false, loaded: false };
 
@@ -5445,6 +5454,7 @@ export function createHouseArt(ctx0, opts = {}) {
   }
 
   function render(s) {
+    if (s.weather) weatherNow = s.weather;
     // What the household is doing to the house (the power, the dishes, the fridge) comes in with every frame, so the art never shows stale state.
     if (s.house) { power = s.house.power; dishes = s.house.dishes; laundryPile = s.house.laundryPile; fridge = s.house.fridge; parcel = s.house.parcel || null; if (s.house.owned) owned = s.house.owned; }
     sync(s);
@@ -5458,6 +5468,8 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.save();
     const lights = activeLights(lv);
     PFX.step(rdt, isOutdoor(lv) ? [0.16 + (raining() ? 0.2 : 0), 0.06] : [0.015, 0], tier() === 'low' ? 0.5 : 1);
+    // Winter snow builds up on the lawn while it snows, and only melts once spring comes.
+    if (isOutdoor(lv)) { const winter = seasonIdx() === 3; for (const tt of YARD.tiles) { const sn = tt.snow || 0; tt.snow = winter && raining() ? Math.min(1, sn + rdt * 0.05) : (seasonIdx() !== 3 ? Math.max(0, sn - rdt * 0.03) : sn); } }
     // Fall: leaves blow across the yard from the trees' side.
     if (isOutdoor(lv) && seasonIdx() === 2 && tier() !== 'low') {
       for (let i = 0; i < 3; i++) PFX.emit('leaves' + i, 'leaf', 3, 1 + i * 3.2, 0.6 + (i % 2) * 2.4, 2.2 + i * 0.3, 1);

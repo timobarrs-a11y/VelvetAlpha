@@ -1,7 +1,8 @@
 import { SAVE_KEY } from '../kernel/config';
 import { loadSave } from '../state/save';
 import { isCurrentContent, CONTENT_VERSION } from '../state/saveMigration';
-import { qualityManager } from '../engine/qualityTier';
+import { applyPlayerQuality } from '../engine/qualityTier';
+import { fpsOn, setFpsOn } from '../engine/fpsMeter';
 import { postToParent } from '../bridge/protocol';
 import { clockText, DAYS, weekday } from '../state/time';
 import { hasChoice, anyHouse, askWho, listenForCompanions, onCompanionsChanged } from '../bridge/companions';
@@ -18,7 +19,7 @@ import { CODE_QUEUE_KEY } from '../systems/codeQueue';
 
 export type LaunchChoice = 'continue' | 'new' | 'demo';
 
-const QUALITY = [['Auto', null], ['High', 'high'], ['Medium', 'medium'], ['Low', 'low']] as const;
+const QUALITY = [['Auto', 'auto'], ['High', 'high'], ['Medium', 'medium'], ['Low', 'low'], ['Ultra', 'ultra']] as const;
 const esc = (t: string): string => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 interface SaveSummary { day: number; when: string; money: number; names: string }
@@ -152,19 +153,24 @@ export function showMainMenu(): Promise<LaunchChoice> {
 
     const settings = (): void => {
       let idx = 0;
-      try { idx = Math.max(0, Math.min(3, Number(localStorage.getItem('velvet-quality')) || 0)); } catch { /* none */ }
+      try { idx = Math.max(0, Math.min(4, Number(localStorage.getItem('velvet-quality')) || 0)); } catch { /* none */ }
       root.innerHTML = `
         <div class="vh-menu-card">
           <h2 class="vh-menu-h">Settings</h2>
           <div class="vh-menu-row"><span>Graphics</span><div class="vh-menu-seg">${QUALITY.map(([label], i) => `<button data-q="${i}" aria-pressed="${i === idx}">${label}</button>`).join('')}</div></div>
           <p class="vh-menu-sub">Auto lowers the detail by itself if the game runs slowly. Pick Low on an older phone.</p>
+          <div class="vh-menu-row"><span>Frame rate</span><div class="vh-menu-seg"><button data-fps="0" aria-pressed="${!fpsOn()}">Hide</button><button data-fps="1" aria-pressed="${fpsOn()}">Show</button></div></div>
           <button class="vh-menu-btn vh-menu-primary" data-m="back"><span>Back</span></button>
         </div>`;
       root.querySelectorAll<HTMLButtonElement>('[data-q]').forEach((b) => b.addEventListener('click', () => {
         const i = Number(b.dataset.q);
         try { localStorage.setItem('velvet-quality', String(i)); } catch { /* none */ }
-        qualityManager.setPlayerOverride(QUALITY[i][1]);
+        applyPlayerQuality(QUALITY[i][1]);
         root.querySelectorAll('[data-q]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      }));
+      root.querySelectorAll<HTMLButtonElement>('[data-fps]').forEach((b) => b.addEventListener('click', () => {
+        setFpsOn(b.dataset.fps === '1');
+        root.querySelectorAll('[data-fps]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
       }));
       root.querySelector('[data-m=back]')?.addEventListener('click', home);
     };
