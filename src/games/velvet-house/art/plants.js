@@ -157,3 +157,18 @@ const FOLIAGE = { houseplant, fern, palm, fiddle, snake, cactus };
 
 /** The foliage of a kind of plant, drawn from the soil's centre. */
 export function drawFoliage(h, kind, sx, sy, t, seed) { (FOLIAGE[kind] || houseplant)(h, sx, sy, t, seed); }
+
+/**
+ * Draws a plant at a growth scale (0..1 of its full size). Every foliage function draws from the soil's centre, so one
+ * transform around the full drawing grows it from that point: no separate art for each stage.
+ */
+export function drawGrowingFoliage(h, kind, sx, sy, t, seed, grow) {
+  const g = Math.max(0.05, Math.min(1, grow));
+  const { ctx } = h;
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.scale(g, g);
+  ctx.translate(-sx, -sy);
+  drawFoliage(h, kind, sx, sy, t, seed);
+  ctx.restore();
+}
