@@ -103,6 +103,8 @@ export interface HouseArt {
   objectPlaced(id: string): void;
   /** A fruit tree was shaken: it shudders, and `fell` pieces of ripe fruit drop from it. */
   shakeTree(id: string, fell: number): void;
+  /** Whether someone is in the office's meeting room (the sign over its door lights up). */
+  setMeeting(on: boolean): void;
   /** Hangs a bought wall piece (a WTYPES key, e.g. 'print') on a back wall of the level; false if the type is unknown. */
   hangWallObj(level: number, type: string, col?: string, id?: string): boolean;
   /** Wall pieces in Arrange: those on a level (`shown` when the view's walls carry them), and every one in the house. */

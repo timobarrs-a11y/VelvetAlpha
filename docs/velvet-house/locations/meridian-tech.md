@@ -195,6 +195,14 @@ a small code overlay for the paper and the jam.
 The objective bar, the time-left text, the notices and the Orders and Goals rows come from the garden work (`growBar`, `treeEta`, the `timed` rows in the
 HUD). The objective timer is the same shape as `gardenTick`: a list of items with a state and a time, ticked with the game clock and saved with the house.
 
+## Status
+
+**Step 1 and a first slice of step 2 are built** (the level and its pieces, as set dressing): a level 5 scene called Office in `state/scenes.ts`, its walls, four windows,
+the whiteboard and the meeting door with its sign in `state/house.ts`, and nine pieces (desks, printer, cooler, cabinet, plant, counter, fridge, vending
+machine, table) in `state/objects.ts` and `art/houseArt.js`. It is hidden from the floor bar until `flags.officeUnlocked`, which the demo sets. The camera is locked to
+the one angle the room is designed for. The pieces have **no jobs yet**: no tap targets, no states, no people. A house saved before the office is given the pieces
+once on load (`kernel/config.ts`), with the content version unchanged.
+
 ## Build order (pieces first; scenarios last)
 
 Scenarios are built from the pieces, so they wait until the pieces exist. Each step is its own small change, checked in the real game on desktop and

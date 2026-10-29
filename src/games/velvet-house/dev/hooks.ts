@@ -21,6 +21,9 @@ export function installDevHooks(g: Game): void {
       setMinutes: (m: number) => { world.minutes = m; },
       // Jump to a day, so each season can be looked at (a week each: spring 1-7, summer 8-14, autumn 15-21, winter 22-28).
       setDay: (d: number) => { world.day = d; },
+      // The office: unlock it (it joins the floor bar), and light or clear the meeting-room sign.
+      unlockOffice: () => { g.flags.officeUnlocked = true; g.setLevel(view.level); },
+      setMeeting: (on: boolean) => art.setMeeting(on),
       // Set fields on a piece (a fruit tree's growth and fruit), to see its stages without waiting for them.
       patchObject: (id: string, patch: Record<string, unknown>) => { const o = world.objs.find((q) => q.id === id); if (o) Object.assign(o, patch); },
       // The game clock, as minutes since day 0 (does it run, or hold still?).

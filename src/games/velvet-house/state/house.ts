@@ -41,6 +41,7 @@ export const WH = 2.6;
 // Names, floor-bar order and the attic's level come from the scene list (state/scenes.ts).
 export const LEVEL_NAMES: readonly string[] = SCENES.map((s) => s.name);
 export const ATTIC = levelOfKind('attic');
+export const OFFICE = levelOfKind('workplace');
 export { FLOOR_ORDER };
 
 export const LEVELS: LevelDef[] = [
@@ -138,6 +139,21 @@ export const LEVELS: LevelDef[] = [
     ],
     rug: [0, 0, 0, 0],
     anchor: [5.0, 4.0],
+  },
+  {
+    // The office: one open floor. The meeting room is behind the back wall, through the door under the sign (the 'meetdoor').
+    rooms: [{ n: 'Office', r: [0, 0, 10, 8] }],
+    walls: [],
+    feats: [
+      { p: 'L', u: [0.9, 2.2], z: [0.9, 2.2], k: 'window' },
+      { p: 'L', u: [2.6, 3.9], z: [0.9, 2.2], k: 'window' },
+      { p: 'L', u: [4.3, 5.6], z: [0.9, 2.2], k: 'window' },
+      { p: 'L', u: [6.0, 7.3], z: [0.9, 2.2], k: 'window' },
+      { p: 'B', u: [4.7, 5.8], z: [0, 2.1], k: 'meetdoor' },
+      { p: 'B', u: [0.4, 2.3], z: [0.95, 2.15], k: 'whiteboard' },
+    ],
+    rug: [0, 0, 0, 0],
+    anchor: [5.2, 5.0],
   },
 ];
 

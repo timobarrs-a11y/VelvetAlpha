@@ -147,6 +147,16 @@ export const TYPES: Record<string, ObjectTypeDef> = {
     spots: { s: { stand: [0.9, 1.15], dir: [0, -1], tag: 'bar' } } },
   pool: { W: 3.2, D: 2.0, h: 0.2, fixed: true, name: 'Pool',
     spots: { w: { stand: [1.6, 2.45], pos: [1.6, 1.0, 0.0], dir: [0, 1], tag: 'swim', base: 'water' } } },
+  // The office's pieces (set dressing for now; each gets its job from the objectives, see docs/velvet-house/locations/meridian-tech.md).
+  officedesk: { W: 1.8, D: 1.8, h: 1.2, fixed: true, name: 'Office desk' },
+  officeprinter: { W: 1.6, D: 0.6, h: 1.25, fixed: true, name: 'Printer' },
+  officecooler: { W: 0.4, D: 0.4, h: 1.45, fixed: true, name: 'Water cooler' },
+  officecabinet: { W: 0.5, D: 0.6, h: 1.2, fixed: true, name: 'Filing cabinet' },
+  officeplant: { W: 0.5, D: 0.5, h: 1.2, fixed: true, name: 'Office plant' },
+  officecounter: { W: 2.2, D: 0.62, h: 1.3, fixed: true, name: 'Break room counter' },
+  officefridge: { W: 0.7, D: 0.7, h: 1.9, fixed: true, name: 'Office fridge' },
+  officevending: { W: 0.7, D: 0.7, h: 1.8, fixed: true, name: 'Vending machine' },
+  officetable: { W: 0.9, D: 0.9, h: 0.7, fixed: true, name: 'Break room table' },
   daybed: { W: 1.9, D: 0.9, h: 0.8, name: 'Guest daybed', store: true },
   snowman: { W: 0.6, D: 0.6, h: 1.4, name: 'Snowman' },
   bench: { W: 1.6, D: 0.6, h: 0.9, name: 'Garden bench', store: true,
@@ -367,6 +377,9 @@ export const STARTER_RUG_IDS = ['rug1', 'rug2'];
 /** The TV on the living room wall. A house saved while it was part of the wall gets it as a piece, once. */
 export const STARTER_TV_IDS = ['walltv'];
 
+/** The office's own pieces. A house saved before the office existed is given them once, so they are there when it is unlocked (see `kernel/config.ts`). */
+export const STARTER_OFFICE_IDS = ['off-desk1', 'off-desk2', 'off-desk3', 'off-desk4', 'off-desk5', 'off-printer', 'off-cooler', 'off-cabinet', 'off-plant', 'off-counter', 'off-fridge', 'off-vending', 'off-table'];
+
 export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'stair01', type: 'flightY', level: 0, x: 9.0, y: 0, rot: 0 },
   { id: 'tread', type: 'tread', level: 0, x: 1.2, y: 1.2, rot: 0 },
@@ -377,6 +390,21 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'laundry', type: 'laundry', level: 0, x: 1.4, y: 4.72, rot: 0 },
   { id: 'shelves', type: 'shelves', level: 0, x: 4.5, y: 5.4, rot: 1 },
   { id: 'boxes', type: 'boxes', level: 0, x: 2.4, y: 7.0, rot: 0 },
+  // The office (level 5). Desks in two columns along the window wall, the printer and the cooler on the back wall either side of the meeting door,
+  // the break room along the right.
+  { id: 'off-desk1', type: 'officedesk', level: 5, x: 0.5, y: 1.0, rot: 0 },
+  { id: 'off-desk2', type: 'officedesk', level: 5, x: 0.5, y: 2.8, rot: 0 },
+  { id: 'off-desk3', type: 'officedesk', level: 5, x: 0.5, y: 4.6, rot: 0 },
+  { id: 'off-desk4', type: 'officedesk', level: 5, x: 2.6, y: 2.8, rot: 0 },
+  { id: 'off-desk5', type: 'officedesk', level: 5, x: 2.6, y: 4.6, rot: 0 },
+  { id: 'off-printer', type: 'officeprinter', level: 5, x: 2.6, y: 0.1, rot: 0 },
+  { id: 'off-cooler', type: 'officecooler', level: 5, x: 6.15, y: 0.2, rot: 0 },
+  { id: 'off-cabinet', type: 'officecabinet', level: 5, x: 0.2, y: 7.2, rot: 0 },
+  { id: 'off-plant', type: 'officeplant', level: 5, x: 5.2, y: 6.6, rot: 0 },
+  { id: 'off-counter', type: 'officecounter', level: 5, x: 7.2, y: 0.1, rot: 0 },
+  { id: 'off-fridge', type: 'officefridge', level: 5, x: 9.2, y: 0.1, rot: 0 },
+  { id: 'off-vending', type: 'officevending', level: 5, x: 9.2, y: 1.3, rot: 0 },
+  { id: 'off-table', type: 'officetable', level: 5, x: 7.9, y: 2.7, rot: 0 },
   { id: 'tree', type: 'tree', level: 3, x: 7.6, y: 0.5, rot: 0 },
   { id: 'garden', type: 'garden', level: 3, x: 3.6, y: 0.35, rot: 0, grow: 0.35, wet: 0.6 },
   { id: 'sprinkler', type: 'sprinkler', level: 3, x: 5.6, y: 4.4, rot: 0 },

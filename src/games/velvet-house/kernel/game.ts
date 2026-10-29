@@ -119,6 +119,8 @@ export interface Game {
   art: ReturnType<typeof createHouseArt>;
   pictureThumbs: Record<string, string>;
   hasAttic: () => boolean;
+  /** Whether the office has been unlocked (it is in the floor bar once it has). */
+  hasOffice: () => boolean;
   storage: ObjectInstance[];
   townSign: HTMLElement;
   drawer: ReturnType<typeof createDrawer>;
@@ -324,6 +326,9 @@ export function createGame(app: HTMLElement): Game | null {
   // The house's rugs and its TV are pieces now (a new game starts with them; an older save was given them on load): never add them again.
   flags.rugObjects = true;
   flags.tvObject = true;
+  flags.officeObjects = true;
+  // The office stays out of the floor bar until the player first takes control of a workday; the demo shows it straight away.
+  if (IS_DEMO && flags.officeUnlocked === undefined) flags.officeUnlocked = true;
   if (!flags.settleSeen) flags.settleSeen = [];
   if (!flags.styledSet) flags.styledSet = [];
   if (!flags.lifeStep) flags.lifeStep = 0;
@@ -399,6 +404,7 @@ export function createGame(app: HTMLElement): Game | null {
 
   // The attic exists once its stairs have been built.
   const hasAttic = (): boolean => world.objs.some(o => o.id === ATTIC_STAIR_OBJS[0].id);
+  const hasOffice = (): boolean => !!flags.officeUnlocked;
 
   // Test pages start paused so screenshots are the same every time.
   if (import.meta.env.DEV && new URLSearchParams(location.search).has('freeze')) view.paused = true;
@@ -420,6 +426,6 @@ export function createGame(app: HTMLElement): Game | null {
   return {
     app, world, save, simName, partnerName, townName, people, house, rng, rngSeed, view, s,
     owned, closet, flags, style, tasteNorm, coreMem, memories, pastMem, memStore, companionCfg,
-    log, logEntries, logEl, canvas, ctx, stage, el, btn, personEl, art, pictureThumbs, hasAttic,
+    log, logEntries, logEl, canvas, ctx, stage, el, btn, personEl, art, pictureThumbs, hasAttic, hasOffice,
   } as unknown as Game;
 }

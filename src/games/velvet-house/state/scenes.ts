@@ -5,7 +5,7 @@
  * `level` is the scene's number everywhere else in the game (objects, people and saves carry it), so each scene's
  * index in SCENES is its level. Add new scenes at the end.
  */
-export type SceneKind = 'interior' | 'attic' | 'yard';
+export type SceneKind = 'interior' | 'attic' | 'yard' | 'workplace';
 
 export interface SceneDef {
   /** Stable name for scripts and saves. */
@@ -29,6 +29,9 @@ export const SCENES: SceneDef[] = [
   { id: 'upstairs', level: 2, name: 'Upstairs', kind: 'interior', slot: 2, outdoor: false, paintable: true },
   { id: 'yard', level: 3, name: 'Backyard', kind: 'yard', slot: 4, outdoor: true, paintable: false },
   { id: 'attic', level: 4, name: 'Attic', kind: 'attic', slot: 3, outdoor: false, paintable: true, builtBy: 'upgrade-attic' },
+  // The office (see docs/velvet-house/locations/meridian-tech.md): unlocked the first time the player takes control of a workday, so it is
+  // hidden from the floor bar until then (flags.officeUnlocked). Not paintable: it is somebody else's building.
+  { id: 'office', level: 5, name: 'Office', kind: 'workplace', slot: 5, outdoor: false, paintable: false },
 ];
 
 export const LEVEL_COUNT = SCENES.length;

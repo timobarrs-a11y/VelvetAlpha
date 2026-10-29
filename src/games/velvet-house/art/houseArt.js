@@ -13,7 +13,7 @@ import { isOutdoor } from '../state/scenes';
 import { rand } from '../state/rng';
 import { createFabric } from './fabric.js';
 import { SLEEVE_BY_CUT } from '../state/garment';
-import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR } from '../state/house';
+import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR, OFFICE } from '../state/house';
 import { stageAt } from '../state/plantGrowth';
 import { drawCrop, drawGroundSpot } from './cropArt.js';
 import { createWeatherFx, hull } from './weatherFx.js';
@@ -153,10 +153,11 @@ export function createHouseArt(ctx0, opts = {}) {
   function baseDarkness() { return darknessAt(hour(), seasonIdx()); }
   function skyColor() { const h = hour(); if (raining() && darkness() < 0.3) return seasonIdx() === 3 ? '#D2D8E0' : '#9AA6B5'; if (darkness() > 0.3) return '#2A2F55'; if (h >= 17.5 && h < 21) return '#F0B98E'; if (h < 7.5) return '#E9C7B5'; return '#BFE2F0'; }
 
-  const LOOKS = [{ paint: '#B9B4AF', paper: 'block', floor: 'concrete' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#D9CDBD', paper: null, floor: 'wood' }, { paint: '#E4D6C2', paper: 'shiplap', floor: 'wood' }];
+  const LOOKS = [{ paint: '#B9B4AF', paper: 'block', floor: 'concrete' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#D9CDBD', paper: null, floor: 'wood' }, { paint: '#E4D6C2', paper: 'shiplap', floor: 'wood' }, { paint: '#E4DFD6', paper: null, floor: 'office' }];
   const FLOORS = {
     wood: { kind: 'plank', a: '#C9A27A', b: '#C09670', line: 'rgba(90,60,30,.22)' },
     concrete: { kind: 'flat', a: '#A7A29D', b: '#A7A29D', line: 'rgba(0,0,0,.06)' },
+    office: { kind: 'check', a: '#9AA3AE', b: '#929BA7', line: 'rgba(0,0,0,.05)' },
     tile: { kind: 'check', a: '#ECE7E1', b: '#D6CFC6', line: 'rgba(0,0,0,.07)' },
     carpet: { kind: 'flat', a: '#8E9C96', b: '#8E9C96', line: 'rgba(0,0,0,.03)' },
     walnut: { kind: 'plank', a: '#6B4A35', b: '#634330', line: 'rgba(0,0,0,.25)' },
@@ -269,7 +270,7 @@ export function createHouseArt(ctx0, opts = {}) {
     'velvet-tuft': { pat: 'tuft', base: '#6E3C50', ink: 'rgba(0,0,0,.25)' }, blossom: { pat: 'blossom', base: '#F7EEE6' }, palms: { pat: 'palms', base: '#D7EDE4' }, leaves: { pat: 'leaves', base: '#F3E6D0' }, snow: { pat: 'snow', base: '#D9E6F2' }, 'sunset-mural': { pat: 'sunset' }, cork: { pat: 'cork', base: '#B88B5A', ink: 'rgba(80,50,25,.4)' }
   };
   // rooms can override their floor's paint, wallpaper and floor
-  const ROOMLOOK = [{}, {}, {}, {}, {}];
+  const ROOMLOOK = [{}, {}, {}, {}, {}, {}];
   const lookAt = (level, room) => (room && ROOMLOOK[level][room] ? Object.assign({}, LOOKS[level], ROOMLOOK[level][room]) : LOOKS[level]);
   const toneOf = (lk) => { const pp = lk.paper && PAPERS[lk.paper]; return (pp && pp.base) || lk.paint; };
   const wallTone = (level, room) => toneOf(lookAt(level, room));
@@ -2644,6 +2645,8 @@ export function createHouseArt(ctx0, opts = {}) {
   const fallers = (bx, by, n, col, spread, top, t, r = 2) => { for (let k = 0; k < n; k++) { const ph = (t * 0.22 + scatter(k, 5)) % 1; circle(bx - spread + scatter(k, 1) * spread * 2 + Math.sin(t + k) * 8, by - top + ph * top, r, col); } };
   // A tree that has just been shaken: when, and how many pieces of fruit fell, so they can be shown dropping.
   const SHAKES = new Map();
+  // Whether someone is in the meeting room right now (the sign over the door lights up).
+  let officeMeeting = false;
   const treeAt = (kind, cx, cy, drift) => (T, o, t) => {
     const [bx, by] = T.P(cx, cy, 0), season = seasonIdx(), fruity = !!STATE_TYPES[o.type] && ['treeapple', 'treecherry', 'treepalm'].includes(o.type), sk = SHAKES.get(o.id);
     drawTree(ctx, kind, bx, by, t, { season, snowy: treeSnow(), variant: idHash(o.id) % 3, scale: cv.width / W,
@@ -3021,6 +3024,26 @@ export function createHouseArt(ctx0, opts = {}) {
     treewillow: { parts: () => [F(0.2, 0.2, 1.6, 1.6, treeAt('willow', 0.9, 0.9, { 2: ['#D8B442', 8, 70, 90] }))] },
     treepalm: { parts: () => [F(0.2, 0.2, 1.0, 1.0, treeAt('palm', 0.6, 0.6))] },
     treeapple: { parts: () => [F(0.2, 0.2, 1.0, 1.0, treeAt('apple', 0.6, 0.6, { 0: ['#FBF3F5', 8, 34, 60], 2: ['#B6A23A', 4, 34, 60] }))] },
+    // ---- the office ----
+    officedesk: {
+      parts: () => [B(0, 0, 0, 1.8, 1.0, 0.72, '#C8B79B'), B(0, 0, 0.72, 1.8, 0.07, 0.75, '#8E98A6'),
+        B(0.7, 0.25, 0.72, 0.5, 0.06, 0.4, '#2B2F38'), B(0.7, 0.62, 0.72, 0.5, 0.18, 0.04, '#3A3F4A'), B(0.2, 0.3, 0.72, 0.28, 0.2, 0.01, '#E8E2D6'),
+        B(0.62, 1.15, 0, 0.55, 0.55, 0.45, '#3A4150'), B(0.62, 1.15, 0.45, 0.55, 0.08, 0.5, '#3A4150')],
+    },
+    officeprinter: {
+      parts: () => [B(0, 0, 0, 1.6, 0.6, 0.8, '#C9C3B8'), B(0.3, 0.08, 0.8, 1.0, 0.46, 0.4, '#F1EEE8'), B(0.38, 0.14, 1.2, 0.84, 0.26, 0.03, '#6E7686')],
+    },
+    officecooler: {
+      parts: () => [B(0, 0, 0, 0.4, 0.4, 0.9, '#E8EEF2'), B(0.05, 0.05, 0.9, 0.3, 0.3, 0.55, '#7FC0E6')],
+    },
+    officecabinet: { parts: () => [B(0, 0, 0, 0.5, 0.6, 1.2, '#8E98A6')] },
+    officeplant: { parts: () => [B(0.05, 0.05, 0, 0.4, 0.4, 0.32, '#B07A55'), B(0.1, 0.1, 0.32, 0.3, 0.3, 0.8, '#3F7A4A')] },
+    officecounter: {
+      parts: () => [B(0, 0, 0, 2.2, 0.62, 0.9, '#C9C3B8'), B(0.2, 0.08, 0.9, 0.5, 0.4, 0.4, '#2B2F38')],
+    },
+    officefridge: { parts: () => [B(0, 0, 0, 0.7, 0.7, 1.9, '#E8EEF2')] },
+    officevending: { parts: () => [B(0, 0, 0, 0.7, 0.7, 1.8, '#2F5FA8'), B(0.05, 0.62, 0.9, 0.6, 0.06, 0.7, '#CFE4F0')] },
+    officetable: { parts: () => [B(0, 0, 0, 0.9, 0.9, 0.7, '#C8B79B')] },
     garden: {    
       parts: () => [F(0, 0, 2.0, 1.0, (T, o, t) => { T.box(0, 0, 0, 2.0, 1.0, 0.28, '#8A6A50'); T.poly([[0.08, 0.08, 0.281], [1.92, 0.08, 0.281], [1.92, 0.92, 0.281], [0.08, 0.92, 0.281]], (o.wet || 0) > 0.3 ? '#4A3426' : '#7A5E44');
         if (usingSlot(o.id + ':t')) { const [gx, gy] = T.W(1.0, 0.5); PFX.emit(o.id + ':splash', 'splash', o.level, gx, gy, 0.55, 1); }
@@ -3884,6 +3907,22 @@ export function createHouseArt(ctx0, opts = {}) {
     const P = (u, z) => wallPoint(f.p, u, z);
     if (f.k === 'window') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.08), skyColor()); gMat = MATERIAL.matte; if (raining()) glassDrops(f, 0.08); const mu = (f.u[0] + f.u[1]) / 2, mz = (f.z[0] + f.z[1]) / 2; line3(P(mu, f.z[0] + 0.08), P(mu, f.z[1] - 0.08), '#F7F3EE', 2); line3(P(f.u[0] + 0.08, mz), P(f.u[1] - 0.08, mz), '#F7F3EE', 2); if (LOOKS[level] && LOOKS[level].drapes) drawDrapes(level, f, LOOKS[level].drapes); }
     else if (f.k === 'highwin') { poly(featPoly(f), '#E9E4DD', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.06), skyColor()); gMat = MATERIAL.matte; }
+    else if (f.k === 'meetdoor') {
+      // The meeting room is behind this door, under the company sign. Nothing inside is ever drawn: people walk to it and go out of sight. The sign
+      // glows red and reads IN A MEETING while someone is in there.
+      const on = !!officeMeeting;
+      poly([P(f.u[0] - 0.12, 0), P(f.u[1] + 0.12, 0), P(f.u[1] + 0.12, f.z[1] + 0.12), P(f.u[0] - 0.12, f.z[1] + 0.12)], '#F4F1EA', EDGE, 0.8);
+      poly(featPoly(f), '#7A5A3C'); poly(featPoly(f, 0.1), '#8A6A48');
+      const [kx, ky] = iso(...P(f.u[1] - 0.18, 1.0)); circle(kx, ky, 2, '#D8C27A');
+      const sz = [f.z[1] + 0.18, f.z[1] + 0.5], su = [f.u[0] - 0.5, f.u[1] + 0.5];
+      poly([P(su[0], sz[0]), P(su[1], sz[0]), P(su[1], sz[1]), P(su[0], sz[1])], on ? '#C2413A' : '#2F5FA8', '#1B2A4A', 1);
+      const [tx, ty] = iso(...P((su[0] + su[1]) / 2, (sz[0] + sz[1]) / 2)); ctx.save(); ctx.translate(tx, ty); ctx.transform(1, 0.5, 0, 1, 0, 0); ctx.fillStyle = '#FFFFFF'; ctx.font = '700 7.5px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(on ? 'IN A MEETING' : 'MERIDIAN', 0, 3); ctx.restore();
+    }
+    else if (f.k === 'whiteboard') {
+      poly(featPoly(f), '#F6F6F2', '#8E98A6', 1.4);
+      line3(P(f.u[0] + 0.25, f.z[1] - 0.3), P(f.u[0] + 1.1, f.z[1] - 0.3), '#2F5FA8', 1.2); line3(P(f.u[0] + 0.25, f.z[1] - 0.55), P(f.u[0] + 1.5, f.z[1] - 0.55), '#C2413A', 1.2); line3(P(f.u[0] + 0.25, f.z[1] - 0.8), P(f.u[0] + 0.9, f.z[1] - 0.8), '#3F7A4A', 1.2);
+      poly([P(f.u[0] - 0.03, f.z[0] - 0.03), P(f.u[1] + 0.03, f.z[0] - 0.03), P(f.u[1] + 0.03, f.z[0] + 0.03), P(f.u[0] - 0.03, f.z[0] + 0.03)], '#8E98A6');
+    }
     else if (f.k === 'door') { poly([P(f.u[0] - 0.08, 0), P(f.u[1] + 0.08, 0), P(f.u[1] + 0.08, f.z[1] + 0.05), P(f.u[0] - 0.08, f.z[1] + 0.05)], '#EFE8DE', EDGE, 0.8); poly(featPoly(f), '#7A5236'); poly([P(f.u[0] + 0.1, 1.15), P(f.u[1] - 0.1, 1.15), P(f.u[1] - 0.1, 1.9), P(f.u[0] + 0.1, 1.9)], null, 'rgba(0,0,0,.25)', 1); poly([P(f.u[0] + 0.1, 0.2), P(f.u[1] - 0.1, 0.2), P(f.u[1] - 0.1, 0.95), P(f.u[0] + 0.1, 0.95)], null, 'rgba(0,0,0,.25)', 1); const [kx, ky] = iso(...P(f.u[0] + 0.15, 1.02)); circle(kx, ky, 2, '#E0B85A'); }
     else if (f.k === 'switch') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); const mid = (f.u[0] + f.u[1]) / 2; poly(party ? [P(mid - 0.03, 1.11), P(mid + 0.03, 1.11), P(mid + 0.03, 1.19), P(mid - 0.03, 1.19)] : [P(mid - 0.03, 1.03), P(mid + 0.03, 1.03), P(mid + 0.03, 1.11), P(mid - 0.03, 1.11)], party ? '#D24A7A' : '#9C9298'); }
     else if (f.k === 'art') {
@@ -4045,7 +4084,8 @@ export function createHouseArt(ctx0, opts = {}) {
   const isLit = (key) => (LA[key] || 0) > 0.35;
   const lightCv = document.createElement('canvas'), lctx = lightCv.getContext('2d');
 
-  function levelDark(level) { return Math.min(level === 0 ? 0.7 : 0.62, darkness() + (level === 0 ? 0.32 : 0) + (!power && !isOutdoor(level) ? 0.1 : 0) + (isOutdoor(level) && raining() ? 0.08 : 0)); }
+  // An office keeps its lights on: at night it is only a little dimmer, with the dark showing in the windows.
+  function levelDark(level) { if (level === OFFICE) return darkness() * 0.3; return Math.min(level === 0 ? 0.7 : 0.62, darkness() + (level === 0 ? 0.32 : 0) + (!power && !isOutdoor(level) ? 0.1 : 0) + (isOutdoor(level) && raining() ? 0.08 : 0)); }
   function wantLight(level, room, night, amb) {
     if (!power || levelDark(level) < 0.05) return 0;
     const now = absMin(), h = hour(), k = level + ':' + room;
@@ -6075,5 +6115,6 @@ export function createHouseArt(ctx0, opts = {}) {
 
   // Shake a tree: it shudders, and what was ripe on it drops, bounces and is gone.
   function shakeTree(id, fell) { SHAKES.set(id, { t0: animT, n: fell }); }
-  return { shakeTree, render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, roomLook, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
+  const setMeeting = (on) => { officeMeeting = !!on; };
+  return { setMeeting, shakeTree, render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, roomLook, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
 }
