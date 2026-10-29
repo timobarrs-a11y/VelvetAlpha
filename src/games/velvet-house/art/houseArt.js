@@ -17,6 +17,7 @@ import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR } from '../state/house';
 import { stageAt } from '../state/plantGrowth';
 import { drawCrop, drawGroundSpot } from './cropArt.js';
 import { createWeatherFx, hull } from './weatherFx.js';
+import { drawTownGround, drawPlot, drawTownFront } from '../../../features/velvet-world/art/streetArt.js';
 const wfx = createWeatherFx();
 import { CROPS } from '../state/crops';
 import { defaultWallLamps, lampRoom } from '../state/wallLamps';
@@ -4219,6 +4220,20 @@ export function createHouseArt(ctx0, opts = {}) {
     back.filter(pl => pl !== 'L').forEach(pl => { const len = planeLen(pl); for (let u = 0; u <= len + 0.01; u += 0.2) poly([wallPoint(pl, u, 0), wallPoint(pl, u + 0.13, 0), wallPoint(pl, u + 0.13, 1.15), wallPoint(pl, u + 0.065, 1.25), wallPoint(pl, u, 1.15)], '#EFE6D8', 'rgba(0,0,0,.12)', 0.6); [0.3, 0.85].forEach(z => poly([wallPoint(pl, 0, z), wallPoint(pl, len, z), wallPoint(pl, len, z + 0.08), wallPoint(pl, 0, z + 0.08)], '#DCD2C2')); });
     drawWallLights(3);
   }
+  // The street and the two neighbouring lots, in the yard's own screen space (the street module uses the same isometric
+  // formula, so translating by the yard's origin lines the street up with the lot).
+  function drawBackdrop() {
+    const env = { season: ['spring', 'summer', 'autumn', 'winter'][seasonIdx()], hour: hour(), night: darkness(), reducedMotion: false, zoom: 1 };
+    const plotAt = (id, x) => ({ id, member: false, origin: { x, y: 0 }, config: {}, profile: { name: '', earned: [] } });
+    const left = plotAt('nb-left', -WX), right = plotAt('nb-right', WX);
+    ctx.save();
+    ctx.translate(OX, OY);
+    drawTownGround(ctx, 1, env, { t: animT }, 0);
+    drawPlot(ctx, left, 0, 'back', env); drawPlot(ctx, right, 1, 'back', env);
+    drawPlot(ctx, left, 0, 'front', env); drawPlot(ctx, right, 1, 'front', env);
+    drawTownFront(ctx, 1, env, { t: animT });
+    ctx.restore();
+  }
   // How many drops the quality tier allows, scaled by how heavy the rain is (light, medium, heavy).
   function dropCaps() {
     const base = tier() === 'high' ? { rain: 700, snow: 500 } : tier() === 'medium' ? { rain: 400, snow: 300 } : { rain: 200, snow: 150 };
@@ -5482,6 +5497,8 @@ export function createHouseArt(ctx0, opts = {}) {
     if (watcher) tvWatchLevel = watcher.level;
     tvF += ((power && watcher ? 1 : 0) - tvF) * Math.min(1, rdt * 4);
     ctx.clearRect(0, 0, W, H);
+    // Outside, the lot sits in its neighbourhood: the street and the neighbours' houses are drawn first, behind the yard.
+    if (isOutdoor(lv)) drawBackdrop();
     ctx.save();
     const lights = activeLights(lv);
     PFX.step(rdt, isOutdoor(lv) ? [0.16 + (raining() ? 0.2 : 0), 0.06] : [0.015, 0], tier() === 'low' ? 0.5 : 1);
