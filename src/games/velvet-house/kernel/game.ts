@@ -385,7 +385,8 @@ export function createGame(app: HTMLElement): Game | null {
   art.applySave(save);
   const savedMode = (save as { wallMode?: string })?.wallMode;
   const view = {
-    level: 1,
+    // The demo opens in the backyard, where the garden is.
+    level: IS_DEMO && !save ? 3 : 1,
     rot: 0,
     // No save yet: walls down, so nothing in the house is hidden behind a wall on the first day.
     wallIdx: Math.max(0, WALL_MODES.findIndex((w) => w.mode === (savedMode ?? 'down'))),
@@ -408,7 +409,8 @@ export function createGame(app: HTMLElement): Game | null {
     wardrobe: null as Wardrobe | null,
     wornHat: 'none',
     lifeGoal: typeof save?.lifeGoal === 'string' ? save!.lifeGoal : null,
-    settleDone: typeof save?.settleDone === 'boolean' ? save!.settleDone : false,
+    // The demo starts settled: the story and its goals are skipped.
+    settleDone: IS_DEMO ? true : typeof save?.settleDone === 'boolean' ? save!.settleDone : false,
     chatTurns: Array.isArray(save?.turns) ? [...save!.turns as ChatTurn[]] : [],
     sample: null as SampleFn | null,
     chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, plot: null, voice: voiceFrom(save?.voice), skipping: false, scriptMode: null, scriptAllow: [], storyCard: false, hostReady: { profile: false, plot: false },
