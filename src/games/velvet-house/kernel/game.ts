@@ -156,6 +156,9 @@ export interface Game {
   selectObject(o: ObjectInstance | null): void;
   commitMove(o: ObjectInstance, verb?: string): void;
   rotateSelected(): void;
+  /** Arrange: set the selected piece against the nearest wall (again to free it), and slide it along the wall (-1 toward the screen's left, 1 toward its right). */
+  toggleWallSnap(): void;
+  slideAlongWall(side: number): void;
   tryDevMoney(text: string): boolean;
   tryUnlock(text: string): boolean;
   /** Hang a bought wall lamp (or keep it in storage when no wall is free). */

@@ -36,6 +36,8 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onPage: (pg) => { g.scriptEmit({ type: 'tab.opened', tab: pg }); if (pg === 'arrange') g.enterArrange(); else if (g.isArranging()) g.exitArrange(); g.studioPage?.(pg); },
     onArrangePick: (id) => { const o = world.objs.find(q => q.id === id); if (o) g.selectObject(o); else if (id.startsWith('wall-')) g.selectWall(id); },
     onArrangeRotate: () => g.rotateSelected(),
+    onArrangeWall: () => g.toggleWallSnap(),
+    onArrangeSlide: (side) => g.slideAlongWall(side),
     onArrangeSet: () => g.setDown(),
     onArrangeBack: () => g.putBack(),
     onArrangeColour: () => g.recolourHeld(),

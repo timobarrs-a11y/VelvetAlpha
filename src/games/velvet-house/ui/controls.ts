@@ -124,6 +124,8 @@ export function createControls(g: Game): Partial<Game> {
       if (e.key === 'c' || e.key === 'C') { g.recolourHeld(); }
       if (e.key === 'Enter') { g.setDown(); e.preventDefault(); }
       if (e.key === 'Escape') g.escapeArrange();
+      if (e.key === 'ArrowLeft') { g.slideAlongWall(-1); e.preventDefault(); }
+      if (e.key === 'ArrowRight') { g.slideAlongWall(1); e.preventDefault(); }
     }
   });
   syncControls();

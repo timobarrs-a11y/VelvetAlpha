@@ -243,17 +243,17 @@ export function snapEdges(objs: ObjectInstance[], o: ObjectInstance, reach = 0.3
 export interface WallSnap { x: number; y: number; rot: number; axis: 'x' | 'y'; lo: number; hi: number }
 
 /**
- * The nearest wall of the piece's floor (its outer edge, or one inside the house) and the pose that sets the piece's back against it,
+ * Every wall of the piece's floor, nearest first, (its outer edge, or one inside the house) and the pose that sets the piece's back against it,
  * turned to face into the room, keeping its place along the wall where it can. A piece set on a surface, a rug or a mounted piece
  * has no wall to stand against; so does one longer than every wall near it. `o` is left as it was.
  */
-export function snapToWall(objs: ObjectInstance[], o: ObjectInstance): WallSnap | null {
+export function wallSnaps(objs: ObjectInstance[], o: ObjectInstance): WallSnap[] {
   const t = TYPES[o.type];
-  if (!t || o.on || isRug(o.type) || isMount(o.type) || t.small) return null;
+  if (!t || o.on || isRug(o.type) || isMount(o.type) || t.small) return [];
   void objs;
   const m = margin(o.level), rot0 = o.rot, x0 = o.x, y0 = o.y;
   const cx = x0 + footprint(o)[0] / 2, cy = y0 + footprint(o)[1] / 2;
-  let best: (WallSnap & { cost: number }) | null = null;
+  const found: Array<WallSnap & { cost: number }> = [];
   const consider = (rot: number, perp: 'x' | 'y', at: number, from: number, to: number): void => {
     // Rot 0 has its back at low y, 1 at high x, 2 at high y, 3 at low x (as `backToWall` reads it).
     o.rot = rot;
@@ -264,7 +264,7 @@ export function snapToWall(objs: ObjectInstance[], o: ObjectInstance): WallSnap 
     const here = perp === 'y' ? x0 : y0, along = Math.min(top, Math.max(lo, Math.round(here * 4) / 4));
     const x = perp === 'y' ? along : at, y = perp === 'y' ? at : along;
     const cost = Math.hypot(x + fw / 2 - cx, y + fd / 2 - cy);
-    if (!best || cost < best.cost) best = { x, y, rot, axis: perp === 'y' ? 'x' : 'y', lo, hi: top, cost };
+    found.push({ x, y, rot, axis: perp === 'y' ? 'x' : 'y', lo, hi: top, cost });
   };
   const spanX: [number, number] = [m.lo, WX - m.hi], spanY: [number, number] = [m.lo, WY - m.hi];
   consider(0, 'y', m.lo, spanX[0], spanX[1]);
@@ -281,10 +281,13 @@ export function snapToWall(objs: ObjectInstance[], o: ObjectInstance): WallSnap 
     }
   }
   o.rot = rot0; o.x = x0; o.y = y0;
-  if (!best) return null;
-  const { cost, ...snap } = best as WallSnap & { cost: number };
-  void cost;
-  return snap;
+  found.sort((p, q) => p.cost - q.cost);
+  return found.map(({ cost, ...snap }) => (void cost, snap));
+}
+
+/** The nearest wall to set the piece against, or null when it has none (see `wallSnaps`). */
+export function snapToWall(objs: ObjectInstance[], o: ObjectInstance): WallSnap | null {
+  return wallSnaps(objs, o)[0] ?? null;
 }
 
 /** Move a piece set against a wall to `v` along it (a quarter tile at a time), keeping it on the wall's run. */

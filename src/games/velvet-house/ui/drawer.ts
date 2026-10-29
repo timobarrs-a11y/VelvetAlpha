@@ -27,6 +27,8 @@ export interface DrawerCallbacks {
   // Arrange mode's list: pick a piece, or act on the selected one.
   onArrangePick?: (id: string) => void;
   onArrangeRotate?: () => void;
+  onArrangeWall?: () => void;
+  onArrangeSlide?: (side: number) => void;
   onArrangeSet?: () => void;
   onArrangeBack?: () => void;
   onArrangeColour?: () => void;
@@ -106,6 +108,9 @@ export interface ArrangeState {
     name: string;
     where: string;
     canColour: boolean;
+    /** It can be set against a wall; `onWall` when it is, and then it slides along the wall. */
+    canWall?: boolean;
+    onWall?: boolean;
     // The looks it can wear (the stock one and the ones bought); empty when there is nothing to choose.
     looks: Array<{ id: string; name: string; active: boolean }>;
     // Floors it can be carried to.
@@ -180,6 +185,7 @@ const ARR_ICON = {
   back: ico('<path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12"/>'),
   colour: ico('<path d="M12 3.5s6 6.2 6 10.5a6 6 0 0 1-12 0c0-4.3 6-10.5 6-10.5z"/>'),
   look: ico('<path d="m12 3 2.4 5 5.6.8-4 3.9.9 5.5L12 15.5 7.1 18.2 8 12.7 4 8.8l5.6-.8z"/>'),
+  wall: ico('<path d="M4 4v16"/><rect x="7" y="8" width="10" height="8" rx="1.5"/><path d="M20 12h-1.5"/>'),
   hand: ico('<path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1.5A5.5 5.5 0 0 1 6 17.5L4.5 13.5a1.5 1.5 0 0 1 2.6-1.4L9 14.5"/>'),
 };
 
@@ -336,7 +342,8 @@ export function createDrawer(cb: DrawerCallbacks): {
           <div class="vh-arr-what"><strong>${esc(sel.name)}</strong><small>${esc(sel.where)}</small></div>
           <div class="vh-arr-acts">
             ${sel.wall ? `<button data-arr="takedown" title="Take it down: it goes to storage">${ARR_ICON.store}<span>Take it down</span></button>` : `<button data-arr="set" class="vh-arr-primary" title="Set it down (Enter)">${ARR_ICON.set}<span>Set it down</span></button>
-            <button data-arr="rotate" title="Turn it (R)">${ARR_ICON.rotate}<span>Rotate</span></button>`}
+            <button data-arr="rotate" title="Turn it (R)">${ARR_ICON.rotate}<span>Rotate</span></button>
+            ${sel.canWall ? `<button data-arr="wall" aria-pressed="${!!sel.onWall}" title="${sel.onWall ? 'Let it go from the wall' : 'Set it against the nearest wall, then slide it along'}">${ARR_ICON.wall}<span>${sel.onWall ? 'Free it' : 'Snap to wall'}</span></button>` : ''}`}
             ${sel.loose ? `<button data-arr="back" title="Put it back where it was (Esc)">${ARR_ICON.back}<span>Put it back</span></button>` : ''}
             ${sel.canColour ? `<button data-arr="colour" title="Change colour (C)">${ARR_ICON.colour}<span>Colour</span></button>` : ''}
             ${sel.canStore ? `<button data-arr="store" title="Put it in storage">${ARR_ICON.store}<span>Store</span></button>` : ''}
@@ -344,6 +351,7 @@ export function createDrawer(cb: DrawerCallbacks): {
           </div>
           </div>
           ${sel.looks.length > 1 ? `<div class="vh-arr-looks"><span>${ARR_ICON.look}Look</span>${sel.looks.map(l => `<button data-arr-look="${esc(l.id)}" aria-pressed="${l.active}">${esc(l.name)}</button>`).join('')}</div>` : ''}
+          ${sel.onWall ? `<div class="vh-arr-floors vh-arr-slide"><span>Along the wall</span><button data-arr="slide-l" title="Slide left (Left arrow)" aria-label="Slide left">&#9664;</button><button data-arr="slide-r" title="Slide right (Right arrow)" aria-label="Slide right">&#9654;</button><small>or drag it</small></div>` : ''}
           ${sel.moveTo.length ? `<div class="vh-arr-floors"><span>Carry to</span>${sel.moveTo.map(l => `<button data-arr-floor="${l}">${esc(a.floors[l])}</button>`).join('')}</div>` : ''}
           ${sel.wall ? '<p class="vh-arr-why vh-arr-ok">Drag it along the wall, up or down.</p>' : sel.loose && !sel.fits ? `<p class="vh-arr-why">${esc(sel.reason ?? "It doesn't fit there.")} Move it, or put it back.</p>` : sel.loose ? '<p class="vh-arr-why vh-arr-ok">Drag it, turn it, then tap Set it down.</p>' : ''}
         </div>`
@@ -385,6 +393,9 @@ export function createDrawer(cb: DrawerCallbacks): {
     sec.querySelector('[data-arr="takedown"]')?.addEventListener('click', () => cb.onArrangeTakeDown?.());
     sec.querySelectorAll<HTMLElement>('[data-arr-unstore]').forEach(b => b.addEventListener('click', () => cb.onArrangeUnstore?.(b.dataset.arrUnstore!)));
     sec.querySelector('[data-arr="rotate"]')?.addEventListener('click', () => cb.onArrangeRotate?.());
+    sec.querySelector('[data-arr="wall"]')?.addEventListener('click', () => cb.onArrangeWall?.());
+    sec.querySelector('[data-arr="slide-l"]')?.addEventListener('click', () => cb.onArrangeSlide?.(-1));
+    sec.querySelector('[data-arr="slide-r"]')?.addEventListener('click', () => cb.onArrangeSlide?.(1));
     sec.querySelector('[data-arr="set"]')?.addEventListener('click', () => cb.onArrangeSet?.());
     sec.querySelector('[data-arr="back"]')?.addEventListener('click', () => cb.onArrangeBack?.());
     sec.querySelector('[data-arr="colour"]')?.addEventListener('click', () => cb.onArrangeColour?.());
