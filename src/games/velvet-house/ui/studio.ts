@@ -29,6 +29,34 @@ const esc = (t: string): string => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;',
 
 const START: Garment = validateGarment({ slot: 'top', cut: 'tee', fabric: 'cotton', base: '#c2413a', name: 'Custom tee', tags: [], rarity: 'one-of-a-kind' })!;
 
+/**
+ * Groups the colours of a picture into at most `k` colours (plain k-means, a few rounds). Returns the colours in the
+ * order they are used, and the colour number (0-based) of each point.
+ */
+function reduceColours(pts: [number, number, number][], k: number): { centres: [number, number, number][]; assign: number[] } {
+  const seen = new Map<string, [number, number, number]>();
+  for (const p of pts) seen.set(p.join(','), p);
+  const distinct = [...seen.values()].sort((a, b) => (a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2]));
+  let cen: [number, number, number][] = distinct.length <= k
+    ? distinct.map((c) => [...c] as [number, number, number])
+    : Array.from({ length: k }, (_, i) => [...distinct[Math.floor((i * distinct.length) / k)]] as [number, number, number]);
+  const near = (p: [number, number, number]): number => {
+    let best = 0, bd = Infinity;
+    cen.forEach((c, i) => { const d = (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2; if (d < bd) { bd = d; best = i; } });
+    return best;
+  };
+  let assign = pts.map(near);
+  for (let round = 0; round < 8; round++) {
+    const sum = cen.map(() => [0, 0, 0, 0]);
+    pts.forEach((p, n) => { const s = sum[assign[n]]; s[0] += p[0]; s[1] += p[1]; s[2] += p[2]; s[3]++; });
+    cen = cen.map((c, i) => (sum[i][3] ? [sum[i][0] / sum[i][3], sum[i][1] / sum[i][3], sum[i][2] / sum[i][3]] as [number, number, number] : c));
+    assign = pts.map(near);
+  }
+  const used = [...new Set(assign)].sort((a, b) => a - b);
+  const slot = new Map(used.map((c, i) => [c, i]));
+  return { centres: used.map((i) => cen[i].map(Math.round) as [number, number, number]), assign: assign.map((a) => slot.get(a)!) };
+}
+
 export function createStudio(g: Game): Partial<Game> {
   const { world, log, drawer } = g;
   const sec = drawer.el.querySelector('[data-page="studio"]') as HTMLElement;
@@ -297,6 +325,8 @@ export function createStudio(g: Game): Partial<Game> {
       <div class="vh-st-row">${chip('8 × 8', 'data-pxsize', '8', px.w === 8)}${chip('16 × 16', 'data-pxsize', '16', px.w === 16)}
         <button type="button" class="vh-st-chip" data-pxundo ${px.undo.length ? '' : 'disabled'}>Undo</button><button type="button" class="vh-st-chip" data-pxclear>Clear</button></div>
       ${slider('data-pxscale', 'Print size', 0.25, 4, 0.025, cur.pattern?.scale ?? 1)}
+      <div class="vh-st-row"><label class="vh-st-chip">Import a picture<input type="file" accept="image/*" data-pximport hidden></label></div>
+      <p class="vh-st-hint">A picture is squashed into a square, laid on white and reduced to 7 colours. Its colours and grid can then be changed by hand.</p>
       <h5>The yard</h5>
       <p class="vh-st-hint">Lay this picture on the grass of the yard. It also works with a code someone shared.</p>
       <div class="vh-st-row"><button type="button" class="vh-st-primary" data-pxyard ${cur.pattern?.kind === 'pixel' ? '' : 'disabled'}>Use on the yard</button><button type="button" class="vh-st-chip" data-pxyardoff>Back to grass</button></div>`;
@@ -346,7 +376,39 @@ export function createStudio(g: Game): Partial<Game> {
 
   const pushUndo = (): void => { px.undo.push([...px.data]); if (px.undo.length > 30) px.undo.shift(); };
 
+  /** Turns a player's picture into the pixel grid, at the size it is already on, and shows it for hand editing. */
+  async function importPicture(file: File): Promise<void> {
+    let img: ImageBitmap;
+    try { img = await createImageBitmap(file); } catch { say('That file is not a picture the game can read.'); return; }
+    const w = px.w, cv = document.createElement('canvas');
+    cv.width = w; cv.height = w;
+    const x = cv.getContext('2d');
+    if (!x) return;
+    x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, w);
+    x.imageSmoothingQuality = 'high';
+    x.drawImage(img, 0, 0, w, w);
+    img.close();
+    const { data } = x.getImageData(0, 0, w, w);
+    const pts: [number, number, number][] = [];
+    for (let k = 0; k < data.length; k += 4) pts.push([data[k], data[k + 1], data[k + 2]]);
+    const { centres, assign } = reduceColours(pts, 7);
+    pushUndo();
+    const hex = (c: [number, number, number]): string => `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+    px.palette = [...centres.map(hex), ...DEFAULT_PALETTE].slice(0, 7);
+    px.data = assign.map((a) => a + 1);
+    px.color = 1;
+    applyPixels();
+    renderPane();
+    say('Picture imported. Press Use on the yard to lay it down.');
+  }
+
   function wirePixelGrid(): void {
+    pane.querySelector<HTMLInputElement>('[data-pximport]')?.addEventListener('change', (e) => {
+      const input = e.currentTarget as HTMLInputElement;
+      const file = input.files?.[0];
+      if (file) void importPicture(file);
+      input.value = '';
+    });
     const cv = pane.querySelector<HTMLCanvasElement>('[data-pixgrid]');
     if (!cv) return;
     let down = false;
