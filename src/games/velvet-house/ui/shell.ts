@@ -29,14 +29,16 @@ export function mountShell(app: HTMLElement, people: Agent[], logEl: HTMLElement
 
   app.innerHTML = `
     <div class="vh-stage">
-      <canvas class="vh-canvas" aria-label="Your house"></canvas>
       <div class="vh-hud">
         <div class="vh-chip"><span data-el="when"></span><strong data-el="clock"></strong></div>
         <div class="vh-chip vh-season" data-el="season"></div>
         <div class="vh-chip vh-money" data-el="money"></div>
       </div>
+      <div class="vh-view">
+        <canvas class="vh-canvas" aria-label="Your house"></canvas>
+        <ul class="vh-log" aria-live="polite"></ul>
+      </div>
       <div class="vh-people" aria-label="Who is home">${people.map(card).join('')}</div>
-      <ul class="vh-log" aria-live="polite"></ul>
       <div class="vh-controls">
         <div class="vh-floors" role="tablist" aria-label="Floors">
           ${FLOOR_ORDER.map((i) => `<button role="tab" data-level="${i}"${i === ATTIC ? ' hidden' : ''}>${LEVEL_NAMES[i]}</button>`).join('')}
