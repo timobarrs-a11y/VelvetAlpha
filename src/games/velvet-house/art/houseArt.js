@@ -4285,7 +4285,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (nbHash(seed, 6) > 0.4) poly([[x1 - 3.2, y1 - 1.5, 0.01], [x1 - 1.4, y1 - 1.5, 0.01], [x1 - 1.4, y1 - 0.6, 0.01], [x1 - 3.2, y1 - 0.6, 0.01]], '#6B4A35');
   }
   function buildBackdrop() {
-    const si = seasonIdx(), grass = ['#86C26A', '#74B556', '#A9AB5C', '#E2E8EC'][si], dk = darkness(), asphalt = si === 3 ? '#6A6F78' : '#5A5E66';
+    const si = seasonIdx(), grass = ['#86C26A', '#74B556', '#A9AB5C', '#E2E8EC'][si], asphalt = si === 3 ? '#6A6F78' : '#5A5E66';
     const R = 14, big = 90, rows = [];
     // Ground. The whole canvas is grass first, so no edge of the neighbourhood ever shows.
     ctx.fillStyle = grass; ctx.fillRect(0, 0, W, H);
@@ -4321,9 +4321,8 @@ export function createHouseArt(ctx0, opts = {}) {
     rows.sort((a, b) => a.key - b.key).forEach(r => r.d());
     // Utility poles down the lane.
     for (let k = -R; k <= R; k++) { const y = k * WY * 1.0 + 2; if (!nbBehind(NB.lane0 - 0.2, y - 0.2, NB.lane0 + 0.2, y + 0.2)) continue; const [px, py] = iso(NB.lane0 - 0.2, y, 0); limb(px, py, px, py - 120, '#5A4A44', 2.4); limb(px - 14, py - 112, px + 14, py - 118, '#5A4A44', 1.8); }
-    // Haze toward the top and dusk at night, then the edges fade to nothing, so the neighbourhood never ends on a line.
+    // Haze toward the top (the light pass darkens it at night with the yard), then the edges fade to nothing, so the neighbourhood never ends on a line.
     const g = ctx.createLinearGradient(0, 0, 0, H * 0.55); g.addColorStop(0, si === 3 ? 'rgba(228,234,240,.5)' : 'rgba(214,226,232,.42)'); g.addColorStop(1, 'rgba(214,226,232,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    if (dk > 0.02) { ctx.fillStyle = `rgba(12,14,40,${Math.min(0.6, dk * 0.8)})`; ctx.fillRect(0, 0, W, H); }
     ctx.globalCompositeOperation = 'destination-out';
     [[0, 0, 40, 0], [W, 0, W - 40, 0], [0, 0, 0, 36], [0, H, 0, H - 32]].forEach(([x0, y0, x1, y1]) => { const e = ctx.createLinearGradient(x0, y0, x1, y1); e.addColorStop(0, 'rgba(0,0,0,1)'); e.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = e; ctx.fillRect(0, 0, W, H); });
     ctx.globalCompositeOperation = 'source-over';
@@ -4520,7 +4519,8 @@ export function createHouseArt(ctx0, opts = {}) {
   }
   function lighting(level, lights, deferred) {
     const a = levelDark(level);
-    ctx.save(); roomPath(); ctx.clip();
+    // Outside, the light and the grade cover the whole view, so the neighbourhood is lit like the yard and the lot never shows as a lit block.
+    ctx.save(); if (isOutdoor(level)) { ctx.beginPath(); ctx.rect(0, 0, W, H); } else roomPath(); ctx.clip();
     const litOnGpu = deferred && deferredLighting(level, lights);
     if (!litOnGpu && a > 0.01 && !gpuLighting(level, lights, a)) {
       if (lightCv.width !== cv.width || lightCv.height !== cv.height) { lightCv.width = cv.width; lightCv.height = cv.height; }
