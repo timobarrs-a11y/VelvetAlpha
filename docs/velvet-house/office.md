@@ -132,3 +132,58 @@ Dale, the team photo, birthday cake, chat with Kayleigh, pin a note, ride the li
 the cooler, look out of the window, take a stall break, fix the hand dryer, and read messages.
 
 Each day's three objectives come from the top of this table, and the board meeting falls on its own day.
+
+## Work as scenarios (the variety comes from sequencing)
+
+A **scenario** is a short chain of steps. Each step is a place plus one reusable action, and some steps have a timer.
+The same places and step types are reused in many scenarios. That gives variety without a new bespoke action each time.
+
+### Places (added: the boss's office)
+
+- **Boss's office:** Dale's room. He sits at a desk with a window behind him. Jordan walks in, stands or sits in front, and
+  the talk runs for a set time. Dale's mood and the project's status change with how the talk goes.
+- The meeting room, desk, kitchen, lavatory, hallway, server room and printer alcove stay as before.
+
+### Reusable step types
+
+| Step | What the player does | Timer |
+|---|---|---|
+| **Go to a place** | Walk to a room or desk; the walk is the step's visible part | None |
+| **Disappear behind a door** | Jordan walks through a door and is out of sight | Set by the step |
+| **Sit and work** | At a desk or cubicle; the bar fills | Set by the step |
+| **Talk** | Stand by someone; a short conversation with a choice | Set by the step |
+| **Fix something** | Three steps in any order (printer, cable, jam) | Set by the step |
+| **Help someone** | Go to a coworker, do one small job for them | Set by the step |
+| **Break** | Kitchen or lavatory; short, nothing lost if skipped | Set by the step |
+
+### Twenty scenarios
+
+Each one is a short chain. Days pick three to five.
+
+1. **Board day:** meeting room (disappear, return), then desk: work on the project.
+2. **Board follow-up:** meeting room, then Dale's office to talk about the project, then desk.
+3. **Morning with Dale:** Dale's office for a check-in, then tickets at a cubicle.
+4. **Printer trouble:** printer alcove (fix the jam), then desk to finish the print run.
+5. **Ozzie's cable:** server room with the ladder, then desk to log it.
+6. **Kayleigh's mess:** Kayleigh's cubicle (help her with an error), then the kitchen for a coffee to calm down.
+7. **Raven's walk:** hallway with Raven, then the fire-door sign, then desk.
+8. **Tony's deadline:** Tony's desk (a call), then the desk to write it up.
+9. **Lunch run:** kitchen (heat lunch), lunch with Tony, then desk.
+10. **Email wall:** desk: answer emails, then a short talk with Kayleigh.
+11. **Ticket queue:** a cubicle with five tickets; a break in the lavatory halfway through.
+12. **Spreadsheet week:** desk: update the spreadsheet, then Dale's office to show it.
+13. **Presentation:** desk: make the slides, then the meeting room to present them, then Dale's office for feedback.
+14. **Bug hunt:** Ozzie's desk (look at the bug), then desk (fix it).
+15. **Photo day:** hallway (line for the team photo), then the kitchen for cake.
+16. **Plant for Dale:** kitchen (fill a cup of water), then Dale's office to give him the plant.
+17. **Quiet morning:** desk: answer emails, then a break at the window.
+18. **Fire drill:** hallway (walk to the door with everyone), then wait, then desk.
+19. **Help desk call:** a cubicle with a caller; then the kitchen for a tea.
+20. **Friday wrap-up:** Dale's office for the week's review, then desk for tidying tasks.
+
+### Daily picking
+
+- Each day picks one anchor scenario (the board meeting on its days) and two or three others.
+- Days don't repeat the same chain. Each scenario has a set of days it can't sit on, so a scenario can't run two days in
+  a row.
+- The weekend has none of these.
