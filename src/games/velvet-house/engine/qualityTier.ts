@@ -19,7 +19,8 @@ class QualityManager {
   private tier: QualityTier = 'high';
   private playerOverride: QualityTier | null = null;
   private frameTimes: number[] = [];
-  private dprStep = 2;
+  /** How far the frame rate has pushed the pixel ratio down: 4 is full (see DPR_NOTCHES), 0 is the lowest. */
+  private dprStep = 4;
   private lowFrames = 0;
   private highFrames = 0;
 
@@ -54,10 +55,10 @@ class QualityManager {
     }
 
     // Auto-adjust DPR: step down after sustained slow frames, step up after sustained high
-    if (this.lowFrames > 30 && this.dprStep > 1) {
+    if (this.lowFrames > 30 && this.dprStep > 0) {
       this.dprStep--;
       this.lowFrames = 0;
-    } else if (this.highFrames > 60 && this.dprStep < 2) {
+    } else if (this.highFrames > 60 && this.dprStep < 4) {
       this.dprStep++;
       this.highFrames = 0;
     }
@@ -90,16 +91,19 @@ class QualityManager {
 
   /** Suggests a device pixel ratio capped by the current quality step. */
   resolveDpr(nativeDpr: number): number {
-    // Ultra draws at least 2x even on a normal screen: the picture is drawn larger and shrunk down, which smooths edges (supersampling).
-    if (this.ultra && this.getTier() === 'high') return Math.min(Math.max(nativeDpr, 2), 3);
-    const base = Math.min(nativeDpr, 2);
-    if (this.getTier() === 'low') return Math.min(base, 1);
-    if (this.getTier() === 'medium') return Math.min(base, 1.5);
-    return base;
+    // Each step down the frame rate has forced drops the ratio one notch, so it eases down rather than jumping to 1x.
+    const notch = DPR_NOTCHES[this.dprStep];
+    if (this.ultra && this.getTier() === 'high') return Math.min(Math.max(nativeDpr, 2), 3, notch);
+    const tierCap = this.getTier() === 'low' ? 1 : this.getTier() === 'medium' ? 1.5 : 2;
+    return Math.min(nativeDpr, tierCap, notch);
   }
+
 }
 
 export const qualityManager = new QualityManager();
+
+/** The pixel ratios the game steps between, from lowest to full. */
+const DPR_NOTCHES = [1, 1.5, 2, 2.5, 3];
 
 /** The player's graphics choice: Auto, Ultra, High, Medium or Low. Ultra is High plus the full pixel ratio. */
 export type PlayerQuality = 'auto' | 'ultra' | 'high' | 'medium' | 'low';

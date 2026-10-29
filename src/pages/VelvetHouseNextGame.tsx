@@ -218,6 +218,10 @@ export function VelvetHouseNextGame() {
   }, [companionId, noteRestart]);
 
   const handleExit = () => {
+    // The demo's Exit goes back to the game's own title menu, not the lobby: the game frame reloads without the demo.
+    let inDemo = false;
+    try { inDemo = new URLSearchParams(iframeRef.current?.contentWindow?.location.search ?? '').has('demo'); } catch { /* frame not ready */ }
+    if (inDemo && iframeRef.current) { setLoading(true); iframeRef.current.src = GAME_PATH; return; }
     navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
   };
 
