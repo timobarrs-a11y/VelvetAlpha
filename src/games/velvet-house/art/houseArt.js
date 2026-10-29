@@ -4317,27 +4317,19 @@ export function createHouseArt(ctx0, opts = {}) {
       edge: night > 0.5 ? 'rgba(10,14,34,.3)' : 'rgba(0,0,0,.12)',
     };
   }
-  // A square post where fences meet or end, so a fence never just butts into another and overlaps it.
-  function nbPost(x, y) {
-    const fc = fenceColors(0, 1), s = 0.065, keepOn = gOn; gOn = false;
-    box(x - s, y - s, 0, s * 2, s * 2, FENCE.tip + 0.03, shade(fc.board, 0.07));
-    gOn = keepOn;
-  }
   function nbFence(xa, ya, xb, yb) {
     const len = Math.hypot(xb - xa, yb - ya), ux = (xb - xa) / len, uy = (yb - ya) / len;
     // The face we see is the one turned toward the camera.
     const n1 = [-uy, ux], n2 = [uy, -ux], vis = VD(n1[0], n1[1]).reduce((s, v) => s + v, 0) > 0 ? n1 : n2, fc = fenceColors(vis[0], vis[1]);
     for (const k of [0.22, -0.14]) poly([[xa, ya, 0.003], [xb, yb, 0.003], [xb - uy * k, yb + ux * k, 0.003], [xa - uy * k, ya + ux * k, 0.003]], 'rgba(28,40,26,.18)');
     for (const z of FENCE.rails) poly([[xa, ya, z], [xb, yb, z], [xb, yb, z + 0.08], [xa, ya, z + 0.08]], fc.rail);
-    // Pickets sit on one grid (every 0.2 along the run from its start), between the end posts, drawn from the far end toward the camera.
-    const step = 0.2, n = Math.max(1, Math.round((len - 0.2) / step)), fwd = VD(ux, uy).reduce((s, v) => s + v, 0) > 0;
-    for (let i = 0; i < n; i++) {
-      const k = fwd ? i : n - 1 - i, d = 0.1 + k * step, x = xa + ux * d, y = ya + uy * d, px = ux * 0.13, py = uy * 0.13;
+    // One continuous run of pickets on a single grid (every 0.2 from the run's start), from its first corner to its last, drawn from the far end
+    // toward the camera. Where two runs meet, each ends with a picket on the corner itself, so they join without a post or a gap.
+    const step = 0.2, n = Math.max(1, Math.round(len / step)), fwd = VD(ux, uy).reduce((s, v) => s + v, 0) > 0;
+    for (let i = 0; i <= n; i++) {
+      const k = fwd ? i : n - i, d = Math.min(len - 0.13, k * step), x = xa + ux * d, y = ya + uy * d, px = ux * 0.13, py = uy * 0.13;
       poly([[x, y, 0], [x + px, y + py, 0], [x + px, y + py, FENCE.h], [x + px / 2, y + py / 2, FENCE.tip], [x, y, FENCE.h]], fc.board, fc.edge, 0.6);
     }
-    // Posts at both ends and every two tiles between, so every run, and every place two meet, is built the same way.
-    const posts = Math.max(1, Math.round(len / 2));
-    for (let i = 0; i <= posts; i++) nbPost(xa + (xb - xa) * (i / posts), ya + (yb - ya) * (i / posts));
   }
   function nbTree(x, y, seed) {
     if (!nbBehind(x - 1.4, y - 1.4, x + 1.4, y + 1.4)) return;
