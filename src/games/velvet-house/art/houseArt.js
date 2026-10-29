@@ -4243,18 +4243,8 @@ export function createHouseArt(ctx0, opts = {}) {
       LEVELS[3].feats.forEach(f => { if (f.k === 'extwin') { const col = extWindowColor(1); poly(featPoly(f), '#F7F3EE', EDGE, 0.8); poly(featPoly(f, 0.07), col); const mu = (f.u[0] + f.u[1]) / 2; line3([0, mu, f.z[0] + 0.07], [0, mu, f.z[1] - 0.07], '#F7F3EE', 2); } else drawFeature(3, f); });
       poly([[-0.3, -0.3, WH], [0.12, -0.3, WH], [0.12, WY, WH], [-0.3, WY, WH]], '#5A4A44');
     }
-    back.filter(pl => pl !== 'L').forEach(pl => { const len = planeLen(pl), [ix, iy] = pl === 'B' ? [0, 1] : pl === 'R' ? [-1, 0] : [0, -1], fc = fenceColors(ix, iy), keepOn = gOn, sh = (k) => { const p0 = wallPoint(pl, 0, 0.003), p1 = wallPoint(pl, len, 0.003); poly([p0, p1, [p1[0] + ix * k, p1[1] + iy * k, 0.003], [p0[0] + ix * k, p0[1] + iy * k, 0.003]], 'rgba(28,40,26,.2)'); }; gOn = false; sh(0.22); sh(-0.14); for (let u = 0; u <= len + 0.01; u += 0.2) poly([wallPoint(pl, u, 0), wallPoint(pl, u + 0.13, 0), wallPoint(pl, u + 0.13, FENCE.h), wallPoint(pl, u + 0.065, FENCE.tip), wallPoint(pl, u, FENCE.h)], fc.board, fc.edge, 0.6); FENCE.rails.forEach(z => poly([wallPoint(pl, 0, z), wallPoint(pl, len, z), wallPoint(pl, len, z + 0.08), wallPoint(pl, 0, z + 0.08)], fc.rail)); gOn = keepOn; });
-    // Where two of the yard's fences meet they end in one square post, so neither fence overlaps the other and the corner stands as tall as the fence.
-    const fp = back.filter(pl => pl !== 'L');
-    if (fp.length === 2) {
-      const ends = (pl) => [wallPoint(pl, 0, 0), wallPoint(pl, planeLen(pl), 0)], A = ends(fp[0]), B = ends(fp[1]);
-      for (const a1 of A) for (const b1 of B) if (Math.hypot(a1[0] - b1[0], a1[1] - b1[1]) < 0.01) {
-        const fc = fenceColors(0, 1), s = 0.09, keepOn = gOn; gOn = false;
-        box(a1[0] - s, a1[1] - s, 0, s * 2, s * 2, FENCE.tip + 0.03, shade(fc.board, 0.14));
-        poly([[a1[0] - s, a1[1] - s, FENCE.tip + 0.03], [a1[0] + s, a1[1] - s, FENCE.tip + 0.03], [a1[0] + s, a1[1] + s, FENCE.tip + 0.03], [a1[0] - s, a1[1] + s, FENCE.tip + 0.03]], fc.rail);
-        gOn = keepOn;
-      }
-    }
+    // The yard's own fences are drawn by the same code as every neighbour's (nbFence), so pickets, rails, posts, height and colour are one thing.
+    back.filter(pl => pl !== 'L').forEach(pl => { const a = wallPoint(pl, 0, 0), b = wallPoint(pl, planeLen(pl), 0), keepOn = gOn; gOn = false; nbFence(a[0], a[1], b[0], b[1]); gOn = keepOn; });
     drawWallLights(3);
   }
   // The neighbourhood around the yard. This is a back yard, so the lot is seen from behind the houses: our house is behind its
@@ -4329,18 +4319,25 @@ export function createHouseArt(ctx0, opts = {}) {
   }
   // A square post where fences meet or end, so a fence never just butts into another and overlaps it.
   function nbPost(x, y) {
-    const fc = fenceColors(0, 1), s = 0.09, keepOn = gOn; gOn = false;
-    box(x - s, y - s, 0, s * 2, s * 2, FENCE.tip + 0.03, shade(fc.board, 0.14));
+    const fc = fenceColors(0, 1), s = 0.065, keepOn = gOn; gOn = false;
+    box(x - s, y - s, 0, s * 2, s * 2, FENCE.tip + 0.03, shade(fc.board, 0.07));
     gOn = keepOn;
   }
   function nbFence(xa, ya, xb, yb) {
-    const len = Math.hypot(xb - xa, yb - ya), n = Math.round(len / 0.2), ux = (xb - xa) / len, uy = (yb - ya) / len;
+    const len = Math.hypot(xb - xa, yb - ya), ux = (xb - xa) / len, uy = (yb - ya) / len;
     // The face we see is the one turned toward the camera.
     const n1 = [-uy, ux], n2 = [uy, -ux], vis = VD(n1[0], n1[1]).reduce((s, v) => s + v, 0) > 0 ? n1 : n2, fc = fenceColors(vis[0], vis[1]);
     for (const k of [0.22, -0.14]) poly([[xa, ya, 0.003], [xb, yb, 0.003], [xb - uy * k, yb + ux * k, 0.003], [xa - uy * k, ya + ux * k, 0.003]], 'rgba(28,40,26,.18)');
-    // The same board and rails as the yard's own fence.
     for (const z of FENCE.rails) poly([[xa, ya, z], [xb, yb, z], [xb, yb, z + 0.08], [xa, ya, z + 0.08]], fc.rail);
-    for (let k = 0; k < n; k++) { const x = xa + ux * k * 0.2, y = ya + uy * k * 0.2, px = ux * 0.13, py = uy * 0.13; poly([[x, y, 0], [x + px, y + py, 0], [x + px, y + py, FENCE.h], [x + px / 2, y + py / 2, FENCE.tip], [x, y, FENCE.h]], fc.board, fc.edge, 0.6); }
+    // Pickets sit on one grid (every 0.2 along the run from its start), between the end posts, drawn from the far end toward the camera.
+    const step = 0.2, n = Math.max(1, Math.round((len - 0.2) / step)), fwd = VD(ux, uy).reduce((s, v) => s + v, 0) > 0;
+    for (let i = 0; i < n; i++) {
+      const k = fwd ? i : n - 1 - i, d = 0.1 + k * step, x = xa + ux * d, y = ya + uy * d, px = ux * 0.13, py = uy * 0.13;
+      poly([[x, y, 0], [x + px, y + py, 0], [x + px, y + py, FENCE.h], [x + px / 2, y + py / 2, FENCE.tip], [x, y, FENCE.h]], fc.board, fc.edge, 0.6);
+    }
+    // Posts at both ends and every two tiles between, so every run, and every place two meet, is built the same way.
+    const posts = Math.max(1, Math.round(len / 2));
+    for (let i = 0; i <= posts; i++) nbPost(xa + (xb - xa) * (i / posts), ya + (yb - ya) * (i / posts));
   }
   function nbTree(x, y, seed) {
     if (!nbBehind(x - 1.4, y - 1.4, x + 1.4, y + 1.4)) return;
@@ -4426,7 +4423,7 @@ export function createHouseArt(ctx0, opts = {}) {
     nbOcc = []; nbGlows = [];
     // Back-to-front: fences go in the same sort as the houses, sheds and trees (a fence in front of a shed has to cover it), in short runs
     // so each run is sorted by its own depth.
-    const fenceRows = (xa, ya, xb, yb) => { rows.push({ key: vs(xa, ya) - 0.01, d: () => nbPost(xa, ya) }, { key: vs(xb, yb) + 0.01, d: () => nbPost(xb, yb) }); const len = Math.hypot(xb - xa, yb - ya), n = Math.max(1, Math.round(len / 2)); for (let i = 0; i < n; i++) { const a = [xa + (xb - xa) * i / n, ya + (yb - ya) * i / n], b = [xa + (xb - xa) * (i + 1) / n, ya + (yb - ya) * (i + 1) / n]; rows.push({ key: vs((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), d: () => nbFence(a[0], a[1], b[0], b[1]) }); } };
+    const fenceRows = (xa, ya, xb, yb) => { const len = Math.hypot(xb - xa, yb - ya), n = Math.max(1, Math.round(len / 2)); for (let i = 0; i < n; i++) { const a = [xa + (xb - xa) * i / n, ya + (yb - ya) * i / n], b = [xa + (xb - xa) * (i + 1) / n, ya + (yb - ya) * (i + 1) / n]; rows.push({ key: vs((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), d: () => nbFence(a[0], a[1], b[0], b[1]) }); } };
     for (let k = -R; k <= R + 1; k++) {
       if (k !== 0 && k !== 1) fenceRows(0, k * WY, WX, k * WY);
       const ys = k * WY + 4; fenceRows(NB.rear0, ys, NB.rear0 + 10, ys);
