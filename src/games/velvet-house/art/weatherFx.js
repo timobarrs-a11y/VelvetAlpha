@@ -72,12 +72,12 @@ export function createWeatherFx() {
   const splash = pool(260);
   let time = 0;
 
-  function spawn(P, cap, makeV) {
+  function spawn(P, cap, makeV, top) {
     const want = Math.min(P.max, cap);
     const room = Math.min(want - P.n, Math.ceil(want * 0.04)); // fill in about a second, a little each frame
     for (let k = 0; k < room; k++) {
       const i = P.n++;
-      P.x[i] = Math.random() * 10; P.y[i] = Math.random() * 8; P.z[i] = 3.2 + Math.random() * 0.6;
+      P.x[i] = Math.random() * 10; P.y[i] = Math.random() * 8; P.z[i] = top ? top(P.x[i], P.y[i]) : 3.2 + Math.random() * 0.6;
       P.v[i] = makeV(); P.p[i] = Math.random() * TAU;
       // Each drop's own sideways speed, so rain comes down slanted and not all in one direction.
       P.ax[i] = 0.7 + Math.random() * 0.9; P.ay[i] = 0.15 + Math.random() * 0.45;
@@ -90,8 +90,8 @@ export function createWeatherFx() {
      */
     step(dt, s, tiles, caps) {
       time += dt;
-      if (s.raining && !s.snow) spawn(rain, caps.rain, () => -(8.5 + Math.random() * 2));
-      if (s.raining && s.snow) spawn(snow, caps.snow, () => -(1.1 + Math.random() * 0.6));
+      if (s.raining && !s.snow) spawn(rain, caps.rain, () => -(8.5 + Math.random() * 2), s.top);
+      if (s.raining && s.snow) spawn(snow, caps.snow, () => -(1.1 + Math.random() * 0.6), s.top);
 
       for (let k = rain.n - 1; k >= 0; k--) {
         rain.z[k] += rain.v[k] * dt; rain.x[k] += rain.ax[k] * dt; rain.y[k] += rain.ay[k] * dt;
@@ -150,29 +150,36 @@ export function createWeatherFx() {
      * stroke. They fall with the same slant and speed as the yard's own, and ring the ground where they land. `o` = { n, snow, W, H, TW, TH, ZH }.
      */
     drawField(c, t, o) {
-      const { n, snow, W, H, TW, TH, ZH } = o, fract = (v) => v - Math.floor(v), hs = (i, k) => fract(Math.sin(i * 12.9898 + k * 78.233) * 43758.5453);
+      const { n, snow, W, H, TW, TH, ZH, skip, part } = o, fract = (v) => v - Math.floor(v), hs = (i, k) => fract(Math.sin(i * 12.9898 + k * 78.233) * 43758.5453);
       if (n < 1) return;
+      // The yard's own weather covers the lot; a drop that would land on the lot is left to it. (The lot's floor is convex.)
+      const inLot = (x, y) => { if (!skip) return false; let s = 0; for (let k = 0; k < skip.length; k++) { const [ax, ay] = skip[k], [bx, by] = skip[(k + 1) % skip.length], cr = (bx - ax) * (y - ay) - (by - ay) * (x - ax); if (cr * s < 0) return false; if (cr) s = cr; } return true; };
       c.save();
       if (snow) {
+        if (part === 'ground') { c.restore(); return; }
         c.fillStyle = 'rgba(246,248,250,.85)';
         for (let i = 0; i < n; i++) {
-          const fall = 3.4 / (1.1 + hs(i, 3) * 0.6), cyc = (t + hs(i, 4) * fall) % fall, z = 3.4 * (1 - cyc / fall), lx = hs(i, 1) * (W + 40) - 20, ly = hs(i, 2) * H;
-          const sx = lx + Math.sin(t * 1.3 + hs(i, 5) * 6.28) * 6, sy = ly - z * ZH;
-          c.fillRect(sx, sy, 2, 2);
+          const lx = hs(i, 1) * (W + 40) - 20, ly = hs(i, 2) * (H + 30); if (inLot(lx, ly)) continue;
+          const z0 = (ly + 30) / ZH + 0.5, fall = z0 / (1.1 + hs(i, 3) * 0.6), cyc = (t + hs(i, 4) * fall) % fall, z = z0 * (1 - cyc / fall);
+          c.fillRect(lx + Math.sin(t * 1.3 + hs(i, 5) * 6.28) * 6, ly - z * ZH, 2, 2);
         }
         c.restore(); return;
       }
+      const air = part !== 'ground', grd = part !== 'air';
       c.strokeStyle = 'rgba(205,220,240,.5)'; c.lineWidth = 1; c.beginPath();
       const rip = [];
       for (let i = 0; i < n; i++) {
-        const vz = 8.5 + hs(i, 3) * 2, fall = 3.4 / vz, rest = 0.35, per = fall + rest, cyc = (t + hs(i, 4) * per) % per;
-        const ax = 0.7 + hs(i, 6) * 0.9, ay = 0.15 + hs(i, 7) * 0.45, lx = hs(i, 1) * (W + 40) - 20, ly = hs(i, 2) * H;
+        const lx = hs(i, 1) * (W + 40) - 20, ly = hs(i, 2) * (H + 30); if (inLot(lx, ly)) continue;
+        // Every drop starts above the top edge of the picture, so the rain comes in from out of frame.
+        const vz = 8.5 + hs(i, 3) * 2, z0 = (ly + 30) / ZH + 0.5, fall = z0 / vz, rest = 0.35, per = fall + rest, cyc = (t + hs(i, 4) * per) % per;
+        const ax = 0.7 + hs(i, 6) * 0.9, ay = 0.15 + hs(i, 7) * 0.45;
         if (cyc < fall) {
-          const z = 3.4 * (1 - cyc / fall), k = (zz) => [lx - (ax - ay) * TW * zz / vz, ly - (ax + ay) * TH * zz / vz - zz * ZH], [tx, ty] = k(z + 0.45), [bx, by] = k(z);
+          if (!air) continue;
+          const z = z0 * (1 - cyc / fall), k = (zz) => [lx - (ax - ay) * TW * zz / vz, ly - (ax + ay) * TH * zz / vz - zz * ZH], [tx, ty] = k(z + 0.45), [bx, by] = k(z);
           c.moveTo(tx, ty); c.lineTo(bx, by);
-        } else rip.push(lx, ly, (cyc - fall) / rest);
+        } else if (grd) rip.push(lx, ly, (cyc - fall) / rest);
       }
-      c.stroke();
+      if (air) c.stroke();
       c.strokeStyle = 'rgba(230,240,255,.3)'; c.beginPath();
       for (let k = 0; k < rip.length; k += 3) { const a = rip[k + 2], r = 1.5 + a * 5; c.moveTo(rip[k] + r, rip[k + 1]); c.ellipse(rip[k], rip[k + 1], r, r / 2, 0, 0, TAU); }
       c.stroke();

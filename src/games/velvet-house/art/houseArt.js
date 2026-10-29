@@ -4206,7 +4206,9 @@ export function createHouseArt(ctx0, opts = {}) {
     });
     // Puddles, splashes and the falling rain all go in the ground pass, so the house and furniture cover them.
     wfx.drawGround(ctx, iso, YARD.tiles);
-    wfx.drawAir(ctx, iso, lotOutline());
+    // Rain and snow fall from out of frame over the whole scene: the yard's own over the lot, and a stateless layer over everything past the fence.
+    wfx.drawAir(ctx, iso, null);
+    if (nbWet > 0.02) wfx.drawField(ctx, animT, nbRain('air'));
   }
   function drawYardBack() {
     const back = BACK[VR], sid = '#D9CDBD';
@@ -4226,7 +4228,7 @@ export function createHouseArt(ctx0, opts = {}) {
   // and drawn through the yard's own camera (V / VR), so it turns with the lot. It is drawn once per camera / season / light and kept.
   // Everything sits on whole tiles like the yard: fences on tile edges, one clear tile between a fence and a shed, a tile of verge either side of the lane.
   const NB = { lane0: WX + 1, lane1: WX + 4, rear0: WX + 5, depth: 7, front: 5 };
-  const nbBack = { cv: null, key: '' };
+  const nbBack = { ground: null, objects: null, key: '' };
   let nbWet = 0;
   const nbHash = (a, b) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
   // A face is seen when its outward normal turns toward the camera, which always sits at +a, +b.
@@ -4297,11 +4299,13 @@ export function createHouseArt(ctx0, opts = {}) {
     poly([[px, py, 0.01], [px + 3, py, 0.01], [px + 3, py + 2, 0.01], [px, py + 2, 0.01]], '#CFC9C0', 'rgba(60,50,40,.2)', 0.8);
     if (nbHash(seed, 6) > 0.4) poly([[x1 - 4, y1 - 2, 0.01], [x1 - 2, y1 - 2, 0.01], [x1 - 2, y1 - 1, 0.01], [x1 - 4, y1 - 1, 0.01]], '#6B4A35');
   }
-  function buildBackdrop() {
+  // `part` is 'ground' (the lawns and the lane) or 'objects' (what stands on them), kept apart so the rain's ripples can sit between the two.
+  function buildBackdrop(part) {
     const si = seasonIdx(), grass = grassColor({ water: 0.72, len: 0.38, burn: 0, j: 0, mowedAt: -9999 }), asphalt = si === 3 ? '#6A6F78' : '#5A5E66';
     // The yard's own lawn is brighter and greener than a flat tile (its blades and mowing stripes), so the neighbours' is lifted to match; a step in colour reads as a step in height.
     const [lr, lg, lb] = rgb(grass), lawn = `rgb(${Math.min(255, Math.round(lr * 1.1))},${Math.min(255, Math.round(lg * 1.145))},${Math.round(lb * 0.96)})`;
     const R = 14, big = 90, rows = [];
+    if (part === 'ground') {
     // Ground. The whole canvas is grass first, so no edge of the neighbourhood ever shows.
     ctx.fillStyle = lawn; ctx.fillRect(0, 0, W, H);
     poly([[-big, -big, -0.02], [big, -big, -0.02], [big, big, -0.02], [-big, big, -0.02]], lawn);
@@ -4314,6 +4318,8 @@ export function createHouseArt(ctx0, opts = {}) {
     for (let k = -R; k <= R; k++) if (k !== 0) nbLot(0, WX, k * WY, k * WY + WY, k + 40, lawn);
     for (let k = -R; k <= R; k++) nbLot(NB.rear0, NB.rear0 + 10, k * WY + 4, k * WY + 4 + WY, k + 90, lawn);
     for (let k = -R; k <= R; k++) { nbLot(-NB.front, 0, k * WY, k * WY + WY, k + 140, lawn); }
+    }
+    if (part === 'objects') {
     // Back-to-front: fences go in the same sort as the houses, sheds and trees (a fence in front of a shed has to cover it), in short runs
     // so each run is sorted by its own depth.
     const fenceRows = (xa, ya, xb, yb) => { const len = Math.hypot(xb - xa, yb - ya), n = Math.max(1, Math.round(len / 2)); for (let i = 0; i < n; i++) { const a = [xa + (xb - xa) * i / n, ya + (yb - ya) * i / n], b = [xa + (xb - xa) * (i + 1) / n, ya + (yb - ya) * (i + 1) / n]; rows.push({ key: vs((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), d: () => nbFence(a[0], a[1], b[0], b[1]) }); } };
@@ -4338,7 +4344,11 @@ export function createHouseArt(ctx0, opts = {}) {
     rows.sort((a, b) => a.key - b.key).forEach(r => r.d());
     // Utility poles down the lane.
     for (let k = -R; k <= R; k++) { const y = k * WY + 2; if (!nbBehind(NB.lane0 - 0.7, y - 0.2, NB.lane0 - 0.3, y + 0.2)) continue; const [px, py] = iso(NB.lane0 - 0.5, y, 0); limb(px, py, px, py - 120, '#5A4A44', 2.4); limb(px - 14, py - 112, px + 14, py - 118, '#5A4A44', 1.8); }
-    // Haze toward the top (the light pass darkens it at night with the yard), then the edges fade to nothing, so the neighbourhood never ends on a line.
+    }
+  }
+  // Haze toward the top (the light pass darkens it at night with the yard), then the edges fade to nothing, so the neighbourhood never ends on a line.
+  function nbFinish() {
+    const si = seasonIdx();
     const g = ctx.createLinearGradient(0, 0, 0, H * 0.55); g.addColorStop(0, si === 3 ? 'rgba(228,234,240,.5)' : 'rgba(214,226,232,.42)'); g.addColorStop(1, 'rgba(214,226,232,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     ctx.globalCompositeOperation = 'destination-out';
     [[0, 0, 40, 0], [W, 0, W - 40, 0], [0, 0, 0, 36], [0, H, 0, H - 32]].forEach(([x0, y0, x1, y1]) => { const e = ctx.createLinearGradient(x0, y0, x1, y1); e.addColorStop(0, 'rgba(0,0,0,1)'); e.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = e; ctx.fillRect(0, 0, W, H); });
@@ -4347,19 +4357,24 @@ export function createHouseArt(ctx0, opts = {}) {
   function drawBackdrop() {
     const key = `${VR}|${seasonIdx()}|${Math.round(darkness() * 20)}|${raining() ? 1 : 0}|${cv.width}`;
     if (nbBack.key !== key) {
-      if (!nbBack.cv) nbBack.cv = document.createElement('canvas');
-      nbBack.cv.width = cv.width; nbBack.cv.height = cv.height;
-      const keepCtx = ctx, keepOn = gOn, c2 = nbBack.cv.getContext('2d');
-      c2.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
-      ctx = c2; gOn = false;
-      try { buildBackdrop(); } finally { ctx = keepCtx; gOn = keepOn; }
+      const keepCtx = ctx, keepOn = gOn;
+      for (const part of ['ground', 'objects']) {
+        const c2 = (nbBack[part] = nbBack[part] || document.createElement('canvas')).getContext('2d');
+        nbBack[part].width = cv.width; nbBack[part].height = cv.height;
+        c2.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+        ctx = c2; gOn = false;
+        try { buildBackdrop(part); } finally { ctx = keepCtx; gOn = keepOn; }
+      }
       nbBack.key = key;
     }
-    ctx.drawImage(nbBack.cv, 0, 0, W, H);
-    // The weather carries on past the fence: the same rain or snow over the neighbourhood, behind the yard (which covers it where it lands).
+    ctx.drawImage(nbBack.ground, 0, 0, W, H);
+    // Where rain lands past the fence it rings the ground, under the fences, sheds and houses, so a ripple can never sit on top of something tall.
     nbWet += ((raining() ? 1 : 0) - nbWet) * Math.min(1, rdt * 1.5);
-    if (nbWet > 0.02) wfx.drawField(ctx, animT, { n: Math.round(dropCaps().rain * 2.2 * nbWet), snow: !!(weatherNow.snow ?? seasonIdx() === 3), W, H, TW, TH, ZH });
+    if (nbWet > 0.02 && !(weatherNow.snow ?? seasonIdx() === 3)) wfx.drawField(ctx, animT, nbRain('ground'));
+    ctx.drawImage(nbBack.objects, 0, 0, W, H);
+    nbFinish();
   }
+  const nbRain = (part) => ({ part, n: Math.round(dropCaps().rain * 2.2 * nbWet), snow: !!(weatherNow.snow ?? seasonIdx() === 3), W, H, TW, TH, ZH, skip: [iso(0, 0), iso(WX, 0), iso(WX, WY), iso(0, WY)] });
   // How many drops the quality tier allows, scaled by how heavy the rain is (light, medium, heavy).
   function dropCaps() {
     const base = tier() === 'high' ? { rain: 700, snow: 500 } : tier() === 'medium' ? { rain: 400, snow: 300 } : { rain: 200, snow: 150 };
@@ -5631,7 +5646,7 @@ export function createHouseArt(ctx0, opts = {}) {
     PFX.step(rdt, isOutdoor(lv) ? [0.16 + (raining() ? 0.2 : 0), 0.06] : [0.015, 0], tier() === 'low' ? 0.5 : 1);
     // Winter snow builds up on the lawn while it snows, and only melts once spring comes.
     // Rain and snow fall in the yard's own space and land on the ground (see weatherFx.js).
-    if (isOutdoor(lv)) wfx.step(rdt, { raining: raining(), snow: !!(weatherNow.snow ?? seasonIdx() === 3) }, YARD.tiles, dropCaps());
+    if (isOutdoor(lv)) wfx.step(rdt, { raining: raining(), snow: !!(weatherNow.snow ?? seasonIdx() === 3), top: (x, y) => (iso(x, y, 0)[1] + 30) / ZH + 0.5 + Math.random() * 0.8 }, YARD.tiles, dropCaps());
     if (isOutdoor(lv)) { const snowing = !!(weatherNow.snow ?? seasonIdx() === 3); for (const tt of YARD.tiles) { const sn = tt.snow || 0; tt.snow = snowing ? sn : Math.max(0, sn - rdt * 0.03); } }
     // Fall: leaves blow across the yard from the trees' side.
     if (isOutdoor(lv) && seasonIdx() === 2 && tier() !== 'low') {
