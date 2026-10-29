@@ -1,6 +1,42 @@
 # Meridian Tech (IT Help Desk): layout and art plan
 
-*Planning doc. Scope: the place, its layout and its look. The tickets, cast and pay are in `../jobs.md`; this plan does not change them.*
+*Planning doc. Scope: how the office is reached, what you do there (objectives), and its layout and look. The ticket list and cast are in `../jobs.md`; where that doc says Maya stays home, this one supersedes it (see "Going to work").*
+
+## Going to work: automatic, or yours
+
+This is the rule that decides everything else.
+
+- **By default the household goes to work on its own.** On a workday both of them leave at the same time, and both are home at the same time. No scene
+  opens, the clock runs as it does today (`routineStep`: `leave` at the job's start, `return` at its end, status "At work"), and the shift pays the
+  ordinary day's wage (`dayPay`). Nothing about the office is ever shown. A player who never touches it never meets it.
+- **The office is unlocked by choosing to take control of the commute.** When the player takes over at the moment they leave ("Go to work with
+  Jordan"), the office scene opens and the shift is played. This is the only way in. Declining costs nothing but the extras below.
+- **Taking control is optional every day,** and the unlock is the first time they do it: the Meridian Tech level then appears in the floor bar for
+  good, and the Help Desk job is theirs to progress in.
+- **There is no walking out of the house to a street.** Both people leave through the front door in the existing "away" state, as now; if the
+  player takes control, the scene switches to the office, and when the shift ends it switches back as they return together.
+
+## Objectives (what you do when you take control)
+
+A shift is a stream of tickets (the table in `../jobs.md`) against a performance meter. These objectives sit on top of it.
+*These numbers are a proposal to confirm; the structure is what matters.*
+
+| Level | Objective | Why it exists |
+|---|---|---|
+| **Per ticket** | Pick the right fix: turn it off and on again, check the cable, reset the password, or escalate. Right answer fast = full marks, wrong = a retry with a hit to the meter | The core loop |
+| **Per shift** | Clear the day's quota (say 8 tickets) and keep the average response under the timer. Hit both = a **good shift** | The thing you are playing for |
+| **Per shift, bonus** | One hidden "extra": help Kayleigh with a break, calm Dale before the review, or spot that it was Barb's cable again | Rewards paying attention without spoiling it |
+| **Per week** | The Friday review: a score from the week's speed and accuracy. Over the bar = a raise, under = nothing lost | The pay and promotion gate |
+| **Career** | Help Desk Tech, Senior Tech, Team Lead, Sysadmin, IT Director. Each needs a number of good shifts and a review score. Each step unlocks something in the office (a better desk, a window seat, a key to the server room, the corner office) | A reason to come back |
+| **Set pieces** | Monday standup, Friday review, the all-hands server outage. Each fires once its conditions are met | The story beats |
+
+What the player gets for taking control, over autopilot:
+- **Autopilot pays the plain day's wage and nothing more.** No performance, no promotion, no bonuses, no relationships at the office.
+- **A played shift adds** a bonus on a good shift, the weekly review raise, promotion up the ladder, and the story with the cast.
+- **Nobody is punished for letting it run.** The household is always fed and paid. (Check this against the "skipping work" decision in `../jobs.md`.)
+
+Needs still drain at work (`needs.ts` `away`), so a controlled shift also has Jordan eat in the break room and use the bathroom; that is a small objective
+of its own (keep him from starving) and uses the break room we are building.
 
 ## What the engine gives us (and its limits)
 
@@ -78,17 +114,23 @@ game's angle). Cubicles and partitions are simple boxes and stay code-drawn so t
 3. **Furniture set 2:** copier, cooler, boardroom, break room pieces.
 4. **Light and day or night:** window wall, ceiling light, server glow, dusk at the end of the shift.
 5. **Cast placement and work poses.**
-6. **Getting there:** the workplace tab, the commute and the return. Open question below.
+6. **Taking control:** the "go to work with Jordan" prompt at the leave step, the scene switch, the shift's end and the return. Then the objectives, one level at
+   a time: tickets, the shift quota, the weekly review, the career ladder.
 
 Each step is its own small change, and is checked in the real game on desktop and phone before the next.
 
 ## Open questions
 
-1. **Getting there:** does Jordan walk out the door and the camera follows, or does the workplace tab switch scenes directly (the jobs doc
-   says the second)? The second is much cheaper; the first needs a front door and a street scene.
-2. **One floor or two:** if the four rooms feel cramped at 10 x 8, the server room and boardroom could be a second floor reached by stairs,
-   like the house. That doubles the level work.
-3. **Customisable:** which of the office pieces can the player recolour or rearrange? The jobs doc says "organize affects mood".
-4. **Story scenes:** Monday standup, the Friday review and the server outage are scripted scenes. By the repo rules each needs its own
-   contract in `docs/velvet-house/scenes/` before it is built, so they are out of scope here.
-5. **Name and brand:** Meridian Tech is fine as a fictional name. Check it is not a real company before shipping.
+1. **Maya's day:** the jobs doc has her staying home with chores, and you said both leave and return together. Does Maya have her own job and
+   workplace (a second location to plan), or does she go somewhere unseen? Her needs and her texts to Jordan on break depend on it.
+2. **Weekends and days off:** no work, so no prompt, as now. Does a sick day or a called-in day (`calledIn`) cancel the prompt?
+3. **The prompt:** where does the choice appear (a card at the leave hour, a button on the Today page, both)? And does it time out into autopilot?
+4. **Pay for a played shift vs autopilot:** confirm the split above, so taking control is a reward and not a chore.
+5. **One floor or two:** if the four rooms feel cramped at 10 x 8, the server room and boardroom could be a second floor reached by stairs. That
+   doubles the level work.
+6. **Saves:** adding a level touches the save format, so we ask the director before changing `MIN_CONTENT_VERSION`. Old houses would load
+   without the office, which fits "unlocked by taking control".
+7. **Customisable:** which of the office pieces can the player recolour or rearrange? The jobs doc says "organize affects mood".
+8. **Story scenes:** Monday standup, the Friday review and the server outage each need their own contract in `docs/velvet-house/scenes/` before they
+   are built, so they are out of scope here.
+9. **Name and brand:** Meridian Tech is fine as a fictional name. Check it is not a real company before shipping.
