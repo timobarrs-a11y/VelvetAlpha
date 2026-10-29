@@ -4229,6 +4229,8 @@ export function createHouseArt(ctx0, opts = {}) {
   // Everything sits on whole tiles like the yard: fences on tile edges, one clear tile between a fence and a shed, a tile of verge either side of the lane.
   const NB = { lane0: WX + 1, lane1: WX + 4, rear0: WX + 5, depth: 7, front: 5 };
   const nbBack = { ground: null, objects: null, key: '' };
+  // What rain can land on, recorded as the objects are drawn: a roof or canopy (a flat shape at a height) and the outline that hides what is behind it.
+  let nbOcc = [];
   let nbWet = 0;
   const nbHash = (a, b) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
   // A face is seen when its outward normal turns toward the camera, which always sits at +a, +b.
@@ -4270,6 +4272,7 @@ export function createHouseArt(ctx0, opts = {}) {
   function nbTree(x, y, seed) {
     if (!nbBehind(x - 1.4, y - 1.4, x + 1.4, y + 1.4)) return;
     const si = seasonIdx(), [sx, sy] = iso(x, y, 0), pine = seed > 0.66, s = 0.8 + seed * 0.5;
+    nbOcc.push(pine ? { ell: { cx: sx, cy: sy - 34 * s, rx: 15 * s, ry: 7.5 * s }, zr: s, sil: { cx: sx, cy: sy - 30 * s, rx: 16 * s, ry: 26 * s } } : { ell: { cx: sx, cy: sy - 38 * s, rx: 24 * s, ry: 12 * s }, zr: 1.12 * s, sil: { cx: sx, cy: sy - 34 * s, rx: 24 * s, ry: 24 * s } });
     ell(sx + 6, sy + 1, 22 * s, 8 * s, 'rgba(28,40,26,.2)');
     rr(sx - 2, sy - 22 * s, 4, 22 * s, 1.5, '#5A3E2E');
     if (pine) { const c = si === 3 ? '#8DA8A0' : '#3F7A4A'; for (let k = 0; k < 3; k++) { const w = (17 - k * 4) * s, yy = sy - (14 + k * 11) * s; ctx.fillStyle = shade(c, k * 0.05); ctx.beginPath(); ctx.moveTo(sx - w, yy + 8 * s); ctx.lineTo(sx + w, yy + 8 * s); ctx.lineTo(sx, yy - 12 * s); ctx.closePath(); ctx.fill(); } return; }
@@ -4280,6 +4283,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (!nbBehind(x, y, x + 2, y + 2)) return;
     const c = ['#8C6A4E', '#A9B8A6', '#B8A07C'][(seed * 3 | 0) % 3];
     box(x, y, 0, 2, 2, 1.5, c);
+    nbOcc.push({ roof: [iso(x - 0.1, y - 0.1, 1.62), iso(x + 2.1, y - 0.1, 1.62), iso(x + 2.1, y + 2.1, 1.62), iso(x - 0.1, y + 2.1, 1.62)], zr: 1.62, sil: hull([0, 1.62].flatMap(z => [iso(x - 0.1, y - 0.1, z), iso(x + 2.1, y - 0.1, z), iso(x + 2.1, y + 2.1, z), iso(x - 0.1, y + 2.1, z)])) });
     // The door faces into the yard (+y, away from the fence the shed stands against); the wall seen from the other side gets a window.
     if (nbFacing(0, 1)) poly([[x + 0.6, y + 2.012, 0], [x + 1.4, y + 2.012, 0], [x + 1.4, y + 2.012, 1.1], [x + 0.6, y + 2.012, 1.1]], shade(c, -0.35), '#F7F3EE', 0.8);
     const wx = nbFacing(1, 0) ? x + 2.012 : x - 0.012;
@@ -4320,6 +4324,7 @@ export function createHouseArt(ctx0, opts = {}) {
     for (let k = -R; k <= R; k++) { nbLot(-NB.front, 0, k * WY, k * WY + WY, k + 140, lawn); }
     }
     if (part === 'objects') {
+    nbOcc = [];
     // Back-to-front: fences go in the same sort as the houses, sheds and trees (a fence in front of a shed has to cover it), in short runs
     // so each run is sorted by its own depth.
     const fenceRows = (xa, ya, xb, yb) => { const len = Math.hypot(xb - xa, yb - ya), n = Math.max(1, Math.round(len / 2)); for (let i = 0; i < n; i++) { const a = [xa + (xb - xa) * i / n, ya + (yb - ya) * i / n], b = [xa + (xb - xa) * (i + 1) / n, ya + (yb - ya) * (i + 1) / n]; rows.push({ key: vs((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), d: () => nbFence(a[0], a[1], b[0], b[1]) }); } };
@@ -4374,7 +4379,7 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.drawImage(nbBack.objects, 0, 0, W, H);
     nbFinish();
   }
-  const nbRain = (part) => ({ part, n: Math.round(dropCaps().rain * 2.2 * nbWet), snow: !!(weatherNow.snow ?? seasonIdx() === 3), W, H, TW, TH, ZH, skip: [iso(0, 0), iso(WX, 0), iso(WX, WY), iso(0, WY)] });
+  const nbRain = (part) => ({ part, occ: nbOcc, n: Math.round(dropCaps().rain * 2.2 * nbWet), snow: !!(weatherNow.snow ?? seasonIdx() === 3), W, H, TW, TH, ZH, skip: [iso(0, 0), iso(WX, 0), iso(WX, WY), iso(0, WY)] });
   // How many drops the quality tier allows, scaled by how heavy the rain is (light, medium, heavy).
   function dropCaps() {
     const base = tier() === 'high' ? { rain: 700, snow: 500 } : tier() === 'medium' ? { rain: 400, snow: 300 } : { rain: 200, snow: 150 };
