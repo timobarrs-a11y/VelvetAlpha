@@ -343,6 +343,10 @@
 .vh-station-act:hover:not([disabled]) { background: rgba(255,255,255,.1); }
 .vh-station-act:active:not([disabled]) { transform: scale(.98); }
 .vh-station-act[disabled] { opacity: .45; cursor: default; }
+/* On a phone the sheet is a bottom sheet, so the house stays in view above it. */
+@media (max-width: 560px) {
+  .vh-station { left: 8px !important; right: 8px; top: auto !important; bottom: 92px; width: auto; max-height: 52%; }
+}
 
 /* Discovery card */
 .vh-dcard {
@@ -425,14 +429,14 @@
 /* The action buttons are one even grid, all the same size: the green one is the main one by colour alone. */
 .vh-arr-acts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
 .vh-arr-floors > span, .vh-arr-looks > span { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #A99BBF; }
-.vh-arr-bar button {
+.vh-arr-bar button, .vh-arr-acts button {
   appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   border: 1px solid rgba(255,255,255,.14); border-radius: 11px; padding: 0 10px; min-height: 36px;
   font: 700 12.5px/1 Inter, system-ui, sans-serif; color: #F2EEE8; background: rgba(255,255,255,.08); cursor: pointer;
   transition: background .15s ease, border-color .15s ease, transform .12s ease, box-shadow .15s ease;
 }
 .vh-arr-bar button svg { flex: none; opacity: .9; }
-.vh-arr-bar button:hover { background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.26); }
+.vh-arr-bar button:hover, .vh-arr-acts button:hover { background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.26); }
 .vh-arr-bar button:active { transform: scale(.96); }
 .vh-arr-bar button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .vh-arr-bar .vh-arr-primary { background: linear-gradient(180deg, #6CC98F, #4FAE76); border-color: rgba(255,255,255,.28); color: #0D2417; box-shadow: 0 4px 14px rgba(79,174,118,.35); }

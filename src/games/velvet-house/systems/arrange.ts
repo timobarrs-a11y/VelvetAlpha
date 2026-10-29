@@ -262,12 +262,11 @@ export function createArrange(g: Game): Partial<Game> {
     const dir = (b[0] >= a[0] ? 1 : -1) * (side < 0 ? -1 : 1);
     makeLoose(o);
     const prev: Pose = { x: o.x, y: o.y, rot: o.rot };
-    const start = snap.axis === 'x' ? o.x : o.y, v = clearAlong(o, snap, dir);
+    const v = clearAlong(o, snap, dir);
     if (v === null) { log(`There's no room for the ${nameOf(o)} further along the wall.`); return; }
     slideAlong(o, snap, v);
     carryOnTop(world.objs, o, prev);
     refit(o);
-    void start;
   }
   /** The demo: the office's pieces as lines of the starting layout (`INITIAL_OBJS`), copied to the clipboard, so a finished arrangement can go into the main game. */
   function copyOfficeLayout(): void {

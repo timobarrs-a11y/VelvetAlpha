@@ -247,10 +247,9 @@ export interface WallSnap { x: number; y: number; rot: number; axis: 'x' | 'y'; 
  * turned to face into the room, keeping its place along the wall where it can. A piece set on a surface, a rug or a mounted piece
  * has no wall to stand against; so does one longer than every wall near it. `o` is left as it was.
  */
-export function wallSnaps(objs: ObjectInstance[], o: ObjectInstance): WallSnap[] {
+export function wallSnaps(_objs: ObjectInstance[], o: ObjectInstance): WallSnap[] {
   const t = TYPES[o.type];
   if (!t || o.on || isRug(o.type) || isMount(o.type) || t.small) return [];
-  void objs;
   const m = margin(o.level), rot0 = o.rot, x0 = o.x, y0 = o.y;
   const cx = x0 + footprint(o)[0] / 2, cy = y0 + footprint(o)[1] / 2;
   const found: Array<WallSnap & { cost: number }> = [];
@@ -282,7 +281,7 @@ export function wallSnaps(objs: ObjectInstance[], o: ObjectInstance): WallSnap[]
   }
   o.rot = rot0; o.x = x0; o.y = y0;
   found.sort((p, q) => p.cost - q.cost);
-  return found.map(({ cost, ...snap }) => (void cost, snap));
+  return found.map(({ x, y, rot, axis, lo, hi }) => ({ x, y, rot, axis, lo, hi }));
 }
 
 /** The nearest wall to set the piece against, or null when it has none (see `wallSnaps`). */
