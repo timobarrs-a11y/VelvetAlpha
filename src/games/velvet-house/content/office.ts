@@ -6,7 +6,7 @@ import type { ActivityGives } from '../state/activities';
  * walk, pose and timer. `secs` is real seconds at the normal speed (a game minute is a second there). Tags are what today's list will
  * match against once it is built; nothing reads them yet.
  */
-export type StationId = 'desk' | 'sink' | 'boss' | 'printer' | 'whiteboard' | 'door' | 'filing' | 'cooler' | 'vending' | 'coffee' | 'fridge' | 'plant';
+export type StationId = 'desk' | 'sink' | 'boss' | 'printer' | 'whiteboard' | 'door' | 'filing' | 'vending' | 'coffee' | 'fridge' | 'plant';
 
 export interface StationInfo {
   title: string;
@@ -25,7 +25,6 @@ export const STATIONS: Record<StationId, StationInfo> = {
   whiteboard: { title: 'Whiteboard', tag: 'o_board', taps: [] },
   door: { title: 'Meeting room', tag: 'o_door', taps: [] },
   filing: { title: 'Filing cabinet', tag: 'o_files', taps: ['officecabinet'] },
-  cooler: { title: 'Water cooler', tag: 'o_cooler', taps: ['officecooler'] },
   vending: { title: 'Vending machine', tag: 'o_vending', taps: ['officevending'] },
   coffee: { title: 'Coffee machine', tag: 'o_coffee', taps: ['officecoffee'] },
   fridge: { title: 'Fridge', tag: 'o_fridge', taps: ['officefridge'] },
@@ -107,7 +106,7 @@ export const OFFICE_ACTIONS: OfficeAction[] = [
   // The rest of the floor.
   { id: 'brainstorm', station: 'whiteboard', label: 'Brainstorm on the whiteboard', secs: 60, tags: ['plan'], pose: 'board', verb: 'Brainstorming at the whiteboard' },
   { id: 'file', station: 'filing', label: 'Find a document', secs: 45, tags: ['paper', 'file'], pose: 'files', verb: 'Looking through the files' },
-  { id: 'water', station: 'cooler', label: 'Get some water', secs: 30, tags: ['break'], pose: 'dispense', verb: 'Getting water', gives: { comfort: 4 } },
+  { id: 'water', station: 'sink', label: 'Get some water', secs: 30, tags: ['break'], pose: 'dispense', verb: 'Getting water', gives: { comfort: 4 } },
   { id: 'coffee', station: 'coffee', label: 'Make a coffee', secs: 30, tags: ['break', 'coffee'], pose: 'dispense', verb: 'Making a coffee', gives: { energy: 10 } },
   { id: 'snack', station: 'vending', label: 'Buy a snack', secs: 30, tags: ['break', 'snack'], pose: 'operate', verb: 'Buying a snack', gives: { food: 14 } },
   { id: 'lunch', station: 'fridge', label: 'Have lunch', secs: 120, tags: ['break', 'lunch'], pose: 'snack', verb: 'Having lunch', gives: { food: 45, comfort: 6 } },

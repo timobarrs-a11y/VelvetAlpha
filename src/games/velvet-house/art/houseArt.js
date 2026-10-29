@@ -3100,16 +3100,16 @@ export function createHouseArt(ctx0, opts = {}) {
     },
     officerug: {
       // The boss's rug: deep red with a gold border.
-      parts: () => [F(0, 0, 3.0, 3.0, (T) => { const q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1); q(0, 0, 3.0, 3.0, 0.01, '#6A2A2E'); q(0.12, 0.12, 2.88, 2.88, 0.012, null, '#C9A24A'); q(0.25, 0.25, 2.75, 2.75, 0.012, null, 'rgba(201,162,74,.5)'); })],
+      parts: () => [F(0, 0, 3.0, 3.0, (T) => { const q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1); q(0, 0, 3.0, 3.0, 0.01, '#6A2A2E'); q(0.12, 0.12, 2.88, 2.88, 0.012, null, '#C9A24A'); q(0.25, 0.25, 2.75, 2.75, 0.012, null, 'rgba(201,162,74,.5)'); }, { decal: true })],
     },
     officerunner: {
       // A long corporate runner laid from the meeting room door down the aisle: charcoal-blue with a pale edge stripe and a darker inner border.
-      parts: () => [F(0, 0, 1.1, 6.4, (T) => { const q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1); q(0, 0, 1.1, 6.4, 0.01, '#3C4A63'); q(0.07, 0, 1.03, 6.33, 0.012, null, '#9AA7BD'); q(0.15, 0, 0.95, 6.25, 0.012, null, 'rgba(154,167,189,.45)'); })],
+      parts: () => [F(0, 0, 1.1, 6.4, (T) => { const q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1); q(0, 0, 1.1, 6.4, 0.01, '#3C4A63'); q(0.07, 0, 1.03, 6.33, 0.012, null, '#9AA7BD'); q(0.15, 0, 0.95, 6.25, 0.012, null, 'rgba(154,167,189,.45)'); }, { decal: true })],
     },
     officeprinter: {
       // A floor-standing copier: a cabinet with two paper drawers, a white body, a scanner lid with a glass top, a control panel with buttons on the front half, and a tray with paper. The front (drawers, tray, panel) is local +y; the piece stands against the front wall turned (rot 2) so that front faces into the room.
       parts: () => [B(0.05, 0.05, 0, 1.5, 0.6, 0.5, '#8E98A6'), B(0, 0, 0.5, 1.6, 0.7, 0.5, '#F1EEE8'),
-        // The top (lid, glass, panel, buttons) is painted over the body; the front strip (drawers, tray) is its own piece at the front edge, so it sorts with the front whichever way the piece is turned.
+        // The top (lid, glass, panel, buttons) is painted over the body; the front strip (drawers, tray) is its own piece at the front edge, so it sorts with the front whichever way the piece is turned. A front strip reaches a little past the sides of its piece so that a neighbour a hair's breadth away does not make the sort ambiguous.
         F(0, 0, 1.6, 0.7, (T) => {
           T.box(0.04, 0.04, 1.0, 1.1, 0.62, 0.07, '#DDE1E7');                                                                         // the scanner lid
           T.poly([[0.12, 0.12, 1.075], [1.02, 0.12, 1.075], [1.02, 0.6, 1.075], [0.12, 0.6, 1.075]], '#9FC4DA', 'rgba(0,0,0,.25)');   // the scanner glass
@@ -3117,7 +3117,7 @@ export function createHouseArt(ctx0, opts = {}) {
           [['#3F9A5A', 1.24], ['#C2413A', 1.32], ['#E0B64A', 1.4]].forEach(([c, x]) => T.box(x, 0.32, 1.14, 0.05, 0.05, 0.015, c));
           T.box(1.22, 0.44, 1.14, 0.28, 0.12, 0.012, '#7FC0E6');
         }, { onTop: true }),
-        F(0, 0.7, 1.6, 0.9, (T) => {
+        F(-0.1, 0.7, 1.7, 0.9, (T) => {
           [0.1, 0.3].forEach(z => { T.poly([[0.12, 0.701, z + 0.04], [1.48, 0.701, z + 0.04], [1.48, 0.701, z + 0.17], [0.12, 0.701, z + 0.17]], '#A5AEBA', 'rgba(0,0,0,.3)'); T.box(0.7, 0.702, z + 0.1, 0.2, 0.012, 0.03, '#3A3F4A'); });
           T.box(0.1, 0.7, 0.55, 0.62, 0.15, 0.025, '#C9CED6'); T.box(0.14, 0.72, 0.575, 0.54, 0.11, 0.03, '#FFFFFF');                  // the output tray and its paper
         })],
@@ -3125,23 +3125,10 @@ export function createHouseArt(ctx0, opts = {}) {
     // Nothing is drawn for the two spots (the whiteboard and the meeting door are part of the wall).
     officeboardspot: { parts: () => [] },
     officedoorspot: { parts: () => [] },
-    officecooler: {
-      // A water cooler: a cabinet, a tilted-looking bottle of blue water, two taps over a drip tray and a stack of cups at its side. The front is local +y.
-      parts: () => [B(0, 0, 0, 0.4, 0.4, 0.84, '#DDE4EA'), B(0.01, 0.01, 0.84, 0.38, 0.38, 0.04, '#B9C3CE'),
-        B(0.07, 0.07, 0.88, 0.26, 0.26, 0.46, '#7FC0E6'), B(0.13, 0.13, 1.34, 0.14, 0.14, 0.08, '#5AA3CE'),
-        F(0, 0.4, 0.4, 0.46, (T) => {
-          const fy = 0.401;
-          T.poly([[0.04, fy, 0.52], [0.36, fy, 0.52], [0.36, fy, 0.8], [0.04, fy, 0.8]], '#CBD4DD', 'rgba(0,0,0,.18)');                  // the front panel
-          T.box(0.09, 0.4, 0.62, 0.07, 0.05, 0.06, '#3D8BD6'); T.box(0.24, 0.4, 0.62, 0.07, 0.05, 0.06, '#E08A3A');                    // the cold and hot taps
-          T.box(0.05, 0.4, 0.5, 0.3, 0.06, 0.02, '#8E98A6');                                                                           // the drip tray
-          T.poly([[0.1, 0.331, 0.92], [0.13, 0.331, 0.92], [0.13, 0.331, 1.3], [0.1, 0.331, 1.3]], 'rgba(255,255,255,.35)');            // a gleam down the bottle
-          T.box(0.31, 0.39, 0.54, 0.07, 0.07, 0.14, '#F4EFE6');                                                                       // the cups
-        }, { onTop: true })],
-    },
     officecabinet: {
       // A four-drawer filing cabinet: a steel body, a lip on top, drawer fronts with a handle and a label holder each. The front is local +y.
       parts: () => [B(0, 0, 0, 0.5, 0.6, 1.2, '#8E98A6'), B(-0.01, -0.01, 1.2, 0.52, 0.62, 0.03, '#7C8694'),
-        F(0, 0.6, 0.5, 0.66, (T) => {
+        F(-0.1, 0.6, 0.6, 0.66, (T) => {
           const fy = 0.601;
           for (let i = 0; i < 4; i++) {
             const z0 = 0.05 + i * 0.285, z1 = z0 + 0.265;
@@ -3187,27 +3174,35 @@ export function createHouseArt(ctx0, opts = {}) {
         }, { onTop: true })],
     },
     officecoffee: {
-      // The coffee station: a cabinet with two doors, a wood top, a machine with its glass pot, a stack of mugs and a tin. Its front is local +y; the piece is set against the window wall turned (rot 3).
+      // The coffee station: a two-door cabinet with a wood top. On it, left to right along the wall: a drip machine (a column at the back, a brew head overhanging a glass pot on a base plate), a tray with three mugs, and a tin.
+      // The things on top are boxes drawn far to near for however the piece is turned, so none clashes with another. The front is local +y.
       parts: () => [B(0, 0, 0, 1.1, 0.55, 0.85, '#C9C3B8'), B(0, 0, 0.85, 1.1, 0.55, 0.05, '#8E6B4E', { name: 'top' }),
-        F(0, 0, 1.1, 0.55, (T) => {
-          const fy = 0.551;
-          [0.55].forEach(x => T.line([x, fy, 0.06], [x, fy, 0.8], 'rgba(60,50,40,.45)', 1.2));
+        F(0, 0, 1.1, 0.55, (T, o) => {
+          const fy = 0.551, W = 1.1, D = 0.55, z0 = 0.9;
+          T.line([0.55, fy, 0.06], [0.55, fy, 0.8], 'rgba(60,50,40,.45)', 1.2);
           [0.45, 0.65].forEach(x => T.box(x - 0.015, fy, 0.45, 0.03, 0.012, 0.12, '#8E98A6'));
-          const z0 = 0.9;
-          T.box(0.08, 0.1, z0, 0.36, 0.3, 0.06, '#2B2F38');                                      // the machine's base
-          T.box(0.08, 0.34, z0, 0.36, 0.06, 0.4, '#23272F');                                     // its back column
-          T.box(0.08, 0.1, z0 + 0.4, 0.36, 0.3, 0.07, '#23272F');                                 // its head
-          T.box(0.17, 0.16, z0 + 0.06, 0.14, 0.14, 0.2, '#BFE3EE');                                 // the glass pot
-          T.box(0.2, 0.19, z0 + 0.06, 0.08, 0.08, 0.1, '#5A3A22');                                  // the coffee in it
-          T.box(0.36, 0.12, z0 + 0.4, 0.04, 0.04, 0.02, '#5BE08A');                                 // its light
-          T.box(0.62, 0.14, z0, 0.1, 0.1, 0.1, '#E8E2D6'); T.box(0.78, 0.22, z0, 0.1, 0.1, 0.1, '#7FB8C9'); T.box(0.62, 0.3, z0, 0.1, 0.1, 0.1, '#E8E2D6');   // the mugs
-          T.box(0.86, 0.32, z0, 0.16, 0.16, 0.12, '#C9A24A');                                     // the tin
+          const depth = (x, y) => (o.rot === 1 ? (D - y) + x : o.rot === 2 ? (W - x) + (D - y) : o.rot === 3 ? y + (W - x) : x + y);
+          const boxes = [
+            [0.1, 0.06, z0, 0.32, 0.06, 0.44, '#23272F'],            // the machine's back column
+            [0.1, 0.06, z0, 0.32, 0.36, 0.05, '#2B2F38'],            // its base plate
+            [0.1, 0.06, z0 + 0.4, 0.32, 0.36, 0.07, '#23272F'],      // the brew head, over the pot
+            [0.2, 0.2, z0 + 0.05, 0.12, 0.12, 0.2, '#BFE3EE'],       // the glass pot
+            [0.22, 0.22, z0 + 0.05, 0.08, 0.08, 0.09, '#5A3A22'],    // the coffee in it
+            [0.36, 0.13, z0 + 0.34, 0.04, 0.02, 0.03, '#5BE08A'],    // its light, on the column
+            [0.55, 0.14, z0, 0.34, 0.2, 0.015, '#B9B3A6'],           // the tray
+            [0.58, 0.19, z0 + 0.015, 0.09, 0.09, 0.1, '#E8E2D6'],    // the mugs
+            [0.7, 0.19, z0 + 0.015, 0.09, 0.09, 0.1, '#7FB8C9'],
+            [0.82, 0.19, z0 + 0.015, 0.09, 0.09, 0.1, '#E8E2D6'],
+            [0.96, 0.1, z0, 0.12, 0.12, 0.15, '#C9A24A'],            // the tin
+            [0.955, 0.095, z0 + 0.15, 0.13, 0.13, 0.025, '#A8832F'], // its lid
+          ].map((b) => ({ b, d: depth(b[0] + b[3] / 2, b[1] + b[4] / 2), z: b[2] })).sort((p, q) => p.d - q.d || p.z - q.z);
+          boxes.forEach(({ b }) => T.box(b[0], b[1], b[2], b[3], b[4], b[5], b[6]));
         }, { onTop: true })],
     },
     officefridge: {
       // An office fridge: a freezer door over a tall door with a handle each, a gap between, a few magnets and a note. The front is local +y.
       parts: () => [B(0, 0, 0, 0.7, 0.7, 1.9, '#E3E9EE'), B(0.005, 0.005, 1.9, 0.69, 0.69, 0.02, '#CBD3DA'),
-        F(0, 0.7, 0.7, 0.76, (T) => {
+        F(-0.1, 0.7, 0.8, 0.76, (T) => {
           const fy = 0.701;
           T.poly([[0.02, fy, 1.28], [0.68, fy, 1.28], [0.68, fy, 1.88], [0.02, fy, 1.88]], '#F2F5F8', 'rgba(0,0,0,.2)');                    // the freezer door
           T.poly([[0.02, fy, 0.06], [0.68, fy, 0.06], [0.68, fy, 1.24], [0.02, fy, 1.24]], '#EAEFF3', 'rgba(0,0,0,.2)');                    // the main door
@@ -3221,7 +3216,7 @@ export function createHouseArt(ctx0, opts = {}) {
     officevending: {
       // A snack machine: a lit sign over a window of snacks on coils, a keypad and a coin slot on the right, a flap at the bottom. The front is local +y.
       parts: () => [B(0, 0, 0, 0.7, 0.7, 1.8, '#2F5FA8'), B(0.005, 0.005, 1.8, 0.69, 0.69, 0.02, '#244B86'),
-        F(0, 0.7, 0.7, 0.76, (T) => {
+        F(-0.1, 0.7, 0.8, 0.76, (T) => {
           const fy = 0.701;
           T.poly([[0.04, fy, 1.66], [0.66, fy, 1.66], [0.66, fy, 1.76], [0.04, fy, 1.76]], '#F2C14E', '#C99A2E');                            // the lit sign
           T.poly([[0.05, fy, 0.62], [0.46, fy, 0.62], [0.46, fy, 1.62], [0.05, fy, 1.62]], '#16202E', '#0E1622');                            // the glass
