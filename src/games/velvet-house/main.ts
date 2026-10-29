@@ -33,7 +33,7 @@ import { installDevHooks } from './dev/hooks';
 import { createHostBridge } from './bridge/hostBridge';
 import { showMainMenu } from './ui/mainMenu';
 import { startAttract } from './ui/attract';
-import { run, SAVE_KEY } from './kernel/config';
+import { run, SAVE_KEY, IS_DEMO } from './kernel/config';
 import { postToParent } from './bridge/protocol';
 
 /**
@@ -91,6 +91,7 @@ function boot(attract: boolean): void {
  * directly with ?nomenu.
  */
 async function launch(): Promise<void> {
+  if (IS_DEMO) document.title = 'Velvet Sims (Demo)';
   const skip = import.meta.env.DEV && new URLSearchParams(location.search).has('nomenu');
   const launched = location.hash === '#launch';
   if (launched) history.replaceState(null, '', location.pathname + location.search);
@@ -110,7 +111,15 @@ async function launch(): Promise<void> {
   if (skip || launched) { boot(false); return; }
   run.attract = true;
   boot(true);
-  await showMainMenu();
+  const choice = await showMainMenu();
+  // The demo reloads into its own save slot, starting fresh, so every try of it begins the same way.
+  if (choice === 'demo') {
+    const p = new URLSearchParams(location.search);
+    p.set('demo', '1');
+    p.set('start', 'new');
+    location.replace(`${location.pathname}?${p}`);
+    return;
+  }
   location.hash = 'launch';
   location.reload();
 }
