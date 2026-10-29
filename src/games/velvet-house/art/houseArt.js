@@ -4289,7 +4289,7 @@ export function createHouseArt(ctx0, opts = {}) {
     for (let i = x0; i < x1; i++) for (let j = y0; j < y1; j++) {
       const [sx, sy] = iso(i + 0.5, j + 0.5, 0); if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) continue;
       const h = nbHash(i * 31 + seed, j * 17 + 5);
-      poly([[i, j, 0], [i + 1, j, 0], [i + 1, j + 1, 0], [i, j + 1, 0]], shade(grass, 0.1 + (h - 0.5) * 0.05), 'rgba(40,70,30,.12)', 0.6);
+      poly([[i, j, 0], [i + 1, j, 0], [i + 1, j + 1, 0], [i, j + 1, 0]], shade(grass, (h - 0.5) * 0.05), 'rgba(40,70,30,.12)', 0.6);
       for (let k = 0; k < 3; k++) { const px = i + nbHash(i + k, j * 7 + seed), py = j + nbHash(i * 5 + seed, j + k * 3), [bx, by] = iso(px, py, 0); limb(bx, by, bx - 1, by - 3, 'rgba(60,110,44,.55)', 1); limb(bx, by, bx + 1.5, by - 2.5, 'rgba(60,110,44,.55)', 1); }
     }
     const px = x0 + 1 + Math.floor(nbHash(seed, 2) * 3), py = y0 + 4 + Math.floor(nbHash(seed, 4) * 2);
@@ -4298,19 +4298,21 @@ export function createHouseArt(ctx0, opts = {}) {
   }
   function buildBackdrop() {
     const si = seasonIdx(), grass = grassColor({ water: 0.72, len: 0.38, burn: 0, j: 0, mowedAt: -9999 }), asphalt = si === 3 ? '#6A6F78' : '#5A5E66';
+    // The yard's own lawn is brighter and greener than a flat tile (its blades and mowing stripes), so the neighbours' is lifted to match; a step in colour reads as a step in height.
+    const [lr, lg, lb] = rgb(grass), lawn = `rgb(${Math.min(255, Math.round(lr * 1.1))},${Math.min(255, Math.round(lg * 1.145))},${Math.round(lb * 0.96)})`;
     const R = 14, big = 90, rows = [];
     // Ground. The whole canvas is grass first, so no edge of the neighbourhood ever shows.
-    ctx.fillStyle = grass; ctx.fillRect(0, 0, W, H);
-    poly([[-big, -big, -0.02], [big, -big, -0.02], [big, big, -0.02], [-big, big, -0.02]], grass);
+    ctx.fillStyle = lawn; ctx.fillRect(0, 0, W, H);
+    poly([[-big, -big, -0.02], [big, -big, -0.02], [big, big, -0.02], [-big, big, -0.02]], lawn);
     // The lane behind the back fences, with gravel shoulders and a concrete apron at each back gate.
     poly([[NB.lane0 - 1, -big, -0.01], [NB.lane1 + 1, -big, -0.01], [NB.lane1 + 1, big, -0.01], [NB.lane0 - 1, big, -0.01]], si === 3 ? '#D5DADF' : '#B8AE9C');
     poly([[NB.lane0, -big, 0], [NB.lane1, -big, 0], [NB.lane1, big, 0], [NB.lane0, big, 0]], asphalt);
     for (let k = -R; k <= R; k++) { const y = k * WY + 3, y2 = y + 2; poly([[WX, y, 0.005], [NB.lane0, y, 0.005], [NB.lane0, y2, 0.005], [WX, y2, 0.005]], '#CFC9C0'); }
     for (let k = -R; k <= R; k++) for (let t = 0; t < 4; t++) { const y = k * WY + 1 + t * 2; poly([[NB.lane0 + 0.1, y, 0.002], [NB.lane0 + 0.1, y + 0.15, 0.002], [NB.lane1 - 0.1, y + 0.15, 0.002], [NB.lane1 - 0.1, y, 0.002]], 'rgba(0,0,0,.06)'); }
     // Back yards: ours and the neighbours' on this side, then the next street's on the far side of the lane.
-    for (let k = -R; k <= R; k++) if (k !== 0) nbLot(0, WX, k * WY, k * WY + WY, k + 40, grass);
-    for (let k = -R; k <= R; k++) nbLot(NB.rear0, NB.rear0 + 10, k * WY + 4, k * WY + 4 + WY, k + 90, grass);
-    for (let k = -R; k <= R; k++) { nbLot(-NB.front, 0, k * WY, k * WY + WY, k + 140, grass); }
+    for (let k = -R; k <= R; k++) if (k !== 0) nbLot(0, WX, k * WY, k * WY + WY, k + 40, lawn);
+    for (let k = -R; k <= R; k++) nbLot(NB.rear0, NB.rear0 + 10, k * WY + 4, k * WY + 4 + WY, k + 90, lawn);
+    for (let k = -R; k <= R; k++) { nbLot(-NB.front, 0, k * WY, k * WY + WY, k + 140, lawn); }
     // Back-to-front: fences go in the same sort as the houses, sheds and trees (a fence in front of a shed has to cover it), in short runs
     // so each run is sorted by its own depth.
     const fenceRows = (xa, ya, xb, yb) => { const len = Math.hypot(xb - xa, yb - ya), n = Math.max(1, Math.round(len / 2)); for (let i = 0; i < n; i++) { const a = [xa + (xb - xa) * i / n, ya + (yb - ya) * i / n], b = [xa + (xb - xa) * (i + 1) / n, ya + (yb - ya) * (i + 1) / n]; rows.push({ key: vs((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), d: () => nbFence(a[0], a[1], b[0], b[1]) }); } };
