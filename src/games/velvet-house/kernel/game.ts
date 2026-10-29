@@ -15,7 +15,7 @@ import { PICTURE_WALLS } from '../state/pictureWalls';
 import { createDrawer, type ArrangeState, type DrawerPage } from '../ui/drawer';
 import { clothByKey, clothId, type OwnedCloth, type Wardrobe } from '../state/clothing';
 import { createDialogue, createTray } from '../ui/dialogue';
-import { WALL_MODES, DEFAULT_LOOKS, lookFrom, nameFrom, type World } from '../kernel/config';
+import { WALL_MODES, DEFAULT_LOOKS, lookFrom, nameFrom, IS_DEMO, type World } from '../kernel/config';
 import { type MemoryStore } from '../state/memory';
 import { validateGarment } from '../state/garment';
 import type { Garment } from '../state/garment';
@@ -319,6 +319,8 @@ export function createGame(app: HTMLElement): Game | null {
   if (!closet.some(c => c.slot === 'bottom')) closet.push({ slot: 'bottom', style: 'pants', col: people[0].look.bottom, name: 'Old jeans', id: clothId('jeans') });
   // What the avatar wardrobe lets the player wear (sent by the host), and the avatar hat they have on.
   const flags: Record<string, unknown> = (save?.flags as Record<string, unknown>) ?? {};
+  // The demo starts with a few packets of each seed, so the garden can be tried straight away.
+  if (IS_DEMO && flags.seedPackets === undefined) flags.seedPackets = { flower: 3, fruit: 3, vegetable: 3 };
   // The house's rugs and its TV are pieces now (a new game starts with them; an older save was given them on load): never add them again.
   flags.rugObjects = true;
   flags.tvObject = true;

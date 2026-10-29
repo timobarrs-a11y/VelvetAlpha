@@ -24,7 +24,8 @@ export const SAVE_KEY = IS_DEMO
   ? `velvet-sims-demo${VELVET_COMPANION_ID ? `:${VELVET_COMPANION_ID}` : ''}`
   : VELVET_COMPANION_ID ? `velvet-sims:${VELVET_COMPANION_ID}` : 'velvet-sims';
 const LEGACY_SAVE_KEY = VELVET_COMPANION_ID ? `velvet-house-v1:${VELVET_COMPANION_ID}` : 'velvet-house-v1';
-export const SPEEDS = [1, 3, 10];
+/** The demo runs faster so the garden's growing and dying can be watched in minutes, not days. */
+export const SPEEDS = IS_DEMO ? [1, 10, 60, 180] : [1, 3, 10];
 export const WALL_MODES: { mode: WallMode; label: string }[] = [
   { mode: 'cut', label: 'Cutaway' },
   { mode: 'up', label: 'Walls up' },

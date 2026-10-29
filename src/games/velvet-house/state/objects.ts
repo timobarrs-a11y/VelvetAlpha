@@ -340,6 +340,9 @@ export interface ObjectInstance {
   wet?: number;
   /** The crop growing in a garden bed (see crops.ts); none when the bed is empty. */
   crop?: string | null;
+  /** Game minutes the planted bed has been dry, and whether the crop has died of it. */
+  dry?: number;
+  dead?: boolean;
   art?: number;
   runUntil?: number;
   flash?: number;

@@ -42,7 +42,7 @@ export interface DrawerCallbacks {
   // The Household page's pet buttons: 'feedPet', 'playPet', 'petPet', 'walkDog' or 'scoop' for a pet.
   onPetOrder?: (act: string, petId: string) => void;
   // The garden bed on the Orders page: plant a packet, water it, or harvest it when ripe.
-  onGarden?: (action: 'plant' | 'water' | 'harvest', crop?: string) => void;
+  onGarden?: (action: 'plant' | 'water' | 'harvest' | 'clear', crop?: string) => void;
   onPayBill: () => void;
   onOrderGroceries: () => void;
   onOrderTakeout: () => void;
@@ -149,7 +149,7 @@ export interface DrawerState {
   townName: string;
   deliveryPending: boolean;
   mayaStatus: string;
-  garden?: { bed: boolean; crop: string | null; grow: number; wet: number; packets: Record<string, number> };
+  garden?: { bed: boolean; crop: string | null; grow: number; wet: number; dead: boolean; dry: number; packets: Record<string, number> };
   closet: OwnedCloth[];
   personas: WardrobePersona[];
   wearing: { top: string; topStyle: string; bottom: string; bottomStyle?: string; hat?: string; topGarment?: Garment; bottomGarment?: Garment };
@@ -576,6 +576,10 @@ export function createDrawer(cb: DrawerCallbacks): {
     const bed = state.garden;
     if (!bed?.bed) return '';
     const crop = cropOf(bed.crop);
+    if (crop && bed.dead) {
+      return `<div class="vh-garden"><p><strong>${crop.name}</strong> · <span class="vh-garden-dry">died of thirst</span></p>`
+        + '<button data-garden="clear">Clear the bed</button></div>';
+    }
     if (crop) {
       const dry = bed.wet <= DRY_AT && bed.grow < 1;
       return `<div class="vh-garden"><p><strong>${crop.name}</strong> · ${stageName(bed.grow)}${dry ? ' · <span class="vh-garden-dry">the bed is drying out</span>' : ''}</p>`
@@ -621,7 +625,7 @@ export function createDrawer(cb: DrawerCallbacks): {
       b.addEventListener('click', () => cb.onOrder((b as HTMLElement).dataset.order!));
     });
     sec.querySelectorAll<HTMLElement>('[data-garden]').forEach(b => {
-      b.addEventListener('click', () => cb.onGarden?.(b.dataset.garden as 'plant' | 'water' | 'harvest', b.dataset.crop));
+      b.addEventListener('click', () => cb.onGarden?.(b.dataset.garden as 'plant' | 'water' | 'harvest' | 'clear', b.dataset.crop));
     });
   }
 
