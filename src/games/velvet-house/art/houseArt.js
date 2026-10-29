@@ -4224,7 +4224,8 @@ export function createHouseArt(ctx0, opts = {}) {
   // x = 0 wall, the neighbours' back yards run along both sides (y < 0 and y > WY), the rows' back fences stand at x = WX, a lane
   // runs behind them and the next street's back yards and the backs of its houses lie beyond. Everything is placed in world space
   // and drawn through the yard's own camera (V / VR), so it turns with the lot. It is drawn once per camera / season / light and kept.
-  const NB = { lane0: WX + 0.7, lane1: WX + 3.7, rear0: WX + 4.3, depth: 7, front: 5.4 };
+  // Everything sits on whole tiles like the yard: fences on tile edges, one clear tile between a fence and a shed, a tile of verge either side of the lane.
+  const NB = { lane0: WX + 1, lane1: WX + 4, rear0: WX + 5, depth: 7, front: 5 };
   const nbBack = { cv: null, key: '' };
   const nbHash = (a, b) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
   // A face is seen when its outward normal turns toward the camera, which always sits at +a, +b.
@@ -4273,10 +4274,14 @@ export function createHouseArt(ctx0, opts = {}) {
     circle(sx - 8 * s, sy - 30 * s, 12 * s, shade(c, -0.08)); circle(sx + 8 * s, sy - 29 * s, 12 * s, shade(c, -0.12)); circle(sx, sy - 38 * s, 14 * s, c); circle(sx - 4 * s, sy - 42 * s, 8 * s, shade(c, 0.1));
   }
   function nbShed(x, y, seed) {
-    if (!nbBehind(x - 0.2, y - 0.2, x + 2.4, y + 2.1)) return;
+    if (!nbBehind(x, y, x + 2, y + 2)) return;
     const c = ['#8C6A4E', '#A9B8A6', '#B8A07C'][(seed * 3 | 0) % 3];
-    box(x, y, 0, 2.2, 1.9, 1.5, c);
-    box(x - 0.15, y - 0.15, 1.5, 2.5, 2.2, 0.12, '#5A4A44');
+    box(x, y, 0, 2, 2, 1.5, c);
+    // The door faces into the yard (+y, away from the fence the shed stands against); the wall seen from the other side gets a window.
+    if (nbFacing(0, 1)) poly([[x + 0.6, y + 2.012, 0], [x + 1.4, y + 2.012, 0], [x + 1.4, y + 2.012, 1.1], [x + 0.6, y + 2.012, 1.1]], shade(c, -0.35), '#F7F3EE', 0.8);
+    const wx = nbFacing(1, 0) ? x + 2.012 : x - 0.012;
+    if (nbFacing(1, 0) || nbFacing(-1, 0)) poly([[wx, y + 0.5, 0.65], [wx, y + 1.3, 0.65], [wx, y + 1.3, 1.15], [wx, y + 0.5, 1.15]], raining() ? '#8E99A8' : '#A9C3D3', '#F7F3EE', 0.8);
+    box(x - 0.1, y - 0.1, 1.5, 2.2, 2.2, 0.12, '#5A4A44');
   }
   function nbLot(x0, x1, y0, y1, seed, grass) {
     poly([[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]], grass);
@@ -4287,9 +4292,9 @@ export function createHouseArt(ctx0, opts = {}) {
       poly([[i, j, 0], [i + 1, j, 0], [i + 1, j + 1, 0], [i, j + 1, 0]], shade(grass, 0.1 + (h - 0.5) * 0.05), 'rgba(40,70,30,.12)', 0.6);
       for (let k = 0; k < 3; k++) { const px = i + nbHash(i + k, j * 7 + seed), py = j + nbHash(i * 5 + seed, j + k * 3), [bx, by] = iso(px, py, 0); limb(bx, by, bx - 1, by - 3, 'rgba(60,110,44,.55)', 1); limb(bx, by, bx + 1.5, by - 2.5, 'rgba(60,110,44,.55)', 1); }
     }
-    const px = x0 + 1.2 + nbHash(seed, 2) * 2, py = y0 + 1 + nbHash(seed, 4) * (y1 - y0 - 3);
-    poly([[px, py, 0.01], [px + 2.4, py, 0.01], [px + 2.4, py + 2, 0.01], [px, py + 2, 0.01]], '#CFC9C0', 'rgba(60,50,40,.2)', 0.8);
-    if (nbHash(seed, 6) > 0.4) poly([[x1 - 3.2, y1 - 1.5, 0.01], [x1 - 1.4, y1 - 1.5, 0.01], [x1 - 1.4, y1 - 0.6, 0.01], [x1 - 3.2, y1 - 0.6, 0.01]], '#6B4A35');
+    const px = x0 + 1 + Math.floor(nbHash(seed, 2) * 3), py = y0 + 4 + Math.floor(nbHash(seed, 4) * 2);
+    poly([[px, py, 0.01], [px + 3, py, 0.01], [px + 3, py + 2, 0.01], [px, py + 2, 0.01]], '#CFC9C0', 'rgba(60,50,40,.2)', 0.8);
+    if (nbHash(seed, 6) > 0.4) poly([[x1 - 4, y1 - 2, 0.01], [x1 - 2, y1 - 2, 0.01], [x1 - 2, y1 - 1, 0.01], [x1 - 4, y1 - 1, 0.01]], '#6B4A35');
   }
   function buildBackdrop() {
     const si = seasonIdx(), grass = grassColor({ water: 0.72, len: 0.38, burn: 0, j: 0, mowedAt: -9999 }), asphalt = si === 3 ? '#6A6F78' : '#5A5E66';
@@ -4298,36 +4303,38 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.fillStyle = grass; ctx.fillRect(0, 0, W, H);
     poly([[-big, -big, -0.02], [big, -big, -0.02], [big, big, -0.02], [-big, big, -0.02]], grass);
     // The lane behind the back fences, with gravel shoulders and a concrete apron at each back gate.
-    poly([[NB.lane0 - 0.5, -big, -0.01], [NB.lane1 + 0.5, -big, -0.01], [NB.lane1 + 0.5, big, -0.01], [NB.lane0 - 0.5, big, -0.01]], si === 3 ? '#D5DADF' : '#B8AE9C');
+    poly([[NB.lane0 - 1, -big, -0.01], [NB.lane1 + 1, -big, -0.01], [NB.lane1 + 1, big, -0.01], [NB.lane0 - 1, big, -0.01]], si === 3 ? '#D5DADF' : '#B8AE9C');
     poly([[NB.lane0, -big, 0], [NB.lane1, -big, 0], [NB.lane1, big, 0], [NB.lane0, big, 0]], asphalt);
-    for (let k = -R; k <= R; k++) { const y = k * WY + WY / 2 - 1, y2 = y + 2; poly([[WX, y, 0.005], [NB.lane0, y, 0.005], [NB.lane0, y2, 0.005], [WX, y2, 0.005]], '#CFC9C0'); }
+    for (let k = -R; k <= R; k++) { const y = k * WY + 3, y2 = y + 2; poly([[WX, y, 0.005], [NB.lane0, y, 0.005], [NB.lane0, y2, 0.005], [WX, y2, 0.005]], '#CFC9C0'); }
     for (let k = -R; k <= R; k++) for (let t = 0; t < 4; t++) { const y = k * WY + 1 + t * 2; poly([[NB.lane0 + 0.1, y, 0.002], [NB.lane0 + 0.1, y + 0.15, 0.002], [NB.lane1 - 0.1, y + 0.15, 0.002], [NB.lane1 - 0.1, y, 0.002]], 'rgba(0,0,0,.06)'); }
     // Back yards: ours and the neighbours' on this side, then the next street's on the far side of the lane.
     for (let k = -R; k <= R; k++) if (k !== 0) nbLot(0, WX, k * WY, k * WY + WY, k + 40, grass);
     for (let k = -R; k <= R; k++) nbLot(NB.rear0, NB.rear0 + 10, k * WY + 4, k * WY + 4 + WY, k + 90, grass);
     for (let k = -R; k <= R; k++) { nbLot(-NB.front, 0, k * WY, k * WY + WY, k + 140, grass); }
-    // Back-to-front: fences, then whatever stands up, sorted by depth in view space.
+    // Back-to-front: fences go in the same sort as the houses, sheds and trees (a fence in front of a shed has to cover it), in short runs
+    // so each run is sorted by its own depth.
+    const fenceRows = (xa, ya, xb, yb) => { const len = Math.hypot(xb - xa, yb - ya), n = Math.max(1, Math.round(len / 2)); for (let i = 0; i < n; i++) { const a = [xa + (xb - xa) * i / n, ya + (yb - ya) * i / n], b = [xa + (xb - xa) * (i + 1) / n, ya + (yb - ya) * (i + 1) / n]; rows.push({ key: vs((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), d: () => nbFence(a[0], a[1], b[0], b[1]) }); } };
     for (let k = -R; k <= R + 1; k++) {
-      if (k !== 0 && k !== 1) nbFence(0, k * WY, WX, k * WY);
-      const ys = k * WY + 4; nbFence(NB.rear0, ys, NB.rear0 + 10, ys);
-      if (k !== 0 && k < R + 1) nbFence(WX, k * WY, WX, k * WY + WY);
-      if (k < R + 1) { nbFence(NB.lane1 + 0.6, k * WY + 4, NB.lane1 + 0.6, k * WY + 4 + WY); }
+      if (k !== 0 && k !== 1) fenceRows(0, k * WY, WX, k * WY);
+      const ys = k * WY + 4; fenceRows(NB.rear0, ys, NB.rear0 + 10, ys);
+      if (k !== 0 && k < R + 1) fenceRows(WX, k * WY, WX, k * WY + WY);
+      if (k < R + 1) fenceRows(NB.rear0, k * WY + 4, NB.rear0, k * WY + 4 + WY);
     }
     const wallPal = ['#D9CDBD', '#B9C7CF', '#E3D3A8', '#C9A9A0', '#A9BFA8', '#E8E2D6'], roofPal = ['#5A4A44', '#4B5D6B', '#6E3B3B', '#3F3A3D'];
     for (let k = -R; k <= R; k++) {
       const s = nbHash(k + 11, 1), y0 = k * WY;
-      if (k !== 0) rows.push({ key: vs(-NB.depth / 2, y0 + WY / 2), d: () => nbHouse(0, y0 + 0.5, y0 + WY - 0.5, 1, s > 0.45 ? 5.4 : 2.9, wallPal[(s * 6 | 0) % 6], roofPal[(s * 13 | 0) % 4], s) });
+      if (k !== 0) rows.push({ key: vs(-NB.depth / 2, y0 + WY / 2), d: () => nbHouse(0, y0 + 1, y0 + WY - 1, 1, s > 0.45 ? 5.4 : 2.9, wallPal[(s * 6 | 0) % 6], roofPal[(s * 13 | 0) % 4], s) });
       const ry = k * WY + 4, rs = nbHash(k + 71, 1);
-      rows.push({ key: vs(NB.rear0 + 10 + NB.depth / 2, ry + WY / 2), d: () => nbHouse(NB.rear0 + 10, ry + 0.5, ry + WY - 0.5, -1, rs > 0.45 ? 5.4 : 2.9, wallPal[(rs * 6 | 0) % 6], roofPal[(rs * 13 | 0) % 4], rs) });
-      if (k !== 0) { const tx = 6 + nbHash(k, 8) * 3, ty = y0 + 1.5 + nbHash(k, 9) * (WY - 3); rows.push({ key: vs(tx, ty), d: () => nbTree(tx, ty, nbHash(k, 10)) }); if (nbHash(k, 12) > 0.5) rows.push({ key: vs(7.5, y0 + 0.4), d: () => nbShed(7.6, y0 + 0.4, nbHash(k, 13)) }); }
-      const qx = NB.rear0 + 1.5 + nbHash(k, 14) * 5, qy = ry + 1.5 + nbHash(k, 15) * (WY - 3); rows.push({ key: vs(qx, qy), d: () => nbTree(qx, qy, nbHash(k, 16)) });
-      if (nbHash(k, 17) > 0.5) rows.push({ key: vs(NB.rear0 + 0.6, ry + 0.4), d: () => nbShed(NB.rear0 + 0.6, ry + 0.4, nbHash(k, 18)) });
+      rows.push({ key: vs(NB.rear0 + 10 + NB.depth / 2, ry + WY / 2), d: () => nbHouse(NB.rear0 + 10, ry + 1, ry + WY - 1, -1, rs > 0.45 ? 5.4 : 2.9, wallPal[(rs * 6 | 0) % 6], roofPal[(rs * 13 | 0) % 4], rs) });
+      if (k !== 0) { const tx = 4.5 + Math.floor(nbHash(k, 8) * 3), ty = y0 + 4.5 + Math.floor(nbHash(k, 9) * 3); rows.push({ key: vs(tx, ty), d: () => nbTree(tx, ty, nbHash(k, 10)) }); if (nbHash(k, 12) > 0.5) rows.push({ key: vs(8, y0 + 2), d: () => nbShed(7, y0 + 1, nbHash(k, 13)) }); }
+      const qx = NB.rear0 + 4.5 + Math.floor(nbHash(k, 14) * 4), qy = ry + 4.5 + Math.floor(nbHash(k, 15) * 3); rows.push({ key: vs(qx, qy), d: () => nbTree(qx, qy, nbHash(k, 16)) });
+      if (nbHash(k, 17) > 0.5) rows.push({ key: vs(NB.rear0 + 2, ry + 2), d: () => nbShed(NB.rear0 + 1, ry + 1, nbHash(k, 18)) });
     }
     // Our own house behind the back wall: the upper floor and the roof above the wall the yard draws.
     rows.push({ key: vs(-NB.depth / 2, WY / 2), d: () => nbHouse(-0.3, 0, WY, 1, 5.4, '#D9CDBD', '#5A4A44', 0.5, { z0: 2.6 }) });
     rows.sort((a, b) => a.key - b.key).forEach(r => r.d());
     // Utility poles down the lane.
-    for (let k = -R; k <= R; k++) { const y = k * WY * 1.0 + 2; if (!nbBehind(NB.lane0 - 0.2, y - 0.2, NB.lane0 + 0.2, y + 0.2)) continue; const [px, py] = iso(NB.lane0 - 0.2, y, 0); limb(px, py, px, py - 120, '#5A4A44', 2.4); limb(px - 14, py - 112, px + 14, py - 118, '#5A4A44', 1.8); }
+    for (let k = -R; k <= R; k++) { const y = k * WY + 2; if (!nbBehind(NB.lane0 - 0.7, y - 0.2, NB.lane0 - 0.3, y + 0.2)) continue; const [px, py] = iso(NB.lane0 - 0.5, y, 0); limb(px, py, px, py - 120, '#5A4A44', 2.4); limb(px - 14, py - 112, px + 14, py - 118, '#5A4A44', 1.8); }
     // Haze toward the top (the light pass darkens it at night with the yard), then the edges fade to nothing, so the neighbourhood never ends on a line.
     const g = ctx.createLinearGradient(0, 0, 0, H * 0.55); g.addColorStop(0, si === 3 ? 'rgba(228,234,240,.5)' : 'rgba(214,226,232,.42)'); g.addColorStop(1, 'rgba(214,226,232,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     ctx.globalCompositeOperation = 'destination-out';
