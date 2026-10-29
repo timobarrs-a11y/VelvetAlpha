@@ -4205,7 +4205,6 @@ export function createHouseArt(ctx0, opts = {}) {
     // Puddles, splashes and the falling rain all go in the ground pass, so the house and furniture cover them.
     wfx.drawGround(ctx, iso, YARD.tiles);
     wfx.drawAir(ctx, iso, lotOutline());
-    { const vw = viewW(), vd = viewD(); polyV([[0, vd, 0], [vw, vd, 0], [vw, vd, -0.25], [0, vd, -0.25]], '#6B4A35'); polyV([[vw, 0, 0], [vw, vd, 0], [vw, vd, -0.25], [vw, 0, -0.25]], '#5A3E2E'); }
   }
   function drawYardBack() {
     const back = BACK[VR], sid = '#D9CDBD';
