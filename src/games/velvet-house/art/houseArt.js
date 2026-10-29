@@ -5468,6 +5468,8 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.save();
     const lights = activeLights(lv);
     PFX.step(rdt, isOutdoor(lv) ? [0.16 + (raining() ? 0.2 : 0), 0.06] : [0.015, 0], tier() === 'low' ? 0.5 : 1);
+    // Winter snow builds up on the lawn while it snows, and only melts once spring comes.
+    if (isOutdoor(lv)) { const winter = seasonIdx() === 3; for (const tt of YARD.tiles) { const sn = tt.snow || 0; tt.snow = winter && raining() ? Math.min(1, sn + rdt * 0.05) : (seasonIdx() !== 3 ? Math.max(0, sn - rdt * 0.03) : sn); } }
     // Fall: leaves blow across the yard from the trees' side.
     if (isOutdoor(lv) && seasonIdx() === 2 && tier() !== 'low') {
       for (let i = 0; i < 3; i++) PFX.emit('leaves' + i, 'leaf', 3, 1 + i * 3.2, 0.6 + (i % 2) * 2.4, 2.2 + i * 0.3, 1);

@@ -59,7 +59,12 @@ export function cropOf(id: string | null | undefined): CropDef | null {
  * that the crop will die if it stays dry, the death itself, or a crop that has just ripened. Each is said once, on the
  * change, not every tick.
  */
-export function gardenTick(objs: ObjectInstance[], gameMin: number, raining = false): string[] {
+/** How fast crops grow by season (spring, summer, autumn, winter): winter is dormant. Matches the yard's seasons. */
+export const SEASON_GROW = [1, 1.15, 0.6, 0];
+/** How fast a bed dries by season: summer dries quickest, winter slowest. */
+export const SEASON_DRY = [1, 1.5, 0.8, 0.3];
+
+export function gardenTick(objs: ObjectInstance[], gameMin: number, raining = false, season = 0): string[] {
   const msgs: string[] = [];
   for (const bed of objs) {
     if (bed.type !== 'garden') continue;
@@ -69,10 +74,10 @@ export function gardenTick(objs: ObjectInstance[], gameMin: number, raining = fa
     const hadDry = bed.dry ?? 0;
     // Rain soaks a bed that has a crop in it, so a rainy day waters it for free.
     if (raining && crop) bed.wet = Math.max(bed.wet ?? 0, WATERED);
-    bed.wet = Math.max(0, (bed.wet ?? 0) - gameMin * WET_FADE_PER_MIN);
+    bed.wet = Math.max(0, (bed.wet ?? 0) - gameMin * WET_FADE_PER_MIN * (SEASON_DRY[season] ?? 1));
     if (!crop || bed.dead) continue;
     if (bed.wet > DRY_AT) {
-      bed.grow = Math.min(1, hadGrow + gameMin / crop.ripeMinutes);
+      bed.grow = Math.min(1, hadGrow + (gameMin * (SEASON_GROW[season] ?? 1)) / crop.ripeMinutes);
       bed.dry = 0;
     } else {
       bed.dry = hadDry + gameMin;
