@@ -75,7 +75,9 @@ export function createHouseArt(ctx0, opts = {}) {
   const isoV = (a, b, z = 0) => [OX + (a - b) * TW, OY + (a + b) * TH - z * ZH];
   const iso = (x, y, z = 0) => { const [a, b] = V(x, y); return isoV(a, b, z); };
   const unIso = (sx, sy) => { const a = (sx - OX) / TW, b = (sy - OY) / TH; return Vi((a + b) / 2, (b - a) / 2); };
-  function setOrigin() { const vw = viewW(), vd = viewD(); OX = 320 - (vw / 2 - vd / 2) * TW; OY = 272 - (vw / 2 + vd / 2) * TH; }
+  // Outside, the yard sits right of centre so its far fence runs off the edge of the picture instead of ending in view.
+  let YS = 0;
+  function setOrigin() { const vw = viewW(), vd = viewD(); OX = 320 - (vw / 2 - vd / 2) * TW + YS; OY = 272 - (vw / 2 + vd / 2) * TH; }
   function vrect(x1, y1, x2, y2) { const [a1, b1] = V(x1, y1), [a2, b2] = V(x2, y2); return [Math.min(a1, a2), Math.min(b1, b2), Math.max(a1, a2), Math.max(b1, b2)]; }
 
   function rgb(h) { if (h[0] !== '#') { const m = h.match(/[\d.]+/g) || [128, 128, 128]; return [+m[0], +m[1], +m[2]]; } h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
@@ -4583,7 +4585,7 @@ export function createHouseArt(ctx0, opts = {}) {
     dimNow += (dimTarget - dimNow) * Math.min(1, rdt * 1.6);
     wallMode = s.wallMode || 'cut';
     OBJS = s.objs;
-    if (s.rot !== VR) { VR = s.rot; setOrigin(); }
+    { const ys = isOutdoor(s.level) ? 56 : 0; if (s.rot !== VR || ys !== YS) { VR = s.rot; YS = ys; setOrigin(); } }
     // Who's doing what, where: the stove steams while someone cooks, the
     // washer spins during laundry, the shower runs while they shower.
     const who = (c, name) => c ? { name, away: !!c.hidden && false, level: c.level, x: c.x, y: c.y,
