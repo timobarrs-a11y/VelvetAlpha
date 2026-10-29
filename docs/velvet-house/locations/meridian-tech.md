@@ -16,7 +16,10 @@ a timer runs (one to three minutes), you go and do other things at home, and whe
   sees the office.
 - **The office is unlocked by choosing to take control of the commute.** The first time the player does ("Go to work with Jordan" at the leave hour),
   the office level appears in the floor bar for good. After that, any workday they can choose to play it or let it run.
-- **Playing a day pays more than autopilot** (a bonus per objective and per finished scenario), but autopilot is never punished.
+- **When the player plays Jordan's day, the companion stays home.** On autopilot both go to work; once the player takes control of Jordan, only he goes,
+  and the companion is at home to take the player's orders (plant seeds, water, buy and cook food, tend the garden and the trees). This is what the
+  timer windows are for: Jordan is in a meeting, so the player directs the companion.
+- **Playing a day pays more than autopilot** (a bonus per objective and per finished scenario), but autopilot never loses money.
 
 ## Timed objectives (the garden pattern)
 
@@ -38,7 +41,24 @@ pieces: state that saves with the house, a tick that moves it on, a bar and a ti
   card on Orders, so a player who is busy at home can keep the day moving.
 - **Unseen means no animation.** Because we never see a meeting, we draw no meeting: only Jordan walking to the door, the door closing, a "meeting in
   progress" sign lit over it, and the door opening again. That is the whole cost of a meeting, and it is the reason a meeting can last three minutes.
-- **No penalty for not keeping up.** An objective that is not done by the end of the shift is simply missed: no bonus, nothing lost.
+- **Stakes, so there is a reason to finish** (the next section). The pay on autopilot is never taken away; what is at stake is Jordan's time and the quality of the day.
+
+## Why finish: the stakes
+
+The lock is on **Jordan**, not on the camera. The player can still go home and swap a wallpaper while a timer runs; what they cannot do is have Jordan
+there.
+
+1. **The workday ends when the work does.** Jordan comes home only when the scenario is done. If objectives remain at the usual end of shift he stays
+   late, which shortens the evening: his free time, the companion's company and the hobbies.
+2. **Home needs him.** While Jordan is away the companion keeps the house going, but some things are his: he cooks the big meal, and anything the
+   player queues for him waits. Needs still drain at work, so a long shift brings him home hungry. A late finish costs the evening he would have spent
+   on these.
+3. **Appointments are fixed.** A meeting starts at a set time, and what you did before it decides how it goes. Not having written and printed the
+   report by then means the presentation is *unprepared*, and it scores lower.
+4. **Quality tiers,** to be confirmed: a finished scenario is *prepared*, *rushed* or *unprepared*, and that sets the pay bonus, the weekly review and
+   promotion. Autopilot keeps the plain wage and nothing more.
+
+*Items 1 to 3 are my recommendation; item 4 is optional and still to confirm.*
 
 ## Scenarios (variety from the same assets)
 
@@ -132,8 +152,8 @@ Each step is its own small change, checked in the real game on desktop and phone
 1. **Where the player is during a timer:** a timed objective needs Jordan out of sight (in the meeting room). If the player is at home at the time,
    is Jordan simply "at work" in the usual hidden state, and the objective bar the only trace of him? (Proposal: yes. The office scene is only
    drawn while they are viewing it.)
-2. **Maya's day:** you said both leave and return together. Does Maya have her own workplace and objectives (a second location), or does she go
-   somewhere unseen?
+2. **Autopilot vs played:** on autopilot both go to work (the companion's workplace is unseen), but once the player plays Jordan's day the companion
+   stays home. Is that the intent, and how does the companion get home on a played day if she would otherwise have left for work?
 3. **The prompt:** where does the "take control" choice appear (a card at the leave hour, a button on the Today page, both)? Does it time out into
    autopilot?
 4. **Timers:** one to three real minutes at normal speed, running at higher speeds like the garden. Is that the pace you want, and should a
