@@ -147,6 +147,43 @@ export const TYPES: Record<string, ObjectTypeDef> = {
     spots: { s: { stand: [0.9, 1.15], dir: [0, -1], tag: 'bar' } } },
   pool: { W: 3.2, D: 2.0, h: 0.2, fixed: true, name: 'Pool',
     spots: { w: { stand: [1.6, 2.45], pos: [1.6, 1.0, 0.0], dir: [0, 1], tag: 'swim', base: 'water' } } },
+  // The office's pieces (set dressing for now; each gets its job from the objectives, see docs/velvet-house/locations/meridian-tech.md).
+  // Desks and chairs are separate pieces, each with a position and a turn of its own: a desk is only a desk (1.2 x 0.7, narrow so two people can walk side by side down the aisle
+  // between the rows), and the chair is tucked in at its front. The seat is a spot like every other seat, so the game's sit-down and stand-up animation applies; `stand` is the
+  // clear space behind the chair where it is pulled out.
+  officedesk: { W: 1.2, D: 0.7, h: 1.25, fixed: true, name: 'Office desk' },
+  officechair: { W: 0.6, D: 0.6, h: 1.0, fixed: true, name: 'Office chair',
+    spots: { s: { stand: [0.3, 1.1], pos: [0.3, 0.32, 0.49], dir: [0, -1], tag: 'officework', base: 'seat' } } },
+  // The boss's desk and his chair: bigger, placed turned (rot 2) so he works on the far side facing the room. His chair is entered from the side (the desk is against the back).
+  bossdesk: { W: 2.0, D: 0.95, h: 1.35, fixed: true, name: 'Boss desk' },
+  bosschair: { W: 0.9, D: 0.8, h: 1.5, fixed: true, name: 'Boss chair',
+    spots: { s: { stand: [1.25, 0.4], pos: [0.45, 0.38, 0.5], dir: [0, -1], tag: 'bosswork', base: 'seat' } } },
+  // The visitor's chair, facing the boss's desk. Nobody sits in it unless the boss is at his desk (see state/boss.ts).
+  visitorchair: { W: 0.6, D: 0.6, h: 0.95, fixed: true, name: 'Visitor chair',
+    spots: { s: { stand: [0.3, 1.15], pos: [0.3, 0.32, 0.46], dir: [0, -1], tag: 'bossvisit', base: 'seat' } } },
+  officerug: { W: 3.0, D: 3.0, h: 0.02, fixed: true, rug: true, blocks: [], name: 'Boss rug' },
+  officerunner: { W: 1.1, D: 6.4, h: 0.02, fixed: true, rug: true, blocks: [], name: 'Aisle runner' },
+  // Each working piece carries the spot to stand at to use it (a tag per station: content/office.ts). The front is local +y, so a piece against a wall is turned to face into the room.
+  officeprinter: { W: 1.6, D: 0.75, h: 1.25, fixed: true, name: 'Printer',
+    spots: { f: { stand: [0.8, 1.2], dir: [0, -1], tag: 'o_printer' } } },
+  officecabinet: { W: 0.5, D: 0.6, h: 1.2, fixed: true, name: 'Filing cabinet',
+    spots: { f: { stand: [0.25, 1.0], dir: [0, -1], tag: 'o_files' } } },
+  officeplant: { W: 0.5, D: 0.5, h: 1.2, fixed: true, name: 'Office plant',
+    spots: { f: { stand: [0.25, 0.95], dir: [0, -1], tag: 'o_plant' } } },
+  officecounter: { W: 1.2, D: 0.62, h: 1.2, fixed: true, name: 'Sink counter',
+    spots: { f: { stand: [0.6, 1.05], dir: [0, -1], tag: 'o_sink' } } },
+  // The coffee station: a low counter with the machine and the mugs, set along the window wall (rot 3, its front toward the room).
+  officecoffee: { W: 1.1, D: 0.55, h: 1.35, fixed: true, name: 'Coffee station',
+    spots: { f: { stand: [0.55, 1.0], dir: [0, -1], tag: 'o_coffee' } } },
+  officefridge: { W: 0.7, D: 0.7, h: 1.9, fixed: true, name: 'Office fridge',
+    spots: { f: { stand: [0.35, 1.1], dir: [0, -1], tag: 'o_fridge' } } },
+  officevending: { W: 0.7, D: 0.7, h: 1.8, fixed: true, name: 'Vending machine',
+    spots: { f: { stand: [0.35, 1.15], dir: [0, -1], tag: 'o_vending' } } },
+  // Where to stand for the two things on the wall (the whiteboard, and the door under the sign): nothing is drawn, nothing blocks, and the piece cannot be picked up.
+  officeboardspot: { W: 1.0, D: 0.5, h: 0.1, fixed: true, blocks: [], name: 'Whiteboard spot',
+    spots: { s: { stand: [0.5, 0.6], dir: [0, -1], tag: 'o_board' } } },
+  officedoorspot: { W: 1.0, D: 0.5, h: 0.1, fixed: true, blocks: [], name: 'Meeting room door spot',
+    spots: { s: { stand: [0.5, 0.6], dir: [0, -1], tag: 'o_door' } } },
   daybed: { W: 1.9, D: 0.9, h: 0.8, name: 'Guest daybed', store: true },
   snowman: { W: 0.6, D: 0.6, h: 1.4, name: 'Snowman' },
   bench: { W: 1.6, D: 0.6, h: 0.9, name: 'Garden bench', store: true,
@@ -236,6 +273,13 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   cattree: { W: 0.8, D: 0.8, h: 1.7, name: 'Cat tree', store: true, cols: ['#D8C9AE', '#8E9C96', '#6E3C50'] },
   hammock: { W: 2.4, D: 1.0, h: 1.3, name: 'Hammock', store: true, out: true, cols: ['#E0A43A', '#3D6B73', '#D24A7A', '#F2EEE8'],
     spots: { h: { stand: [1.2, 1.5], pos: [0.65, 0.5, 0.62], lie: [1, 0], tag: 'hammock', base: 'bed' } } },
+  treeoak: { W: 1.6, D: 1.6, h: 2.7, name: 'Oak tree', store: true, out: true, blocks: [[0.65, 0.65, 0.95, 0.95]] },
+  treecherry: { W: 1.6, D: 1.6, h: 2.5, name: 'Cherry blossom tree', store: true, out: true, blocks: [[0.65, 0.65, 0.95, 0.95]] },
+  treepine: { W: 1.2, D: 1.2, h: 3.7, name: 'Pine tree', store: true, out: true, blocks: [[0.45, 0.45, 0.75, 0.75]] },
+  treebirch: { W: 1.0, D: 1.0, h: 3.9, name: 'Birch tree', store: true, out: true, blocks: [[0.35, 0.35, 0.65, 0.65]] },
+  treewillow: { W: 1.8, D: 1.8, h: 2.4, name: 'Weeping willow', store: true, out: true, blocks: [[0.75, 0.75, 1.05, 1.05]] },
+  treepalm: { W: 1.2, D: 1.2, h: 3.6, name: 'Palm tree', store: true, out: true, blocks: [[0.45, 0.45, 0.75, 0.75]] },
+  treeapple: { W: 1.2, D: 1.2, h: 2.6, name: 'Apple tree', store: true, out: true, blocks: [[0.45, 0.45, 0.75, 0.75]] },
   firepit: { W: 1.2, D: 1.2, h: 0.4, name: 'Fire pit', store: true, out: true, cols: ['#8C8884', '#A85A40', '#3A3A3F'], light: { at: [0.6, 0.6, 0.4], r: 150, col: '255,150,70' },
     spots: { f: { stand: [0.6, 1.7], dir: [0, -1], tag: 'fireside' } } },
   grill: { W: 0.9, D: 0.6, h: 1.1, name: 'Charcoal grill', store: true, out: true, cols: ['#1B1A1F', '#C2413A', '#3D6B73'],
@@ -337,6 +381,8 @@ export interface ObjectInstance {
   pot?: string;
   pet?: string;
   grow?: number;
+  /** A fruit tree: how far its fruit has come, 0 bare to 1 ripe (see crops.ts). */
+  fruit?: number;
   wet?: number;
   /** The crop growing in a garden bed (see crops.ts); none when the bed is empty. */
   crop?: string | null;
@@ -358,6 +404,11 @@ export const STARTER_RUG_IDS = ['rug1', 'rug2'];
 /** The TV on the living room wall. A house saved while it was part of the wall gets it as a piece, once. */
 export const STARTER_TV_IDS = ['walltv'];
 
+/** The office's own pieces. A house saved before the office existed is given them once, so they are there when it is unlocked (see `kernel/config.ts`). */
+export const STARTER_OFFICE_IDS = ['off-desk2', 'off-desk3', 'off-desk4', 'off-desk5', 'off-chair2', 'off-chair3', 'off-chair4', 'off-chair5', 'off-printer', 'off-cabinet', 'off-plant', 'off-counter', 'off-fridge', 'off-vending', 'off-runner', 'off-boardspot', 'off-doorspot', 'off-coffee', 'off-boss', 'off-bosschair', 'off-visitor', 'off-rug'];
+/** Bumped when the office's layout changes: a house saved with an older layout has its office pieces replaced (and only those) once on load. */
+export const OFFICE_LAYOUT = 9;
+
 export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'stair01', type: 'flightY', level: 0, x: 9.0, y: 0, rot: 0 },
   { id: 'tread', type: 'tread', level: 0, x: 1.2, y: 1.2, rot: 0 },
@@ -368,6 +419,32 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'laundry', type: 'laundry', level: 0, x: 1.4, y: 4.72, rot: 0 },
   { id: 'shelves', type: 'shelves', level: 0, x: 4.5, y: 5.4, rot: 1 },
   { id: 'boxes', type: 'boxes', level: 0, x: 2.4, y: 7.0, rot: 0 },
+  // The office (level 5). Four narrow desks in two rows along the window wall with an aisle between, the whiteboard wall kept clear, the printer and the cooler on
+  // the back wall either side of the meeting door, the boss's corner at the back right (his desk faces the room, a visitor's chair in front), and the break area at the front right.
+  { id: 'off-desk2', type: 'officedesk', level: 5, x: 0.4, y: 3.2, rot: 0 },
+  { id: 'off-desk3', type: 'officedesk', level: 5, x: 0.4, y: 5.4, rot: 0 },
+  { id: 'off-desk4', type: 'officedesk', level: 5, x: 2.9, y: 3.2, rot: 0 },
+  { id: 'off-desk5', type: 'officedesk', level: 5, x: 2.9, y: 5.4, rot: 0 },
+  { id: 'off-chair2', type: 'officechair', level: 5, x: 0.7, y: 3.85, rot: 0 },
+  { id: 'off-chair3', type: 'officechair', level: 5, x: 0.7, y: 6.05, rot: 0 },
+  { id: 'off-chair4', type: 'officechair', level: 5, x: 3.2, y: 3.85, rot: 0 },
+  { id: 'off-chair5', type: 'officechair', level: 5, x: 3.2, y: 6.05, rot: 0 },
+  // The vending machine stands where the printer was, on the back wall between the whiteboard and the meeting door; the printer is at the front right.
+  { id: 'off-vending', type: 'officevending', level: 5, x: 6.05, y: 0.1, rot: 0 },
+  { id: 'off-cabinet', type: 'officecabinet', level: 5, x: 6.8, y: 0.1, rot: 0 },
+  { id: 'off-boardspot', type: 'officeboardspot', level: 5, x: 0.85, y: 0.3, rot: 0 },
+  { id: 'off-doorspot', type: 'officedoorspot', level: 5, x: 4.75, y: 0.3, rot: 0 },
+  // The plant stands in the front-left corner beside the filing cabinet, turned to face the room; the coffee station is under the first window.
+  { id: 'off-plant', type: 'officeplant', level: 5, x: 0.1, y: 0.1, rot: 3 },
+  { id: 'off-coffee', type: 'officecoffee', level: 5, x: 0.1, y: 0.8, rot: 3 },
+  { id: 'off-counter', type: 'officecounter', level: 5, x: 2.5, y: 0.1, rot: 0 },
+  { id: 'off-fridge', type: 'officefridge', level: 5, x: 3.8, y: 0.1, rot: 0 },
+  { id: 'off-printer', type: 'officeprinter', level: 5, x: 8.3, y: 7.2, rot: 2 },
+  { id: 'off-runner', type: 'officerunner', level: 5, x: 4.7, y: 0.0, rot: 0 },
+  { id: 'off-rug', type: 'officerug', level: 5, x: 7.0, y: 0.2, rot: 0 },
+  { id: 'off-boss', type: 'bossdesk', level: 5, x: 8.0, y: 1.0, rot: 2 },
+  { id: 'off-bosschair', type: 'bosschair', level: 5, x: 8.5, y: 0.2, rot: 2 },
+  { id: 'off-visitor', type: 'visitorchair', level: 5, x: 8.7, y: 2.2, rot: 0 },
   { id: 'tree', type: 'tree', level: 3, x: 7.6, y: 0.5, rot: 0 },
   { id: 'garden', type: 'garden', level: 3, x: 3.6, y: 0.35, rot: 0, grow: 0.35, wet: 0.6 },
   { id: 'sprinkler', type: 'sprinkler', level: 3, x: 5.6, y: 4.4, rot: 0 },

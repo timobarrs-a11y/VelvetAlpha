@@ -72,12 +72,12 @@ export function createWeatherFx() {
   const splash = pool(260);
   let time = 0;
 
-  function spawn(P, cap, makeV) {
+  function spawn(P, cap, makeV, top) {
     const want = Math.min(P.max, cap);
     const room = Math.min(want - P.n, Math.ceil(want * 0.04)); // fill in about a second, a little each frame
     for (let k = 0; k < room; k++) {
       const i = P.n++;
-      P.x[i] = Math.random() * 10; P.y[i] = Math.random() * 8; P.z[i] = 3.2 + Math.random() * 0.6;
+      P.x[i] = Math.random() * 10; P.y[i] = Math.random() * 8; P.z[i] = top ? top(P.x[i], P.y[i]) : 3.2 + Math.random() * 0.6;
       P.v[i] = makeV(); P.p[i] = Math.random() * TAU;
       // Each drop's own sideways speed, so rain comes down slanted and not all in one direction.
       P.ax[i] = 0.7 + Math.random() * 0.9; P.ay[i] = 0.15 + Math.random() * 0.45;
@@ -90,8 +90,8 @@ export function createWeatherFx() {
      */
     step(dt, s, tiles, caps) {
       time += dt;
-      if (s.raining && !s.snow) spawn(rain, caps.rain, () => -(8.5 + Math.random() * 2));
-      if (s.raining && s.snow) spawn(snow, caps.snow, () => -(1.1 + Math.random() * 0.6));
+      if (s.raining && !s.snow) spawn(rain, caps.rain, () => -(8.5 + Math.random() * 2), s.top);
+      if (s.raining && s.snow) spawn(snow, caps.snow, () => -(1.1 + Math.random() * 0.6), s.top);
 
       for (let k = rain.n - 1; k >= 0; k--) {
         rain.z[k] += rain.v[k] * dt; rain.x[k] += rain.ax[k] * dt; rain.y[k] += rain.ay[k] * dt;
@@ -143,6 +143,59 @@ export function createWeatherFx() {
         else { c.globalAlpha = (1 - t) * 0.9; c.drawImage(SPLASH, sx - 20 * sc, sy - 12 * sc, 40 * sc, 24 * sc); }
       }
       c.globalAlpha = 1;
+    },
+
+    /**
+     * The weather over the neighbourhood behind the yard: drops that hold no state, each worked out from the clock alone, so it costs one
+     * stroke. They fall with the same slant and speed as the yard's own, and ring the ground where they land. `o` = { n, snow, W, H, TW, TH, ZH }.
+     */
+    drawField(c, t, o) {
+      const { n, snow, W, H, TW, TH, ZH, skip, part, occ } = o, fract = (v) => v - Math.floor(v), hs = (i, k) => fract(Math.sin(i * 12.9898 + k * 78.233) * 43758.5453);
+      if (n < 1) return;
+      const inCvx = (pts, x, y) => { let s = 0; for (let k = 0; k < pts.length; k++) { const [ax, ay] = pts[k], [bx, by] = pts[(k + 1) % pts.length], cr = (bx - ax) * (y - ay) - (by - ay) * (x - ax); if (cr * s < 0) return false; if (cr) s = cr; } return true; };
+      const inEll = (e, x, y) => ((x - e.cx) / e.rx) ** 2 + ((y - e.cy) / e.ry) ** 2 <= 1;
+      const inShape = (s, x, y) => (Array.isArray(s) ? inCvx(s, x, y) : inEll(s, x, y));
+      // Where a drop ends: 0 on the ground, the height of the roof or canopy it meets first, or -1 when it would land out of sight behind one.
+      const lands = (lx, ly, z0, at) => {
+        if (skip && inCvx(skip, lx, ly)) return -1; // the yard's own weather covers the lot
+        let zl = 0;
+        if (occ) for (const q of occ) if (q.zr < z0 && q.zr > zl) { const [px, py] = at(q.zr); if (inShape(q.roof || q.ell, px, py)) zl = q.zr; }
+        if (zl === 0 && occ) for (const q of occ) if (inShape(q.sil, lx, ly)) return -1;
+        return zl;
+      };
+      const air = part !== 'ground', grd = part !== 'air';
+      c.save();
+      if (snow) {
+        if (!air) { c.restore(); return; }
+        c.fillStyle = 'rgba(246,248,250,.85)';
+        for (let i = 0; i < n; i++) {
+          const lx = hs(i, 1) * (W + 40) - 20, ly = hs(i, 2) * (H + 30), z0 = (ly + 30) / ZH + 0.5, sw = hs(i, 5) * 6.28;
+          const zl = lands(lx, ly, z0, (zz) => [lx, ly - zz * ZH]); if (zl < 0) continue;
+          const fall = (z0 - zl) / (1.1 + hs(i, 3) * 0.6), cyc = (t + hs(i, 4) * fall) % fall, z = zl + (z0 - zl) * (1 - cyc / fall);
+          c.fillRect(lx + Math.sin(t * 1.3 + sw) * 6, ly - z * ZH, 2, 2);
+        }
+        c.restore(); return;
+      }
+      c.strokeStyle = 'rgba(205,220,240,.5)'; c.lineWidth = 1; c.beginPath();
+      const rip = [];
+      for (let i = 0; i < n; i++) {
+        const lx = hs(i, 1) * (W + 40) - 20, ly = hs(i, 2) * (H + 30);
+        // Every drop starts above the top edge of the picture, so the rain comes in from out of frame.
+        const vz = 8.5 + hs(i, 3) * 2, z0 = (ly + 30) / ZH + 0.5, ax = 0.7 + hs(i, 6) * 0.9, ay = 0.15 + hs(i, 7) * 0.45;
+        const k = (zz) => [lx - (ax - ay) * TW * zz / vz, ly - (ax + ay) * TH * zz / vz - zz * ZH];
+        const zl = lands(lx, ly, z0, k); if (zl < 0) continue;
+        const fall = (z0 - zl) / vz, rest = 0.35, per = fall + rest, cyc = (t + hs(i, 4) * per) % per;
+        if (cyc < fall) {
+          if (!air) continue;
+          const z = zl + (z0 - zl) * (1 - cyc / fall), [tx, ty] = k(z + 0.45), [bx, by] = k(z);
+          c.moveTo(tx, ty); c.lineTo(bx, by);
+        } else if (zl > 0 ? air : grd) { const [rx, ry] = k(zl); rip.push(rx, ry, (cyc - fall) / rest); }
+      }
+      if (air) c.stroke();
+      c.strokeStyle = 'rgba(230,240,255,.3)'; c.beginPath();
+      for (let k = 0; k < rip.length; k += 3) { const a = rip[k + 2], r = 1.5 + a * 5; c.moveTo(rip[k] + r, rip[k + 1]); c.ellipse(rip[k], rip[k + 1], r, r / 2, 0, 0, TAU); }
+      c.stroke();
+      c.restore();
     },
 
     /** The air layer: falling drops in one stroke, and snowflakes stamped. Drawn over the house. */

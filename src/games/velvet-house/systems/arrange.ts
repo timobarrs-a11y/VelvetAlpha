@@ -1,6 +1,7 @@
-import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, surfaceUnder, putOn, takeOff, carryOnTop, fridgeUnder, swapModel, type PlacementCheck, type Pose } from '../state/arrange';
+import { checkPlacement, snapEdges, snapToWall, wallSnaps, slideAlong, type WallSnap, nearestFit, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, surfaceUnder, putOn, takeOff, carryOnTop, fridgeUnder, swapModel, type PlacementCheck, type Pose } from '../state/arrange';
 import { looksFor, changeLook, parseLook } from '../state/skins';
 import { TYPES, footprint, displayName, type ObjectInstance } from '../state/objects';
+import { IS_DEMO } from '../kernel/config';
 import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, WX, WY, roomName } from '../state/house';
 import { buildWorld } from '../state/agents';
 import { addFood } from '../state/vitals';
@@ -27,6 +28,8 @@ export function createArrange(g: Game): Partial<Game> {
   let floatOrig: { x: number; y: number; rot: number; level: number; on?: string; z?: number } | null = null;
   let floatKids: Array<{ o: ObjectInstance; x: number; y: number; rot: number; level: number }> = [];
   let floatCheck: PlacementCheck = { ok: true };
+  // A piece set against a wall: while it is, dragging it slides it along the wall instead of anywhere on the floor.
+  let wallLock: { id: string; snap: WallSnap } | null = null;
   let wasPaused = false;
   let ghost: { x: number; y: number; h: number; level: number } | null = null;
   // The lesson's outline as the piece itself would be set: where its corner goes and how it faces.
@@ -40,6 +43,7 @@ export function createArrange(g: Game): Partial<Game> {
     stage.classList.add('vh-arranging');
     selectedObj = null;
     selectedWall = null;
+    wallLock = null;
     heldObj = null;
     wasPaused = view.paused;
     view.paused = true;
@@ -55,6 +59,7 @@ export function createArrange(g: Game): Partial<Game> {
     arranging = false;
     selectedObj = null;
     selectedWall = null;
+    wallLock = null;
     wallDrag = null;
     dragCandidate = null;
     hoverObj = null;
@@ -73,12 +78,22 @@ export function createArrange(g: Game): Partial<Game> {
     if (!heldObj) return;
     heldCheck = heldObj.type === 'food' && fridgeUnder(world.objs, heldObj) ? { ok: true } : checkPlacement(world.objs, heldObj, peopleOnFloor());
   }
+  // Put somewhere it does not fit: slide it (and turn it, if it is used from one side) to the nearest place close by that it does, if there is one.
+  function fitNearby(o: ObjectInstance, radius = 2): boolean {
+    const f = nearestFit(world.objs, o, peopleOnFloor(), radius);
+    if (!f) return false;
+    const prev: Pose = { x: o.x, y: o.y, rot: o.rot };
+    o.x = f.x; o.y = f.y; o.rot = f.rot;
+    carryOnTop(world.objs, o, prev);
+    return true;
+  }
   const movableHere = (): string[] => world.objs.filter(o => o.level === view.level && isMovable(o)).map(o => o.id);
   // Select a piece: jump to its floor, outline it, and bring it into frame.
   function selectObject(o: ObjectInstance | null): void {
     cancelHold();
     if (floating && o !== floating) settleFloating();
     selectedWall = null;
+    if (wallLock && wallLock.id !== o?.id) wallLock = null;
     selectedObj = o;
     if (!o) return;
     if (o.level !== view.level) { selectedObj = null; g.setLevel(o.level); selectedObj = o; }
@@ -130,9 +145,11 @@ export function createArrange(g: Game): Partial<Game> {
     if (o.type === 'food') { const fridge = fridgeUnder(world.objs, o); if (fridge) { floating = null; floatOrig = null; floatKids = []; floatCheck = { ok: true }; g.putFoodAway(o, fridge); return; } }
     const was = { x: o.x, y: o.y };
     snapToOutline(o, 2.5);
-    const check = checkPlacement(world.objs, o, peopleOnFloor());
+    let check = checkPlacement(world.objs, o, peopleOnFloor());
+    if (!check.ok && !o.on && fitNearby(o)) { check = checkPlacement(world.objs, o, peopleOnFloor()); if (check.ok) log(`Slid the ${nameOf(o)} to the nearest spot it fits.`); }
     if (!check.ok) { Object.assign(o, was); floatCheck = check; log(`${check.reason ?? "It doesn't fit there."} Move it, or tap Put it back.`); return; }
     floating = null; floatOrig = null; floatKids = []; floatCheck = { ok: true };
+    wallLock = null;
     commitMove(o, 'Set down');
   }
   /** Put it back: the loose piece returns to where it was picked up. */
@@ -140,6 +157,7 @@ export function createArrange(g: Game): Partial<Game> {
     cancelHold();
     if (!floating || !floatOrig) return;
     const o = floating;
+    wallLock = null;
     Object.assign(o, { x: floatOrig.x, y: floatOrig.y, rot: floatOrig.rot, level: floatOrig.level });
     if (floatOrig.on) { o.on = floatOrig.on; o.z = floatOrig.z; } else takeOff(o);
     for (const k of floatKids) Object.assign(k.o, { x: k.x, y: k.y, rot: k.rot, level: k.level });
@@ -179,10 +197,89 @@ export function createArrange(g: Game): Partial<Game> {
     const o = heldObj ?? floating ?? selectedObj;
     if (!o) return;
     if (o !== heldObj && o !== floating) { floating = o; floatOrig = { x: o.x, y: o.y, rot: o.rot, level: o.level, on: o.on, z: o.z }; floatKids = world.objs.filter((k) => k.on === o.id).map((k) => ({ o: k, x: k.x, y: k.y, rot: k.rot, level: k.level })); }
+    wallLock = null;
     const prev: Pose = { x: o.x, y: o.y, rot: o.rot };
     rotateAboutCentre(o);
     carryOnTop(world.objs, o, prev);
+    // Turned into something in the way: nudge it to where it fits, if that is close.
+    if (!o.on && !checkPlacement(world.objs, o, peopleOnFloor()).ok) fitNearby(o, 1.5);
     if (o === heldObj) recheck(); else floatCheck = checkPlacement(world.objs, o, peopleOnFloor());
+  }
+  /** Make the selected piece the loose one (as turning it does), so what is done to it stays until Set it down or Put it back. */
+  function makeLoose(o: ObjectInstance): void {
+    if (o === heldObj || o === floating) return;
+    floating = o; floatOrig = { x: o.x, y: o.y, rot: o.rot, level: o.level, on: o.on, z: o.z };
+    floatKids = world.objs.filter((k) => k.on === o.id).map((k) => ({ o: k, x: k.x, y: k.y, rot: k.rot, level: k.level }));
+  }
+  const refit = (o: ObjectInstance): void => { if (o === heldObj) recheck(); else floatCheck = checkPlacement(world.objs, o, peopleOnFloor()); };
+  /**
+   * The nearest place along the wall where the piece fits: from where it is, outward a quarter tile at a time, one way (`dir` 1 or -1 in the
+   * wall's own coordinate) or both (0). Null when the wall has no room for it.
+   */
+  function clearAlong(o: ObjectInstance, snap: WallSnap, dir: number): number | null {
+    const at = snap.axis === 'x' ? o.x : o.y, keep = at;
+    try {
+      for (let d = dir ? 0.25 : 0; d <= snap.hi - snap.lo + 1e-9; d += 0.25) {
+        for (const sgn of dir ? [dir] : d ? [1, -1] : [1]) {
+          const v = at + sgn * d;
+          if (v < snap.lo - 1e-9 || v > snap.hi + 1e-9) continue;
+          slideAlong(o, snap, v);
+          if (checkPlacement(world.objs, o, peopleOnFloor()).ok) return v;
+        }
+      }
+      return null;
+    } finally { slideAlong(o, snap, keep); }
+  }
+  /** Snap to wall: the piece goes back against the nearest wall, turned to face into the room, and then only slides along it. Again to let it go. */
+  function toggleWallSnap(): void {
+    const o = heldObj ?? floating ?? selectedObj;
+    if (!o) return;
+    if (wallLock && wallLock.id === o.id) { wallLock = null; log(`The ${nameOf(o)} can go anywhere again.`); return; }
+    const options = wallSnaps(world.objs, o);
+    if (!options.length) { log(`The ${nameOf(o)} can't be set against a wall.`); return; }
+    makeLoose(o);
+    const prev: Pose = { x: o.x, y: o.y, rot: o.rot };
+    // The nearest wall where it fits (right where it lands, or after sliding along to a clear spot); if none has room, the nearest, shown red.
+    let snap = options[0], moved = false, found = false;
+    for (const opt of options) {
+      o.rot = opt.rot; o.x = opt.x; o.y = opt.y;
+      if (o.on || checkPlacement(world.objs, o, peopleOnFloor()).ok) { snap = opt; moved = false; found = true; break; }
+      const v = clearAlong(o, opt, 0);
+      if (v !== null) { snap = opt; slideAlong(o, opt, v); moved = true; found = true; break; }
+    }
+    if (!found) { o.rot = snap.rot; o.x = snap.x; o.y = snap.y; }
+    wallLock = { id: o.id, snap };
+    carryOnTop(world.objs, o, prev);
+    refit(o);
+    log(moved ? `Set the ${nameOf(o)} against the wall, in the nearest clear spot along it. Slide it with the arrows or drag.` : `Set the ${nameOf(o)} against the wall. Slide it with the arrows or drag it along the wall.`);
+  }
+  /** Slide a piece that is against a wall one step along it: -1 toward the left of the screen, 1 toward the right, hopping over whatever is in the way. */
+  function slideAlongWall(side: number): void {
+    const o = heldObj ?? floating ?? selectedObj;
+    if (!o || !wallLock || wallLock.id !== o.id) return;
+    const snap = wallLock.snap, [fw, fd] = footprint(o), cx = o.x + fw / 2, cy = o.y + fd / 2;
+    const a = art.project(cx, cy, 0), b = snap.axis === 'x' ? art.project(cx + 0.25, cy, 0) : art.project(cx, cy + 0.25, 0);
+    const dir = (b[0] >= a[0] ? 1 : -1) * (side < 0 ? -1 : 1);
+    makeLoose(o);
+    const prev: Pose = { x: o.x, y: o.y, rot: o.rot };
+    const v = clearAlong(o, snap, dir);
+    if (v === null) { log(`There's no room for the ${nameOf(o)} further along the wall.`); return; }
+    slideAlong(o, snap, v);
+    carryOnTop(world.objs, o, prev);
+    refit(o);
+  }
+  /** The demo: the office's pieces as lines of the starting layout (`INITIAL_OBJS`), copied to the clipboard, so a finished arrangement can go into the main game. */
+  function copyOfficeLayout(): void {
+    const lines = world.objs.filter((o) => o.level === 5 && TYPES[o.type]).map((o) => `  { id: '${o.id}', type: '${o.type}', level: 5, x: ${Math.round(o.x * 100) / 100}, y: ${Math.round(o.y * 100) / 100}, rot: ${o.rot} },`);
+    const text = lines.join('\n');
+    (window as unknown as { __officeLayout?: string }).__officeLayout = text;
+    const done = (): void => log(`Copied the office layout (${lines.length} pieces). Paste it to send it on.`);
+    const fallback = (): void => {
+      const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch { log('Could not copy. The layout is in the console.'); console.log(text); }
+      ta.remove();
+    };
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
   }
   function recolourHeld(): void {
     const o = heldObj ?? selectedObj ?? hoverObj;
@@ -224,6 +321,7 @@ export function createArrange(g: Game): Partial<Game> {
   function carryTo(level: number): void {
     const o = selectedObj;
     if (!o || !otherFloors(o).includes(level) || (level === ATTIC && !hasAttic())) return;
+    wallLock = null;
     const from = o.level;
     const before: Pose = { x: o.x, y: o.y, rot: o.rot };
     if (!relocate(world.objs, o, level, peopleOnFloor())) { log(`There's no room for the ${nameOf(o)} on the ${LEVEL_NAMES[level].toLowerCase()}.`); return; }
@@ -332,6 +430,7 @@ export function createArrange(g: Game): Partial<Game> {
     const o = selectedObj;
     const wall = selectedWall ? walls.find((w) => w.id === selectedWall) ?? null : null;
     return {
+      exportable: IS_DEMO && view.level === 5,
       floors: [...LEVEL_NAMES],
       order: FLOOR_ORDER.filter(l => l !== ATTIC || hasAttic()),
       stored: [...storage.map(o => ({ id: o.id, name: displayName(o), color: o.col })), ...art.storedWallObjs().map((w) => ({ id: w.id, name: w.name, color: w.col }))],
@@ -344,6 +443,7 @@ export function createArrange(g: Game): Partial<Game> {
         id: o.id, name: displayName(o),
         where: `${LEVEL_NAMES[o.level]} · ${items.find(i => i.id === o.id)?.room ?? ''}`,
         canColour: !!nextColour(o),
+        canWall: !!snapToWall(world.objs, o), onWall: wallLock?.id === o.id,
         looks: looksFor(o, g.owned),
         canStore: canStore(o),
         moveTo: otherFloors(o).filter(l => l !== ATTIC || hasAttic()),
@@ -401,7 +501,16 @@ export function createArrange(g: Game): Partial<Game> {
       }
       const [wx, wy] = worldAt(sx, sy);
       const prev: Pose = { x: heldObj.x, y: heldObj.y, rot: heldObj.rot };
+      // Set against a wall: it only slides along it, until the pointer is pulled well away from the wall (then it comes free).
+      if (wallLock && wallLock.id === heldObj.id) {
+        const [fw, fd] = footprint(heldObj), cx = wx - heldGrab[0], cy = wy - heldGrab[1], sn = wallLock.snap;
+        const off = sn.axis === 'x' ? Math.abs(cy - (heldObj.y + fd / 2)) : Math.abs(cx - (heldObj.x + fw / 2));
+        if (off <= 1.6) { slideAlong(heldObj, sn, sn.axis === 'x' ? cx - fw / 2 : cy - fd / 2); carryOnTop(world.objs, heldObj, prev); recheck(); return; }
+        wallLock = null;
+      }
       centreAt(heldObj, wx - heldGrab[0], wy - heldGrab[1]);
+      // Edges meet without a hunt for the right quarter tile: flush to the wall or fence, and to the pieces beside it.
+      snapEdges(world.objs, heldObj);
       // A small piece over a table or shelf sits on it; anything on a piece being carried goes along.
       if (TYPES[heldObj.type].small) {
         const host = surfaceUnder(world.objs, heldObj, wx, wy);
@@ -429,6 +538,7 @@ export function createArrange(g: Game): Partial<Game> {
     // A tap (no drag) on a moving box opens it, even while arranging: boxes are for opening.
     if (!o) { if ((tapped.type === 'pbox' || tapped.type === 'bag') && tapped.contents) g.handleObjectAction(tapped, 'unpack'); return; }
     recheck();
+    if (!heldCheck.ok && !o.on && fitNearby(o)) { recheck(); if (heldCheck.ok) log(`Slid the ${nameOf(o)} to the nearest spot it fits.`); }
     // Food let go of on the fridge goes straight in: the door swings open and the groceries are put away.
     if (o.type === 'food') { const fridge = fridgeUnder(world.objs, o); if (fridge) { heldObj = null; heldOrig = null; heldKids = []; heldCheck = { ok: true }; g.putFoodAway(o, fridge); return; } }
     // Let go: the piece stays where it is, loose, until Set it down. Red means it does not fit yet.
@@ -445,12 +555,12 @@ export function createArrange(g: Game): Partial<Game> {
   function dropSelectionIfOffFloor(lv: number): void {
     if (selectedObj && selectedObj.level !== lv) { cancelHold(); settleFloating(); selectedObj = null; }
   }
-  function escapeArrange(): void { if (heldObj) cancelHold(); else if (floating) putBack(); else { selectedObj = null; selectedWall = null; } }
+  function escapeArrange(): void { if (heldObj) cancelHold(); else if (floating) putBack(); else { selectedObj = null; selectedWall = null; wallLock = null; } }
   /** A second finger came down: let go of whatever is being dragged. */
   function abortDrag(): void {
     if (heldObj) { cancelHold(); heldCheck = { ok: true }; }
     dragCandidate = null;
     wallDrag = null;
   }
-  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, wallAt, selectWall, takeDownWall, rehangWall, commitMove, rotateSelected, recolourHeld, useLook, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, setDown, putBack, putFoodAway, inHand, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
+  return { copyOfficeLayout, storage, toggleArrange, enterArrange, exitArrange, selectObject, wallAt, selectWall, takeDownWall, rehangWall, commitMove, rotateSelected, toggleWallSnap, slideAlongWall, recolourHeld, useLook, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, setDown, putBack, putFoodAway, inHand, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
 }

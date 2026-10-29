@@ -13,10 +13,12 @@ import { isOutdoor } from '../state/scenes';
 import { rand } from '../state/rng';
 import { createFabric } from './fabric.js';
 import { SLEEVE_BY_CUT } from '../state/garment';
-import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR } from '../state/house';
+import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR, OFFICE } from '../state/house';
 import { stageAt } from '../state/plantGrowth';
 import { drawCrop, drawGroundSpot } from './cropArt.js';
 import { createWeatherFx, hull } from './weatherFx.js';
+import { drawTree, mix as treeMix } from './treeArt.js';
+import { darknessAt } from '../state/daylight';
 const wfx = createWeatherFx();
 import { CROPS } from '../state/crops';
 import { defaultWallLamps, lampRoom } from '../state/wallLamps';
@@ -51,7 +53,7 @@ export function createHouseArt(ctx0, opts = {}) {
   // The wall lamps (they can be moved: see systems/wallLamps.ts) and what is selected or held among them.
   let LAMPS = defaultWallLamps(), lampUi = null;
   const offstage = () => ({ name: '', away: true, level: -1, x: -10, y: -10, task: null, queue: [], needs: {} });
-  let jordan = offstage(), maya = offstage();
+  let jordan = offstage(), maya = offstage(), others = [];
   const GUESTS = [];
   const has = (id) => owned.has(id);
   const cv = ctx0.canvas;
@@ -75,7 +77,9 @@ export function createHouseArt(ctx0, opts = {}) {
   const isoV = (a, b, z = 0) => [OX + (a - b) * TW, OY + (a + b) * TH - z * ZH];
   const iso = (x, y, z = 0) => { const [a, b] = V(x, y); return isoV(a, b, z); };
   const unIso = (sx, sy) => { const a = (sx - OX) / TW, b = (sy - OY) / TH; return Vi((a + b) / 2, (b - a) / 2); };
-  function setOrigin() { const vw = viewW(), vd = viewD(); OX = 320 - (vw / 2 - vd / 2) * TW; OY = 272 - (vw / 2 + vd / 2) * TH; }
+  // Outside, the yard sits right of centre so its far fence runs off the edge of the picture instead of ending in view.
+  let YS = 0;
+  function setOrigin() { const vw = viewW(), vd = viewD(); OX = 320 - (vw / 2 - vd / 2) * TW + YS; OY = 272 - (vw / 2 + vd / 2) * TH; }
   function vrect(x1, y1, x2, y2) { const [a1, b1] = V(x1, y1), [a2, b2] = V(x2, y2); return [Math.min(a1, a2), Math.min(b1, b2), Math.max(a1, a2), Math.max(b1, b2)]; }
 
   function rgb(h) { if (h[0] !== '#') { const m = h.match(/[\d.]+/g) || [128, 128, 128]; return [+m[0], +m[1], +m[2]]; } h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
@@ -146,14 +150,14 @@ export function createHouseArt(ctx0, opts = {}) {
   // A scene can pull the room toward evening without moving the clock, to show off the lights (see setDim).
   let dimTarget = 0, dimNow = 0;
   function darkness() { const base = baseDarkness(); return dimNow > base ? dimNow : base; }
-  function baseDarkness() { const h = hour(), si = seasonIdx(), eve = [0, 1, -1, -2.5][si], morn = [0, -0.5, 0.4, 0.8][si], night0 = 21 + eve, dusk0 = 18 + eve, dawn0 = 5.5 + morn, light0 = 7.5 + morn;
-    if (h >= night0 || h < dawn0) return 0.42; if (h >= dusk0) return (h - dusk0) / (night0 - dusk0) * 0.42; if (h < light0) return (light0 - h) / (light0 - dawn0) * 0.42; return 0; }
+  function baseDarkness() { return darknessAt(hour(), seasonIdx()); }
   function skyColor() { const h = hour(); if (raining() && darkness() < 0.3) return seasonIdx() === 3 ? '#D2D8E0' : '#9AA6B5'; if (darkness() > 0.3) return '#2A2F55'; if (h >= 17.5 && h < 21) return '#F0B98E'; if (h < 7.5) return '#E9C7B5'; return '#BFE2F0'; }
 
-  const LOOKS = [{ paint: '#B9B4AF', paper: 'block', floor: 'concrete' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#D9CDBD', paper: null, floor: 'wood' }, { paint: '#E4D6C2', paper: 'shiplap', floor: 'wood' }];
+  const LOOKS = [{ paint: '#B9B4AF', paper: 'block', floor: 'concrete' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#D9CDBD', paper: null, floor: 'wood' }, { paint: '#E4D6C2', paper: 'shiplap', floor: 'wood' }, { paint: '#E4DFD6', paper: null, floor: 'office' }];
   const FLOORS = {
     wood: { kind: 'plank', a: '#C9A27A', b: '#C09670', line: 'rgba(90,60,30,.22)' },
     concrete: { kind: 'flat', a: '#A7A29D', b: '#A7A29D', line: 'rgba(0,0,0,.06)' },
+    office: { kind: 'check', a: '#9AA3AE', b: '#929BA7', line: 'rgba(0,0,0,.05)' },
     tile: { kind: 'check', a: '#ECE7E1', b: '#D6CFC6', line: 'rgba(0,0,0,.07)' },
     carpet: { kind: 'flat', a: '#8E9C96', b: '#8E9C96', line: 'rgba(0,0,0,.03)' },
     walnut: { kind: 'plank', a: '#6B4A35', b: '#634330', line: 'rgba(0,0,0,.25)' },
@@ -266,7 +270,7 @@ export function createHouseArt(ctx0, opts = {}) {
     'velvet-tuft': { pat: 'tuft', base: '#6E3C50', ink: 'rgba(0,0,0,.25)' }, blossom: { pat: 'blossom', base: '#F7EEE6' }, palms: { pat: 'palms', base: '#D7EDE4' }, leaves: { pat: 'leaves', base: '#F3E6D0' }, snow: { pat: 'snow', base: '#D9E6F2' }, 'sunset-mural': { pat: 'sunset' }, cork: { pat: 'cork', base: '#B88B5A', ink: 'rgba(80,50,25,.4)' }
   };
   // rooms can override their floor's paint, wallpaper and floor
-  const ROOMLOOK = [{}, {}, {}, {}, {}];
+  const ROOMLOOK = [{}, {}, {}, {}, {}, {}];
   const lookAt = (level, room) => (room && ROOMLOOK[level][room] ? Object.assign({}, LOOKS[level], ROOMLOOK[level][room]) : LOOKS[level]);
   const toneOf = (lk) => { const pp = lk.paper && PAPERS[lk.paper]; return (pp && pp.base) || lk.paint; };
   const wallTone = (level, room) => toneOf(lookAt(level, room));
@@ -427,6 +431,16 @@ export function createHouseArt(ctx0, opts = {}) {
   /** Every wall piece in the house, for the Arrange list. */
   function wallObjsAll() { return WALLOBJS.filter((w) => WTYPES[w.type]).map((w) => ({ id: w.id, type: w.type, name: wallName(w), level: w.level, col: w.col })); }
   /** The id of the wall piece under a view point on the walls the view shows, if any. */
+  /** The kind of wall feature (the whiteboard, the meeting door with its sign) under a view point, among `kinds`, or null. */
+  function hitFeature(level, sx, sy, kinds) {
+    let hit = null;
+    LEVELS[level].feats.forEach((f) => {
+      if (!kinds.includes(f.k) || !BACK[VR].includes(f.p)) return;
+      const P = (u, z) => iso(...wallPoint(f.p, u, z)), pad = f.k === 'meetdoor' ? 0.4 : 0;
+      if (inPoly(sx, sy, [P(f.u[0] - pad, f.z[0]), P(f.u[1] + pad, f.z[0]), P(f.u[1] + pad, f.z[1] + (f.k === 'meetdoor' ? 0.6 : 0)), P(f.u[0] - pad, f.z[1] + (f.k === 'meetdoor' ? 0.6 : 0))])) hit = f.k;
+    });
+    return hit;
+  }
   function hitWallObj(level, sx, sy) { let hit = null; WALLOBJS.forEach((w) => { if (w.level === level && WTYPES[w.type] && BACK[VR].includes(w.p) && inPoly(sx, sy, wallQuad(w))) hit = w; }); return hit ? hit.id : null; }
   /** The view point at a wall piece's centre, for framing and tests. */
   function wallObjView(id) { const w = WALLOBJS.find((x) => x.id === id); if (!w || !WTYPES[w.type]) return null; const T = WTYPES[w.type]; return iso(...wallPoint(w.p, w.u + T.w / 2, w.z + T.h / 2)); }
@@ -459,7 +473,9 @@ export function createHouseArt(ctx0, opts = {}) {
   const B = (x, y, z, w, d, h, c, f = {}) => Object.assign({ box: [x, y, z, w, d, h], c }, f);
   const F = (x1, y1, x2, y2, fn, f = {}) => Object.assign({ rect: [x1, y1, x2, y2], fn }, f);
   const doing = (ch, name) => ch.task && ch.task.name === name && ch.task.phase === 'do';
-  const usingSlot = (sid, names) => [jordan, maya].some(c => c.task && c.task.phase === 'do' && c.task.slot === sid && (!names || names.includes(c.task.name)));
+  // A desk's screen lights while someone sits in the chair tucked in at it (the chairs are pieces of their own).
+  const deskInUse = (o, wide = 0.6, deep = 1.5) => OBJS.some(c => (c.type === 'officechair' || c.type === 'bosschair') && c.level === o.level && Math.abs(c.x + (c.type === 'bosschair' ? 0.45 : 0.3) - (o.x + (o.type === 'bossdesk' ? 1.0 : 0.6))) < wide + (o.type === 'bossdesk' ? 0.5 : 0) && Math.abs(c.y - o.y) < deep && usingSlot(c.id + ':s'));
+  const usingSlot = (sid, names) => [jordan, maya, ...others].some(c => c.task && c.task.phase === 'do' && c.task.slot === sid && (!names || names.includes(c.task.name)));
   function steamAt(T, lx, ly, lz, t, n = 4, rise = 0.8) { const [x, y] = T.W(lx, ly); PFX.emit(`${T.o.id}:${lx},${ly}`, 'steam', T.o.level, x, y, lz, (n / 4) * (rise / 0.8)); }
   // A flight of stairs. The same numbers draw it from below (a flight rising to the floor above) and from above (the
   // stairwell cut into that floor, seen going down), so the two views are the same stairs. TOP is the height of a floor.
@@ -2633,6 +2649,23 @@ export function createHouseArt(ctx0, opts = {}) {
     T.box(0.52, 0, 1.6, 1.36, D, 0.25, c);
     T.box(-0.02, -0.02, 1.85, W + 0.04, D + 0.04, 0.08, shade(c, 0.1));
   }
+  // ---- Trees: seven species painted once into cached layers and swayed every frame (see treeArt.js) ----
+  const treeSnow = () => seasonIdx() === 3 && YARD.tiles.some(q => q.snow > 0.3);
+  const scatter = (k, s) => Math.abs(Math.sin(k * 12.9898 + s * 78.233) * 43758.5453 % 1);
+  const idHash = (id) => { let h = 0; for (let i = 0; i < String(id).length; i++) h = (h * 31 + String(id).charCodeAt(i)) | 0; return Math.abs(h); };
+  // Petals, blossom or leaves drifting down past a tree, a few at a time, each on its own steady track.
+  const fallers = (bx, by, n, col, spread, top, t, r = 2) => { for (let k = 0; k < n; k++) { const ph = (t * 0.22 + scatter(k, 5)) % 1; circle(bx - spread + scatter(k, 1) * spread * 2 + Math.sin(t + k) * 8, by - top + ph * top, r, col); } };
+  // A tree that has just been shaken: when, and how many pieces of fruit fell, so they can be shown dropping.
+  const SHAKES = new Map();
+  // Whether someone is in the meeting room right now (the sign over the door lights up).
+  let officeMeeting = false;
+  const treeAt = (kind, cx, cy, drift) => (T, o, t) => {
+    const [bx, by] = T.P(cx, cy, 0), season = seasonIdx(), fruity = !!STATE_TYPES[o.type] && ['treeapple', 'treecherry', 'treepalm'].includes(o.type), sk = SHAKES.get(o.id);
+    drawTree(ctx, kind, bx, by, t, { season, snowy: treeSnow(), variant: idHash(o.id) % 3, scale: cv.width / W,
+      ...(fruity ? { grow: o.grow ?? 0, fruit: { t: o.fruit ?? 0 } } : {}), ...(sk ? { shake: animT - sk.t0, fallen: sk.n } : {}) });
+    if (drift && drift[season]) { const [col, n, spread, top] = drift[season]; fallers(bx, by, n, col, spread, top, t); }
+  };
+
   const DRAWN = {
     sofa: {    
       parts: (o) => { const s1 = usingSlot(o.id + ':s1') ? 1 : 0, s2 = usingSlot(o.id + ':s2') ? 1 : 0;
@@ -2995,6 +3028,211 @@ export function createHouseArt(ctx0, opts = {}) {
         blobs.forEach(([dx, dy, r], k) => circle(bx + dx + sway, ty + dy, r, pal[k % 3]));
         if (si === 0) for (let k = 0; k < 14; k++) circle(bx + Math.sin(k * 2.3) * 30 + sway, ty - 20 + Math.cos(k * 1.7) * 22, 2.2, '#F2B8C6');
         if (si === 2) for (let k = 0; k < 5; k++) { const ph = (t * 0.25 + k / 5) % 1; circle(bx - 30 + k * 15 + Math.sin(t + k) * 8, ty - 20 + ph * 90, 2, '#D98F2B'); } })] },
+    // The trees you can plant (the shop's Outdoor tab): seven kinds, each its own shape.
+    treeoak: { parts: () => [F(0.2, 0.2, 1.4, 1.4, treeAt('oak', 0.8, 0.8, { 2: ['#D98F2B', 7, 60, 90] }))] },
+    treecherry: { parts: () => [F(0.2, 0.2, 1.4, 1.4, treeAt('cherry', 0.8, 0.8, { 0: ['#FBD6E0', 12, 54, 80], 2: ['#E0762C', 5, 50, 80] }))] },
+    treepine: { parts: () => [F(0.2, 0.2, 1.0, 1.0, treeAt('pine', 0.6, 0.6))] },
+    treebirch: { parts: () => [F(0.2, 0.2, 0.8, 0.8, treeAt('birch', 0.5, 0.5, { 2: ['#EBC23A', 6, 30, 100] }))] },
+    treewillow: { parts: () => [F(0.2, 0.2, 1.6, 1.6, treeAt('willow', 0.9, 0.9, { 2: ['#D8B442', 8, 70, 90] }))] },
+    treepalm: { parts: () => [F(0.2, 0.2, 1.0, 1.0, treeAt('palm', 0.6, 0.6))] },
+    treeapple: { parts: () => [F(0.2, 0.2, 1.0, 1.0, treeAt('apple', 0.6, 0.6, { 0: ['#FBF3F5', 8, 34, 60], 2: ['#B6A23A', 4, 34, 60] }))] },
+    // ---- the office ----
+    officedesk: {
+      // A 1.2 x 0.62 top on side panels, a low partition behind it, a monitor (its screen lights while someone sits at it), a keyboard, a mouse on its pad and a desk phone pushed against the back
+      // and a PC tower standing at the left end. The chair is a piece of its own (officechair), tucked in at the desk's front. Everything that stands on the top is
+      // painted in one pass over it (back to front), so the depth order cannot tangle.
+      parts: () => [B(0.03, 0.05, 0, 0.05, 0.55, 0.72, '#B9B09A'), B(1.12, 0.05, 0, 0.05, 0.55, 0.72, '#B9B09A'), B(0.08, 0.05, 0.12, 1.04, 0.03, 0.6, '#A59C86'),
+        B(0, 0, 0.72, 1.2, 0.62, 0.05, '#CDBFA3', { name: 'top' }), B(0, 0, 0.77, 1.2, 0.04, 0.46, '#8E98A6'),
+        F(0, 0, 1.2, 0.62, (T, o, t) => {
+          const on = deskInUse(o), z0 = 0.77;
+          // The monitor, at the back, then the PC tower at the left end.
+          T.box(0.58, 0.12, z0, 0.1, 0.08, 0.14, '#2B2F38'); T.box(0.41, 0.09, z0 + 0.13, 0.5, 0.05, 0.3, '#23272F');
+          T.poly([[0.44, 0.141, 0.93], [0.88, 0.141, 0.93], [0.88, 0.141, 1.17], [0.44, 0.141, 1.17]], on ? '#9FD0FF' : '#1B2230');
+          // Text appears on the screen line by line as it is typed, then clears and starts again.
+          if (on) { const k = (t * 0.22) % 1; [1.12, 1.07, 1.02, 0.97].forEach((z, i) => { const f = Math.max(0, Math.min(1, k * 4.4 - i)); if (f > 0.02) T.line([0.48, 0.142, z], [0.48 + (i % 2 ? 0.26 : 0.34) * f, 0.142, z], '#FFFFFF', 1); }); }
+          T.box(0.1, 0.12, z0, 0.2, 0.44, 0.46, '#2E323B');
+          const fy = 0.561;
+          T.poly([[0.12, fy, z0 + 0.36], [0.28, fy, z0 + 0.36], [0.28, fy, z0 + 0.4], [0.12, fy, z0 + 0.4]], '#15181D');                    // the drive bay
+          T.poly([[0.12, fy, z0 + 0.3], [0.28, fy, z0 + 0.3], [0.28, fy, z0 + 0.33], [0.12, fy, z0 + 0.33]], '#22262E');
+          T.box(0.15, fy, z0 + 0.2, 0.05, 0.012, 0.05, '#4A5262');                                                                        // the power button
+          T.box(0.235, fy, z0 + 0.215, 0.03, 0.012, 0.03, on ? '#5BE08A' : '#2E5A3E');                                                     // its light
+          [0.06, 0.09, 0.12, 0.15].forEach(z => T.line([0.13, fy + 0.001, z0 + z], [0.27, fy + 0.001, z0 + z], '#15181D', 1));            // the vents
+          const sx = 0.301, cy = 0.34, cz = z0 + 0.23;                                                                                    // the side panel and its fan
+          T.poly([[sx, 0.16, z0 + 0.05], [sx, 0.52, z0 + 0.05], [sx, 0.52, z0 + 0.42], [sx, 0.16, z0 + 0.42]], '#3A4150');
+          const ring = [], hub = [];
+          for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; ring.push([sx + 0.001, cy + Math.cos(a) * 0.1, cz + Math.sin(a) * 0.1]); }
+          for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; hub.push([sx + 0.002, cy + Math.cos(a) * 0.03, cz + Math.sin(a) * 0.03]); }
+          T.poly(ring, '#1B1E24'); T.poly(hub, '#6B7280');
+          // The keyboard; while the desk is in use, a few keys light and fade as they are pressed.
+          T.box(0.4, 0.4, z0, 0.36, 0.13, 0.02, '#3A3F4A');
+          if (on) for (let i = 0; i < 5; i++) { const q = Math.max(0, Math.sin(t * (9 + i * 1.7) + i * 2.1)); if (q > 0.6) T.box(0.42 + ((i * 7 + Math.floor(t * 6 + i * 3)) % 9) * 0.035, 0.42 + (i % 3) * 0.035, z0 + 0.02, 0.025, 0.025, 0.008, '#B8C2D4'); }
+          // The mouse pad and the mouse: a pale shell with a split for the buttons and a wheel, easy to tell from the dark pad.
+          T.box(0.77, 0.33, z0, 0.16, 0.24, 0.008, '#2B2F38');
+          T.box(0.81, 0.39, z0 + 0.008, 0.08, 0.13, 0.035, '#E4E7EC'); T.line([0.81, 0.44, z0 + 0.043], [0.89, 0.44, z0 + 0.043], '#6B7280', 1); T.line([0.85, 0.39, z0 + 0.043], [0.85, 0.44, z0 + 0.043], '#6B7280', 1); T.box(0.842, 0.4, z0 + 0.044, 0.016, 0.035, 0.006, '#3A3F4A');
+          // The desk phone at the right end: a base with a keypad, the handset across its cradle and a red light.
+          T.box(0.95, 0.1, z0, 0.22, 0.24, 0.06, '#4A5262'); T.box(0.98, 0.18, z0 + 0.06, 0.12, 0.14, 0.012, '#8E98A6'); T.box(0.94, 0.12, z0 + 0.06, 0.06, 0.2, 0.05, '#1E2128'); T.box(1.13, 0.12, z0 + 0.06, 0.06, 0.2, 0.05, '#1E2128'); T.box(0.94, 0.16, z0 + 0.11, 0.25, 0.12, 0.04, '#1E2128');
+        }, { onTop: true })],
+    },
+    officechair: {
+      parts: () => [B(0.12, 0.2, 0.0, 0.36, 0.2, 0.04, '#2B2F38'), B(0.27, 0.27, 0.04, 0.06, 0.06, 0.36, '#2B2F38'),
+        B(0.05, 0.1, 0.4, 0.5, 0.45, 0.07, '#3A4150', { name: 'seat' }), B(0.05, 0.5, 0.47, 0.5, 0.07, 0.5, '#3A4150')],
+    },
+    // The boss's desk: dark walnut, twice the size, drawer pedestals either side, a green leather blotter, a brass lamp and nameplate. The piece is placed turned (rot 2) so the
+    // boss works on the far side, facing the room; its chair (bosschair) is a piece of its own.
+    bossdesk: {
+      parts: () => [B(0.05, 0.05, 0, 0.5, 0.85, 0.72, '#4E3224'), B(1.45, 0.05, 0, 0.5, 0.85, 0.72, '#4E3224'), B(0.55, 0.05, 0.1, 0.9, 0.04, 0.6, '#43281C'),
+        B(0, 0, 0.72, 2.0, 0.95, 0.07, '#6B4630', { name: 'top' }),
+        B(0.62, 0.3, 0.79, 0.76, 0.46, 0.012, '#2B3A2F'),
+        F(0.8, 0.04, 1.3, 0.3, (T, o) => { const on = deskInUse(o); T.box(0.95, 0.12, 0.79, 0.1, 0.08, 0.15, '#1E2128'); T.box(0.78, 0.09, 0.93, 0.44, 0.05, 0.3, '#1E2128'); T.poly([[0.81, 0.141, 0.96], [1.19, 0.141, 0.96], [1.19, 0.141, 1.2], [0.81, 0.141, 1.2]], on ? '#9FD0FF' : '#1B2230'); }, { onTop: true }),
+        F(0.1, 0.1, 0.5, 0.5, (T) => { T.box(0.14, 0.14, 0.79, 0.14, 0.14, 0.03, '#C9A24A'); T.line([0.21, 0.21, 0.82], [0.21, 0.21, 1.05], '#C9A24A', 2); T.box(0.1, 0.1, 1.04, 0.22, 0.22, 0.1, '#2F6B4F'); }, { onTop: true }),
+        B(1.55, 0.62, 0.79, 0.34, 0.07, 0.07, '#C9A24A'), B(1.6, 0.22, 0.79, 0.28, 0.2, 0.06, '#1E2128')],
+    },
+    // A big leather chair: a swivel base on a column, a deep seat, arms, and a tall back. Placed turned (rot 2) so it faces the room from behind the desk.
+    bosschair: {
+      parts: () => [B(0.2, 0.18, 0.0, 0.5, 0.36, 0.05, '#1E2128'), B(0.38, 0.32, 0.05, 0.12, 0.12, 0.35, '#1E2128'),
+        B(0.05, 0.1, 0.4, 0.8, 0.62, 0.1, '#33241E', { name: 'seat' }), B(0.05, 0.6, 0.5, 0.8, 0.14, 1.0, '#33241E'),
+        B(0.0, 0.1, 0.5, 0.07, 0.55, 0.28, '#1F1613'), B(0.83, 0.1, 0.5, 0.07, 0.55, 0.28, '#1F1613')],
+    },
+    visitorchair: {
+      // An upholstered chair for the visitor, its back toward the room and its seat toward the boss's desk.
+      parts: () => [B(0.05, 0.05, 0, 0.05, 0.05, 0.4, '#2B2F38'), B(0.5, 0.05, 0, 0.05, 0.05, 0.4, '#2B2F38'), B(0.05, 0.5, 0, 0.05, 0.05, 0.4, '#2B2F38'), B(0.5, 0.5, 0, 0.05, 0.05, 0.4, '#2B2F38'),
+        B(0.02, 0.1, 0.4, 0.56, 0.46, 0.08, '#4A5262', { name: 'seat' }), B(0.02, 0.52, 0.48, 0.56, 0.07, 0.5, '#4A5262')],
+    },
+    officerug: {
+      // The boss's rug: deep red with a gold border.
+      parts: () => [F(0, 0, 3.0, 3.0, (T) => { const q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1); q(0, 0, 3.0, 3.0, 0.01, '#6A2A2E'); q(0.12, 0.12, 2.88, 2.88, 0.012, null, '#C9A24A'); q(0.25, 0.25, 2.75, 2.75, 0.012, null, 'rgba(201,162,74,.5)'); }, { decal: true })],
+    },
+    officerunner: {
+      // A long corporate runner laid from the meeting room door down the aisle: charcoal-blue with a pale edge stripe and a darker inner border.
+      parts: () => [F(0, 0, 1.1, 6.4, (T) => { const q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1); q(0, 0, 1.1, 6.4, 0.01, '#3C4A63'); q(0.07, 0, 1.03, 6.33, 0.012, null, '#9AA7BD'); q(0.15, 0, 0.95, 6.25, 0.012, null, 'rgba(154,167,189,.45)'); }, { decal: true })],
+    },
+    officeprinter: {
+      // A floor-standing copier: a cabinet with two paper drawers, a white body, a scanner lid with a glass top, a control panel with buttons on the front half, and a tray with paper. The front (drawers, tray, panel) is local +y; the piece stands against the front wall turned (rot 2) so that front faces into the room.
+      parts: () => [B(0.05, 0.05, 0, 1.5, 0.6, 0.5, '#8E98A6'), B(0, 0, 0.5, 1.6, 0.7, 0.5, '#F1EEE8'),
+        // The top (lid, glass, panel, buttons) is painted over the body; the front strip (drawers, tray) is its own piece at the front edge, so it sorts with the front whichever way the piece is turned. A front strip reaches a little past the sides of its piece so that a neighbour a hair's breadth away does not make the sort ambiguous.
+        F(0, 0, 1.6, 0.7, (T) => {
+          T.box(0.04, 0.04, 1.0, 1.1, 0.62, 0.07, '#DDE1E7');                                                                         // the scanner lid
+          T.poly([[0.12, 0.12, 1.075], [1.02, 0.12, 1.075], [1.02, 0.6, 1.075], [0.12, 0.6, 1.075]], '#9FC4DA', 'rgba(0,0,0,.25)');   // the scanner glass
+          T.box(1.18, 0.26, 1.0, 0.36, 0.4, 0.14, '#3A3F4A');                                                                         // the control panel
+          [['#3F9A5A', 1.24], ['#C2413A', 1.32], ['#E0B64A', 1.4]].forEach(([c, x]) => T.box(x, 0.32, 1.14, 0.05, 0.05, 0.015, c));
+          T.box(1.22, 0.44, 1.14, 0.28, 0.12, 0.012, '#7FC0E6');
+        }, { onTop: true }),
+        F(-0.1, 0.7, 1.7, 0.9, (T) => {
+          [0.1, 0.3].forEach(z => { T.poly([[0.12, 0.701, z + 0.04], [1.48, 0.701, z + 0.04], [1.48, 0.701, z + 0.17], [0.12, 0.701, z + 0.17]], '#A5AEBA', 'rgba(0,0,0,.3)'); T.box(0.7, 0.702, z + 0.1, 0.2, 0.012, 0.03, '#3A3F4A'); });
+          T.box(0.1, 0.7, 0.55, 0.62, 0.15, 0.025, '#C9CED6'); T.box(0.14, 0.72, 0.575, 0.54, 0.11, 0.03, '#FFFFFF');                  // the output tray and its paper
+        })],
+    },
+    // Nothing is drawn for the two spots (the whiteboard and the meeting door are part of the wall).
+    officeboardspot: { parts: () => [] },
+    officedoorspot: { parts: () => [] },
+    officecabinet: {
+      // A four-drawer filing cabinet: a steel body, a lip on top, drawer fronts with a handle and a label holder each. The front is local +y.
+      parts: () => [B(0, 0, 0, 0.5, 0.6, 1.2, '#8E98A6'), B(-0.01, -0.01, 1.2, 0.52, 0.62, 0.03, '#7C8694'),
+        F(-0.1, 0.6, 0.6, 0.66, (T) => {
+          const fy = 0.601;
+          for (let i = 0; i < 4; i++) {
+            const z0 = 0.05 + i * 0.285, z1 = z0 + 0.265;
+            T.poly([[0.03, fy, z0], [0.47, fy, z0], [0.47, fy, z1], [0.03, fy, z1]], '#A7B0BC', '#6B7482');
+            T.box(0.18, 0.6, z1 - 0.1, 0.14, 0.03, 0.025, '#5A6370');                                                                   // the handle
+            T.poly([[0.2, fy, z1 - 0.05], [0.3, fy, z1 - 0.05], [0.3, fy, z1 - 0.02], [0.2, fy, z1 - 0.02]], '#EFEAD9');                  // the label
+          }
+        }, { onTop: true })],
+    },
+    officeplant: {
+      // A leafy plant in a terracotta pot: a fan of long leaves in several greens, drawn far to near, with a slow sway.
+      parts: () => [B(0.08, 0.08, 0, 0.34, 0.34, 0.05, '#8A5A3B'), B(0.06, 0.06, 0.05, 0.38, 0.38, 0.2, '#B87A55'), B(0.04, 0.04, 0.25, 0.42, 0.42, 0.05, '#C98F68'),
+        B(0.08, 0.08, 0.3, 0.34, 0.34, 0.01, '#4A3426', { name: 'soil' }),
+        F(0.04, 0.04, 0.46, 0.46, (T, o, t) => {
+          const cx = 0.25, cy = 0.25, GREENS = ['#2F6A3F', '#3F7A4A', '#4F9459', '#5BA566', '#3A8050'], leaves = [];
+          for (let i = 0; i < 18; i++) {
+            const a = i * 2.39996, r = 0.1 + ((i * 7) % 5) * 0.035, zt = 0.62 + ((i * 5) % 7) * 0.1 + (i % 2) * 0.05, sway = Math.sin(t * 0.9 + i) * 0.012;
+            leaves.push({ a, r, zt, sway, col: GREENS[i % GREENS.length], d: Math.cos(a) + Math.sin(a) });
+          }
+          leaves.sort((p, q) => p.d - q.d);
+          for (const l of leaves) {
+            const bx = cx + Math.cos(l.a) * 0.03, by = cy + Math.sin(l.a) * 0.03, tx = cx + Math.cos(l.a) * l.r + l.sway, ty = cy + Math.sin(l.a) * l.r + l.sway, tz = l.zt;
+            const mx = bx + (tx - bx) * 0.55, my = by + (ty - by) * 0.55, mz = 0.31 + (tz - 0.31) * 0.62, px = -Math.sin(l.a) * 0.045, py = Math.cos(l.a) * 0.045;
+            T.poly([[bx, by, 0.31], [mx + px, my + py, mz], [tx, ty, tz], [mx - px, my - py, mz]], l.col, 'rgba(20,50,30,.45)');
+          }
+        }, { onTop: true })],
+    },
+    officecounter: {
+      // The sink counter: a cabinet with two doors, a wood top with a steel sink and a tall tap, soap, and a rack with plates. The front is local +y.
+      parts: () => [B(0, 0, 0, 1.2, 0.62, 0.88, '#C9C3B8'), B(0, 0, 0.88, 1.2, 0.62, 0.05, '#8E6B4E', { name: 'top' }),
+        F(0, 0, 1.2, 0.62, (T) => {
+          const fy = 0.621, z0 = 0.93;
+          T.line([0.6, fy, 0.06], [0.6, fy, 0.84], 'rgba(60,50,40,.45)', 1.2);
+          T.poly([[0.04, fy, 0.08], [0.58, fy, 0.08], [0.58, fy, 0.84], [0.04, fy, 0.84]], 'rgba(255,255,255,.07)', 'rgba(60,50,40,.3)');
+          T.poly([[0.62, fy, 0.08], [1.16, fy, 0.08], [1.16, fy, 0.84], [0.62, fy, 0.84]], 'rgba(255,255,255,.07)', 'rgba(60,50,40,.3)');
+          [0.5, 0.64].forEach(x => T.box(x - 0.015, 0.62, 0.62, 0.03, 0.02, 0.12, '#8E98A6'));
+          T.poly([[0.08, 0.12, z0 + 0.002], [0.56, 0.12, z0 + 0.002], [0.56, 0.5, z0 + 0.002], [0.08, 0.5, z0 + 0.002]], '#B9C3CE', '#7C8694');   // the sink
+          T.poly([[0.12, 0.16, z0 + 0.004], [0.52, 0.16, z0 + 0.004], [0.52, 0.46, z0 + 0.004], [0.12, 0.46, z0 + 0.004]], '#8E9AA8');
+          T.box(0.52, 0.08, z0, 0.04, 0.04, 0.26, '#C9CED6'); T.box(0.36, 0.08, z0 + 0.22, 0.2, 0.04, 0.04, '#C9CED6'); T.box(0.36, 0.08, z0 + 0.14, 0.04, 0.04, 0.1, '#C9CED6');   // the tap
+          T.box(0.64, 0.42, z0, 0.07, 0.07, 0.13, '#7FC0E6');                                                                                  // the soap
+          T.box(0.78, 0.14, z0, 0.34, 0.3, 0.03, '#8E98A6');                                                                                   // the rack
+          [0.82, 0.9, 0.98, 1.06].forEach(x => T.box(x, 0.18, z0 + 0.03, 0.02, 0.22, 0.16, '#F4EFE6'));                                        // plates on edge
+        }, { onTop: true })],
+    },
+    officecoffee: {
+      // The coffee station: a two-door cabinet with a wood top. On it, left to right along the wall: a drip machine (a column at the back, a brew head overhanging a glass pot on a base plate), a tray with three mugs, and a tin.
+      // The things on top are boxes drawn far to near for however the piece is turned, so none clashes with another. The front is local +y.
+      parts: () => [B(0, 0, 0, 1.1, 0.55, 0.85, '#C9C3B8'), B(0, 0, 0.85, 1.1, 0.55, 0.05, '#8E6B4E', { name: 'top' }),
+        F(0, 0, 1.1, 0.55, (T, o) => {
+          const fy = 0.551, W = 1.1, D = 0.55, z0 = 0.9;
+          T.line([0.55, fy, 0.06], [0.55, fy, 0.8], 'rgba(60,50,40,.45)', 1.2);
+          [0.45, 0.65].forEach(x => T.box(x - 0.015, fy, 0.45, 0.03, 0.012, 0.12, '#8E98A6'));
+          const depth = (x, y) => (o.rot === 1 ? (D - y) + x : o.rot === 2 ? (W - x) + (D - y) : o.rot === 3 ? y + (W - x) : x + y);
+          const boxes = [
+            [0.1, 0.06, z0, 0.32, 0.06, 0.44, '#23272F'],            // the machine's back column
+            [0.1, 0.06, z0, 0.32, 0.36, 0.05, '#2B2F38'],            // its base plate
+            [0.1, 0.06, z0 + 0.4, 0.32, 0.36, 0.07, '#23272F'],      // the brew head, over the pot
+            [0.2, 0.2, z0 + 0.05, 0.12, 0.12, 0.2, '#BFE3EE'],       // the glass pot
+            [0.22, 0.22, z0 + 0.05, 0.08, 0.08, 0.09, '#5A3A22'],    // the coffee in it
+            [0.36, 0.13, z0 + 0.34, 0.04, 0.02, 0.03, '#5BE08A'],    // its light, on the column
+            [0.55, 0.14, z0, 0.34, 0.2, 0.015, '#B9B3A6'],           // the tray
+            [0.58, 0.19, z0 + 0.015, 0.09, 0.09, 0.1, '#E8E2D6'],    // the mugs
+            [0.7, 0.19, z0 + 0.015, 0.09, 0.09, 0.1, '#7FB8C9'],
+            [0.82, 0.19, z0 + 0.015, 0.09, 0.09, 0.1, '#E8E2D6'],
+            [0.96, 0.1, z0, 0.12, 0.12, 0.15, '#C9A24A'],            // the tin
+            [0.955, 0.095, z0 + 0.15, 0.13, 0.13, 0.025, '#A8832F'], // its lid
+          ].map((b) => ({ b, d: depth(b[0] + b[3] / 2, b[1] + b[4] / 2), z: b[2] })).sort((p, q) => p.d - q.d || p.z - q.z);
+          boxes.forEach(({ b }) => T.box(b[0], b[1], b[2], b[3], b[4], b[5], b[6]));
+        }, { onTop: true })],
+    },
+    officefridge: {
+      // An office fridge: a freezer door over a tall door with a handle each, a gap between, a few magnets and a note. The front is local +y.
+      parts: () => [B(0, 0, 0, 0.7, 0.7, 1.9, '#E3E9EE'), B(0.005, 0.005, 1.9, 0.69, 0.69, 0.02, '#CBD3DA'),
+        F(-0.1, 0.7, 0.8, 0.76, (T) => {
+          const fy = 0.701;
+          T.poly([[0.02, fy, 1.28], [0.68, fy, 1.28], [0.68, fy, 1.88], [0.02, fy, 1.88]], '#F2F5F8', 'rgba(0,0,0,.2)');                    // the freezer door
+          T.poly([[0.02, fy, 0.06], [0.68, fy, 0.06], [0.68, fy, 1.24], [0.02, fy, 1.24]], '#EAEFF3', 'rgba(0,0,0,.2)');                    // the main door
+          T.poly([[0.02, fy, 1.24], [0.68, fy, 1.24], [0.68, fy, 1.28], [0.02, fy, 1.28]], '#8E98A6');                                      // the gap
+          T.box(0.57, 0.7, 1.34, 0.035, 0.03, 0.34, '#9AA4B2'); T.box(0.57, 0.7, 0.78, 0.035, 0.03, 0.34, '#9AA4B2');                      // the handles
+          T.poly([[0.12, fy, 1.0], [0.2, fy, 1.0], [0.2, fy, 1.09], [0.12, fy, 1.09]], '#F2C14E');                                          // a note
+          T.poly([[0.24, fy, 0.9], [0.29, fy, 0.9], [0.29, fy, 0.95], [0.24, fy, 0.95]], '#3D8BD6');                                        // a magnet
+          T.poly([[0.02, fy, 0], [0.68, fy, 0], [0.68, fy, 0.06], [0.02, fy, 0.06]], '#2B2F38');                                            // the kick plate
+        }, { onTop: true })],
+    },
+    officevending: {
+      // A snack machine: a lit sign over a window of snacks on coils, a keypad and a coin slot on the right, a flap at the bottom. The front is local +y.
+      parts: () => [B(0, 0, 0, 0.7, 0.7, 1.8, '#2F5FA8'), B(0.005, 0.005, 1.8, 0.69, 0.69, 0.02, '#244B86'),
+        F(-0.1, 0.7, 0.8, 0.76, (T) => {
+          const fy = 0.701;
+          T.poly([[0.04, fy, 1.66], [0.66, fy, 1.66], [0.66, fy, 1.76], [0.04, fy, 1.76]], '#F2C14E', '#C99A2E');                            // the lit sign
+          T.poly([[0.05, fy, 0.62], [0.46, fy, 0.62], [0.46, fy, 1.62], [0.05, fy, 1.62]], '#16202E', '#0E1622');                            // the glass
+          const PACKS = ['#E0453A', '#F2C14E', '#3F9A5A', '#3D8BD6', '#B76AC9', '#F08A3A'];
+          [1.46, 1.24, 1.02, 0.80].forEach((z, r) => {
+            for (let k = 0; k < 5; k++) { const x = 0.07 + k * 0.078, c = PACKS[(r * 2 + k) % PACKS.length]; T.poly([[x, fy, z], [x + 0.06, fy, z], [x + 0.06, fy, z + 0.14], [x, fy, z + 0.14]], c); }
+            T.line([0.06, fy, z - 0.01], [0.45, fy, z - 0.01], '#6B7482', 1);
+          });
+          T.poly([[0.49, fy, 0.62], [0.65, fy, 0.62], [0.65, fy, 1.62], [0.49, fy, 1.62]], '#1D3E7A');                                        // the panel
+          T.poly([[0.51, fy, 1.46], [0.63, fy, 1.46], [0.63, fy, 1.56], [0.51, fy, 1.56]], '#9BE8B4', '#2F6B4F');                            // its display
+          for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) { const x = 0.51 + c * 0.04, z = 1.3 - r * 0.07; T.poly([[x, fy, z], [x + 0.03, fy, z], [x + 0.03, fy, z + 0.05], [x, fy, z + 0.05]], '#C9D4E5'); }
+          T.poly([[0.54, fy, 0.84], [0.6, fy, 0.84], [0.6, fy, 0.9], [0.54, fy, 0.9]], '#0E1622');                                          // the coin slot
+          T.poly([[0.07, fy, 0.1], [0.46, fy, 0.1], [0.46, fy, 0.46], [0.07, fy, 0.46]], '#10141B', '#0A0D12');                              // the delivery flap
+          T.poly([[0.0, fy, 0], [0.7, fy, 0], [0.7, fy, 0.07], [0.0, fy, 0.07]], '#1F4580');
+        }, { onTop: true })],
+    },
     garden: {    
       parts: () => [F(0, 0, 2.0, 1.0, (T, o, t) => { T.box(0, 0, 0, 2.0, 1.0, 0.28, '#8A6A50'); T.poly([[0.08, 0.08, 0.281], [1.92, 0.08, 0.281], [1.92, 0.92, 0.281], [0.08, 0.92, 0.281]], (o.wet || 0) > 0.3 ? '#4A3426' : '#7A5E44');
         if (usingSlot(o.id + ':t')) { const [gx, gy] = T.W(1.0, 0.5); PFX.emit(o.id + ':splash', 'splash', o.level, gx, gy, 0.55, 1); }
@@ -3858,6 +4096,22 @@ export function createHouseArt(ctx0, opts = {}) {
     const P = (u, z) => wallPoint(f.p, u, z);
     if (f.k === 'window') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.08), skyColor()); gMat = MATERIAL.matte; if (raining()) glassDrops(f, 0.08); const mu = (f.u[0] + f.u[1]) / 2, mz = (f.z[0] + f.z[1]) / 2; line3(P(mu, f.z[0] + 0.08), P(mu, f.z[1] - 0.08), '#F7F3EE', 2); line3(P(f.u[0] + 0.08, mz), P(f.u[1] - 0.08, mz), '#F7F3EE', 2); if (LOOKS[level] && LOOKS[level].drapes) drawDrapes(level, f, LOOKS[level].drapes); }
     else if (f.k === 'highwin') { poly(featPoly(f), '#E9E4DD', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.06), skyColor()); gMat = MATERIAL.matte; }
+    else if (f.k === 'meetdoor') {
+      // The meeting room is behind this door, under the company sign. Nothing inside is ever drawn: people walk to it and go out of sight. The sign
+      // glows red and reads IN A MEETING while someone is in there.
+      const on = !!officeMeeting;
+      poly([P(f.u[0] - 0.12, 0), P(f.u[1] + 0.12, 0), P(f.u[1] + 0.12, f.z[1] + 0.12), P(f.u[0] - 0.12, f.z[1] + 0.12)], '#F4F1EA', EDGE, 0.8);
+      poly(featPoly(f), '#7A5A3C'); poly(featPoly(f, 0.1), '#8A6A48');
+      const [kx, ky] = iso(...P(f.u[1] - 0.18, 1.0)); circle(kx, ky, 2, '#D8C27A');
+      const sz = [f.z[1] + 0.18, f.z[1] + 0.5], su = [f.u[0] - 0.5, f.u[1] + 0.5];
+      poly([P(su[0], sz[0]), P(su[1], sz[0]), P(su[1], sz[1]), P(su[0], sz[1])], on ? '#C2413A' : '#2F5FA8', '#1B2A4A', 1);
+      const [tx, ty] = iso(...P((su[0] + su[1]) / 2, (sz[0] + sz[1]) / 2)); ctx.save(); ctx.translate(tx, ty); ctx.transform(1, 0.5, 0, 1, 0, 0); ctx.fillStyle = '#FFFFFF'; ctx.font = '700 7.5px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(on ? 'IN A MEETING' : 'MERIDIAN', 0, 3); ctx.restore();
+    }
+    else if (f.k === 'whiteboard') {
+      poly(featPoly(f), '#F6F6F2', '#8E98A6', 1.4);
+      line3(P(f.u[0] + 0.25, f.z[1] - 0.3), P(f.u[0] + 1.1, f.z[1] - 0.3), '#2F5FA8', 1.2); line3(P(f.u[0] + 0.25, f.z[1] - 0.55), P(f.u[0] + 1.5, f.z[1] - 0.55), '#C2413A', 1.2); line3(P(f.u[0] + 0.25, f.z[1] - 0.8), P(f.u[0] + 0.9, f.z[1] - 0.8), '#3F7A4A', 1.2);
+      poly([P(f.u[0] - 0.03, f.z[0] - 0.03), P(f.u[1] + 0.03, f.z[0] - 0.03), P(f.u[1] + 0.03, f.z[0] + 0.03), P(f.u[0] - 0.03, f.z[0] + 0.03)], '#8E98A6');
+    }
     else if (f.k === 'door') { poly([P(f.u[0] - 0.08, 0), P(f.u[1] + 0.08, 0), P(f.u[1] + 0.08, f.z[1] + 0.05), P(f.u[0] - 0.08, f.z[1] + 0.05)], '#EFE8DE', EDGE, 0.8); poly(featPoly(f), '#7A5236'); poly([P(f.u[0] + 0.1, 1.15), P(f.u[1] - 0.1, 1.15), P(f.u[1] - 0.1, 1.9), P(f.u[0] + 0.1, 1.9)], null, 'rgba(0,0,0,.25)', 1); poly([P(f.u[0] + 0.1, 0.2), P(f.u[1] - 0.1, 0.2), P(f.u[1] - 0.1, 0.95), P(f.u[0] + 0.1, 0.95)], null, 'rgba(0,0,0,.25)', 1); const [kx, ky] = iso(...P(f.u[0] + 0.15, 1.02)); circle(kx, ky, 2, '#E0B85A'); }
     else if (f.k === 'switch') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); const mid = (f.u[0] + f.u[1]) / 2; poly(party ? [P(mid - 0.03, 1.11), P(mid + 0.03, 1.11), P(mid + 0.03, 1.19), P(mid - 0.03, 1.19)] : [P(mid - 0.03, 1.03), P(mid + 0.03, 1.03), P(mid + 0.03, 1.11), P(mid - 0.03, 1.11)], party ? '#D24A7A' : '#9C9298'); }
     else if (f.k === 'art') {
@@ -4019,7 +4273,8 @@ export function createHouseArt(ctx0, opts = {}) {
   const isLit = (key) => (LA[key] || 0) > 0.35;
   const lightCv = document.createElement('canvas'), lctx = lightCv.getContext('2d');
 
-  function levelDark(level) { return Math.min(level === 0 ? 0.7 : 0.62, darkness() + (level === 0 ? 0.32 : 0) + (!power && !isOutdoor(level) ? 0.1 : 0) + (isOutdoor(level) && raining() ? 0.08 : 0)); }
+  // An office keeps its lights on: at night it is only a little dimmer, with the dark showing in the windows.
+  function levelDark(level) { if (level === OFFICE) return darkness() * 0.3; return Math.min(level === 0 ? 0.7 : 0.62, darkness() + (level === 0 ? 0.32 : 0) + (!power && !isOutdoor(level) ? 0.1 : 0) + (isOutdoor(level) && raining() ? 0.08 : 0)); }
   function wantLight(level, room, night, amb) {
     if (!power || levelDark(level) < 0.05) return 0;
     const now = absMin(), h = hour(), k = level + ':' + room;
@@ -4204,8 +4459,9 @@ export function createHouseArt(ctx0, opts = {}) {
     });
     // Puddles, splashes and the falling rain all go in the ground pass, so the house and furniture cover them.
     wfx.drawGround(ctx, iso, YARD.tiles);
-    wfx.drawAir(ctx, iso, lotOutline());
-    { const vw = viewW(), vd = viewD(); polyV([[0, vd, 0], [vw, vd, 0], [vw, vd, -0.25], [0, vd, -0.25]], '#6B4A35'); polyV([[vw, 0, 0], [vw, vd, 0], [vw, vd, -0.25], [vw, 0, -0.25]], '#5A3E2E'); }
+    // Rain and snow fall from out of frame over the whole scene: the yard's own over the lot, and a stateless layer over everything past the fence.
+    wfx.drawAir(ctx, iso, null);
+    if (nbWet > 0.02) wfx.drawField(ctx, animT, nbRain('air'));
   }
   function drawYardBack() {
     const back = BACK[VR], sid = '#D9CDBD';
@@ -4216,9 +4472,244 @@ export function createHouseArt(ctx0, opts = {}) {
       LEVELS[3].feats.forEach(f => { if (f.k === 'extwin') { const col = extWindowColor(1); poly(featPoly(f), '#F7F3EE', EDGE, 0.8); poly(featPoly(f, 0.07), col); const mu = (f.u[0] + f.u[1]) / 2; line3([0, mu, f.z[0] + 0.07], [0, mu, f.z[1] - 0.07], '#F7F3EE', 2); } else drawFeature(3, f); });
       poly([[-0.3, -0.3, WH], [0.12, -0.3, WH], [0.12, WY, WH], [-0.3, WY, WH]], '#5A4A44');
     }
-    back.filter(pl => pl !== 'L').forEach(pl => { const len = planeLen(pl); for (let u = 0; u <= len + 0.01; u += 0.2) poly([wallPoint(pl, u, 0), wallPoint(pl, u + 0.13, 0), wallPoint(pl, u + 0.13, 1.15), wallPoint(pl, u + 0.065, 1.25), wallPoint(pl, u, 1.15)], '#EFE6D8', 'rgba(0,0,0,.12)', 0.6); [0.3, 0.85].forEach(z => poly([wallPoint(pl, 0, z), wallPoint(pl, len, z), wallPoint(pl, len, z + 0.08), wallPoint(pl, 0, z + 0.08)], '#DCD2C2')); });
+    // The yard's own fences are drawn by the same code as every neighbour's (nbFence), so pickets, rails, posts, height and colour are one thing.
+    back.filter(pl => pl !== 'L').forEach(pl => { const a = wallPoint(pl, 0, 0), b = wallPoint(pl, planeLen(pl), 0), keepOn = gOn; gOn = false; nbFence(a[0], a[1], b[0], b[1]); gOn = keepOn; });
     drawWallLights(3);
   }
+  // The neighbourhood around the yard. This is a back yard, so the lot is seen from behind the houses: our house is behind its
+  // x = 0 wall, the neighbours' back yards run along both sides (y < 0 and y > WY), the rows' back fences stand at x = WX, a lane
+  // runs behind them and the next street's back yards and the backs of its houses lie beyond. Everything is placed in world space
+  // and drawn through the yard's own camera (V / VR), so it turns with the lot. It is drawn once per camera / season / light and kept.
+  // Everything sits on whole tiles like the yard: fences on tile edges, one clear tile between a fence and a shed, a tile of verge either side of the lane.
+  const NB = { lane0: WX + 1, lane1: WX + 4, rear0: WX + 5, depth: 7, front: 5 };
+  const nbBack = { ground: null, objects: null, key: '' };
+  // What rain can land on, recorded as the objects are drawn: a roof or canopy (a flat shape at a height) and the outline that hides what is behind it.
+  let nbOcc = [];
+  // Lights in the neighbourhood (lit windows, the street lamps), drawn after the game's own night lighting so they glow instead of being darkened by it.
+  let nbGlows = [];
+  let nbWet = 0;
+  const nbHash = (a, b) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
+  // A face is seen when its outward normal turns toward the camera, which always sits at +a, +b.
+  const nbFacing = (nx, ny) => { const [da, db] = VD(nx, ny); return da + db > 0; };
+  // Tall things are only drawn behind the lot (view a or b <= 0); on the near side they would hang over the yard.
+  const nbBehind = (x1, y1, x2, y2) => { const r = vrect(x1, y1, x2, y2); return r[2] <= 0.2 || r[3] <= 0.2; };
+  function nbWindow(plane, at, u0, u1, z0, z1, lit) {
+    const q = plane === 'x' ? [[at, u0, z0], [at, u1, z0], [at, u1, z1], [at, u0, z1]] : [[u0, at, z0], [u1, at, z0], [u1, at, z1], [u0, at, z1]];
+    poly(q, lit === 1 ? '#FFD98A' : lit === 3 ? '#B4D6FF' : lit === 2 ? '#2B2F45' : raining() ? '#8E99A8' : '#A9C3D3', lit === 1 || lit === 3 ? 'rgba(255,240,200,.9)' : '#F7F3EE', 1);
+    if (lit === 1 || lit === 3) {
+      const mu = (u0 + u1) / 2, mz = (z0 + z1) / 2, [gx, gy] = plane === 'x' ? iso(at, mu, mz) : iso(mu, at, mz);
+      nbGlows.push({ x: gx, y: gy, r: 17, col: lit === 3 ? '170,205,255' : '255,200,120', a: lit === 3 ? 0.45 : 0.55 });
+    }
+  }
+  // Whether a neighbour's window has its light on at this hour: most come on between dusk and the late evening and go off before dawn, some
+  // are up early, and a few glow the blue of a television. (0: by day, plain glass; 1 warm light; 2 dark; 3 a screen's blue.)
+  function nbWindowState(seed, k) {
+    const r1 = nbHash(seed * 7 + k, 3), r2 = nbHash(seed * 7 + k, 4), r3 = nbHash(seed * 7 + k, 5), h = hour(), hh = h < 5 ? h + 24 : h;
+    const evening = hh >= 17.4 + r1 * 3.4 && hh < 22.2 + r2 * 4.6, early = r3 > 0.55 && h >= 5.2 + r1 * 1.2 && h < 7.4 + r2 * 0.8, on = evening || early;
+    if (darkness() < 0.06 && !on) return 0;
+    return on ? (r3 < 0.22 && hh > 19 ? 3 : 1) : darkness() > 0.12 ? 2 : 0;
+  }
+  // A house seen from its back. `rear` is the side the back wall faces along x (+1: the body lies at x < x0, -1: at x > x0).
+  function nbHouse(x0, y0, y1, rear, h, wall, roof, seed, o = {}) {
+    const dep = NB.depth, xa = rear > 0 ? x0 - dep : x0, xb = rear > 0 ? x0 : x0 + dep, z0 = o.z0 || 0;
+    if (!nbBehind(xa - 0.5, y0 - 0.5, xb + 0.5, y1 + 0.5)) return;
+    const win = (k) => nbWindowState(seed, k);
+    box(xa, y0, z0, xb - xa, y1 - y0, h - z0, wall);
+    const rx = rear > 0 ? xb + 0.012 : xa - 0.012, rn = rear > 0 ? 1 : -1;
+    const floors = h > 4 ? [0.55, 2.75] : [0.55];
+    if (nbFacing(rn, 0)) {
+      const n = Math.max(2, Math.round((y1 - y0) / 2.2)), step = (y1 - y0) / n;
+      floors.forEach((fz, f) => { if (fz < z0) return; for (let k = 0; k < n; k++) { const u = y0 + step * (k + 0.5); if (f === 0 && z0 === 0 && k === (seed * 5 | 0) % n) { poly([[rx, u - 0.45, 0], [rx, u + 0.45, 0], [rx, u + 0.45, 2.0], [rx, u - 0.45, 2.0]], '#7A5236', '#F7F3EE', 1); continue; } nbWindow('x', rx, u - 0.45, u + 0.45, fz, fz + 1.2, win(f * 9 + k)); } });
+    }
+    [[y0, -1], [y1, 1]].forEach(([yy, sn]) => { if (!nbFacing(0, sn)) return; const sy = yy + sn * 0.012; for (let f = 0; f < floors.length; f++) { if (floors[f] < z0) continue; nbWindow('y', sy, (xa + xb) / 2 - 0.45, (xa + xb) / 2 + 0.45, floors[f], floors[f] + 1.2, win(40 + f)); } });
+    const ym = (y0 + y1) / 2, rise = (y1 - y0) * 0.32, ov = 0.3, ze = h - 0.1, snow = seasonIdx() === 3, rc = snow ? '#EEF2F5' : roof;
+    const slope = (ya, yb, sn) => poly([[xa - ov, ya, ze], [xb + ov, ya, ze], [xb + ov, yb, h + rise], [xa - ov, yb, h + rise]], shade(rc, sn > 0 ? -0.06 : 0.04), 'rgba(30,20,25,.18)', 0.8);
+    const nearIsB = nbFacing(0, 1);
+    const sA = () => slope(y0 - ov, ym, -1), sB = () => slope(y1 + ov, ym, 1);
+    if (nearIsB) sA(); else sB();
+    [[xb, 1], [xa, -1]].forEach(([gx, sn]) => { if (nbFacing(sn, 0)) poly([[gx, y0, h], [gx, y1, h], [gx, ym, h + rise]], shade(wall, sn > 0 ? -0.04 : -0.2), EDGE, 0.8); });
+    if (nearIsB) sB(); else sA();
+    if (seed > 0.5) { const cy2 = ym + (seed - 0.5) * 2; box(xa + dep * 0.5, cy2 - 0.3, h - 0.3, 0.6, 0.6, rise + 0.6, '#9C6B45'); }
+  }
+  // The fence's colours at this hour, for the face turned toward us: the yard's own fence and every neighbour's use these, so they always
+  // match. The sun is front-left (the +b face is lit, the +a face shaded); at dawn and dusk the lit side warms and the shade goes lilac,
+  // at night the whole fence turns to cool moonlit blue, darker on the shaded side, and rain greys it a little.
+  // How tall every fence is, the yard's own and the neighbours' alike: pickets, their pointed tips and the two rails.
+  const FENCE = { h: 0.98, tip: 1.07, rails: [0.26, 0.68] };
+  function fenceColors(nx, ny) {
+    const lit = VD(nx, ny)[1] > 0, dk = darkness(), night = Math.max(0, Math.min(1, (dk - 0.04) / 0.5)), h = hour();
+    const warm = Math.max(0, 1 - Math.abs(h - 6.6) / 1.6, 1 - Math.abs(h - 19.2) / 1.9) * (1 - night), rain = raining() ? 0.14 : 0, snow = seasonIdx() === 3;
+    const k = (c, dusk, moon) => { let o = treeMix(c, dusk, warm * 0.4); o = treeMix(o, moon, night * 0.88); return rain ? treeMix(o, '#98A2AE', rain) : o; };
+    return {
+      board: k(lit ? (snow ? '#F8FAFC' : '#F6EFE0') : (snow ? '#D6DEE6' : '#D8CCBA'), lit ? '#F4B27E' : '#A08CB0', lit ? '#95A2C6' : '#566080'),
+      rail: k(lit ? '#E8DCC8' : '#C2B5A2', lit ? '#E8A878' : '#8E7CA0', lit ? '#7C88AC' : '#48516E'),
+      edge: night > 0.5 ? 'rgba(10,14,34,.3)' : 'rgba(0,0,0,.12)',
+    };
+  }
+  function nbFence(xa, ya, xb, yb) {
+    const len = Math.hypot(xb - xa, yb - ya), ux = (xb - xa) / len, uy = (yb - ya) / len;
+    // The face we see is the one turned toward the camera.
+    const n1 = [-uy, ux], n2 = [uy, -ux], vis = VD(n1[0], n1[1]).reduce((s, v) => s + v, 0) > 0 ? n1 : n2, fc = fenceColors(vis[0], vis[1]);
+    for (const k of [0.22, -0.14]) poly([[xa, ya, 0.003], [xb, yb, 0.003], [xb - uy * k, yb + ux * k, 0.003], [xa - uy * k, ya + ux * k, 0.003]], 'rgba(28,40,26,.18)');
+    for (const z of FENCE.rails) poly([[xa, ya, z], [xb, yb, z], [xb, yb, z + 0.08], [xa, ya, z + 0.08]], fc.rail);
+    // One continuous run of pickets on a single grid (every 0.2 from the run's start), from its first corner to its last, drawn from the far end
+    // toward the camera. Where two runs meet, each ends with a picket on the corner itself, so they join without a post or a gap.
+    const step = 0.2, n = Math.max(1, Math.round(len / step)), fwd = VD(ux, uy).reduce((s, v) => s + v, 0) > 0;
+    for (let i = 0; i <= n; i++) {
+      const k = fwd ? i : n - i, d = Math.min(len - 0.13, k * step), x = xa + ux * d, y = ya + uy * d, px = ux * 0.13, py = uy * 0.13;
+      poly([[x, y, 0], [x + px, y + py, 0], [x + px, y + py, FENCE.h], [x + px / 2, y + py / 2, FENCE.tip], [x, y, FENCE.h]], fc.board, fc.edge, 0.6);
+    }
+  }
+  function nbTree(x, y, seed) {
+    if (!nbBehind(x - 1.4, y - 1.4, x + 1.4, y + 1.4)) return;
+    const si = seasonIdx(), [sx, sy] = iso(x, y, 0), pine = seed > 0.66, s = 0.8 + seed * 0.5;
+    nbOcc.push(pine ? { ell: { cx: sx, cy: sy - 34 * s, rx: 15 * s, ry: 7.5 * s }, zr: s, sil: { cx: sx, cy: sy - 30 * s, rx: 16 * s, ry: 26 * s } } : { ell: { cx: sx, cy: sy - 38 * s, rx: 24 * s, ry: 12 * s }, zr: 1.12 * s, sil: { cx: sx, cy: sy - 34 * s, rx: 24 * s, ry: 24 * s } });
+    ell(sx + 6, sy + 1, 22 * s, 8 * s, 'rgba(28,40,26,.2)');
+    rr(sx - 2, sy - 22 * s, 4, 22 * s, 1.5, '#5A3E2E');
+    if (pine) { const c = si === 3 ? '#8DA8A0' : '#3F7A4A'; for (let k = 0; k < 3; k++) { const w = (17 - k * 4) * s, yy = sy - (14 + k * 11) * s; ctx.fillStyle = shade(c, k * 0.05); ctx.beginPath(); ctx.moveTo(sx - w, yy + 8 * s); ctx.lineTo(sx + w, yy + 8 * s); ctx.lineTo(sx, yy - 12 * s); ctx.closePath(); ctx.fill(); } return; }
+    const c = ['#6CB45A', '#4E9A48', '#C9803A', '#A9B4B0'][si];
+    circle(sx - 8 * s, sy - 30 * s, 12 * s, shade(c, -0.08)); circle(sx + 8 * s, sy - 29 * s, 12 * s, shade(c, -0.12)); circle(sx, sy - 38 * s, 14 * s, c); circle(sx - 4 * s, sy - 42 * s, 8 * s, shade(c, 0.1));
+  }
+  function nbShed(x, y, seed) {
+    if (!nbBehind(x, y, x + 2, y + 2)) return;
+    const c = ['#8C6A4E', '#A9B8A6', '#B8A07C'][(seed * 3 | 0) % 3];
+    box(x, y, 0, 2, 2, 1.5, c);
+    nbOcc.push({ roof: [iso(x - 0.1, y - 0.1, 1.62), iso(x + 2.1, y - 0.1, 1.62), iso(x + 2.1, y + 2.1, 1.62), iso(x - 0.1, y + 2.1, 1.62)], zr: 1.62, sil: hull([0, 1.62].flatMap(z => [iso(x - 0.1, y - 0.1, z), iso(x + 2.1, y - 0.1, z), iso(x + 2.1, y + 2.1, z), iso(x - 0.1, y + 2.1, z)])) });
+    // The door faces into the yard (+y, away from the fence the shed stands against); the wall seen from the other side gets a window.
+    if (nbFacing(0, 1)) poly([[x + 0.6, y + 2.012, 0], [x + 1.4, y + 2.012, 0], [x + 1.4, y + 2.012, 1.1], [x + 0.6, y + 2.012, 1.1]], shade(c, -0.35), '#F7F3EE', 0.8);
+    const wx = nbFacing(1, 0) ? x + 2.012 : x - 0.012;
+    if (nbFacing(1, 0) || nbFacing(-1, 0)) {
+      const lit = darkness() > 0.2 && nbHash(seed * 11, 9) > 0.6;
+      poly([[wx, y + 0.5, 0.65], [wx, y + 1.3, 0.65], [wx, y + 1.3, 1.15], [wx, y + 0.5, 1.15]], lit ? '#FFD98A' : darkness() > 0.2 ? '#2B2F45' : raining() ? '#8E99A8' : '#A9C3D3', '#F7F3EE', 0.8);
+      if (lit) { const [gx, gy] = iso(wx, y + 0.9, 0.9); nbGlows.push({ x: gx, y: gy, r: 14, col: '255,200,120', a: 0.5 }); }
+    }
+    box(x - 0.1, y - 0.1, 1.5, 2.2, 2.2, 0.12, '#5A4A44');
+  }
+  function nbPole(x, y, lamp) {
+    if (!nbBehind(x - 0.3, y - 0.3, x + 0.3, y + 0.3)) return;
+    const zt = 3.7, za = 3.35, [sx, sy] = iso(x, y, 0), arm = shade('#5A4A44', 0.05);
+    ell(sx + 5, sy + 1, 7, 3, 'rgba(28,40,26,.25)');
+    line3([x, y, 0], [x, y, zt], '#5A4A44', 3);
+    line3([x, y - 0.6, za], [x, y + 0.6, za], arm, 2.2);
+    // Every other pole carries a street lamp reaching out over the lane: a dark hood and a lens, and at night a pool of light on the road.
+    if (lamp) {
+      const lx = x + 1.5, lz = 3.5;
+      line3([x, y, lz - 0.1], [lx, y, lz], '#3F3A3F', 2.4);
+      const [hx, hy] = iso(lx, y, lz);
+      rr(hx - 5.5, hy - 2.5, 11, 4.4, 2, '#3A363C'); ell(hx, hy + 2.2, 3.6, 1.5, darkness() > 0.12 ? '#FFF0C0' : '#D8D2C0');
+      nbGlows.push({ x: hx, y: hy + 3, r: 22, col: '255,224,150', a: 0.8 }, { pool: true, x: iso(lx, y, 0)[0], y: iso(lx, y, 0)[1], rx: 3.4 * TW, ry: 3.4 * TH, col: '255,214,140', a: 0.5 });
+    }
+    for (const off of [-0.5, 0.5]) {
+      const [ix, iy] = iso(x, y + off, za + 0.08); circle(ix, iy, 1.7, '#9CB5B8');
+      // The wire to the next pole sags between them.
+      ctx.strokeStyle = 'rgba(40,36,44,.65)'; ctx.lineWidth = 1; ctx.beginPath();
+      for (let s = 0; s <= 10; s++) { const u = s / 10, [wx, wy] = iso(x, y + off + u * WY, za + 0.08 - 0.5 * 4 * u * (1 - u)); s ? ctx.lineTo(wx, wy) : ctx.moveTo(wx, wy); }
+      ctx.stroke();
+    }
+  }
+  function nbLot(x0, x1, y0, y1, seed, grass) {
+    poly([[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]], grass);
+    // The same tiles and blades as the yard's own lawn, so the two read as one lawn.
+    for (let i = x0; i < x1; i++) for (let j = y0; j < y1; j++) {
+      const [sx, sy] = iso(i + 0.5, j + 0.5, 0); if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) continue;
+      const h = nbHash(i * 31 + seed, j * 17 + 5);
+      poly([[i, j, 0], [i + 1, j, 0], [i + 1, j + 1, 0], [i, j + 1, 0]], shade(grass, (h - 0.5) * 0.05), 'rgba(40,70,30,.12)', 0.6);
+      for (let k = 0; k < 3; k++) { const px = i + nbHash(i + k, j * 7 + seed), py = j + nbHash(i * 5 + seed, j + k * 3), [bx, by] = iso(px, py, 0); limb(bx, by, bx - 1, by - 3, 'rgba(60,110,44,.55)', 1); limb(bx, by, bx + 1.5, by - 2.5, 'rgba(60,110,44,.55)', 1); }
+    }
+    const px = x0 + 1 + Math.floor(nbHash(seed, 2) * 3), py = y0 + 4 + Math.floor(nbHash(seed, 4) * 2);
+    poly([[px, py, 0.01], [px + 3, py, 0.01], [px + 3, py + 2, 0.01], [px, py + 2, 0.01]], '#CFC9C0', 'rgba(60,50,40,.2)', 0.8);
+    if (nbHash(seed, 6) > 0.4) poly([[x1 - 4, y1 - 2, 0.01], [x1 - 2, y1 - 2, 0.01], [x1 - 2, y1 - 1, 0.01], [x1 - 4, y1 - 1, 0.01]], '#6B4A35');
+  }
+  // `part` is 'ground' (the lawns and the lane) or 'objects' (what stands on them), kept apart so the rain's ripples can sit between the two.
+  function buildBackdrop(part) {
+    const si = seasonIdx(), grass = grassColor({ water: 0.72, len: 0.38, burn: 0, j: 0, mowedAt: -9999 }), asphalt = si === 3 ? '#6A6F78' : '#5A5E66';
+    // The yard's own lawn is brighter and greener than a flat tile (its blades and mowing stripes), so the neighbours' is lifted to match; a step in colour reads as a step in height.
+    const [lr, lg, lb] = rgb(grass), lawn = `rgb(${Math.min(255, Math.round(lr * 1.1))},${Math.min(255, Math.round(lg * 1.145))},${Math.round(lb * 0.96)})`;
+    const R = 14, big = 90, rows = [];
+    if (part === 'ground') {
+    // Ground. The whole canvas is grass first, so no edge of the neighbourhood ever shows.
+    ctx.fillStyle = lawn; ctx.fillRect(0, 0, W, H);
+    poly([[-big, -big, -0.02], [big, -big, -0.02], [big, big, -0.02], [-big, big, -0.02]], lawn);
+    // The lane behind the back fences, with gravel shoulders and a concrete apron at each back gate.
+    poly([[NB.lane0 - 1, -big, -0.01], [NB.lane1 + 1, -big, -0.01], [NB.lane1 + 1, big, -0.01], [NB.lane0 - 1, big, -0.01]], si === 3 ? '#D5DADF' : '#B8AE9C');
+    poly([[NB.lane0, -big, 0], [NB.lane1, -big, 0], [NB.lane1, big, 0], [NB.lane0, big, 0]], asphalt);
+    for (let k = -R; k <= R; k++) { const y = k * WY + 3, y2 = y + 2; poly([[WX, y, 0.005], [NB.lane0, y, 0.005], [NB.lane0, y2, 0.005], [WX, y2, 0.005]], '#CFC9C0'); }
+    for (let k = -R; k <= R; k++) for (let t = 0; t < 4; t++) { const y = k * WY + 1 + t * 2; poly([[NB.lane0 + 0.1, y, 0.002], [NB.lane0 + 0.1, y + 0.15, 0.002], [NB.lane1 - 0.1, y + 0.15, 0.002], [NB.lane1 - 0.1, y, 0.002]], 'rgba(0,0,0,.06)'); }
+    // Back yards: ours and the neighbours' on this side, then the next street's on the far side of the lane.
+    for (let k = -R; k <= R; k++) if (k !== 0) nbLot(0, WX, k * WY, k * WY + WY, k + 40, lawn);
+    for (let k = -R; k <= R; k++) nbLot(NB.rear0, NB.rear0 + 10, k * WY + 4, k * WY + 4 + WY, k + 90, lawn);
+    for (let k = -R; k <= R; k++) { nbLot(-NB.front, 0, k * WY, k * WY + WY, k + 140, lawn); }
+    }
+    if (part === 'objects') {
+    nbOcc = []; nbGlows = [];
+    // Back-to-front: fences go in the same sort as the houses, sheds and trees (a fence in front of a shed has to cover it), in short runs
+    // so each run is sorted by its own depth.
+    const fenceRows = (xa, ya, xb, yb) => { const len = Math.hypot(xb - xa, yb - ya), n = Math.max(1, Math.round(len / 2)); for (let i = 0; i < n; i++) { const a = [xa + (xb - xa) * i / n, ya + (yb - ya) * i / n], b = [xa + (xb - xa) * (i + 1) / n, ya + (yb - ya) * (i + 1) / n]; rows.push({ key: vs((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), d: () => nbFence(a[0], a[1], b[0], b[1]) }); } };
+    for (let k = -R; k <= R + 1; k++) {
+      if (k !== 0 && k !== 1) fenceRows(0, k * WY, WX, k * WY);
+      const ys = k * WY + 4; fenceRows(NB.rear0, ys, NB.rear0 + 10, ys);
+      if (k !== 0 && k < R + 1) fenceRows(WX, k * WY, WX, k * WY + WY);
+      if (k < R + 1) fenceRows(NB.rear0, k * WY + 4, NB.rear0, k * WY + 4 + WY);
+    }
+    const wallPal = ['#D9CDBD', '#B9C7CF', '#E3D3A8', '#C9A9A0', '#A9BFA8', '#E8E2D6'], roofPal = ['#5A4A44', '#4B5D6B', '#6E3B3B', '#3F3A3D'];
+    for (let k = -R; k <= R; k++) {
+      const s = nbHash(k + 11, 1), y0 = k * WY;
+      if (k !== 0) rows.push({ key: vs(-NB.depth / 2, y0 + WY / 2), d: () => nbHouse(0, y0 + 1, y0 + WY - 1, 1, s > 0.45 ? 5.4 : 2.9, wallPal[(s * 6 | 0) % 6], roofPal[(s * 13 | 0) % 4], s) });
+      const ry = k * WY + 4, rs = nbHash(k + 71, 1);
+      rows.push({ key: vs(NB.rear0 + 10 + NB.depth / 2, ry + WY / 2), d: () => nbHouse(NB.rear0 + 10, ry + 1, ry + WY - 1, -1, rs > 0.45 ? 5.4 : 2.9, wallPal[(rs * 6 | 0) % 6], roofPal[(rs * 13 | 0) % 4], rs) });
+      if (k !== 0) { const tx = 4.5 + Math.floor(nbHash(k, 8) * 3), ty = y0 + 4.5 + Math.floor(nbHash(k, 9) * 3); rows.push({ key: vs(tx, ty), d: () => nbTree(tx, ty, nbHash(k, 10)) }); if (nbHash(k, 12) > 0.5) rows.push({ key: vs(8, y0 + 2), d: () => nbShed(7, y0 + 1, nbHash(k, 13)) }); }
+      const qx = NB.rear0 + 4.5 + Math.floor(nbHash(k, 14) * 4), qy = ry + 4.5 + Math.floor(nbHash(k, 15) * 3); rows.push({ key: vs(qx, qy), d: () => nbTree(qx, qy, nbHash(k, 16)) });
+      if (nbHash(k, 17) > 0.5) rows.push({ key: vs(NB.rear0 + 2, ry + 2), d: () => nbShed(NB.rear0 + 1, ry + 1, nbHash(k, 18)) });
+    }
+    // Our own house behind the back wall: the upper floor and the roof above the wall the yard draws.
+    rows.push({ key: vs(-NB.depth / 2, WY / 2), d: () => nbHouse(-0.3, 0, WY, 1, 5.4, '#D9CDBD', '#5A4A44', 0.5, { z0: 2.6 }) });
+    // Utility poles down the lane's verge, in world space like everything else: the crossarm runs along the lane (so it slopes with the grid), and the wires sag to the next pole.
+    for (let k = -R; k <= R; k++) { const px = NB.lane0 - 0.5, py = k * WY + 2; rows.push({ key: vs(px, py), d: () => nbPole(px, py, k % 2 === 0) }); }
+    rows.sort((a, b) => a.key - b.key).forEach(r => r.d());
+    }
+  }
+  // Haze toward the top (the light pass darkens it at night with the yard), then the edges fade to nothing, so the neighbourhood never ends on a line.
+  function nbFinish() {
+    const si = seasonIdx();
+    const g = ctx.createLinearGradient(0, 0, 0, H * 0.55); g.addColorStop(0, si === 3 ? 'rgba(228,234,240,.5)' : 'rgba(214,226,232,.42)'); g.addColorStop(1, 'rgba(214,226,232,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'destination-out';
+    [[0, 0, 40, 0], [W, 0, W - 40, 0], [0, 0, 0, 36], [0, H, 0, H - 32]].forEach(([x0, y0, x1, y1]) => { const e = ctx.createLinearGradient(x0, y0, x1, y1); e.addColorStop(0, 'rgba(0,0,0,1)'); e.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = e; ctx.fillRect(0, 0, W, H); });
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  // The neighbourhood's lights, over everything lit: lit windows, the street lamps and the pools they make on the lane. They come up as it
+  // gets dark and fade at dawn.
+  function drawNbGlows() {
+    const night = Math.max(0, Math.min(1, (darkness() - 0.05) / 0.3));
+    if (night < 0.02 || !nbGlows.length) return;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (const g of nbGlows) {
+      if (g.pool) { ctx.save(); ctx.translate(g.x, g.y); ctx.scale(1, g.ry / g.rx); const gr = ctx.createRadialGradient(0, 0, 2, 0, 0, g.rx); gr.addColorStop(0, `rgba(${g.col},${g.a * night * 0.55})`); gr.addColorStop(1, `rgba(${g.col},0)`); ctx.fillStyle = gr; ctx.fillRect(-g.rx, -g.rx, g.rx * 2, g.rx * 2); ctx.restore(); continue; }
+      const gr = ctx.createRadialGradient(g.x, g.y, 1, g.x, g.y, g.r); gr.addColorStop(0, `rgba(${g.col},${g.a * night})`); gr.addColorStop(1, `rgba(${g.col},0)`);
+      ctx.fillStyle = gr; ctx.fillRect(g.x - g.r, g.y - g.r, g.r * 2, g.r * 2);
+    }
+    ctx.restore();
+  }
+  function drawBackdrop() {
+    const key = `${VR}|${seasonIdx()}|${Math.round(darkness() * 20)}|${Math.floor(hour() * 2)}|${raining() ? 1 : 0}|${cv.width}`;
+    if (nbBack.key !== key) {
+      const keepCtx = ctx, keepOn = gOn;
+      for (const part of ['ground', 'objects']) {
+        const c2 = (nbBack[part] = nbBack[part] || document.createElement('canvas')).getContext('2d');
+        nbBack[part].width = cv.width; nbBack[part].height = cv.height;
+        c2.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+        ctx = c2; gOn = false;
+        try { buildBackdrop(part); } finally { ctx = keepCtx; gOn = keepOn; }
+      }
+      nbBack.key = key;
+    }
+    ctx.drawImage(nbBack.ground, 0, 0, W, H);
+    // Where rain lands past the fence it rings the ground, under the fences, sheds and houses, so a ripple can never sit on top of something tall.
+    nbWet += ((raining() ? 1 : 0) - nbWet) * Math.min(1, rdt * 1.5);
+    if (nbWet > 0.02 && !(weatherNow.snow ?? seasonIdx() === 3)) wfx.drawField(ctx, animT, nbRain('ground'));
+    ctx.drawImage(nbBack.objects, 0, 0, W, H);
+    nbFinish();
+  }
+  const nbRain = (part) => ({ part, occ: nbOcc, n: Math.round(dropCaps().rain * 2.2 * nbWet), snow: !!(weatherNow.snow ?? seasonIdx() === 3), W, H, TW, TH, ZH, skip: [iso(0, 0), iso(WX, 0), iso(WX, WY), iso(0, WY)] });
   // How many drops the quality tier allows, scaled by how heavy the rain is (light, medium, heavy).
   function dropCaps() {
     const base = tier() === 'high' ? { rain: 700, snow: 500 } : tier() === 'medium' ? { rain: 400, snow: 300 } : { rain: 200, snow: 150 };
@@ -4398,7 +4889,8 @@ export function createHouseArt(ctx0, opts = {}) {
   }
   function lighting(level, lights, deferred) {
     const a = levelDark(level);
-    ctx.save(); roomPath(); ctx.clip();
+    // Outside, the light and the grade cover the whole view, so the neighbourhood is lit like the yard and the lot never shows as a lit block.
+    ctx.save(); if (isOutdoor(level)) { ctx.beginPath(); ctx.rect(0, 0, W, H); } else roomPath(); ctx.clip();
     const litOnGpu = deferred && deferredLighting(level, lights);
     if (!litOnGpu && a > 0.01 && !gpuLighting(level, lights, a)) {
       if (lightCv.width !== cv.width || lightCv.height !== cv.height) { lightCv.width = cv.width; lightCv.height = cv.height; }
@@ -4456,12 +4948,12 @@ export function createHouseArt(ctx0, opts = {}) {
     dimNow += (dimTarget - dimNow) * Math.min(1, rdt * 1.6);
     wallMode = s.wallMode || 'cut';
     OBJS = s.objs;
-    if (s.rot !== VR) { VR = s.rot; setOrigin(); }
+    { const ys = isOutdoor(s.level) ? 56 : 0; if (s.rot !== VR || ys !== YS) { VR = s.rot; YS = ys; setOrigin(); } }
     // Who's doing what, where: the stove steams while someone cooks, the
     // washer spins during laundry, the shower runs while they shower.
     const who = (c, name) => c ? { name, away: !!c.hidden && false, level: c.level, x: c.x, y: c.y,
       task: c.act ? { name: c.act, phase: 'do', slot: c.slot || null } : null, queue: [], needs: {} } : offstage();
-    if (s.chars) { jordan = who(s.chars[0], 'Jordan'); maya = who(s.chars[1], 'Maya'); }
+    if (s.chars) { jordan = who(s.chars[0], 'Jordan'); maya = who(s.chars[1], 'Maya'); others = s.chars.slice(2).map((c) => who(c, 'visitor')); }
     // Arrange mode: walls come down, and the overlay below shows what can move.
     arrState = s.arrange || null;
     arranging = !!arrState;
@@ -4538,7 +5030,7 @@ export function createHouseArt(ctx0, opts = {}) {
   function setMood(v) { mood = Math.max(0, Math.min(1, Number(v) || 0)); }
 
   // Things in hand for an activity, drawn over the arms.
-  const PROP_ZOOM = { spoon: 1.5, fork: 1.6, cup: 1.4, phone: 1.5, knife: 1.5, brush: 1.5, pen: 1.5, comb: 1.5, spatula: 1.4, apple: 1.3, rag: 1.3, can: 1.3, ball: 1.3, roller: 1.2 };
+  const PROP_ZOOM = { spoon: 1.5, fork: 1.6, cup: 1.4, phone: 1.5, handset: 1.7, sheet: 1.2, folder: 1.2, knife: 1.5, brush: 1.5, pen: 1.5, comb: 1.5, spatula: 1.4, apple: 1.3, rag: 1.3, can: 1.3, ball: 1.3, roller: 1.2 };
   function drawProps(rig, hand, c, t, hd, local, pass) {
     (rig.props || []).forEach(p => {
       // The guitar's body sits behind the hands that play it; everything else is held in front.
@@ -4558,6 +5050,10 @@ export function createHouseArt(ctx0, opts = {}) {
           if (p.steam) for (let k = 0; k < 2; k++) { const u = (t * 0.9 + k * 0.5) % 1; ctx.globalAlpha = 0.55 * (1 - u); limb(h[0] - 1 + k * 2 + Math.sin(u * 6 + k) * 0.8, h[1] - 5 - u * 6, h[0] - 1 + k * 2 + Math.sin(u * 6 + k + 1) * 0.8, h[1] - 7 - u * 6, '#FFFFFF', 0.9); ctx.globalAlpha = 1; }
           break;
         case 'phone': rr(h[0] - 1.6, h[1] - 3.5, 3.2, 6, 0.8, '#1E1B2E'); if (p.scroll != null) limb(h[0] - 0.6, h[1] - 2.6 + p.scroll * 4, h[0] + 0.6, h[1] - 2.6 + p.scroll * 4, '#7FB2FF', 0.8); break;
+        case 'handset': limb(h[0] - 0.5, h[1] - 5.5, h[0] + 0.8, h[1] + 4, '#4A5262', 2.6); circle(h[0] - 0.5, h[1] - 5.5, 1.9, '#3A3F4A'); circle(h[0] + 0.8, h[1] + 4, 1.9, '#3A3F4A'); break;
+        case 'sheet': rr(h[0] - 3.5, h[1] - 6, 7, 8.5, 0.5, '#F6F3EC'); ctx.fillStyle = 'rgba(60,60,70,.45)'; for (let k = 0; k < 3; k++) ctx.fillRect(h[0] - 2.4, h[1] - 4.6 + k * 2.2, 4.8, 0.7); break;
+        case 'folder': rr(h[0] - 4, h[1] - 7, 8, 9, 0.8, '#D9B36A'); rr(h[0] - 4, h[1] - 8.2, 3.6, 1.6, 0.6, '#D9B36A'); rr(h[0] - 2.6, h[1] - 6, 6, 6.5, 0.4, '#F6F3EC'); break;
+        case 'stream': for (let i = 0; i < 3; i++) { const u = (t * 2.6 + i / 3) % 1; limb(h[0] + 0.3, h[1] - 15 + u * 11, h[0] + 0.3, h[1] - 13 + u * 11, `rgba(150,200,255,${0.9 - u * 0.4})`, 1.1); } break;
         case 'dumbbell': limb(h[0] - 4, h[1], h[0] + 4, h[1], '#3B3F4A', 1.8); circle(h[0] - 4, h[1], 2.2, '#2A2D35'); circle(h[0] + 4, h[1], 2.2, '#2A2D35'); break;
         case 'brush': limb(h[0], h[1], h[0] + 2, h[1] - 6, '#8A5A3B', 1.2); circle(h[0] + 2, h[1] - 6, 1.1, '#E48AAE'); break;
         case 'palette': ell(h[0], h[1] - 1, 5, 3, '#D9B98C'); circle(h[0] - 2, h[1] - 2, 0.9, '#E5484D'); circle(h[0] + 1, h[1] - 2.5, 0.9, '#3B82F6'); circle(h[0] + 2.5, h[1] - 0.5, 0.9, '#22C55E'); break;
@@ -5022,7 +5518,7 @@ export function createHouseArt(ctx0, opts = {}) {
     // behind the torso (the far arm) or in front of it.
     const SLEEVES = { tank: 0, tee: 0.55, jersey: 0.5, dress: 0.4, cheer: 0, cop: 0.55, scrubs: 0.55, hero: 0.55, uniform: 0.55, sundress: 0.4 };
     const sleeve = L.topGarment ? (SLEEVE_BY_CUT[L.topGarment.cut] ?? 1) : L.topStyle ? (SLEEVES[L.topStyle] ?? 1) : 0.55;
-    const NOT_HELD = new Set(['notes', 'water', 'splash']), OPEN_KINDS = new Set(['book', 'plate', 'parcel', 'cloth', 'paper']);
+    const NOT_HELD = new Set(['notes', 'water', 'splash', 'stream']), OPEN_KINDS = new Set(['book', 'plate', 'parcel', 'cloth', 'paper']);
     // Props too wide to grip by a handle: no fingers drawn over them.
     const NO_FINGERS = new Set(['guitar', 'gloves']);
     const mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
@@ -5328,6 +5824,13 @@ export function createHouseArt(ctx0, opts = {}) {
           tri([[hl, -3.4], [hl, 3.4], [hl - 6, 0]], L.skin);
           line([hl, -3.6], [hl - 6.4, 0], A || '#f4f1ea', 0.9); line([hl, 3.6], [hl - 6.4, 0], A || '#f4f1ea', 0.9);
           line([-hl + 4, -5.5], [-hl + 4, 5.5], A || '#f4f1ea', 1.6);
+        } else if (pat === 'bosssuit') {
+          // The boss: white collar, a broad gold tie, wide lapels, two columns of gold buttons and a white pocket square.
+          tri([[hl, -3.2], [hl, 3.2], [hl - 9.5, 0]], '#f2efe8');
+          ctx.fillStyle = A || '#C9A24A'; ctx.fillRect(hl - 11, -1.3, 10.5, 2.6);
+          line([hl, -4], [hl - 11, -1.6], 'rgba(0,0,0,.45)', 1); line([hl, 4], [hl - 11, 1.6], 'rgba(0,0,0,.45)', 1);
+          ctx.fillStyle = '#E0B64A'; [hl - 4, hl - 7.5, hl - 11].forEach(x => [-2.6, 2.6].forEach(y => { ctx.beginPath(); ctx.arc(x, y, 0.85, 0, 7); ctx.fill(); }));
+          ctx.fillStyle = '#f4f4f2'; ctx.fillRect(hl - 8.4, -5.2, 2.6, 1.7);
         } else if (pat === 'president') {
           tri([[hl, -2.8], [hl, 2.8], [hl - 9, 0]], '#f2efe8');
           ctx.fillStyle = A || '#b3202f'; ctx.fillRect(hl - 11, -0.8, 10, 1.6);
@@ -5482,12 +5985,14 @@ export function createHouseArt(ctx0, opts = {}) {
     if (watcher) tvWatchLevel = watcher.level;
     tvF += ((power && watcher ? 1 : 0) - tvF) * Math.min(1, rdt * 4);
     ctx.clearRect(0, 0, W, H);
+    // Outside, the lot sits in its neighbourhood: the street and the neighbours' houses are drawn first, behind the yard.
+    if (isOutdoor(lv)) drawBackdrop();
     ctx.save();
     const lights = activeLights(lv);
     PFX.step(rdt, isOutdoor(lv) ? [0.16 + (raining() ? 0.2 : 0), 0.06] : [0.015, 0], tier() === 'low' ? 0.5 : 1);
     // Winter snow builds up on the lawn while it snows, and only melts once spring comes.
     // Rain and snow fall in the yard's own space and land on the ground (see weatherFx.js).
-    if (isOutdoor(lv)) wfx.step(rdt, { raining: raining(), snow: !!(weatherNow.snow ?? seasonIdx() === 3) }, YARD.tiles, dropCaps());
+    if (isOutdoor(lv)) wfx.step(rdt, { raining: raining(), snow: !!(weatherNow.snow ?? seasonIdx() === 3), top: (x, y) => (iso(x, y, 0)[1] + 30) / ZH + 0.5 + Math.random() * 0.8 }, YARD.tiles, dropCaps());
     if (isOutdoor(lv)) { const snowing = !!(weatherNow.snow ?? seasonIdx() === 3); for (const tt of YARD.tiles) { const sn = tt.snow || 0; tt.snow = snowing ? sn : Math.max(0, sn - rdt * 0.03); } }
     // Fall: leaves blow across the yard from the trees' side.
     if (isOutdoor(lv) && seasonIdx() === 2 && tier() !== 'low') {
@@ -5535,6 +6040,7 @@ export function createHouseArt(ctx0, opts = {}) {
     } finally { gOn = false; ctx = ctx0; gMat = MATERIAL.matte; }
     drawParticles(lv, false);
     lighting(lv, lights, deferred);
+    if (isOutdoor(lv)) drawNbGlows();
     drawParticles(lv, true);
     if (isOutdoor(lv)) drawRain();
     dofAmt += ((s.focus && tier() === 'high' ? 0.85 : 0) - dofAmt) * Math.min(1, rdt * 3);
@@ -5807,5 +6313,8 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, roomLook, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
+  // Shake a tree: it shudders, and what was ripe on it drops, bounces and is gone.
+  function shakeTree(id, fell) { SHAKES.set(id, { t0: animT, n: fell }); }
+  const setMeeting = (on) => { officeMeeting = !!on; };
+  return { setMeeting, shakeTree, render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, roomLook, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, hitFeature, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
 }

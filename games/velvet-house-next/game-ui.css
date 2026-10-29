@@ -321,6 +321,33 @@
 .vh-tray button:hover { background: rgba(255,255,255,.1); }
 .vh-tray button:active { transform: scale(.96); }
 
+
+/* Station menu (the office): a small sheet of what can be done at a piece, with the time each takes */
+.vh-station {
+  position: absolute; z-index: 26; width: min(300px, calc(100% - 16px)); max-height: min(70%, 420px);
+  display: flex; flex-direction: column; gap: 6px; padding: 10px;
+  border-radius: 14px; background: rgba(23,21,29,.95); backdrop-filter: blur(8px);
+  box-shadow: 0 8px 26px rgba(0,0,0,.4); color: #E9E4EC; font: 500 13px/1.3 Inter, system-ui, sans-serif;
+}
+.vh-station[hidden] { display: none; }
+.vh-station-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.vh-station-head strong { font-size: 14px; }
+.vh-station-x { appearance: none; border: 0; background: transparent; color: #A99BBF; font-size: 20px; line-height: 1; padding: 2px 6px; cursor: pointer; }
+.vh-station-note { margin: 0; color: #F0B6A8; font-size: 12px; }
+.vh-station-tabs { display: flex; gap: 6px; }
+.vh-station-tabs button { appearance: none; flex: 1; border: 0; border-radius: 8px; padding: 6px 8px; font: 600 12px/1.2 Inter, system-ui, sans-serif; color: #C9BEDB; background: rgba(255,255,255,.07); cursor: pointer; }
+.vh-station-tabs button[aria-selected="true"] { background: #A582F0; color: #fff; }
+.vh-station-list { display: flex; flex-direction: column; gap: 3px; overflow-y: auto; scrollbar-width: thin; min-height: 0; }
+.vh-station-act { appearance: none; border: 0; border-radius: 8px; padding: 8px 10px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; text-align: left; font: 600 13px/1.25 Inter, system-ui, sans-serif; color: #E9E4EC; background: transparent; cursor: pointer; }
+.vh-station-act small { color: #A99BBF; font-weight: 500; white-space: nowrap; }
+.vh-station-act:hover:not([disabled]) { background: rgba(255,255,255,.1); }
+.vh-station-act:active:not([disabled]) { transform: scale(.98); }
+.vh-station-act[disabled] { opacity: .45; cursor: default; }
+/* On a phone the sheet is a bottom sheet, so the house stays in view above it. */
+@media (max-width: 560px) {
+  .vh-station { left: 8px !important; right: 8px; top: auto !important; bottom: 92px; width: auto; max-height: 52%; }
+}
+
 /* Discovery card */
 .vh-dcard {
   position: absolute; inset: 0; z-index: 40;
@@ -402,14 +429,14 @@
 /* The action buttons are one even grid, all the same size: the green one is the main one by colour alone. */
 .vh-arr-acts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
 .vh-arr-floors > span, .vh-arr-looks > span { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #A99BBF; }
-.vh-arr-bar button {
+.vh-arr-bar button, .vh-arr-acts button {
   appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   border: 1px solid rgba(255,255,255,.14); border-radius: 11px; padding: 0 10px; min-height: 36px;
   font: 700 12.5px/1 Inter, system-ui, sans-serif; color: #F2EEE8; background: rgba(255,255,255,.08); cursor: pointer;
   transition: background .15s ease, border-color .15s ease, transform .12s ease, box-shadow .15s ease;
 }
 .vh-arr-bar button svg { flex: none; opacity: .9; }
-.vh-arr-bar button:hover { background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.26); }
+.vh-arr-bar button:hover, .vh-arr-acts button:hover { background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.26); }
 .vh-arr-bar button:active { transform: scale(.96); }
 .vh-arr-bar button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .vh-arr-bar .vh-arr-primary { background: linear-gradient(180deg, #6CC98F, #4FAE76); border-color: rgba(255,255,255,.28); color: #0D2417; box-shadow: 0 4px 14px rgba(79,174,118,.35); }
@@ -684,6 +711,10 @@
 .vh-vital-value { font-variant-numeric: tabular-nums; color: #A9A1AE; min-width: 44px; text-align: right; white-space: nowrap; }
 .vh-vital[data-overdue="1"] .vh-vital-value { color: #F2A7A0; font-weight: 700; }
 .vh-log { bottom: 200px !important; }
+/* Notices stay out of the way of the game: the two newest show in the house, the four newest in the backyard (where they sit over the lawn,
+   not over anything you play on). */
+.vh-log li:nth-child(n+3) { display: none; }
+[data-outdoor="1"] .vh-log li:nth-child(-n+4) { display: list-item; }
 .vh-stage.vh-arranging .vh-vitals, .vh-stage[data-script="cutscene"] .vh-vitals, .vh-stage.vh-attract .vh-vitals { display: none; }
 @media (max-width: 760px) {
   .vh-vitals { left: 8px; right: auto; bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 136px); width: 168px; padding: 8px 10px 6px; }
@@ -778,6 +809,13 @@
 .vh-garden p { margin: 0 0 8px; }
 .vh-garden button { margin: 0 6px 6px 0; }
 .vh-garden-dry { color: #F2A7A0; }
+/* Growth bars: how far a crop or a fruit tree has come, on the Orders and Goals pages. */
+.vh-grow { height: 9px; border-radius: 5px; background: rgba(255,255,255,.12); overflow: hidden; margin: 2px 0 4px; }
+.vh-grow i { display: block; height: 100%; min-width: 3px; border-radius: 5px; background: linear-gradient(90deg, #5FAE6A, #8CD07A); transition: width .5s ease; }
+.vh-grow i[data-tone="mid"] { background: linear-gradient(90deg, #D09A32, #E8BE5A); }
+.vh-grow i[data-tone="low"] { background: linear-gradient(90deg, #C0443A, #E0685C); }
+.vh-grow i[data-tone="ripe"] { background: linear-gradient(90deg, #E8A93A, #F6D060); box-shadow: 0 0 8px rgba(246,208,96,.55); }
+.vh-grow-note { display: block; margin: 0 0 8px; color: #A9A1AE; font-size: 11.5px; }
 
 /* ── Layout: the house has its own band ───────────────────────────────────────────────────────────────────────────
    The stage is a column: a top band (clock, money, objective), the house in the middle, and a bottom band (floor and

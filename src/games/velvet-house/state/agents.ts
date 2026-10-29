@@ -1,4 +1,5 @@
 import type { Garment } from './garment';
+import { OFFICE_ACTIONS, STATIONS, actionActivity } from '../content/office';
 import type { HeadImages } from './headSprites';
 import type { BodyImages } from './bodySprites';
 import { TYPES, blocksOf, isRug, isWall, isMount, type ObjectInstance } from './objects';
@@ -99,6 +100,8 @@ export interface HouseWorld {
   grids: Grid[];
   /** Where the TVs are: the middle of each picture, on its floor. */
   screens: Array<{ level: number; x: number; y: number }>;
+  /** The boss is at his desk: only then may anyone sit in the chair in front of it (see state/boss.ts). */
+  bossIn?: boolean;
 }
 
 const WALK_SPEED = 1.5;
@@ -136,13 +139,16 @@ const ACT_TAGS: Record<string, string[]> = {
   massage: ['massage'], hammock: ['hammock'], jukebox: ['jukebox'], bike: ['bike'],
   boxing: ['boxbag'], stargaze: ['stars'], fire: ['fireside'], swim: ['swim'],
   // Everyday life (see activities.ts); `open` ones need no object.
-  newspaper: ['seat'], snack: ['fridge'], wipeCounter: ['sink'], journal: ['desk'], freelance: ['desk'],
+  newspaper: ['seat'], snack: ['fridge'], wipeCounter: ['sink'], journal: ['desk'], freelance: ['desk'], officework: ['officework'], bosswork: ['bosswork'], bossvisit: ['bossvisit'],
   mirror: ['mirror'], foldClothes: ['dresser'], makeBed: ['makebed'], laundry: ['washer'],
   rummage: ['rummage'], tend: ['garden'],
   feedPet: ['bowl'], scoop: ['litter'],
   // Side jobs (sideJobs.ts): never chosen on their own, only when the player says.
   sideDesk: ['desk'], sideBake: ['stove'],
 };
+
+// The office's actions each look for their station's spot (content/office.ts).
+for (const a of OFFICE_ACTIONS) ACT_TAGS[actionActivity(a)] = [STATIONS[a.station].tag];
 
 const CHOICES = [
   'sleep', 'nap', 'cookeat', 'coffee', 'shower', 'bath', 'read', 'phone', 'tv',
@@ -155,7 +161,7 @@ const CHOICES = [
   'laundry', 'rummage', 'lift', 'jumprope', 'shadowbox',
 ];
 
-export const SITTING_POSES = new Set(['tv', 'read', 'phone', 'desk', 'eat', 'sip', 'eatOut']);
+export const SITTING_POSES = new Set(['tv', 'read', 'phone', 'desk', 'eat', 'sip', 'eatOut', 'deskcall', 'sittalk']);
 
 function tagsFor(act: string, id: AgentId): string[] {
   return OWN_SIDE[act]?.[id] ?? ACT_TAGS[act] ?? [];
@@ -274,6 +280,8 @@ function freeSlot(world: HouseWorld, ch: Agent, act: string, taken: Set<string>)
     let bd = Infinity;
     for (const s of world.slots) {
       if (s.tag !== tag || taken.has(s.id) || (lvReq !== undefined && s.level !== lvReq)) continue;
+      // The chair in front of the boss's desk is only for when he is in it.
+      if (tag === 'bossvisit' && !world.bossIn) continue;
       // Watching TV: only on a floor with a TV, and a seat near one beats a seat nearer the person.
       const tvs = screen ? world.screens.filter((v) => v.level === s.level) : [];
       if (screen && !tvs.length) continue;
@@ -357,6 +365,19 @@ function startAct(world: HouseWorld, ch: Agent, act: string, next: string[], oth
     goal = [ch.level, gx, gy];
   }
   ch.task = { act, slot: slot ?? null, phase: 'walk', route: routeTo(world, ch, ...goal), time: 0, dur: meta?.dur ?? 8, next };
+  return true;
+}
+
+/**
+ * An activity at one particular spot (the piece the player tapped), not the nearest free one. False when the spot is not there, is taken,
+ * or is the chair in front of the boss's desk while he is away.
+ */
+export function startActAt(world: HouseWorld, ch: Agent, act: string, slotId: string, other: Agent | null): boolean {
+  const slot = world.slots.find((s) => s.id === slotId);
+  if (!slot || takenBy(other).has(slot.id) || (slot.tag === 'bossvisit' && !world.bossIn)) return false;
+  const meta = ACTIVITIES[act];
+  ch.task = { act, slot, phase: 'walk', route: routeTo(world, ch, slot.level, slot.stand[0], slot.stand[1]), time: 0, dur: meta?.dur ?? 8, next: [] };
+  ch.lastChain = act;
   return true;
 }
 

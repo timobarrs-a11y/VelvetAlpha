@@ -6,6 +6,7 @@
  */
 import { stageAt } from './plantGrowth';
 import type { ObjectInstance } from './objects';
+import { sunAt, lightAt, growthAt, dryingAt, dayAverageGrowth } from './daylight';
 
 export type CropId = 'flower' | 'fruit' | 'vegetable' | 'carrot' | 'lettuce';
 
@@ -64,8 +65,10 @@ export const SEASON_GROW = [1, 1.15, 0.6, 0];
 /** How fast a bed dries by season: summer dries quickest, winter slowest. */
 export const SEASON_DRY = [1, 1.5, 0.8, 0.3];
 
-export function gardenTick(objs: ObjectInstance[], gameMin: number, raining = false, season = 0): string[] {
+export function gardenTick(objs: ObjectInstance[], gameMin: number, raining = false, season = 0, hour = 12, snowing = false): string[] {
   const msgs: string[] = [];
+  // The day's light sets the pace: plants grow with it (slowly in the dark, under cloud and in rain) and soil dries with the sun.
+  const light = growthAt(lightAt(hour, season, raining, snowing)), dry = dryingAt(sunAt(hour, season));
   for (const bed of objs) {
     if (bed.type !== 'garden') continue;
     const crop = cropOf(bed.crop);
@@ -74,10 +77,10 @@ export function gardenTick(objs: ObjectInstance[], gameMin: number, raining = fa
     const hadDry = bed.dry ?? 0;
     // Rain soaks a bed that has a crop in it, so a rainy day waters it for free.
     if (raining && crop) bed.wet = Math.max(bed.wet ?? 0, WATERED);
-    bed.wet = Math.max(0, (bed.wet ?? 0) - gameMin * WET_FADE_PER_MIN * (SEASON_DRY[season] ?? 1));
+    bed.wet = Math.max(0, (bed.wet ?? 0) - gameMin * WET_FADE_PER_MIN * (SEASON_DRY[season] ?? 1) * dry);
     if (!crop || bed.dead) continue;
     if (bed.wet > DRY_AT) {
-      bed.grow = Math.min(1, hadGrow + (gameMin * (SEASON_GROW[season] ?? 1)) / crop.ripeMinutes);
+      bed.grow = Math.min(1, hadGrow + (gameMin * (SEASON_GROW[season] ?? 1) * light) / crop.ripeMinutes);
       bed.dry = 0;
     } else {
       bed.dry = hadDry + gameMin;
@@ -97,4 +100,110 @@ export function gardenTick(objs: ObjectInstance[], gameMin: number, raining = fa
 /** The stage a bed shows: its growth stage, or dead once the crop has died. */
 export function bedStage(bed: ObjectInstance): string {
   return bed.dead ? 'dead' : stageAt(bed.grow ?? 0).name;
+}
+
+// ---- Fruit trees --------------------------------------------------------------------------------------------------------
+// A fruit tree is bought as a sapling and set out in the yard. Watered, it grows through its stages into a tree; a grown tree then bears
+// a batch of fruit that swells and colours over time until it is ripe, is picked (from the Orders page or by giving the tree a shake) and
+// grows again. A tree's growth and its fruit stop in winter. It never dies. State lives on the tree itself: `grow` 0 sapling .. 1 grown,
+// `fruit` 0 bare .. 1 ripe, `wet` as for a bed. (A tree placed without `grow` starts as a sapling.)
+
+export interface FruitTreeDef {
+  /** Which painted tree it is (art/treeArt.js). */
+  kind: 'apple' | 'cherry' | 'palm';
+  name: string;
+  /** What it bears, plural. */
+  fruit: string;
+  /** Meals of food one ripe batch adds to the fridge. */
+  meals: number;
+}
+
+export const FRUIT_TREES: Record<string, FruitTreeDef> = {
+  treeapple: { kind: 'apple', name: 'Apple tree', fruit: 'apples', meals: 3 },
+  treecherry: { kind: 'cherry', name: 'Cherry tree', fruit: 'cherries', meals: 2 },
+  treepalm: { kind: 'palm', name: 'Coconut palm', fruit: 'coconuts', meals: 3 },
+};
+export const isFruitTree = (type: string): boolean => type in FRUIT_TREES;
+/** Game minutes of watered growth from a sapling to a grown tree: a day and a half. */
+export const TREE_GROW_MIN = 36 * 60;
+/** Game minutes of fruiting weather from a bare tree to ripe fruit: a day. */
+export const FRUIT_MIN = 24 * 60;
+/** The fruit is ripe once it has come this far (0..1). */
+export const FRUIT_RIPE_AT = 1;
+
+/** Where a tree is in its life, in words. */
+export function treeStage(o: ObjectInstance): 'sapling' | 'young' | 'growing' | 'grown' {
+  const g = o.grow ?? 0;
+  return g < 0.16 ? 'sapling' : g < 0.5 ? 'young' : g < 1 ? 'growing' : 'grown';
+}
+
+/**
+ * Moves every fruit tree on by a stretch of game time. A sapling grows only while it is wet (rain, or watered from the Orders page); a grown
+ * tree's fruit comes on by itself. Returns the messages worth showing, each said once, on the change.
+ */
+export function treeTick(objs: ObjectInstance[], gameMin: number, raining = false, season = 0, hour = 12, snowing = false): string[] {
+  const msgs: string[] = [];
+  const light = growthAt(lightAt(hour, season, raining, snowing)), dry = dryingAt(sunAt(hour, season));
+  for (const tree of objs) {
+    const def = FRUIT_TREES[tree.type];
+    if (!def) continue;
+    const name = def.name.toLowerCase(), rate = (SEASON_GROW[season] ?? 1) * light;
+    tree.grow = tree.grow ?? 0;
+    const wasWet = (tree.wet ?? 0) > DRY_AT;
+    if (raining && tree.grow < 1) tree.wet = Math.max(tree.wet ?? 0, WATERED);
+    tree.wet = Math.max(0, (tree.wet ?? 0) - gameMin * WET_FADE_PER_MIN * (SEASON_DRY[season] ?? 1) * dry);
+    if (tree.grow < 1) {
+      if (tree.wet > DRY_AT) tree.grow = Math.min(1, tree.grow + (gameMin * rate) / TREE_GROW_MIN);
+      else if (wasWet) msgs.push(`The ${name} sapling is thirsty. Water it from the Orders page.`);
+      if (tree.grow >= 1) msgs.push(`The ${name} has grown. It will bear ${def.fruit} before long.`);
+      continue;
+    }
+    const had = tree.fruit ?? 0;
+    tree.fruit = Math.min(1, had + (gameMin * rate) / FRUIT_MIN);
+    if (had < 1 && tree.fruit >= 1) msgs.push(`The ${name} is full of ripe ${def.fruit}. Pick them from the Orders page, or give the tree a shake.`);
+  }
+  return msgs;
+}
+
+// ---- Time left to grow -------------------------------------------------------------------------------------------------
+
+/** A span of game minutes in words: "40 min", "9 h", "1 day 4 h". */
+export function fmtGameMinutes(min: number): string {
+  const m = Math.max(1, Math.round(min));
+  if (m < 60) return `${m} min`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} h`;
+  const d = Math.floor(h / 24), r = h % 24;
+  return `${d} day${d === 1 ? '' : 's'}${r ? ` ${r} h` : ''}`;
+}
+
+/** How long until a bed's crop is ripe, in words, or what is holding it up. Empty when there is nothing growing. */
+/** What the light is doing to growth right now, in words, or nothing when it is a plain clear day. */
+export function lightNote(hour: number, season: number, raining: boolean): string {
+  const sun = sunAt(hour, season);
+  if (sun < 0.15) return 'slow in the dark';
+  if (raining) return 'slow under cloud';
+  return sun < 0.6 ? (hour < 12 ? 'warming up' : 'fading light') : '';
+}
+
+export function cropEta(bed: ObjectInstance, season = 0): string {
+  const crop = cropOf(bed.crop);
+  if (!crop || bed.dead) return '';
+  if ((bed.grow ?? 0) >= 1) return 'ripe';
+  if ((bed.wet ?? 0) <= DRY_AT) return 'needs water';
+  const rate = (SEASON_GROW[season] ?? 1) * dayAverageGrowth(season);
+  if (rate <= 0) return 'asleep for the winter';
+  return `ripe in about ${fmtGameMinutes(((1 - (bed.grow ?? 0)) * crop.ripeMinutes) / rate)}`;
+}
+
+/** The same for a fruit tree: how long until it is grown, or until its fruit is ripe. */
+export function treeEta(tree: ObjectInstance, season = 0): string {
+  if (!FRUIT_TREES[tree.type]) return '';
+  const rate = (SEASON_GROW[season] ?? 1) * dayAverageGrowth(season), grown = (tree.grow ?? 0) >= 1;
+  if (!grown) {
+    if ((tree.wet ?? 0) <= DRY_AT) return 'needs water';
+    return rate <= 0 ? 'asleep for the winter' : `grown in about ${fmtGameMinutes(((1 - (tree.grow ?? 0)) * TREE_GROW_MIN) / rate)}`;
+  }
+  if ((tree.fruit ?? 0) >= 1) return 'ripe';
+  return rate <= 0 ? 'bare for the winter' : `ripe in about ${fmtGameMinutes(((1 - (tree.fruit ?? 0)) * FRUIT_MIN) / rate)}`;
 }

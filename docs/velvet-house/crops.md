@@ -31,3 +31,37 @@
 | Carrot | Root | 20 | Once, pulled up | 2 meals of vegetable | Planned |
 | Lettuce | Rosette | 12 | Once | 1 meal of vegetable | Planned |
 | Strawberry | Bush fruit | 18 | Repeat | 1 meal of fruit each pick | Planned |
+
+## Fruit trees
+
+*Bought in the shop's Outdoor tab as a sapling, set out in the yard, grown, then picked again and again.*
+
+A fruit tree is **one painted tree** (`art/treeArt.js`). What changes is drawn on top of it: a sapling while it is young, the tree
+standing up through its stages, and then the fruit, small and green at first and swelling and colouring until it is ripe.
+
+| Tree | Bears | Meals per ripe batch |
+|---|---|---|
+| Apple tree | Apples | 3 |
+| Cherry tree | Cherries | 2 |
+| Coconut palm | Coconuts | 3 |
+
+1. **Sapling to tree.** It grows only while it is wet (rain, or *Water the sapling* from Orders, or tap it): about a game day and a
+   half. It never dies, it only waits.
+2. **Fruit.** A grown tree's fruit comes on by itself, about a game day from bare to ripe.
+3. **Picking.** *Pick the fruit* on the Orders page, or tap the tree and *Shake the tree*. The ripe batch drops, goes into the fridge
+   as meals, and the tree starts bearing again.
+4. **Winter.** Growth and fruit both pause; a bare winter tree shows no fruit.
+
+State lives on the tree itself (`grow` 0 to 1, `fruit` 0 to 1, `wet`), so it saves and loads with the house. A tree placed without
+`grow` starts as a sapling. Orders and Goals show a bar and the time left for every garden bed and every fruit tree.
+
+## Day, night and weather
+
+`state/daylight.ts` is the one place that knows what the sun is doing. The art's darkness, the weather's cloud and the garden all read it.
+
+- **The sun** follows the hour and the season: long summer evenings, short winter days (`sunAt`).
+- **Cloud** cuts it: rain takes about 60% of the light, snow about 45% (`skyFactor`).
+- **Growth** runs at `0.2 + 0.8 × light` of the midday rate, so a crop is slow at night and under cloud and full on a clear noon.
+- **Drying** is `0.5 + 0.5 × sun`: soil dries half as fast at night. Rain still waters a bed or sapling outright.
+- **Time-to-ripe** on Orders and Goals uses the day's average growth, so it is honest about the nights, and the bar says why when it is
+  slow ("slow in the dark", "slow under cloud").

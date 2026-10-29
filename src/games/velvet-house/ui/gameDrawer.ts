@@ -5,10 +5,11 @@ import { payBill as payOneBill } from '../state/finance';
 import { takeOffer, SIDE_JOBS } from '../state/sideJobs';
 import { clampRoutine } from '../state/routine';
 import { createDrawer, dockTabHtml, DOCK_TABS } from '../ui/drawer';
-import { gardenAction } from '../systems/garden';
+import { gardenAction, treeAction } from '../systems/garden';
 import { AVATAR_HATS } from '../state/clothing';
 import { createDialogue, createTray, createTownSign } from '../ui/dialogue';
 import { SAVE_KEY } from '../kernel/config';
+import { createStationMenu } from '../ui/stationMenu';
 import type { Game } from '../kernel/game';
 
 export function createGameDrawer(g: Game): Partial<Game> {
@@ -36,6 +37,9 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onPage: (pg) => { g.scriptEmit({ type: 'tab.opened', tab: pg }); if (pg === 'arrange') g.enterArrange(); else if (g.isArranging()) g.exitArrange(); g.studioPage?.(pg); },
     onArrangePick: (id) => { const o = world.objs.find(q => q.id === id); if (o) g.selectObject(o); else if (id.startsWith('wall-')) g.selectWall(id); },
     onArrangeRotate: () => g.rotateSelected(),
+    onArrangeWall: () => g.toggleWallSnap(),
+    onArrangeCopy: () => g.copyOfficeLayout(),
+    onArrangeSlide: (side) => g.slideAlongWall(side),
     onArrangeSet: () => g.setDown(),
     onArrangeBack: () => g.putBack(),
     onArrangeColour: () => g.recolourHeld(),
@@ -50,7 +54,8 @@ export function createGameDrawer(g: Game): Partial<Game> {
     // Furniture goes straight into Arrange, so the player can place it; anything else (paint, seeds) puts the page away.
     onBuy: (item, color) => { g.handleBuy(item, color); if (item.icon === 'obj') drawer.open('arrange'); else drawer.close(); },
     onPetOrder: (act, id) => g.petOrder(act, id),
-    onGarden: (action, crop) => { gardenAction(world.objs, g.flags, world.household.fridge, action, crop, log); g.refreshDrawer(); },
+    onTree: (id, action) => { treeAction(world.objs, id, action, world.household.fridge, g.flags, log, (t, n) => g.art.shakeTree(t.id, n)); g.refreshDrawer(); },
+    onGarden: (action, crop, bedId) => { gardenAction(world.objs, g.flags, world.household.fridge, action, crop, log, bedId); g.refreshDrawer(); },
     onBuyAvatarItem: (id) => g.handleBuyAvatarItem(id),
     onOrder: (chain) => g.handleOrder(chain),
     onPayBill: () => { payBill(world.household, absMin(world.day, world.minutes), log); },
@@ -148,5 +153,6 @@ export function createGameDrawer(g: Game): Partial<Game> {
   // UI: Tray
   const tray = createTray();
   stage.appendChild(tray.el);
-  return { drawer, dialogue, tray, townSign };
+  const stationMenu = createStationMenu(stage);
+  return { drawer, dialogue, tray, stationMenu, townSign };
 }

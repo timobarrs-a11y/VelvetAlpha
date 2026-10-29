@@ -3,8 +3,10 @@ import { tickAgent, isAsleep } from '../state/agents';
 import { financeTick } from '../state/finance';
 import { sideJobsTick } from '../state/sideJobs';
 import { rollDay, nightStart, wakeHour } from '../state/routine';
-import { gardenTick } from '../state/crops';
+import { gardenTick, treeTick } from '../state/crops';
 import { weatherTick, weatherOf, seasonOf } from '../state/weather';
+import { bossTick } from '../state/boss';
+import { UNSEEN_ACTS } from '../content/office';
 import { advanceClock } from '../engine/loop';
 import { startFixedLoop } from '../engine/fixedLoop';
 import { createFpsMeter } from '../engine/fpsMeter';
@@ -14,6 +16,8 @@ import { LayerCache } from '../engine/layerCache';
 import { deliveryTick, dirtTick, laundryTick, newDayReset } from '../state/household';
 import { tickFitness, snackTick } from '../state/vitals';
 import { SPEEDS, WALL_MODES } from '../kernel/config';
+import { isOutdoor } from '../state/scenes';
+import { OFFICE } from '../state/house';
 import type { Game } from '../kernel/game';
 
 // The Sims' fast-forwards: skipping the work day, and the night while everyone sleeps.
@@ -81,13 +85,19 @@ export function startGameLoop(g: Game): void {
       tickFitness(g.flags, gameMin, !!jt && jt.phase === 'do' && (jt.act === 'workout' || jt.act === 'lift'));
       // The garden grows while it is watered; a bed drying out or a crop ripening is said once, when it happens.
       const raining = weatherTick(g.flags, world.day, world.minutes, rng, log);
-      for (const msg of gardenTick(world.objs, gameMin, raining, seasonOf(world.day))) log(msg);
+      const snowing = !!weatherOf(g.flags).snow;
+      for (const msg of gardenTick(world.objs, gameMin, raining, seasonOf(world.day), world.minutes / 60, snowing)) log(msg);
+      for (const msg of treeTick(world.objs, gameMin, raining, seasonOf(world.day), world.minutes / 60, snowing)) log(msg);
       if (snackTick(world.household, g.flags, gameMin)) log('Somebody raided the fridge for a snack.');
       g.concernsTick(gameMin);
       g.petsTick(dt, gameMin, walkMul, hourF);
       g.deliveriesTick();
       // Visitors a script has brought in (people after the two who live here).
       for (const npc of people.slice(2)) tickAgent(house, npc, null, dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
+      const dale = people.find((p) => p.id === 'dale');
+      if (dale) bossTick(house, dale, world.day * 1440 + world.minutes, hourF, gameMin, () => rng.next());
+      // The sign over the meeting-room door glows red while anyone is in there.
+      art.setMeeting(people.some((p) => p.task?.phase === 'do' && UNSEEN_ACTS.has(p.task.act)));
       const followed = view.follow && people.find((p) => p.id === view.follow);
       if (followed && !followed.onStairs && followed.level !== view.level) g.setLevel(followed.level, true);
 
@@ -100,6 +110,10 @@ export function startGameLoop(g: Game): void {
       const prevSim = simCache;
       simCache = { day: world.day, minutes: world.minutes, objs: [...world.objs], chars: people.map(g.toFrame) };
       const interpMinutes = prevSim.minutes + (simCache.minutes - prevSim.minutes) * alpha;
+      // The yard is seen from the lane side (turns 1 and 2), where the house is out of the picture.
+      if (isOutdoor(view.level) && view.rot !== 1 && view.rot !== 2) view.rot = 2;
+      // The office is built to be seen from one angle: its windows, whiteboard and the meeting door are on the two back walls, straight ahead.
+      if (view.level === OFFICE && view.rot !== 0) view.rot = 0;
       const cacheKey = { level: view.level, rot: view.rot, wallMode: WALL_MODES[view.wallIdx].mode, zoomBucket: Math.floor(canvas.width / 400) };
       if (layerCache.keyChanged(cacheKey)) g.fit();
       g.applyCamera(frameDt);

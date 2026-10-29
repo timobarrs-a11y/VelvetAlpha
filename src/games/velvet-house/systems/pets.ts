@@ -1,7 +1,7 @@
 import { ACTIVITIES } from '../state/activities';
 import { buildWorld, isAsleep, placeAgent, startChain, type Agent, type AgentTask } from '../state/agents';
 import { relocate } from '../state/arrange';
-import { ATTIC, DOOR, LEVELS, LEVEL_NAMES, STAIRS, WX, WY } from '../state/house';
+import { ATTIC, OFFICE, DOOR, LEVELS, LEVEL_NAMES, STAIRS, WX, WY } from '../state/house';
 import { addDirt } from '../state/household';
 import { TYPES, type ObjectInstance } from '../state/objects';
 import { isFreeAt, planRoute, randomFree, spotNear, type RouteLeg } from '../state/pathfinding';
@@ -40,7 +40,7 @@ function xf(o: ObjectInstance, lx: number, ly: number): [number, number] {
 export function createPets(g: Game): Partial<Game> {
   const { world, people, house, rng, view, log, art, tray } = g;
   const YARD = LEVELS.findIndex(l => l.yard);
-  const indoorFloors = (): number[] => LEVELS.map((_, i) => i).filter(i => !LEVELS[i].yard && (i !== ATTIC || g.hasAttic()));
+  const indoorFloors = (): number[] => LEVELS.map((_, i) => i).filter(i => !LEVELS[i].yard && i !== OFFICE && (i !== ATTIC || g.hasAttic()));
   const r = () => rng.next();
   const absMin = () => world.day * 1440 + world.minutes;
   const personById = (id: unknown): Agent | null => (typeof id === 'string' ? people.find(c => c.id === id) ?? null : null);

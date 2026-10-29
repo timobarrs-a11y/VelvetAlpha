@@ -14,7 +14,7 @@ import { phoneHtml, phoneStructure, patchPhone, animateMoney, type PhoneTab, typ
 
 import { clockText, season, weekday, DAYS } from '../state/time';
 import type { OwnedCloth, WardrobePersona } from '../state/clothing';
-import { CROPS, CROP_IDS, DRY_AT, cropOf } from '../state/crops';
+import { CROPS, CROP_IDS, DRY_AT, cropOf, FRUIT_TREES } from '../state/crops';
 import { stageAt } from '../state/plantGrowth';
 import { cropIconUrl } from '../art/cropArt.js';
 
@@ -27,6 +27,9 @@ export interface DrawerCallbacks {
   // Arrange mode's list: pick a piece, or act on the selected one.
   onArrangePick?: (id: string) => void;
   onArrangeRotate?: () => void;
+  onArrangeWall?: () => void;
+  onArrangeCopy?: () => void;
+  onArrangeSlide?: (side: number) => void;
   onArrangeSet?: () => void;
   onArrangeBack?: () => void;
   onArrangeColour?: () => void;
@@ -44,7 +47,9 @@ export interface DrawerCallbacks {
   // The Household page's pet buttons: 'feedPet', 'playPet', 'petPet', 'walkDog' or 'scoop' for a pet.
   onPetOrder?: (act: string, petId: string) => void;
   // The garden bed on the Orders page: plant a packet, water it, or harvest it when ripe.
-  onGarden?: (action: 'plant' | 'water' | 'harvest' | 'clear', crop?: string) => void;
+  onGarden?: (action: 'plant' | 'water' | 'harvest' | 'clear', crop?: string, bedId?: string) => void;
+  // The fruit trees on the Orders page: water a sapling, or pick a grown tree's fruit.
+  onTree?: (id: string, action: 'water' | 'harvest') => void;
   onPayBill: () => void;
   onOrderGroceries: () => void;
   onOrderTakeout: () => void;
@@ -84,6 +89,8 @@ export interface ArrangeItem {
 }
 
 export interface ArrangeState {
+  /** The demo, on the office floor: a button copies where every office piece is, to be pasted into the game's layout. */
+  exportable?: boolean;
   floors: string[];
   // Floor numbers in the order to list them (the attic only once built).
   order: number[];
@@ -104,6 +111,9 @@ export interface ArrangeState {
     name: string;
     where: string;
     canColour: boolean;
+    /** It can be set against a wall; `onWall` when it is, and then it slides along the wall. */
+    canWall?: boolean;
+    onWall?: boolean;
     // The looks it can wear (the stock one and the ones bought); empty when there is nothing to choose.
     looks: Array<{ id: string; name: string; active: boolean }>;
     // Floors it can be carried to.
@@ -152,8 +162,12 @@ export interface DrawerState {
   deliveryPending: boolean;
   mayaStatus: string;
   garden?: { bed: boolean; crop: string | null; grow: number; wet: number; dead: boolean; dry: number; packets: Record<string, number> };
+  /** The fruit trees in the yard: how grown each is, how far its fruit has come and how wet it is. */
+  trees?: { id: string; type: string; grow: number; fruit: number; wet: number; eta: string }[];
+  /** Every garden bed in the yard, with what is growing in it and how long it has left. */
+  beds?: { id: string; crop: string | null; grow: number; wet: number; dead: boolean; eta: string }[];
   /** Timed things in progress, for the meters on the Goals page. */
-  timed?: { label: string; pct: number; note: string; tone: 'ok' | 'mid' | 'low' }[];
+  timed?: { label: string; pct: number; note: string; tone: 'ok' | 'mid' | 'low' | 'ripe' }[];
   closet: OwnedCloth[];
   personas: WardrobePersona[];
   wearing: { top: string; topStyle: string; bottom: string; bottomStyle?: string; hat?: string; topGarment?: Garment; bottomGarment?: Garment };
@@ -174,6 +188,7 @@ const ARR_ICON = {
   back: ico('<path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12"/>'),
   colour: ico('<path d="M12 3.5s6 6.2 6 10.5a6 6 0 0 1-12 0c0-4.3 6-10.5 6-10.5z"/>'),
   look: ico('<path d="m12 3 2.4 5 5.6.8-4 3.9.9 5.5L12 15.5 7.1 18.2 8 12.7 4 8.8l5.6-.8z"/>'),
+  wall: ico('<path d="M4 4v16"/><rect x="7" y="8" width="10" height="8" rx="1.5"/><path d="M20 12h-1.5"/>'),
   hand: ico('<path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1.5A5.5 5.5 0 0 1 6 17.5L4.5 13.5a1.5 1.5 0 0 1 2.6-1.4L9 14.5"/>'),
 };
 
@@ -330,19 +345,22 @@ export function createDrawer(cb: DrawerCallbacks): {
           <div class="vh-arr-what"><strong>${esc(sel.name)}</strong><small>${esc(sel.where)}</small></div>
           <div class="vh-arr-acts">
             ${sel.wall ? `<button data-arr="takedown" title="Take it down: it goes to storage">${ARR_ICON.store}<span>Take it down</span></button>` : `<button data-arr="set" class="vh-arr-primary" title="Set it down (Enter)">${ARR_ICON.set}<span>Set it down</span></button>
-            <button data-arr="rotate" title="Turn it (R)">${ARR_ICON.rotate}<span>Rotate</span></button>`}
+            <button data-arr="rotate" title="Turn it (R)">${ARR_ICON.rotate}<span>Rotate</span></button>
+            ${sel.canWall ? `<button data-arr="wall" aria-pressed="${!!sel.onWall}" title="${sel.onWall ? 'Let it go from the wall' : 'Set it against the nearest wall, then slide it along'}">${ARR_ICON.wall}<span>${sel.onWall ? 'Free it' : 'Snap to wall'}</span></button>` : ''}`}
             ${sel.loose ? `<button data-arr="back" title="Put it back where it was (Esc)">${ARR_ICON.back}<span>Put it back</span></button>` : ''}
             ${sel.canColour ? `<button data-arr="colour" title="Change colour (C)">${ARR_ICON.colour}<span>Colour</span></button>` : ''}
             ${sel.canStore ? `<button data-arr="store" title="Put it in storage">${ARR_ICON.store}<span>Store</span></button>` : ''}
+            ${a.exportable ? '<button data-arr="copy" title="Copy where every office piece is">Copy layout</button>' : ''}
             <button data-arr="close" class="vh-arr-close" title="Leave arrange mode">Close</button>
           </div>
           </div>
           ${sel.looks.length > 1 ? `<div class="vh-arr-looks"><span>${ARR_ICON.look}Look</span>${sel.looks.map(l => `<button data-arr-look="${esc(l.id)}" aria-pressed="${l.active}">${esc(l.name)}</button>`).join('')}</div>` : ''}
+          ${sel.onWall ? `<div class="vh-arr-floors vh-arr-slide"><span>Along the wall</span><button data-arr="slide-l" title="Slide left (Left arrow)" aria-label="Slide left">&#9664;</button><button data-arr="slide-r" title="Slide right (Right arrow)" aria-label="Slide right">&#9654;</button><small>or drag it</small></div>` : ''}
           ${sel.moveTo.length ? `<div class="vh-arr-floors"><span>Carry to</span>${sel.moveTo.map(l => `<button data-arr-floor="${l}">${esc(a.floors[l])}</button>`).join('')}</div>` : ''}
           ${sel.wall ? '<p class="vh-arr-why vh-arr-ok">Drag it along the wall, up or down.</p>' : sel.loose && !sel.fits ? `<p class="vh-arr-why">${esc(sel.reason ?? "It doesn't fit there.")} Move it, or put it back.</p>` : sel.loose ? '<p class="vh-arr-why vh-arr-ok">Drag it, turn it, then tap Set it down.</p>' : ''}
         </div>`
       : `<p class="vh-arr-hint">${ARR_ICON.hand}<span>Tap a piece below, or tap one in the house, then drag it where you want it.</span></p>
-          <div class="vh-arr-acts"><button data-arr="close" class="vh-arr-close" title="Leave arrange mode">Close</button></div>`;
+          <div class="vh-arr-acts">${a.exportable ? '<button data-arr="copy" title="Copy where every office piece is">Copy layout</button>' : ''}<button data-arr="close" class="vh-arr-close" title="Leave arrange mode">Close</button></div>`;
     const order = [a.level, ...a.order.filter(l => l !== a.level)];
     const groups = order.map((level) => {
       const name = a.floors[level];
@@ -379,6 +397,10 @@ export function createDrawer(cb: DrawerCallbacks): {
     sec.querySelector('[data-arr="takedown"]')?.addEventListener('click', () => cb.onArrangeTakeDown?.());
     sec.querySelectorAll<HTMLElement>('[data-arr-unstore]').forEach(b => b.addEventListener('click', () => cb.onArrangeUnstore?.(b.dataset.arrUnstore!)));
     sec.querySelector('[data-arr="rotate"]')?.addEventListener('click', () => cb.onArrangeRotate?.());
+    sec.querySelector('[data-arr="wall"]')?.addEventListener('click', () => cb.onArrangeWall?.());
+    sec.querySelector('[data-arr="copy"]')?.addEventListener('click', () => cb.onArrangeCopy?.());
+    sec.querySelector('[data-arr="slide-l"]')?.addEventListener('click', () => cb.onArrangeSlide?.(-1));
+    sec.querySelector('[data-arr="slide-r"]')?.addEventListener('click', () => cb.onArrangeSlide?.(1));
     sec.querySelector('[data-arr="set"]')?.addEventListener('click', () => cb.onArrangeSet?.());
     sec.querySelector('[data-arr="back"]')?.addEventListener('click', () => cb.onArrangeBack?.());
     sec.querySelector('[data-arr="colour"]')?.addEventListener('click', () => cb.onArrangeColour?.());
@@ -570,7 +592,7 @@ export function createDrawer(cb: DrawerCallbacks): {
 
     // Timed things in progress: side jobs and the garden bed, each with a bar that moves as the work goes on.
     const timedHtml = state.timed?.length ? `<div class="vh-timed"><h4>In progress</h4>${state.timed.map(t =>
-      `<div class="vh-timed-row"><span>${esc(t.label)}</span><div class="vh-bar"><i data-tone="${t.tone}" style="width:${t.pct}%"></i></div><small>${t.pct}%${t.note ? ` · ${esc(t.note)}` : ''}</small></div>`).join('')}</div>` : '';
+      `<div class="vh-timed-row"><span>${esc(t.label)}</span><div class="vh-grow"><i data-tone="${t.tone}" style="width:${t.pct}%"></i></div><small>${t.pct}%${t.note ? ` · ${esc(t.note)}` : ''}</small></div>`).join('')}</div>` : '';
     if (!put(sec, `<div class="vh-goals">
       <h4>Move-in checklist</h4>
       <ul class="vh-checklist">${settleItems}</ul>
@@ -582,23 +604,45 @@ export function createDrawer(cb: DrawerCallbacks): {
   const STAGE_WORDS: Record<string, string> = { seed: 'just planted', small: 'sprouting', mid: 'growing', final: 'ready soon' };
   const stageName = (grow: number): string => STAGE_WORDS[stageAt(grow).name] ?? '';
 
-  /** The garden bed's buttons: what is growing and what to do next, or the packets to plant in an empty bed. */
+  /** A growth bar: how far along, and in words how long is left. */
+  const growBar = (pct: number, tone: 'ok' | 'mid' | 'low' | 'ripe', note: string): string =>
+    `<div class="vh-grow"><i data-tone="${tone}" style="width:${Math.max(0, Math.min(100, Math.round(pct)))}%"></i></div><small class="vh-grow-note">${Math.max(0, Math.min(100, Math.round(pct)))}%${note ? ` · ${esc(note)}` : ''}</small>`;
+
+  /** One block per garden bed: what is growing in it with a bar for how far it has come, and what to do next, or the packets to plant. */
   function gardenHtml(state: DrawerState): string {
-    const bed = state.garden;
-    if (!bed?.bed) return '';
-    const crop = cropOf(bed.crop);
-    if (crop && bed.dead) {
-      return `<div class="vh-garden"><p><strong>${crop.name}</strong> · <span class="vh-garden-dry">died of thirst</span></p>`
-        + '<button data-garden="clear">Clear the bed</button></div>';
-    }
-    if (crop) {
-      const dry = bed.wet <= DRY_AT && bed.grow < 1;
-      return `<div class="vh-garden"><p><strong>${crop.name}</strong> · ${stageName(bed.grow)}${dry ? ' · <span class="vh-garden-dry">the bed is drying out</span>' : ''}</p>`
-        + `<button data-garden="water">Water the garden</button>${bed.grow >= 1 ? ' <button data-garden="harvest">Harvest</button>' : ''}</div>`;
-    }
-    const plant = CROP_IDS.filter(id => (bed.packets[id] ?? 0) > 0)
-      .map(id => `<button data-garden="plant" data-crop="${id}">Plant ${CROPS[id].name.toLowerCase()} (${bed.packets[id]})</button>`).join(' ');
-    return `<div class="vh-garden"><p>The garden bed is empty.</p>${plant || '<p class="vh-status">Buy seeds in the shop (Outdoor).</p>'}</div>`;
+    const garden = state.garden, beds = state.beds ?? [];
+    if (!garden?.bed || !beds.length) return '';
+    return beds.map((bed, n) => {
+      const crop = cropOf(bed.crop), name = beds.length > 1 ? `Garden bed ${n + 1}` : 'The garden bed', pct = bed.grow * 100;
+      if (crop && bed.dead) {
+        return `<div class="vh-garden"><p><strong>${name}</strong> · ${crop.name} · <span class="vh-garden-dry">died of thirst</span></p>`
+          + `<button data-garden="clear" data-bed="${bed.id}">Clear the bed</button></div>`;
+      }
+      if (crop) {
+        const dry = bed.wet <= DRY_AT && bed.grow < 1;
+        return `<div class="vh-garden"><p><strong>${name}</strong> · ${crop.name} · ${stageName(bed.grow)}${dry ? ' · <span class="vh-garden-dry">the bed is drying out</span>' : ''}</p>`
+          + growBar(pct, dry ? 'mid' : bed.grow >= 1 ? 'ripe' : 'ok', bed.eta)
+          + `<button data-garden="water" data-bed="${bed.id}">Water the garden</button>${bed.grow >= 1 ? ` <button data-garden="harvest" data-bed="${bed.id}">Harvest</button>` : ''}</div>`;
+      }
+      const plant = CROP_IDS.filter(id => (garden.packets[id] ?? 0) > 0)
+        .map(id => `<button data-garden="plant" data-crop="${id}" data-bed="${bed.id}">Plant ${CROPS[id].name.toLowerCase()} (${garden.packets[id]})</button>`).join(' ');
+      return `<div class="vh-garden"><p>${beds.length > 1 ? `<strong>${name}</strong> · empty` : 'The garden bed is empty.'}</p>${plant || '<p class="vh-status">Buy seeds in the shop (Outdoor).</p>'}</div>`;
+    }).join('');
+  }
+
+  /** One row per fruit tree: its stage, and the button that suits it (water a sapling, pick ripe fruit). */
+  function treesHtml(state: DrawerState): string {
+    return (state.trees ?? []).map((t) => {
+      const def = FRUIT_TREES[t.type];
+      if (!def) return '';
+      const label = `${def.name}${(state.trees ?? []).filter(q => q.type === t.type).length > 1 ? ` ${(state.trees ?? []).filter(q => q.type === t.type).indexOf(t) + 1}` : ''}`;
+      if (t.grow < 1) {
+        const stage = t.grow < 0.16 ? 'a sapling' : t.grow < 0.5 ? 'a young tree' : 'growing up', dry = t.wet <= DRY_AT;
+        return `<div class="vh-garden"><p><strong>${label}</strong> · ${stage}${dry ? ' · <span class="vh-garden-dry">thirsty</span>' : ''}</p>${growBar(t.grow * 100, dry ? 'mid' : 'ok', t.eta)}<button data-tree="water" data-id="${t.id}">Water the sapling</button></div>`;
+      }
+      const ripe = t.fruit >= 1, words = ripe ? `ripe ${def.fruit}` : t.fruit > 0 ? `${def.fruit} coming on` : 'bare for now';
+      return `<div class="vh-garden"><p><strong>${label}</strong> · ${words}</p>${growBar(t.fruit * 100, ripe ? 'ripe' : 'ok', t.eta)}${ripe ? `<button data-tree="harvest" data-id="${t.id}">Pick the ${def.fruit}</button>` : ''}</div>`;
+    }).join('');
   }
 
   function renderDo(state: DrawerState): void {
@@ -631,12 +675,15 @@ export function createDrawer(cb: DrawerCallbacks): {
     ];
     const html = groups.map(g => `<h4 class="vh-order-floor">${g.floor}</h4><div class="vh-order-grid">${
       g.acts.map(a => `<button data-order="${a.chain}" class="vh-order-btn">${a.label}</button>`).join('')}</div>`).join('');
-    if (!put(sec, `<div class="vh-do"><p>Tell ${state.simName} what to do:</p>${gardenHtml(state)}${html}</div>`)) return;
+    if (!put(sec, `<div class="vh-do"><p>Tell ${state.simName} what to do:</p>${gardenHtml(state)}${treesHtml(state)}${html}</div>`)) return;
     sec.querySelectorAll('[data-order]').forEach(b => {
       b.addEventListener('click', () => cb.onOrder((b as HTMLElement).dataset.order!));
     });
+    sec.querySelectorAll<HTMLElement>('[data-tree]').forEach(b => {
+      b.addEventListener('click', () => cb.onTree?.(b.dataset.id!, b.dataset.tree as 'water' | 'harvest'));
+    });
     sec.querySelectorAll<HTMLElement>('[data-garden]').forEach(b => {
-      b.addEventListener('click', () => cb.onGarden?.(b.dataset.garden as 'plant' | 'water' | 'harvest' | 'clear', b.dataset.crop));
+      b.addEventListener('click', () => cb.onGarden?.(b.dataset.garden as 'plant' | 'water' | 'harvest' | 'clear', b.dataset.crop, b.dataset.bed));
     });
   }
 

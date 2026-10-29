@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
+import { OFFICE_ACTIONS, actionActivity } from '../content/office';
+
 export type NeedKey = 'energy' | 'food' | 'hygiene' | 'fun' | 'comfort' | 'social';
 
 export interface ActivityGives {
@@ -46,7 +48,7 @@ export const ACTIVITIES: Record<string, ActivityMeta> = {
   nap: { pose: 'sleep', dur: 90, gives: { energy: 30, comfort: 10 }, verb: 'Napping' },
   cook: { pose: 'cook', dur: 25, gives: {}, verb: 'Cooking' },
   eat: { pose: 'eat', dur: 25, gives: { food: 72, energy: 6 }, verb: 'Eating' },
-  coffee: { pose: 'cook', dur: 10, gives: {}, verb: 'Making coffee' },
+  coffee: { pose: 'dispense', dur: 10, gives: {}, verb: 'Making coffee' },
   sip: { pose: 'sip', dur: 30, gives: { energy: 15, social: 10, fun: 5 }, verb: 'Having coffee' },
   shower: { pose: 'shower', dur: 20, gives: { hygiene: 95 }, verb: 'Showering' },
   read: { pose: 'read', dur: 40, gives: { fun: 35, comfort: 30 }, verb: 'Reading' },
@@ -75,18 +77,23 @@ export const ACTIVITIES: Record<string, ActivityMeta> = {
   pinball: { pose: 'arcade', dur: 15, gives: { fun: 40, energy: -2 }, verb: 'Playing pinball' },
   swing: { pose: 'tv', dur: 15, gives: { fun: 30, comfort: 15 }, verb: 'Swinging under the cloud' },
   vr: { pose: 'tv', dur: 25, gives: { fun: 45, energy: -4 }, verb: 'In VR' },
-  fortune: { pose: 'arcade', dur: 8, gives: { fun: 25, comfort: 10 }, verb: 'Asking the fortune teller' },
+  fortune: { pose: 'operate', dur: 8, gives: { fun: 25, comfort: 10 }, verb: 'Asking the fortune teller' },
   gumball: { pose: 'reach', dur: 4, gives: { fun: 15, food: 5 }, verb: 'Getting a gumball' },
   tiki: { pose: 'cook', dur: 12, gives: { fun: 30, comfort: 10, food: 10 }, verb: 'Mixing a drink at the tiki bar' },
   plants: { pose: 'water', dur: 15, gives: { fun: 15, comfort: 5 }, verb: 'Watering the plants' },
   window: { pose: 'stand', dur: 10, gives: { comfort: 10 }, verb: 'Looking out the window' },
   freelance: { pose: 'desk', dur: 90, gives: { fun: 10 }, verb: 'Freelancing' },
+  // At a desk in the office (level 5 only, so nobody at home ever walks there). The same sit-at-the-desk animation as freelancing.
+  // The boss sits at his desk for good (the duration is long enough that he never gets up on his own), and a visitor sits across from him for a while.
+  bosswork: { pose: 'desk', dur: 100000, gives: {}, verb: 'Running the office', level: 5 },
+  bossvisit: { pose: 'tv', dur: 45, gives: {}, verb: 'Sitting across from the boss', level: 5 },
+  officework: { pose: 'desk', dur: 60, gives: {}, verb: 'Working at the computer', level: 5 },
   // Side jobs (sideJobs.ts): until the job's done or the player stops; main.ts ends them.
   sideDesk: { pose: 'desk', dur: Infinity, gives: {}, verb: 'Working on a side job' },
   sideBake: { pose: 'cook', dur: Infinity, gives: {}, verb: 'Baking for the café' },
   errand: { pose: 'stand', dur: Infinity, gives: {}, verb: 'Heading out' },
-  hangout: { pose: 'stand', dur: 25, gives: { social: 45, fun: 10 }, verb: 'Catching up with Maya' },
-  chat: { pose: 'stand', dur: Infinity, gives: {}, verb: 'Talking with Maya' },
+  hangout: { pose: 'talk', dur: 25, gives: { social: 45, fun: 10 }, verb: 'Catching up with Maya' },
+  chat: { pose: 'talk', dur: Infinity, gives: {}, verb: 'Talking with Maya' },
   approach: { pose: 'stand', dur: 60, gives: {}, verb: 'Waiting to tell you something' },
   wander: { pose: 'stand', dur: 8, gives: {}, verb: 'Taking a breather' },
   scrub: { pose: 'mop', dur: 7, gives: { comfort: 5 }, verb: 'Scrubbing' },
@@ -109,7 +116,7 @@ export const ACTIVITIES: Record<string, ActivityMeta> = {
   mixDrinks: { pose: 'cook', dur: 15, gives: { fun: 25, social: 10 }, verb: 'Mixing drinks' },
   swim: { pose: 'swim', dur: 30, gives: { fun: 50, hygiene: 15, energy: -8 }, verb: 'Swimming' },
   gSit: { pose: 'sip', dur: 25, gives: {}, verb: 'Hanging out' },
-  gChat: { pose: 'stand', dur: 18, gives: {}, verb: 'Chatting' },
+  gChat: { pose: 'talk', dur: 18, gives: {}, verb: 'Chatting' },
   gDance: { pose: 'dance', dur: 20, gives: {}, verb: 'Dancing' },
   gLeave: { pose: 'stand', dur: 1, gives: {}, verb: 'Leaving' },
   laundry: { pose: 'reach', dur: 10, gives: { comfort: 15, hygiene: 8 }, verb: 'Doing laundry' },
@@ -155,6 +162,9 @@ export const ACTIVITIES: Record<string, ActivityMeta> = {
 for (const [act, appeal] of Object.entries({ tend: 6, window: 4, freelance: 3, laundry: 4, rummage: 3, lift: 3, plants: 3 })) {
   ACTIVITIES[act] = { ...ACTIVITIES[act], appeal };
 }
+
+// The office's actions (content/office.ts): each runs as an activity with a set time, on the office floor only.
+for (const a of OFFICE_ACTIONS) ACTIVITIES[actionActivity(a)] = { pose: a.pose, dur: a.secs, gives: a.gives ?? {}, verb: a.verb, level: 5 };
 
 export const CHAINS: Record<string, string[]> = {
   cookeat: ['cook', 'eat'],

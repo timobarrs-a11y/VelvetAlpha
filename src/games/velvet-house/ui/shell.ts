@@ -1,4 +1,4 @@
-import { LEVEL_NAMES, FLOOR_ORDER, ATTIC } from '../state/house';
+import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, OFFICE } from '../state/house';
 import { NEED_KEYS, NEED_LABELS } from '../state/needs';
 import { type Agent, type AgentId } from '../state/agents';
 import { escapeHtml } from '../kernel/config';
@@ -41,7 +41,7 @@ export function mountShell(app: HTMLElement, people: Agent[], logEl: HTMLElement
       <div class="vh-people" aria-label="Who is home">${people.map(card).join('')}</div>
       <div class="vh-controls">
         <div class="vh-floors" role="tablist" aria-label="Floors">
-          ${FLOOR_ORDER.map((i) => `<button role="tab" data-level="${i}"${i === ATTIC ? ' hidden' : ''}>${LEVEL_NAMES[i]}</button>`).join('')}
+          ${FLOOR_ORDER.map((i) => `<button role="tab" data-level="${i}"${i === ATTIC || i === OFFICE ? ' hidden' : ''}>${LEVEL_NAMES[i]}</button>`).join('')}
         </div>
         <div class="vh-tools">
           <button data-act="rotate" title="Turn the house (R)" aria-label="Turn the house">&#8635;</button>

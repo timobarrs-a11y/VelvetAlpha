@@ -1,7 +1,8 @@
 import type { ArrivalPlot } from '../ui/arrivalIntro';
-import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
+import { ATTIC_STAIR_OBJS, OFFICE_LAYOUT, type ObjectInstance } from '../state/objects';
 import { RNG, setGlobalRNG } from '../state/rng';
-import { buildWorld, createAgent, type Agent, type AgentId } from '../state/agents';
+import { buildWorld, createAgent, createNpc, type Agent, type AgentId } from '../state/agents';
+import { npcDef } from '../content/characters';
 import { type CharacterNeeds } from '../state/types';
 import { createHouseArt, type PersonFrame, type PetFrame } from '../art/houseArt.js';
 import { createGpuLights } from '../engine/gpuLights.js';
@@ -119,11 +120,14 @@ export interface Game {
   art: ReturnType<typeof createHouseArt>;
   pictureThumbs: Record<string, string>;
   hasAttic: () => boolean;
+  /** Whether the office has been unlocked (it is in the floor bar once it has). */
+  hasOffice: () => boolean;
   storage: ObjectInstance[];
   townSign: HTMLElement;
   drawer: ReturnType<typeof createDrawer>;
   dialogue: ReturnType<typeof createDialogue>;
   tray: ReturnType<typeof createTray>;
+  stationMenu: ReturnType<typeof import('../ui/stationMenu').createStationMenu>;
   cam: { z: number; fx: number; fy: number; tz: number; tfx: number; tfy: number };
 
   // camera
@@ -153,6 +157,11 @@ export interface Game {
   selectObject(o: ObjectInstance | null): void;
   commitMove(o: ObjectInstance, verb?: string): void;
   rotateSelected(): void;
+  /** Arrange: set the selected piece against the nearest wall (again to free it), and slide it along the wall (-1 toward the screen's left, 1 toward its right). */
+  toggleWallSnap(): void;
+  /** The demo: copy where every office piece is (ready to paste into the game's starting layout). */
+  copyOfficeLayout(): void;
+  slideAlongWall(side: number): void;
   tryDevMoney(text: string): boolean;
   tryUnlock(text: string): boolean;
   /** Hang a bought wall lamp (or keep it in storage when no wall is free). */
@@ -217,6 +226,9 @@ export interface Game {
   escapeArrange(): void;
   abortDrag(): void;
   // tapping things
+  /** The office: open a station's menu for the piece tapped (null for the wall), and which station a wall feature is. */
+  showStation(station: import('../content/office').StationId, obj: ObjectInstance | null, x: number, y: number): void;
+  featureStation(kind: string): import('../content/office').StationId | null;
   findObjectAt(sx: number, sy: number): ObjectInstance | null;
   showObjectActions(obj: ObjectInstance, x: number, y: number, poked?: boolean): void;
   handleObjectAction(obj: ObjectInstance, tag: string): void;
@@ -298,6 +310,9 @@ export function createGame(app: HTMLElement): Game | null {
     createAgent('jordan', simName, (save?.jordan as { needs?: Partial<CharacterNeeds> })?.needs, lookFrom(save?.look, DEFAULT_LOOKS.jordan)),
     createAgent('maya', partnerName, (save?.maya as { needs?: Partial<CharacterNeeds> })?.needs, lookFrom(save?.mayaLook, DEFAULT_LOOKS.maya)),
   ];
+  // Dale, the boss, lives on the office floor and is not part of the household (see state/boss.ts).
+  const daleDef = npcDef('dale');
+  if (daleDef) people.push(createNpc(daleDef.id, daleDef.name, { ...daleDef.look }, { level: 5, x: 8.2, y: 0.7 }));
   const house = buildWorld(world.objs);
   const rngSeed = typeof save?.rngSeed === 'number' ? save.rngSeed : Date.now() & 0xffffffff;
   const rng = new RNG(rngSeed);
@@ -324,6 +339,10 @@ export function createGame(app: HTMLElement): Game | null {
   // The house's rugs and its TV are pieces now (a new game starts with them; an older save was given them on load): never add them again.
   flags.rugObjects = true;
   flags.tvObject = true;
+  flags.officeObjects = true;
+  flags.officeLayout = OFFICE_LAYOUT;
+  // The office stays out of the floor bar until the player first takes control of a workday; the demo shows it straight away.
+  if (IS_DEMO && flags.officeUnlocked === undefined) flags.officeUnlocked = true;
   if (!flags.settleSeen) flags.settleSeen = [];
   if (!flags.styledSet) flags.styledSet = [];
   if (!flags.lifeStep) flags.lifeStep = 0;
@@ -399,6 +418,7 @@ export function createGame(app: HTMLElement): Game | null {
 
   // The attic exists once its stairs have been built.
   const hasAttic = (): boolean => world.objs.some(o => o.id === ATTIC_STAIR_OBJS[0].id);
+  const hasOffice = (): boolean => !!flags.officeUnlocked;
 
   // Test pages start paused so screenshots are the same every time.
   if (import.meta.env.DEV && new URLSearchParams(location.search).has('freeze')) view.paused = true;
@@ -420,6 +440,6 @@ export function createGame(app: HTMLElement): Game | null {
   return {
     app, world, save, simName, partnerName, townName, people, house, rng, rngSeed, view, s,
     owned, closet, flags, style, tasteNorm, coreMem, memories, pastMem, memStore, companionCfg,
-    log, logEntries, logEl, canvas, ctx, stage, el, btn, personEl, art, pictureThumbs, hasAttic,
+    log, logEntries, logEl, canvas, ctx, stage, el, btn, personEl, art, pictureThumbs, hasAttic, hasOffice,
   } as unknown as Game;
 }

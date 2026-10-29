@@ -158,15 +158,29 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
         lean: 0.05 + wave(t, 7, ph) * 0.02, nod: wave(t, 9, ph) * 0.02, snap: true,
         grip: { 1: 'point', [-1]: 'fist' },
       };
-    case 'desk':
-      // Typing: short taps in turn.
-      return {
-        hands: {
-          1: [0.3, 0.05 + wave(t, 1.1, ph) * 0.05, -0.2 + Math.max(0, wave(t, 16, ph)) * 0.1],
-          [-1]: [0.3, 0.05 - wave(t, 1.1, ph) * 0.05, -0.2 + Math.max(0, wave(t, 16, ph + Math.PI)) * 0.1],
-        },
-        lean: 0.03 + wave(t, 0.5, ph) * 0.012, nod: wave(t, 0.9, ph) * 0.018, snap: true,
-      };
+    case 'desk': {
+      // Typing, in bursts: fast alternating taps with the fingers dancing, the head dipping to the screen; then a beat to read it, a hand
+      // over to the mouse, and back to the keys.
+      const u = ((t + ph) % 7) / 7;
+      const tap = (k) => Math.max(0, wave(t, 17, ph + k)), dance = (k) => wave(t, 9, ph + k);
+      if (u < 0.62) {
+        const swing = wave(t, 1.3, ph);
+        return {
+          hands: {
+            1: [0.3 + dance(0) * 0.025, 0.07 + swing * 0.07 + dance(1) * 0.02, -0.21 + tap(0) * 0.09],
+            [-1]: [0.3 + dance(2) * 0.025, 0.07 - swing * 0.07 + dance(3) * 0.02, -0.21 + tap(Math.PI) * 0.09],
+          },
+          lean: 0.045 + wave(t, 0.6, ph) * 0.012, nod: -0.012 + wave(t, 1.9, ph) * 0.016, snap: true,
+        };
+      }
+      if (u < 0.8) {
+        // Reading what was written: the hands hover, the head lifts a little.
+        return { hands: { 1: [0.28, 0.1, -0.14 + wave(t, 2.2, ph) * 0.01], [-1]: [0.28, 0.1, -0.14] }, lean: 0.01, nod: 0.016 };
+      }
+      // The mouse: the right hand slides over and clicks, the left stays on the keys.
+      const slide = wave(t, 3.3, ph) * 0.03, click = Math.max(0, wave(t, 8, ph));
+      return { hands: { 1: [0.32 + slide, 0.2 + slide * 0.6, -0.22 + click * 0.025], [-1]: [0.3, 0.06, -0.2] }, lean: 0.03, nod: -0.006, snap: true };
+    }
     case 'water': {
       const tip = pulse(t, 4, 0.6, ph);
       return {
@@ -234,6 +248,68 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
       return {
         hands: { 1: [0.34, 0.04 + u * 0.2, -0.04 + Math.sin(u * Math.PI) * 0.14], [-1]: [0.16, 0.16, -0.22] },
         props: [{ kind: 'brush', side: 1 }, { kind: 'palette', side: -1 }],
+      };
+    }
+    // ---- Standing and sitting "use" poses: one per kind of thing you work, shared by every station in the game ----
+    case 'operate': {
+      // At a machine's control panel (a copier, a vending machine, a kiosk, a washer): tap the buttons, look at the screen, wait, then take what comes out.
+      const u = ((t + ph) % 5) / 5, tap = Math.max(0, wave(t, 13, ph));
+      if (u < 0.45) return { hands: { 1: [0.34, 0.04 + wave(t, 2.1, ph) * 0.05, -0.1 + tap * 0.05 - 0.05], [-1]: [0.1, 0.14, -0.3] }, lean: 0.04, nod: -0.02, headDown: true, snap: true, grip: { 1: 'point' } };
+      if (u < 0.72) return { hands: { 1: [0.18, 0.1, -0.26], [-1]: [0.1, 0.14, -0.3] }, lean: -0.01, nod: 0.012 };
+      const take = (u - 0.72) / 0.28, out = Math.sin(Math.min(1, take * 1.6) * Math.PI / 2);
+      return { hands: { 1: [0.3 - out * 0.12, 0.06, -0.4 + out * 0.22], [-1]: [0.1, 0.14, -0.3] }, drop: (1 - out) * 0.05, lean: 0.04 * (1 - out), headDown: out < 0.6, props: [{ kind: 'sheet', side: 1 }] };
+    }
+    case 'dispense': {
+      // Holding a cup under a spout (a water cooler, a coffee machine, a tap) until it fills, then a sip.
+      const u = ((t + ph) % 6) / 6, fill = u < 0.55, lift = u < 0.55 ? 0 : Math.min(1, (u - 0.55) / 0.12) * (u > 0.88 ? Math.max(0, 1 - (u - 0.88) / 0.12) : 1);
+      return {
+        hands: { 1: [0.3 - lift * 0.14, 0.05, -0.34 + lift * 0.52], [-1]: fill ? [0.3, -0.1 + wave(t, 6, ph) * 0.01, -0.14 - Math.max(0, wave(t, 1.5, ph)) * 0.03] : [0.1, 0.14, -0.3] },
+        headDown: fill, nod: lift * 0.03, lean: fill ? 0.03 : 0,
+        props: [{ kind: 'cup', side: 1, steam: lift > 0.5 }].concat(fill ? [{ kind: 'stream', side: 1 }] : []),
+      };
+    }
+    case 'board': {
+      // Writing on a whiteboard or chalkboard: a line across, back for the next, then a step back to point at it.
+      const u = ((t + ph) % 8) / 8;
+      if (u < 0.72) {
+        const k = (u / 0.72) * 3, row = Math.floor(k), x = k - row;
+        return { hands: { 1: [0.4, 0.02 + x * 0.2, 0.2 - row * 0.1 + Math.sin(x * 20) * 0.015], [-1]: [0.04, 0.27, -0.26] }, elbows: { 1: [0.18, 0.2, 0.0], [-1]: [0.0, 0.3, -0.18] }, lean: 0.05, nod: 0.015, props: [{ kind: 'pen', side: 1 }] };
+      }
+      return { hands: { 1: [0.36, 0.1, 0.3 + wave(t, 1.4, ph) * 0.02], [-1]: [0.04, 0.27, -0.26] }, elbows: { 1: [0.16, 0.2, 0.08], [-1]: [0.0, 0.3, -0.18] }, nod: 0.02, grip: { 1: 'point' } };
+    }
+    case 'files': {
+      // At a filing cabinet, a dresser or a shelf: pull the drawer, walk the fingers through it, draw one out and read it.
+      const u = ((t + ph) % 7) / 7;
+      if (u < 0.18) { const k = u / 0.18; return { hands: { 1: [0.34 - k * 0.14, 0.1, -0.36], [-1]: [0.12, 0.12, -0.3] }, drop: 0.03, lean: 0.04, headDown: true }; }
+      if (u < 0.62) return { hands: { 1: [0.2, 0.1 + wave(t, 5, ph) * 0.02, -0.34 + Math.abs(wave(t, 3, ph)) * 0.05], [-1]: [0.24, 0.1, -0.3] }, drop: 0.03, lean: 0.05, headDown: true, nod: -0.01 };
+      const k = Math.min(1, (u - 0.62) / 0.14);
+      return { hands: { 1: [0.2 - k * 0.0, 0.06, -0.34 + k * 0.3], [-1]: [0.14, 0.14, -0.1 + k * 0.0 - 0.2] }, headDown: k > 0.5, lean: 0.02, props: [{ kind: 'folder', side: 1 }] };
+    }
+    case 'talk':
+    case 'sittalk': {
+      // A standing conversation: speaking with both hands, then listening with a nod.
+      const sp = pulse(t, 7, 0.62, ph), g1 = Math.max(0, wave(t, 2.9, ph)), g2 = Math.max(0, wave(t, 2.3, ph + 1.7));
+      return {
+        hands: { 1: [0.14 + sp * g1 * 0.12, 0.14 + sp * 0.06, -0.3 + sp * (0.1 + g1 * 0.22)], [-1]: [0.12 + sp * g2 * 0.1, 0.12 + sp * 0.05, -0.3 + sp * (0.08 + g2 * 0.16)] },
+        talk: sp > 0.05, nod: sp > 0.05 ? wave(t, 3.1, ph) * 0.012 : wave(t, 1.4, ph) * 0.02,
+      };
+    }
+    case 'handset': {
+      // A call on a desk or wall phone, standing: the handset at the ear, the free hand writing in the air.
+      const sp = pulse(t, 5, 0.7, ph) > 0.05, g = Math.max(0, wave(t, 2.6, ph)) * (sp ? 1 : 0.2);
+      return {
+        hands: { 1: [0.03, 0.07, 0.27], [-1]: [0.14 + g * 0.1, 0.1 + g * 0.06, -0.28 + g * 0.28] },
+        elbows: { 1: [0.08, 0.17, 0.0] }, talk: sp, nod: sp ? wave(t, 3.4, ph) * 0.015 : 0,
+        props: [{ kind: 'handset', side: 1 }],
+      };
+    }
+    case 'deskcall': {
+      // The same call seated at a desk: the handset at the ear, the other hand taking notes on the desk.
+      const sp = pulse(t, 5, 0.7, ph) > 0.05, note = sp ? 0 : 1, scr = ((t + ph) % 0.8) / 0.8;
+      return {
+        hands: { 1: [0.03, 0.07, 0.27], [-1]: [0.3, 0.06 + (note ? scr * 0.14 : 0), -0.2 + (note ? 0 : Math.max(0, wave(t, 2.6, ph)) * 0.1)] },
+        elbows: { 1: [0.08, 0.17, 0.0] }, talk: sp, nod: sp ? wave(t, 3.4, ph) * 0.015 : -0.01, lean: 0.01,
+        props: [{ kind: 'handset', side: 1 }].concat(note ? [{ kind: 'pen', side: -1 }] : []),
       };
     }
     // Poses that belong to one activity each: the activity's own clip.
@@ -472,6 +548,7 @@ export const ANIMATED_POSES = [
   'cook', 'eat', 'eatOut', 'sip', 'shower', 'read', 'phone', 'tv', 'run', 'lift', 'stretch', 'switch',
   'reach', 'listen', 'arcade', 'desk', 'water', 'mop', 'pet', 'play', 'mow', 'swim', 'roll', 'wipe',
   'jacks', 'snack', 'meditate', 'jumprope',
+  'operate', 'dispense', 'board', 'files', 'talk', 'sittalk', 'handset', 'deskcall',
 ];
 
 export { TAU };

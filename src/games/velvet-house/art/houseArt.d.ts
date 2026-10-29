@@ -101,6 +101,10 @@ export interface HouseArt {
   wallPointAt(level: number, sx: number, sy: number): { p: 'B' | 'L'; u: number; z: number } | null;
   /** Furniture was just set down: it lands with a bounce and a puff of dust. */
   objectPlaced(id: string): void;
+  /** A fruit tree was shaken: it shudders, and `fell` pieces of ripe fruit drop from it. */
+  shakeTree(id: string, fell: number): void;
+  /** Whether someone is in the office's meeting room (the sign over its door lights up). */
+  setMeeting(on: boolean): void;
   /** Hangs a bought wall piece (a WTYPES key, e.g. 'print') on a back wall of the level; false if the type is unknown. */
   hangWallObj(level: number, type: string, col?: string, id?: string): boolean;
   /** Wall pieces in Arrange: those on a level (`shown` when the view's walls carry them), and every one in the house. */
@@ -108,6 +112,8 @@ export interface HouseArt {
   wallObjsAll(): Array<{ id: string; type: string; name: string; level: number; col?: string }>;
   /** The wall piece under a view point on the walls the view shows, if any. */
   hitWallObj(level: number, sx: number, sy: number): string | null;
+  /** The kind of wall feature under a view point among `kinds` (the whiteboard, the meeting door), or null. */
+  hitFeature(level: number, sx: number, sy: number, kinds: string[]): string | null;
   /** The view point at a wall piece's centre. */
   wallObjView(id: string): [number, number] | null;
   /** Slides a wall piece so its centre follows a view point (less the grab offset), kept on its wall. */

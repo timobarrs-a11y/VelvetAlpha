@@ -2,7 +2,9 @@ import { TYPES } from '../state/objects';
 import { checkPlacement } from '../state/arrange';
 import { CATALOG } from '../state/catalog';
 import { checkLamp, type WallLamp } from '../state/wallLamps';
-import { isWalking, poseOf, startGoto } from '../state/agents';
+import { ACTIVITIES } from '../state/activities';
+import { isWalking, poseOf, startGoto, startChain } from '../state/agents';
+import { bossLeave } from '../state/boss';
 import { type SampleFn } from '../state/companionAI';
 import { MARKS } from '../content/marks';
 import type { Game } from '../kernel/game';
@@ -15,10 +17,29 @@ export function installDevHooks(g: Game): void {
     (window as unknown as { __velvet?: Record<string, unknown> }).__velvet = {
       setView: (lv: number) => g.setLevel(lv),
       // Put a piece in the house (a test for new furniture).
-      addObject: (type: string, level: number, x: number, y: number, col?: string) => { world.objs.push({ id: `t-${type}-${world.objs.length}`, type, level, x, y, rot: 0, ...(col ? { col } : {}) }); },
+      addObject: (type: string, level: number, x: number, y: number, col?: string, rot = 0) => { world.objs.push({ id: `t-${type}-${world.objs.length}`, type, level, x, y, rot, ...(col ? { col } : {}) }); },
       // Send someone somewhere (a test for the stairs).
       goto: (who: 'jordan' | 'maya', level: number, x: number, y: number) => { const p = who === 'maya' ? people[1] : people[0]; p.scripted = true; startGoto(g.house, p, { level, x, y }); },
       setMinutes: (m: number) => { world.minutes = m; },
+      // Jump to a day, so each season can be looked at (a week each: spring 1-7, summer 8-14, autumn 15-21, winter 22-28).
+      setDay: (d: number) => { world.day = d; },
+      // Put someone on a floor (without the stairs), and start an activity chain for them: to see the office's desks used.
+      placePerson: (who: 'jordan' | 'maya', level: number, x: number, y: number) => { const p = who === 'maya' ? people[1] : people[0]; p.level = level; p.x = x; p.y = y; p.task = null; p.scripted = true; },
+      // Hold someone in a pose, facing a way, to look at the animation (they are made scripted so nothing else moves them).
+      showPose: (who: 'jordan' | 'maya', pose: string, face: [number, number] = [0, 1]) => {
+        const p = who === 'maya' ? people[1] : people[0], id = `_pose_${pose}`;
+        (ACTIVITIES as Record<string, unknown>)[id] = { pose, dur: Infinity, gives: {}, verb: pose };
+        p.scripted = true; p.face = face; p.task = { act: id, slot: null, phase: 'do', route: [], time: 0, dur: 1e9, next: [] } as never;
+      },
+      // Change the pose of the activity someone is doing right now (so a seated person can be shown on the phone).
+      swapPose: (who: 'jordan' | 'maya', pose: string) => { const p = who === 'maya' ? people[1] : people[0], a = p.task && (ACTIVITIES as Record<string, { pose: string }>)[p.task.act]; if (a) a.pose = pose; },
+      bossLeave: (minutes = 8) => { const d = people.find((q) => q.id === 'dale'); if (d) bossLeave(g.house, d, world.day * 1440 + world.minutes, minutes); },
+      startChain: (who: 'jordan' | 'maya', chain: string) => { const p = who === 'maya' ? people[1] : people[0]; p.scripted = true; return startChain(g.house, p, chain, null, () => Math.random()); },
+      // The office: unlock it (it joins the floor bar), and light or clear the meeting-room sign.
+      unlockOffice: () => { g.flags.officeUnlocked = true; g.setLevel(view.level); },
+      setMeeting: (on: boolean) => art.setMeeting(on),
+      // Set fields on a piece (a fruit tree's growth and fruit), to see its stages without waiting for them.
+      patchObject: (id: string, patch: Record<string, unknown>) => { const o = world.objs.find((q) => q.id === id); if (o) Object.assign(o, patch); },
       // The game clock, as minutes since day 0 (does it run, or hold still?).
       minutes: () => world.day * 1440 + world.minutes,
       saveGame: g.doSave,
@@ -29,11 +50,12 @@ export function installDevHooks(g: Game): void {
       setSample: (f: SampleFn) => { g.s.sample = f; },
       doVidSearch: g.doVidSearch,
       // For the end-to-end tests (e2e/velvet-sims): read what is in the house, and find a piece on screen.
-      objects: () => world.objs.map(o => ({ id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot, ...(o.on ? { on: o.on, z: o.z } : {}), ...(o.skin ? { skin: o.skin } : {}) })),
+      objects: () => world.objs.map(o => ({ id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot, ...(o.on ? { on: o.on, z: o.z } : {}), ...(o.skin ? { skin: o.skin } : {}), ...(o.grow !== undefined ? { grow: o.grow } : {}), ...(o.fruit !== undefined ? { fruit: o.fruit } : {}) })),
       moveObject: (id: string, x: number, y: number) => { const o = world.objs.find((q) => q.id === id); if (o) { o.x = x; o.y = y; } },
       storedCount: () => storage.length,
       settle: () => { g.s.settleDone = true; },
       resetCamera: () => g.resetCamera(),
+      unfollow: () => { view.follow = null; g.syncControls(); g.resetCamera(); },
       personClientPos: (who: 'jordan' | 'maya'): [number, number] => {
         const a = who === 'maya' ? people[1] : people[0];
         const [vx, vy] = art.project(a.x, a.y, a.z + 0.7);

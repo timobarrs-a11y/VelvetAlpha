@@ -1,5 +1,5 @@
-import { ATTIC } from '../state/house';
-import { LEVEL_COUNT, FLOOR_ORDER } from '../state/scenes';
+import { ATTIC, OFFICE } from '../state/house';
+import { LEVEL_COUNT, FLOOR_ORDER, isOutdoor } from '../state/scenes';
 import { type AgentId } from '../state/agents';
 import { applyPlayerQuality, type PlayerQuality } from '../engine/qualityTier';
 import { SPEEDS, WALL_MODES, IS_DEMO } from '../kernel/config';
@@ -7,7 +7,7 @@ import { WEATHER_OVERRIDES, RAIN_LEVELS, type WeatherOverride, type RainLevel } 
 import type { Game } from '../kernel/game';
 
 export function createControls(g: Game): Partial<Game> {
-  const { app, people, view, canvas, btn, personEl, hasAttic } = g;
+  const { app, people, view, canvas, btn, personEl, hasAttic, hasOffice } = g;
   // Controls
   const QUALITY_CHOICES: PlayerQuality[] = ['auto', 'high', 'medium', 'low', 'ultra'];
   const QUALITY_LABELS = ['Auto', 'High', 'Medium', 'Low', 'Ultra'];
@@ -19,7 +19,10 @@ export function createControls(g: Game): Partial<Game> {
     app.querySelectorAll<HTMLButtonElement>('[data-level]').forEach((b) => {
       b.setAttribute('aria-selected', String(Number(b.dataset.level) === view.level));
       if (Number(b.dataset.level) === ATTIC) b.hidden = !hasAttic();
+      if (Number(b.dataset.level) === OFFICE) b.hidden = !hasOffice();
     });
+    // Notices: the newest two show in the house and the newest four in the yard (see .vh-log in game-ui.css).
+    app.dataset.outdoor = isOutdoor(view.level) ? '1' : '';
     btn('walls').textContent = WALL_MODES[view.wallIdx].label;
     btn('speed').textContent = `${SPEEDS[view.speedIdx]}x`;
     if (IS_DEMO) {
@@ -65,7 +68,8 @@ export function createControls(g: Game): Partial<Game> {
     if (!keepFollow) view.follow = null;
     syncControls();
   };
-  const rotate = (): void => { softCut(); view.rot = (view.rot + 1) % 4; };
+  // In the yard the turn only swaps between the two sides that keep the house out of the picture (see kernel/run.ts).
+  const rotate = (): void => { if (view.level === OFFICE) return; softCut(); view.rot = isOutdoor(view.level) ? (view.rot === 1 ? 2 : 1) : (view.rot + 1) % 4; };
   const cycleWalls = (): void => { view.wallIdx = (view.wallIdx + 1) % WALL_MODES.length; syncControls(); };
   const togglePause = (): void => { view.paused = !view.paused; syncControls(); };
   const toggleFollow = (id: AgentId): void => {
@@ -111,7 +115,7 @@ export function createControls(g: Game): Partial<Game> {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     // While the story is telling something (a line, a choice, a card), keys wait; the rest of the time they all work.
     if (g.s.scriptMode === 'cutscene' || g.s.storyCard) return;
-    if (e.key >= '1' && Number(e.key) <= LEVEL_COUNT && (Number(e.key) - 1 !== ATTIC || hasAttic())) setLevel(Number(e.key) - 1);
+    if (e.key >= '1' && Number(e.key) <= LEVEL_COUNT && (Number(e.key) - 1 !== ATTIC || hasAttic()) && (Number(e.key) - 1 !== OFFICE || hasOffice())) setLevel(Number(e.key) - 1);
     else if (e.key === 'r' || e.key === 'R') { if (g.isArranging()) { g.rotateSelected(); e.preventDefault(); } else rotate(); }
     else if (e.key === 'w' || e.key === 'W') cycleWalls();
     else if (e.key === ' ') { e.preventDefault(); togglePause(); }
@@ -120,6 +124,8 @@ export function createControls(g: Game): Partial<Game> {
       if (e.key === 'c' || e.key === 'C') { g.recolourHeld(); }
       if (e.key === 'Enter') { g.setDown(); e.preventDefault(); }
       if (e.key === 'Escape') g.escapeArrange();
+      if (e.key === 'ArrowLeft') { g.slideAlongWall(-1); e.preventDefault(); }
+      if (e.key === 'ArrowRight') { g.slideAlongWall(1); e.preventDefault(); }
     }
   });
   syncControls();
