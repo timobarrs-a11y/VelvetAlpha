@@ -7,7 +7,7 @@
 | Room | Things you can do there | Interactables |
 |---|---|---|
 | **Open plan** | Sit at your desk, work on tickets, check the team board | Jordan's desk, 8 cubicles, wall board, printer, plant, window blinds |
-| **Meeting room** | Attend the board meeting (he disappears behind the door, comes back when it's done) | Long table, screen, whiteboard, chairs, water jug |
+| **Meeting room** | Attend the board meeting (he disappears behind the door, comes back when it's done) | None: the inside is never shown, so nothing here is drawn or can be used |
 | **Kitchen** | Make coffee, grab a snack, eat lunch from the fridge, wash a mug | Coffee machine, microwave, fridge, sink, vending machine, lunch table |
 | **Lavatory** | Wash hands, a short break, check the phone | Sinks, mirror, hand dryer, stall doors |
 | **Hallway** | Walk to the lift, catch a colleague, look at the notice board | Notice board, water cooler, lift, fire door |
