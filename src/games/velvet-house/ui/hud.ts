@@ -40,6 +40,7 @@ export function createHud(g: Game): Partial<Game> {
       partnerName, simName, townName,
       deliveryPending: !!world.household.delivery,
       mayaStatus: statusText(people[1]),
+      garden: ((bed) => ({ bed: !!bed, crop: bed?.crop ?? null, grow: bed?.grow ?? 0, wet: bed?.wet ?? 0, packets: (flags.seedPackets ?? {}) as Record<string, number> }))(world.objs.find(o => o.type === 'garden')),
       closet,
       personas: g.s.wardrobe?.personas ?? [],
       wearing: { top: people[0].look.top, topStyle: people[0].look.topStyle, topGarment: people[0].look.topGarment, bottomGarment: people[0].look.bottomGarment, bottom: people[0].look.bottom, bottomStyle: people[0].look.bottomStyle, hat: g.s.wornHat },

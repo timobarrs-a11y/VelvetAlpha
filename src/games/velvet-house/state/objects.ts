@@ -338,6 +338,8 @@ export interface ObjectInstance {
   pet?: string;
   grow?: number;
   wet?: number;
+  /** The crop growing in a garden bed (see crops.ts); none when the bed is empty. */
+  crop?: string | null;
   art?: number;
   runUntil?: number;
   flash?: number;

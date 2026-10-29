@@ -76,6 +76,16 @@ export function createShop(g: Game): Partial<Game> {
       log('Pick a floor of the house first (Basement, Main floor or Upstairs): walls and floors go inside.');
       return;
     }
+    // Seed packets are kept as a count, not placed: they go into the garden bed from the Orders page.
+    if (item.icon === 'seed' && item.crop) {
+      if (!g.spendOn(`Shop: ${item.name}`, price)) { log('Not enough money.'); return; }
+      const packets = (g.flags.seedPackets ?? {}) as Record<string, number>;
+      packets[item.crop] = (packets[item.crop] ?? 0) + 1;
+      g.flags.seedPackets = packets;
+      log(`Bought ${item.name} for $${price}. Plant it in the garden bed from the Orders page.`);
+      g.refreshDrawer();
+      return;
+    }
     if (item.id === 'pet-food' && !world.pets.length) { log('Adopt a pet first.'); return; }
     // A look restyles the piece already on the main floor, so its one good spot stays; buying what it already wears costs nothing.
     // Another model of a fixed piece (a chest freezer for the fridge) takes that piece's place, if its size fits there.

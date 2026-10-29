@@ -775,3 +775,10 @@
 /* A promo item on the shelf that the player doesn't have: a soft pink card (the lock and tag styles are with the shop cards above). */
 .vh-shop-card.vh-promo-locked { border-color: rgba(247, 198, 217, .35); background: linear-gradient(135deg, rgba(247, 198, 217, .08), rgba(201, 184, 240, .08)); }
 .vh-shop-card.vh-promo-locked button[data-buy] { opacity: .55; cursor: not-allowed; }
+
+/* Seed packets in the shop, and the garden bed's buttons on the Orders page. */
+.vh-seed-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.vh-garden { margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.05); }
+.vh-garden p { margin: 0 0 8px; }
+.vh-garden button { margin: 0 6px 6px 0; }
+.vh-garden-dry { color: #F2A7A0; }

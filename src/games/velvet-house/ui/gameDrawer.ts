@@ -5,6 +5,7 @@ import { payBill as payOneBill } from '../state/finance';
 import { takeOffer, SIDE_JOBS } from '../state/sideJobs';
 import { clampRoutine } from '../state/routine';
 import { createDrawer, dockTabHtml, DOCK_TABS } from '../ui/drawer';
+import { gardenAction } from '../systems/garden';
 import { AVATAR_HATS } from '../state/clothing';
 import { createDialogue, createTray, createTownSign } from '../ui/dialogue';
 import { SAVE_KEY } from '../kernel/config';
@@ -47,6 +48,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onPickRoom: (room) => { g.view.room = room; g.refreshDrawer(); },
     onBuy: (item, color) => g.handleBuy(item, color),
     onPetOrder: (act, id) => g.petOrder(act, id),
+    onGarden: (action, crop) => { gardenAction(world.objs, g.flags, world.household.fridge, action, crop, log); g.refreshDrawer(); },
     onBuyAvatarItem: (id) => g.handleBuyAvatarItem(id),
     onOrder: (chain) => g.handleOrder(chain),
     onPayBill: () => { payBill(world.household, absMin(world.day, world.minutes), log); },

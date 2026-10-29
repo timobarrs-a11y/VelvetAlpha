@@ -14,6 +14,8 @@ import { phoneHtml, phoneStructure, patchPhone, animateMoney, type PhoneTab, typ
 
 import { clockText, season, weekday, DAYS } from '../state/time';
 import type { OwnedCloth, WardrobePersona } from '../state/clothing';
+import { CROPS, CROP_IDS, DRY_AT, cropOf } from '../state/crops';
+import { stageAt } from '../state/plantGrowth';
 
 export type DrawerPage = 'shop' | 'arrange' | 'goals' | 'do' | 'phone' | 'partner' | 'you' | 'studio' | 'home' | 'log' | '';
 
@@ -39,6 +41,8 @@ export interface DrawerCallbacks {
   onOrder: (chain: string) => void;
   // The Household page's pet buttons: 'feedPet', 'playPet', 'petPet', 'walkDog' or 'scoop' for a pet.
   onPetOrder?: (act: string, petId: string) => void;
+  // The garden bed on the Orders page: plant a packet, water it, or harvest it when ripe.
+  onGarden?: (action: 'plant' | 'water' | 'harvest', crop?: string) => void;
   onPayBill: () => void;
   onOrderGroceries: () => void;
   onOrderTakeout: () => void;
@@ -145,6 +149,7 @@ export interface DrawerState {
   townName: string;
   deliveryPending: boolean;
   mayaStatus: string;
+  garden?: { bed: boolean; crop: string | null; grow: number; wet: number; packets: Record<string, number> };
   closet: OwnedCloth[];
   personas: WardrobePersona[];
   wearing: { top: string; topStyle: string; bottom: string; bottomStyle?: string; hat?: string; topGarment?: Garment; bottomGarment?: Garment };
@@ -439,7 +444,7 @@ export function createDrawer(cb: DrawerCallbacks): {
         : '';
       const lockHint = locked ? `<span class="vh-lock">${lock!.hint}</span>` : '';
       return `<div class="vh-shop-card ${cls}" data-item="${item.id}">
-        <div class="vh-shop-icon" data-icon="${item.id}" style="${iconStyle(item, state)}"></div>
+        <div class="vh-shop-icon" data-icon="${item.id}" style="${iconStyle(item, state)}">${item.image ? `<img class="vh-seed-img" src="${item.image}" alt="">` : ''}</div>
         <div class="vh-shop-info">
           <strong>${item.name}</strong>
           ${item.promo ? '<span class="vh-promo-tag">Promo</span>' : ''}
@@ -563,6 +568,24 @@ export function createDrawer(cb: DrawerCallbacks): {
     </div>`)) return;
   }
 
+  const STAGE_WORDS: Record<string, string> = { seed: 'just planted', small: 'sprouting', mid: 'growing', final: 'ready soon' };
+  const stageName = (grow: number): string => STAGE_WORDS[stageAt(grow).name] ?? '';
+
+  /** The garden bed's buttons: what is growing and what to do next, or the packets to plant in an empty bed. */
+  function gardenHtml(state: DrawerState): string {
+    const bed = state.garden;
+    if (!bed?.bed) return '';
+    const crop = cropOf(bed.crop);
+    if (crop) {
+      const dry = bed.wet <= DRY_AT && bed.grow < 1;
+      return `<div class="vh-garden"><p><strong>${crop.name}</strong> · ${stageName(bed.grow)}${dry ? ' · <span class="vh-garden-dry">the bed is drying out</span>' : ''}</p>`
+        + `<button data-garden="water">Water the garden</button>${bed.grow >= 1 ? ' <button data-garden="harvest">Harvest</button>' : ''}</div>`;
+    }
+    const plant = CROP_IDS.filter(id => (bed.packets[id] ?? 0) > 0)
+      .map(id => `<button data-garden="plant" data-crop="${id}">Plant ${CROPS[id].name.toLowerCase()} (${bed.packets[id]})</button>`).join(' ');
+    return `<div class="vh-garden"><p>The garden bed is empty.</p>${plant || '<p class="vh-status">Buy seeds in the shop (Outdoor).</p>'}</div>`;
+  }
+
   function renderDo(state: DrawerState): void {
     const sec = el.querySelector('[data-page="do"]')!;
     // Grouped by where it happens, so the whole house is on offer.
@@ -593,9 +616,12 @@ export function createDrawer(cb: DrawerCallbacks): {
     ];
     const html = groups.map(g => `<h4 class="vh-order-floor">${g.floor}</h4><div class="vh-order-grid">${
       g.acts.map(a => `<button data-order="${a.chain}" class="vh-order-btn">${a.label}</button>`).join('')}</div>`).join('');
-    if (!put(sec, `<div class="vh-do"><p>Tell ${state.simName} what to do:</p>${html}</div>`)) return;
+    if (!put(sec, `<div class="vh-do"><p>Tell ${state.simName} what to do:</p>${gardenHtml(state)}${html}</div>`)) return;
     sec.querySelectorAll('[data-order]').forEach(b => {
       b.addEventListener('click', () => cb.onOrder((b as HTMLElement).dataset.order!));
+    });
+    sec.querySelectorAll<HTMLElement>('[data-garden]').forEach(b => {
+      b.addEventListener('click', () => cb.onGarden?.(b.dataset.garden as 'plant' | 'water' | 'harvest', b.dataset.crop));
     });
   }
 
