@@ -14,7 +14,17 @@ const TAU = Math.PI * 2;
 const SPLASH_LIFE = 0.36;
 const PUDDLE_DRY = 0.02;
 const PUDDLE_ADD = 0.016;
-const SNOW_ADD = 0.03;
+const SNOW_ADD = 0.07;
+
+/** Convex hull of screen points (monotone chain), so the lot's outline can be a clip region. */
+export function hull(points) {
+  const p = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = [];
+  for (const q of p) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (let k = p.length - 1; k >= 0; k--) { const q = p[k]; while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+}
 
 function sprite(w, h, paint) {
   const cv = document.createElement('canvas');
@@ -43,12 +53,12 @@ const FLAKE = sprite(8, 8, (c, w, h) => {
 
 /** A fixed pool: parallel typed arrays, reused. `n` is how many are alive; dead ones are swapped out. */
 function pool(max) {
-  return { n: 0, max, x: new Float32Array(max), y: new Float32Array(max), z: new Float32Array(max), v: new Float32Array(max), p: new Float32Array(max), ax: new Float32Array(max), ay: new Float32Array(max) };
+  return { n: 0, max, kd: new Uint8Array(max), x: new Float32Array(max), y: new Float32Array(max), z: new Float32Array(max), v: new Float32Array(max), p: new Float32Array(max), ax: new Float32Array(max), ay: new Float32Array(max) };
 }
 
 function kill(P, k) {
   const last = --P.n;
-  P.x[k] = P.x[last]; P.y[k] = P.y[last]; P.z[k] = P.z[last]; P.v[k] = P.v[last]; P.p[k] = P.p[last]; P.ax[k] = P.ax[last]; P.ay[k] = P.ay[last];
+  P.x[k] = P.x[last]; P.y[k] = P.y[last]; P.z[k] = P.z[last]; P.v[k] = P.v[last]; P.p[k] = P.p[last]; P.ax[k] = P.ax[last]; P.ay[k] = P.ay[last]; P.kd[k] = P.kd[last];
 }
 
 function tileAt(tiles, x, y) {
@@ -86,7 +96,7 @@ export function createWeatherFx() {
       for (let k = rain.n - 1; k >= 0; k--) {
         rain.z[k] += rain.v[k] * dt; rain.x[k] += rain.ax[k] * dt; rain.y[k] += rain.ay[k] * dt;
         if (rain.z[k] <= 0) {
-          if (splash.n < splash.max) { const q = splash.n++; splash.x[q] = rain.x[k]; splash.y[q] = rain.y[k]; splash.p[q] = 0; }
+          if (splash.n < splash.max) { const q = splash.n++; splash.x[q] = rain.x[k]; splash.y[q] = rain.y[k]; splash.p[q] = 0; splash.kd[q] = 0; }
           const tt = tileAt(tiles, rain.x[k], rain.y[k]);
           if (tt) tt.puddle = Math.min(1, (tt.puddle || 0) + PUDDLE_ADD);
           kill(rain, k);
@@ -99,6 +109,8 @@ export function createWeatherFx() {
         if (snow.z[k] <= 0) {
           const tt = tileAt(tiles, snow.x[k], snow.y[k]);
           if (tt) tt.snow = Math.min(1, (tt.snow || 0) + SNOW_ADD);
+          // A soft puff where the flake lands, so snow reads as landing and not as vanishing.
+          if (splash.n < splash.max) { const q = splash.n++; splash.x[q] = snow.x[k]; splash.y[q] = snow.y[k]; splash.p[q] = 0; splash.kd[q] = 1; }
           kill(snow, k);
         }
       }
@@ -127,14 +139,16 @@ export function createWeatherFx() {
         const [sx, sy] = iso(splash.x[k], splash.y[k], 0.01);
         // It opens out as it fades: small at the hit, wider and paler by the end.
         const t = splash.p[k] / SPLASH_LIFE, sc = 0.45 + 0.75 * t;
-        c.globalAlpha = (1 - t) * 0.9;
-        c.drawImage(SPLASH, sx - 20 * sc, sy - 12 * sc, 40 * sc, 24 * sc);
+        if (splash.kd[k]) { c.globalAlpha = (1 - t) * 0.6; c.drawImage(FLAKE, sx - 6 * sc, sy - 3 * sc, 12 * sc, 6 * sc); }
+        else { c.globalAlpha = (1 - t) * 0.9; c.drawImage(SPLASH, sx - 20 * sc, sy - 12 * sc, 40 * sc, 24 * sc); }
       }
       c.globalAlpha = 1;
     },
 
     /** The air layer: falling drops in one stroke, and snowflakes stamped. Drawn over the house. */
-    drawAir(c, iso) {
+    drawAir(c, iso, clip) {
+      // Rain and snow stay inside the lot: the clip is the lot's outline, so nothing falls in the sky past the walls.
+      if (clip) { c.save(); c.beginPath(); clip.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.clip(); }
       if (rain.n) {
         c.save();
         c.strokeStyle = 'rgba(205,220,240,.5)'; c.lineWidth = 1;
@@ -152,6 +166,7 @@ export function createWeatherFx() {
         const [sx, sy] = iso(snow.x[k], snow.y[k], snow.z[k]);
         c.drawImage(FLAKE, sx - 4, sy - 4, 8, 8);
       }
+      if (clip) c.restore();
     },
   };
 }

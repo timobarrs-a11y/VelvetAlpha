@@ -3,7 +3,7 @@ import { LEVEL_COUNT, FLOOR_ORDER } from '../state/scenes';
 import { type AgentId } from '../state/agents';
 import { applyPlayerQuality, type PlayerQuality } from '../engine/qualityTier';
 import { SPEEDS, WALL_MODES, IS_DEMO } from '../kernel/config';
-import { WEATHER_OVERRIDES, type WeatherOverride } from '../state/weather';
+import { WEATHER_OVERRIDES, RAIN_LEVELS, type WeatherOverride, type RainLevel } from '../state/weather';
 import type { Game } from '../kernel/game';
 
 export function createControls(g: Game): Partial<Game> {
@@ -22,7 +22,10 @@ export function createControls(g: Game): Partial<Game> {
     });
     btn('walls').textContent = WALL_MODES[view.wallIdx].label;
     btn('speed').textContent = `${SPEEDS[view.speedIdx]}x`;
-    if (IS_DEMO) btn('weather').textContent = `Weather: ${(g.flags.weatherOverride ?? 'auto')}`;
+    if (IS_DEMO) {
+      btn('weather').textContent = `Weather: ${(g.flags.weatherOverride ?? 'auto')}`;
+      btn('raintype').textContent = `Rain: ${(g.flags.rainLevel ?? 'medium')}`;
+    }
     btn('quality').textContent = QUALITY_LABELS[g.s.qualityIdx];
     btn('pause').setAttribute('aria-pressed', String(view.paused));
     btn('pause').textContent = view.paused ? 'Play' : 'Pause';
@@ -90,6 +93,12 @@ export function createControls(g: Game): Partial<Game> {
   btn('speed').addEventListener('click', () => { view.speedIdx = (view.speedIdx + 1) % SPEEDS.length; syncControls(); });
   // The demo's weather button: forces rain, snow or clear on demand, so each kind can be checked. Auto follows the seasons.
   if (IS_DEMO) {
+    btn('raintype').hidden = false;
+    btn('raintype').addEventListener('click', () => {
+      const cur = (g.flags.rainLevel ?? 'medium') as RainLevel;
+      g.flags.rainLevel = RAIN_LEVELS[(RAIN_LEVELS.indexOf(cur) + 1) % RAIN_LEVELS.length];
+      syncControls();
+    });
     btn('weather').hidden = false;
     btn('weather').addEventListener('click', () => {
       const cur = (g.flags.weatherOverride ?? 'auto') as WeatherOverride;
