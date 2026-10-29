@@ -151,6 +151,8 @@ export function createArrange(g: Game): Partial<Game> {
     floating = null; floatOrig = null; floatKids = []; floatCheck = { ok: true };
     wallLock = null;
     commitMove(o, 'Set down');
+    // Set down for good, and still arranging: the piece is let go of, so the next one can be picked up (Close is what leaves Arrange).
+    if (selectedObj === o) selectedObj = null;
   }
   /** Put it back: the loose piece returns to where it was picked up. */
   function putBack(): void {
