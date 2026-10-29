@@ -3,6 +3,7 @@ import { tickAgent, isAsleep } from '../state/agents';
 import { financeTick } from '../state/finance';
 import { sideJobsTick } from '../state/sideJobs';
 import { rollDay, nightStart, wakeHour } from '../state/routine';
+import { tickHobby, SKILL_LABEL } from '../state/skills';
 import { advanceClock } from '../engine/loop';
 import { startFixedLoop } from '../engine/fixedLoop';
 import { blendFrames } from '../view/interpolate';
@@ -75,6 +76,9 @@ export function startGameLoop(g: Game): void {
       // The house's vital signs: the treadmill and the weights build fitness; time wears it; the household grazes.
       const jt = people[0].task;
       tickFitness(g.flags, gameMin, !!jt && jt.phase === 'do' && (jt.act === 'workout' || jt.act === 'lift'));
+      // Practising a hobby trains the skill it belongs to; reaching a new level says so in the log.
+      const hobby = tickHobby(g.flags, jt && jt.phase === 'do' ? jt.act : undefined, gameMin);
+      if (hobby) log(`${SKILL_LABEL[hobby.skill]} went up to ${hobby.level}.`);
       if (snackTick(world.household, g.flags, gameMin)) log('Somebody raided the fridge for a snack.');
       g.concernsTick(gameMin);
       g.petsTick(dt, gameMin, walkMul, hourF);
