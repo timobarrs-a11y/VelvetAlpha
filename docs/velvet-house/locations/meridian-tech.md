@@ -135,18 +135,21 @@ a small code overlay for the paper and the jam.
 The objective bar, the time-left text, the notices and the Orders and Goals rows come from the garden work (`growBar`, `treeEta`, the `timed` rows in the
 HUD). The objective timer is the same shape as `gardenTick`: a list of items with a state and a time, ticked with the game clock and saved with the house.
 
-## Build order
+## Build order (pieces first; scenarios last)
 
-1. **The objective engine, without any office:** objective state, the timer tick, the bar on Orders and Goals, save and load. Test it with a fake
-   scenario so it can be checked before any art exists.
-2. **The scenario table and the objective library**, still without a scene: choose a scenario per day, run its objectives from the Orders page.
-3. **The bare office level:** the layout, the doors, an empty floor bar entry, and old saves still loading. *(Needs the director's word on the save
-   change.)*
-4. **Props:** desk and computer, printer, phone, the meeting doors and signs, with their states, at all four camera turns.
-5. **Walking and hiding:** Jordan walking to a door, going out of sight for the timer and walking back, then the tap objectives in the scene.
-6. **Taking control:** the prompt at the leave hour, the scene switch and the return together. Then light, day and night, and weather on the windows.
+Scenarios are built from the pieces, so they wait until the pieces exist. Each step is its own small change, checked in the real game on desktop and
+phone at all four camera turns before the next. A mockup of the target room is in `office-mock.html` (open it in a browser; add `?night=1` for night).
 
-Each step is its own small change, checked in the real game on desktop and phone before the next.
+1. **The shell:** the level, the walls, the doorways, the meeting-room doors and the window wall, with an empty floor and the floor-bar entry. Old saves
+   still load. *(Needs the director's word on the save change.)*
+2. **The furniture:** the desk and computer, the chair, the printer, the phone, the water cooler, the plant, the break-room counter, fridge and coffee machine.
+   Each with its states (the computer working, the printer printing or jammed, the phone ringing, the door shut with its sign lit).
+3. **Light and weather:** ceiling light, window wall by day and night, dusk at a late finish, rain on the glass.
+4. **People:** Jordan walking, sitting, typing, using the printer and the phone, and walking to a door and going out of sight; a few coworkers sitting still.
+5. **The objective engine:** the timed-objective state, the tick, the bar on Orders and Goals, save and load. Tested with a fake objective.
+6. **Objective types:** `fix`, `answer`, `sign`, `work`, `print`, `meeting`, `lunch`, each on its prop.
+7. **Scenarios:** the outlines that combine them, and how a day is chosen.
+8. **Taking control:** the prompt at the leave hour, the scene switch, the companion staying home, and the return.
 
 ## Open questions
 
