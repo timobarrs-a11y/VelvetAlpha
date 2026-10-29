@@ -344,6 +344,8 @@ export interface ObjectInstance {
   pot?: string;
   pet?: string;
   grow?: number;
+  /** A fruit tree: how far its fruit has come, 0 bare to 1 ripe (see crops.ts). */
+  fruit?: number;
   wet?: number;
   /** The crop growing in a garden bed (see crops.ts); none when the bed is empty. */
   crop?: string | null;

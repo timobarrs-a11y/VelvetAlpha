@@ -110,6 +110,12 @@ const outdoor = (id: string, type: string, name: string, price: number, tags: st
   id, name, price, icon: 'obj', tab: 'Outdoor', type, tags, cols, repeat: true,
 });
 
+/** A fruit tree, bought as a sapling: set it out, water it, and it grows into a tree that bears fruit (see crops.ts). */
+const fruitTree = (id: string, type: string, name: string, price: number, tags: string[]): CatalogEntry => ({
+  id, name: `${name} (sapling)`, price, icon: 'obj', tab: 'Outdoor', type, tags, repeat: true,
+  desc: `A sapling. Water it and it grows into a ${name.toLowerCase()} that bears fruit again and again.`,
+});
+
 const wallItem = (id: string, name: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
   id, name, price, icon: 'wobj', tab: 'Wall', tags, cols,
 });
@@ -828,12 +834,12 @@ export const CATALOG: CatalogEntry[] = [
   outdoor('birdfeeder', 'birdfeeder', 'Bird feeder', 40, ['natural', 'cozy', 'soft'], ['#9C6B45', '#F2EEE8', '#3F5B4C']),
   outdoor('beachchair', 'beachchair', 'Beach chair', 50, ['playful', 'cool', 'soft'], ['#5FB8D6', '#E0A43A', '#D24A7A']),
   outdoor('treeoak', 'treeoak', 'Oak tree', 120, ['natural', 'cozy', 'warm']),
-  outdoor('treecherry', 'treecherry', 'Cherry blossom tree', 150, ['natural', 'soft', 'playful']),
+  fruitTree('treecherry', 'treecherry', 'Cherry blossom tree', 150, ['natural', 'soft', 'playful']),
   outdoor('treepine', 'treepine', 'Pine tree', 100, ['natural', 'cool', 'bold']),
   outdoor('treebirch', 'treebirch', 'Birch tree', 110, ['natural', 'cool', 'soft']),
   outdoor('treewillow', 'treewillow', 'Weeping willow', 160, ['natural', 'soft', 'vintage']),
-  outdoor('treepalm', 'treepalm', 'Palm tree', 140, ['natural', 'playful', 'warm']),
-  outdoor('treeapple', 'treeapple', 'Apple tree', 130, ['natural', 'cozy', 'playful']),
+  fruitTree('treepalm', 'treepalm', 'Palm tree', 140, ['natural', 'playful', 'warm']),
+  fruitTree('treeapple', 'treeapple', 'Apple tree', 130, ['natural', 'cozy', 'playful']),
   outdoor('bench', 'bench', 'Garden bench', 90, ['natural', 'vintage', 'cozy']),
   outdoor('garden', 'garden', 'Garden bed', 50, ['natural', 'cozy']),
   seed('seed-flower', 'flower', 'Tulip seeds', 6, 'A packet of tulip seeds. Picked blooms brighten the living room.'),

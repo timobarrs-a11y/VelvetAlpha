@@ -8,7 +8,8 @@ import { type GoalContext } from '../state/goals';
 import { type DrawerState } from '../ui/drawer';
 import { phoneView } from '../ui/phone';
 import { SIDE_JOBS, progress } from '../state/sideJobs';
-import { cropOf, DRY_AT } from '../state/crops';
+import { cropOf, DRY_AT, FRUIT_TREES, FRUIT_RIPE_AT, cropEta, treeEta } from '../state/crops';
+import { seasonOf } from '../state/weather';
 import type { Game } from '../kernel/game';
 
 export function createHud(g: Game): Partial<Game> {
@@ -44,6 +45,8 @@ export function createHud(g: Game): Partial<Game> {
       mayaStatus: statusText(people[1]),
       timed: timedRows(),
       garden: ((bed) => ({ bed: !!bed, crop: bed?.crop ?? null, grow: bed?.grow ?? 0, wet: bed?.wet ?? 0, dead: !!bed?.dead, dry: bed?.dry ?? 0, packets: (flags.seedPackets ?? {}) as Record<string, number> }))(world.objs.find(o => o.type === 'garden')),
+      beds: world.objs.filter(o => o.type === 'garden').map(o => ({ id: o.id, crop: o.crop ?? null, grow: o.grow ?? 0, wet: o.wet ?? 0, dead: !!o.dead, eta: cropEta(o, seasonOf(world.day)) })),
+      trees: world.objs.filter(o => FRUIT_TREES[o.type]).map(o => ({ id: o.id, type: o.type, grow: o.grow ?? 0, fruit: o.fruit ?? 0, wet: o.wet ?? 0, eta: treeEta(o, seasonOf(world.day)) })),
       closet,
       personas: g.s.wardrobe?.personas ?? [],
       wearing: { top: people[0].look.top, topStyle: people[0].look.topStyle, topGarment: people[0].look.topGarment, bottomGarment: people[0].look.bottomGarment, bottom: people[0].look.bottom, bottomStyle: people[0].look.bottomStyle, hat: g.s.wornHat },
@@ -56,17 +59,21 @@ export function createHud(g: Game): Partial<Game> {
   }
 
   // What is in progress, for the Goals page: each side job Jordan has taken, and the garden bed while it has a crop.
-  function timedRows(): { label: string; pct: number; note: string; tone: 'ok' | 'mid' | 'low' }[] {
-    const rows: { label: string; pct: number; note: string; tone: 'ok' | 'mid' | 'low' }[] = [];
+  function timedRows(): { label: string; pct: number; note: string; tone: 'ok' | 'mid' | 'low' | 'ripe' }[] {
+    const rows: { label: string; pct: number; note: string; tone: 'ok' | 'mid' | 'low' | 'ripe' }[] = [];
     for (const t of world.life.taken) {
       rows.push({ label: `${SIDE_JOBS[t.job].title} (${t.client})`, pct: progress(t), note: world.life.working === t.id ? 'working on it now' : 'waiting', tone: 'ok' });
     }
-    const bed = world.objs.find(o => o.type === 'garden');
-    const crop = cropOf(bed?.crop);
-    if (bed && crop) {
-      const pct = Math.round((bed.grow ?? 0) * 100);
-      const dry = (bed.wet ?? 0) <= DRY_AT;
-      rows.push({ label: `${crop.name} in the garden`, pct, note: bed.dead ? 'died' : dry ? 'needs water' : pct >= 100 ? 'ripe' : 'growing', tone: bed.dead ? 'low' : dry ? 'mid' : 'ok' });
+    const season = seasonOf(world.day);
+    for (const bed of world.objs.filter(o => o.type === 'garden')) {
+      const crop = cropOf(bed.crop);
+      if (!crop) continue;
+      const pct = Math.round((bed.grow ?? 0) * 100), dry = (bed.wet ?? 0) <= DRY_AT;
+      rows.push({ label: `${crop.name} in the garden`, pct, note: bed.dead ? 'died' : cropEta(bed, season), tone: bed.dead ? 'low' : dry ? 'mid' : pct >= 100 ? 'ripe' : 'ok' });
+    }
+    for (const tree of world.objs.filter(o => FRUIT_TREES[o.type])) {
+      const def = FRUIT_TREES[tree.type], grown = (tree.grow ?? 0) >= 1, pct = Math.round((grown ? tree.fruit ?? 0 : tree.grow ?? 0) * 100), dry = !grown && (tree.wet ?? 0) <= DRY_AT;
+      rows.push({ label: grown ? `${def.name}: ${def.fruit}` : `${def.name} growing`, pct, note: treeEta(tree, season), tone: dry ? 'mid' : pct >= FRUIT_RIPE_AT * 100 && grown ? 'ripe' : 'ok' });
     }
     return rows;
   }

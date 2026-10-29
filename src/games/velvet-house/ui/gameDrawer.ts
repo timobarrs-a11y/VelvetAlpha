@@ -5,7 +5,7 @@ import { payBill as payOneBill } from '../state/finance';
 import { takeOffer, SIDE_JOBS } from '../state/sideJobs';
 import { clampRoutine } from '../state/routine';
 import { createDrawer, dockTabHtml, DOCK_TABS } from '../ui/drawer';
-import { gardenAction } from '../systems/garden';
+import { gardenAction, treeAction } from '../systems/garden';
 import { AVATAR_HATS } from '../state/clothing';
 import { createDialogue, createTray, createTownSign } from '../ui/dialogue';
 import { SAVE_KEY } from '../kernel/config';
@@ -50,7 +50,8 @@ export function createGameDrawer(g: Game): Partial<Game> {
     // Furniture goes straight into Arrange, so the player can place it; anything else (paint, seeds) puts the page away.
     onBuy: (item, color) => { g.handleBuy(item, color); if (item.icon === 'obj') drawer.open('arrange'); else drawer.close(); },
     onPetOrder: (act, id) => g.petOrder(act, id),
-    onGarden: (action, crop) => { gardenAction(world.objs, g.flags, world.household.fridge, action, crop, log); g.refreshDrawer(); },
+    onTree: (id, action) => { treeAction(world.objs, id, action, world.household.fridge, g.flags, log, (t, n) => g.art.shakeTree(t.id, n)); g.refreshDrawer(); },
+    onGarden: (action, crop, bedId) => { gardenAction(world.objs, g.flags, world.household.fridge, action, crop, log, bedId); g.refreshDrawer(); },
     onBuyAvatarItem: (id) => g.handleBuyAvatarItem(id),
     onOrder: (chain) => g.handleOrder(chain),
     onPayBill: () => { payBill(world.household, absMin(world.day, world.minutes), log); },

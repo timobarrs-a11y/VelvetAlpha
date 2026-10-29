@@ -21,6 +21,8 @@ export function installDevHooks(g: Game): void {
       setMinutes: (m: number) => { world.minutes = m; },
       // Jump to a day, so each season can be looked at (a week each: spring 1-7, summer 8-14, autumn 15-21, winter 22-28).
       setDay: (d: number) => { world.day = d; },
+      // Set fields on a piece (a fruit tree's growth and fruit), to see its stages without waiting for them.
+      patchObject: (id: string, patch: Record<string, unknown>) => { const o = world.objs.find((q) => q.id === id); if (o) Object.assign(o, patch); },
       // The game clock, as minutes since day 0 (does it run, or hold still?).
       minutes: () => world.day * 1440 + world.minutes,
       saveGame: g.doSave,
@@ -31,7 +33,7 @@ export function installDevHooks(g: Game): void {
       setSample: (f: SampleFn) => { g.s.sample = f; },
       doVidSearch: g.doVidSearch,
       // For the end-to-end tests (e2e/velvet-sims): read what is in the house, and find a piece on screen.
-      objects: () => world.objs.map(o => ({ id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot, ...(o.on ? { on: o.on, z: o.z } : {}), ...(o.skin ? { skin: o.skin } : {}) })),
+      objects: () => world.objs.map(o => ({ id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot, ...(o.on ? { on: o.on, z: o.z } : {}), ...(o.skin ? { skin: o.skin } : {}), ...(o.grow !== undefined ? { grow: o.grow } : {}), ...(o.fruit !== undefined ? { fruit: o.fruit } : {}) })),
       moveObject: (id: string, x: number, y: number) => { const o = world.objs.find((q) => q.id === id); if (o) { o.x = x; o.y = y; } },
       storedCount: () => storage.length,
       settle: () => { g.s.settleDone = true; },

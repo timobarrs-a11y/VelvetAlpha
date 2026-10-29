@@ -2,6 +2,8 @@ import { TYPES, type ObjectInstance } from '../state/objects';
 import { startChain } from '../state/agents';
 import { chainOf } from '../state/activities';
 import { relocate } from '../state/arrange';
+import { FRUIT_TREES } from '../state/crops';
+import { treeAction } from './garden';
 import { CORNER_MARKET } from '../state/routine';
 import { type TrayAction } from '../ui/dialogue';
 import type { Game } from '../kernel/game';
@@ -33,6 +35,7 @@ export function createInteract(g: Game): Partial<Game> {
     if (obj.type === 'bag' && obj.contents) acts.push({ act: 'unpack', label: 'Open', icon: '' });
     if (obj.type === 'tallcandelabra') acts.push({ act: 'candles', label: art.candlesOn(obj.id) ? 'Snuff the candles' : 'Light the candles', icon: '' });
     else if (isLight) acts.push({ act: 'toggleLight', label: obj.type === 'woodstove' ? 'Light or bank the stove' : obj.type === 'starprojector' ? 'Turn the stars on/off' : 'Turn light on/off', icon: '' });
+    if (FRUIT_TREES[obj.type]) acts.push({ act: (obj.grow ?? 0) < 1 ? 'treeWater' : 'treeShake', label: (obj.grow ?? 0) < 1 ? 'Water the sapling' : 'Shake the tree', icon: '' });
     if (obj.type === 'servicebell') acts.push({ act: 'ringBell', label: 'Ring for room service', icon: '' });
     if (obj.type === 'overseer') {
       acts.push({ act: 'overseerTalk', label: 'Ask for encouragement', icon: '' }, { act: 'overseerCake', label: 'Request cake', icon: '' }, { act: 'overseerUnplug', label: 'Unplug', icon: '' });
@@ -99,6 +102,7 @@ export function createInteract(g: Game): Partial<Game> {
   }
 
   function handleObjectAction(obj: ObjectInstance, tag: string): void {
+    if (tag === 'treeShake' || tag === 'treeWater') { treeAction(world.objs, obj.id, tag === 'treeShake' ? 'harvest' : 'water', world.household.fridge, g.flags, log, (t, n) => art.shakeTree(t.id, n)); return; }
     if (tag === 'unpack') { unpack(obj); return; }
     if (tag.startsWith('overseer')) { g.overseerAction(obj, tag); return; }
     if (tag === 'ringBell') { g.ringBell(obj); return; }

@@ -101,6 +101,8 @@ export interface HouseArt {
   wallPointAt(level: number, sx: number, sy: number): { p: 'B' | 'L'; u: number; z: number } | null;
   /** Furniture was just set down: it lands with a bounce and a puff of dust. */
   objectPlaced(id: string): void;
+  /** A fruit tree was shaken: it shudders, and `fell` pieces of ripe fruit drop from it. */
+  shakeTree(id: string, fell: number): void;
   /** Hangs a bought wall piece (a WTYPES key, e.g. 'print') on a back wall of the level; false if the type is unknown. */
   hangWallObj(level: number, type: string, col?: string, id?: string): boolean;
   /** Wall pieces in Arrange: those on a level (`shown` when the view's walls carry them), and every one in the house. */
