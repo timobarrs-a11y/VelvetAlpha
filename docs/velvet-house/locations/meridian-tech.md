@@ -84,27 +84,28 @@ draw from the rest and avoid repeating yesterday's.
 Objective types (the library to build): `fix` (tap a prop), `answer` (tap the phone), `sign` (tap the desk), `work` (computer, timed), `print` (needs
 a finished `work`), `meeting` (unseen, timed), `lunch` (unseen, timed). A scenario is a list of these with their order and any dependency.
 
-## Layout (a smaller office than first planned)
+## Layout: one meeting room, behind the sign
 
-Same 10 x 8 tile floor as every level (`WX`, `WY`). Because meetings are unseen, the meeting rooms are **closed rooms with solid walls and a door**:
-nothing inside is drawn or animated, so there is no glass front and no table to build.
+Same 10 x 8 tile floor as every level (`WX`, `WY`). The meeting room is **behind the back wall**, entered by a door right under the Meridian sign.
+People walk up a carpet runner to that wall and vanish through the door. Because the door is straight ahead of the camera, in the middle of the
+longest wall, the player sees exactly where they went. Nothing inside is drawn or animated, so there is no table, no chairs and no poses.
 
 ```
- y0  +----------------+--+--------------+
-     |  MEETING ROOM  |  | MEETING ROOM |   solid walls, a door each,
-     |  (large)       |HW|  (small)     |   a "meeting" sign over the door
-     |  x0-4  y0-3    |  |  x6.6-10     |
- y3  +------ door -----+  +---- door ----+
-     |                    |             |
-     |    OPEN OFFICE     | BREAK ROOM  |   desks, computer, printer, phone,
-     |    x0-6.2 y3-8     | x6.2-10     |   the coffee machine and the fridge
- y8  +--------------------+-------------+
+ back wall (y0)   printer   [ SIGN over DOOR ]   cooler        counter, coffee, fridge
+                  x2.6-4.2     x4.7-5.8          x6.2            x7.2-9.9 (break room)
+ left wall   desks x0.5-2.6 (5 desks)    runner carpet x4.5-5.9   small table x7.9
+ (windows)   Jordan's desk at the front by the window
+                                                        front edge (cut low)
 ```
 
-- **Open office:** four to six desks, Jordan's by the window, and the printer on its own counter. Coworkers can sit at the others, still.
-- **Meeting rooms:** two, large and small, so a scenario can use one or the other. Only their doors and signs are drawn.
-- **Break room:** open to the hallway. Lunch is unseen too, so it needs only the coffee machine and fridge as set dressing.
-- **Hallway strip** between them, so every door is reachable (the walk-around check).
+- **The door and sign:** a wooden door in the back wall at x 4.7 to 5.8, with a long sign above it. The sign says MERIDIAN normally and glows red and
+  reads IN A MEETING while someone is inside, which is also the visible timer cue. It is the one door, so every "meeting" objective ends there.
+- **The runner:** a red carpet from the open office straight to the door, so the path is obvious and the walk-around check passes.
+- **Open office:** five desks in two columns along the window wall, Jordan's at the front. Coworkers sit at the others, still.
+- **Printer and water cooler** on the back wall either side of the door, so a tap on the printer is near the door too.
+- **Break room:** open, along the right: counter with the coffee machine, the fridge, a small table. Lunch is unseen, so this is set dressing.
+- **No interior walls** at all, so the camera sees the whole floor and nothing needs a cut-down mode. (A second door could join the back wall later
+  if a scenario ever needs another room.)
 
 ## New pieces (far fewer)
 
@@ -114,7 +115,7 @@ nothing inside is drawn or animated, so there is no glass front and no table to 
 | Office chair | 0.6 x 0.6 | |
 | Printer | 1.2 x 0.8 | Idle, printing (paper slides out), jammed. The tap target for `fix` and `print` |
 | Desk phone | on the desk | Ringing (a light, a small shake), idle. The tap target for `answer` |
-| Meeting-room door | in a wall | Closed, open (someone walking through), a lit "in meeting" sign |
+| Meeting-room door and sign | in the back wall | Closed, open (someone walking through), the sign lit red while a meeting is on |
 | Coffee machine and fridge | counter | Reuse the kitchen counter pieces |
 | Water cooler, plant, clock, notice board | small | Set dressing |
 | Ceiling lights | | Flat office light, not lamp pools |
