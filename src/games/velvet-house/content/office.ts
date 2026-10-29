@@ -6,7 +6,7 @@ import type { ActivityGives } from '../state/activities';
  * walk, pose and timer. `secs` is real seconds at the normal speed (a game minute is a second there). Tags are what today's list will
  * match against once it is built; nothing reads them yet.
  */
-export type StationId = 'desk' | 'boss' | 'printer' | 'whiteboard' | 'door' | 'filing' | 'cooler' | 'vending' | 'coffee' | 'fridge' | 'plant';
+export type StationId = 'desk' | 'sink' | 'boss' | 'printer' | 'whiteboard' | 'door' | 'filing' | 'cooler' | 'vending' | 'coffee' | 'fridge' | 'plant';
 
 export interface StationInfo {
   title: string;
@@ -30,6 +30,7 @@ export const STATIONS: Record<StationId, StationInfo> = {
   coffee: { title: 'Coffee machine', tag: 'o_coffee', taps: ['officecoffee'] },
   fridge: { title: 'Fridge', tag: 'o_fridge', taps: ['officefridge'] },
   plant: { title: 'Office plant', tag: 'o_plant', taps: ['officeplant'] },
+  sink: { title: 'Sink', tag: 'o_sink', taps: ['officecounter'] },
 };
 
 export interface OfficeAction {
@@ -110,6 +111,7 @@ export const OFFICE_ACTIONS: OfficeAction[] = [
   { id: 'coffee', station: 'coffee', label: 'Make a coffee', secs: 30, tags: ['break', 'coffee'], pose: 'dispense', verb: 'Making a coffee', gives: { energy: 10 } },
   { id: 'snack', station: 'vending', label: 'Buy a snack', secs: 30, tags: ['break', 'snack'], pose: 'operate', verb: 'Buying a snack', gives: { food: 14 } },
   { id: 'lunch', station: 'fridge', label: 'Have lunch', secs: 120, tags: ['break', 'lunch'], pose: 'snack', verb: 'Having lunch', gives: { food: 45, comfort: 6 } },
+  { id: 'wash', station: 'sink', label: 'Wash up', secs: 30, tags: ['break'], pose: 'cook', verb: 'Washing up', gives: { comfort: 2 } },
   { id: 'plant', station: 'plant', label: 'Water the plant', secs: 30, tags: ['plant'], pose: 'water', verb: 'Watering the office plant', gives: { comfort: 2 } },
 ];
 

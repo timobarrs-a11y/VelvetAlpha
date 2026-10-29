@@ -3126,12 +3126,65 @@ export function createHouseArt(ctx0, opts = {}) {
     officeboardspot: { parts: () => [] },
     officedoorspot: { parts: () => [] },
     officecooler: {
-      parts: () => [B(0, 0, 0, 0.4, 0.4, 0.9, '#E8EEF2'), B(0.05, 0.05, 0.9, 0.3, 0.3, 0.55, '#7FC0E6')],
+      // A water cooler: a cabinet, a tilted-looking bottle of blue water, two taps over a drip tray and a stack of cups at its side. The front is local +y.
+      parts: () => [B(0, 0, 0, 0.4, 0.4, 0.84, '#DDE4EA'), B(0.01, 0.01, 0.84, 0.38, 0.38, 0.04, '#B9C3CE'),
+        B(0.07, 0.07, 0.88, 0.26, 0.26, 0.46, '#7FC0E6'), B(0.13, 0.13, 1.34, 0.14, 0.14, 0.08, '#5AA3CE'),
+        F(0, 0.4, 0.4, 0.46, (T) => {
+          const fy = 0.401;
+          T.poly([[0.04, fy, 0.52], [0.36, fy, 0.52], [0.36, fy, 0.8], [0.04, fy, 0.8]], '#CBD4DD', 'rgba(0,0,0,.18)');                  // the front panel
+          T.box(0.09, 0.4, 0.62, 0.07, 0.05, 0.06, '#3D8BD6'); T.box(0.24, 0.4, 0.62, 0.07, 0.05, 0.06, '#E08A3A');                    // the cold and hot taps
+          T.box(0.05, 0.4, 0.5, 0.3, 0.06, 0.02, '#8E98A6');                                                                           // the drip tray
+          T.poly([[0.1, 0.331, 0.92], [0.13, 0.331, 0.92], [0.13, 0.331, 1.3], [0.1, 0.331, 1.3]], 'rgba(255,255,255,.35)');            // a gleam down the bottle
+          T.box(0.31, 0.39, 0.54, 0.07, 0.07, 0.14, '#F4EFE6');                                                                       // the cups
+        }, { onTop: true })],
     },
-    officecabinet: { parts: () => [B(0, 0, 0, 0.5, 0.6, 1.2, '#8E98A6')] },
-    officeplant: { parts: () => [B(0.05, 0.05, 0, 0.4, 0.4, 0.32, '#B07A55'), B(0.1, 0.1, 0.32, 0.3, 0.3, 0.8, '#3F7A4A')] },
+    officecabinet: {
+      // A four-drawer filing cabinet: a steel body, a lip on top, drawer fronts with a handle and a label holder each. The front is local +y.
+      parts: () => [B(0, 0, 0, 0.5, 0.6, 1.2, '#8E98A6'), B(-0.01, -0.01, 1.2, 0.52, 0.62, 0.03, '#7C8694'),
+        F(0, 0.6, 0.5, 0.66, (T) => {
+          const fy = 0.601;
+          for (let i = 0; i < 4; i++) {
+            const z0 = 0.05 + i * 0.285, z1 = z0 + 0.265;
+            T.poly([[0.03, fy, z0], [0.47, fy, z0], [0.47, fy, z1], [0.03, fy, z1]], '#A7B0BC', '#6B7482');
+            T.box(0.18, 0.6, z1 - 0.1, 0.14, 0.03, 0.025, '#5A6370');                                                                   // the handle
+            T.poly([[0.2, fy, z1 - 0.05], [0.3, fy, z1 - 0.05], [0.3, fy, z1 - 0.02], [0.2, fy, z1 - 0.02]], '#EFEAD9');                  // the label
+          }
+        }, { onTop: true })],
+    },
+    officeplant: {
+      // A leafy plant in a terracotta pot: a fan of long leaves in several greens, drawn far to near, with a slow sway.
+      parts: () => [B(0.08, 0.08, 0, 0.34, 0.34, 0.05, '#8A5A3B'), B(0.06, 0.06, 0.05, 0.38, 0.38, 0.2, '#B87A55'), B(0.04, 0.04, 0.25, 0.42, 0.42, 0.05, '#C98F68'),
+        B(0.08, 0.08, 0.3, 0.34, 0.34, 0.01, '#4A3426', { name: 'soil' }),
+        F(0.04, 0.04, 0.46, 0.46, (T, o, t) => {
+          const cx = 0.25, cy = 0.25, GREENS = ['#2F6A3F', '#3F7A4A', '#4F9459', '#5BA566', '#3A8050'], leaves = [];
+          for (let i = 0; i < 18; i++) {
+            const a = i * 2.39996, r = 0.1 + ((i * 7) % 5) * 0.035, zt = 0.62 + ((i * 5) % 7) * 0.1 + (i % 2) * 0.05, sway = Math.sin(t * 0.9 + i) * 0.012;
+            leaves.push({ a, r, zt, sway, col: GREENS[i % GREENS.length], d: Math.cos(a) + Math.sin(a) });
+          }
+          leaves.sort((p, q) => p.d - q.d);
+          for (const l of leaves) {
+            const bx = cx + Math.cos(l.a) * 0.03, by = cy + Math.sin(l.a) * 0.03, tx = cx + Math.cos(l.a) * l.r + l.sway, ty = cy + Math.sin(l.a) * l.r + l.sway, tz = l.zt;
+            const mx = bx + (tx - bx) * 0.55, my = by + (ty - by) * 0.55, mz = 0.31 + (tz - 0.31) * 0.62, px = -Math.sin(l.a) * 0.045, py = Math.cos(l.a) * 0.045;
+            T.poly([[bx, by, 0.31], [mx + px, my + py, mz], [tx, ty, tz], [mx - px, my - py, mz]], l.col, 'rgba(20,50,30,.45)');
+          }
+        }, { onTop: true })],
+    },
     officecounter: {
-      parts: () => [B(0, 0, 0, 2.2, 0.62, 0.9, '#C9C3B8'), B(0, 0, 0.9, 2.2, 0.62, 0.05, '#8E6B4E', { name: 'top' })],
+      // The sink counter: a cabinet with two doors, a wood top with a steel sink and a tall tap, soap, and a rack with plates. The front is local +y.
+      parts: () => [B(0, 0, 0, 1.2, 0.62, 0.88, '#C9C3B8'), B(0, 0, 0.88, 1.2, 0.62, 0.05, '#8E6B4E', { name: 'top' }),
+        F(0, 0, 1.2, 0.62, (T) => {
+          const fy = 0.621, z0 = 0.93;
+          T.line([0.6, fy, 0.06], [0.6, fy, 0.84], 'rgba(60,50,40,.45)', 1.2);
+          T.poly([[0.04, fy, 0.08], [0.58, fy, 0.08], [0.58, fy, 0.84], [0.04, fy, 0.84]], 'rgba(255,255,255,.07)', 'rgba(60,50,40,.3)');
+          T.poly([[0.62, fy, 0.08], [1.16, fy, 0.08], [1.16, fy, 0.84], [0.62, fy, 0.84]], 'rgba(255,255,255,.07)', 'rgba(60,50,40,.3)');
+          [0.5, 0.64].forEach(x => T.box(x - 0.015, 0.62, 0.62, 0.03, 0.02, 0.12, '#8E98A6'));
+          T.poly([[0.08, 0.12, z0 + 0.002], [0.56, 0.12, z0 + 0.002], [0.56, 0.5, z0 + 0.002], [0.08, 0.5, z0 + 0.002]], '#B9C3CE', '#7C8694');   // the sink
+          T.poly([[0.12, 0.16, z0 + 0.004], [0.52, 0.16, z0 + 0.004], [0.52, 0.46, z0 + 0.004], [0.12, 0.46, z0 + 0.004]], '#8E9AA8');
+          T.box(0.52, 0.08, z0, 0.04, 0.04, 0.26, '#C9CED6'); T.box(0.36, 0.08, z0 + 0.22, 0.2, 0.04, 0.04, '#C9CED6'); T.box(0.36, 0.08, z0 + 0.14, 0.04, 0.04, 0.1, '#C9CED6');   // the tap
+          T.box(0.64, 0.42, z0, 0.07, 0.07, 0.13, '#7FC0E6');                                                                                  // the soap
+          T.box(0.78, 0.14, z0, 0.34, 0.3, 0.03, '#8E98A6');                                                                                   // the rack
+          [0.82, 0.9, 0.98, 1.06].forEach(x => T.box(x, 0.18, z0 + 0.03, 0.02, 0.22, 0.16, '#F4EFE6'));                                        // plates on edge
+        }, { onTop: true })],
     },
     officecoffee: {
       // The coffee station: a cabinet with two doors, a wood top, a machine with its glass pot, a stack of mugs and a tin. Its front is local +y; the piece is set against the window wall turned (rot 3).
@@ -3151,8 +3204,40 @@ export function createHouseArt(ctx0, opts = {}) {
           T.box(0.86, 0.32, z0, 0.16, 0.16, 0.12, '#C9A24A');                                     // the tin
         }, { onTop: true })],
     },
-    officefridge: { parts: () => [B(0, 0, 0, 0.7, 0.7, 1.9, '#E8EEF2')] },
-    officevending: { parts: () => [B(0, 0, 0, 0.7, 0.7, 1.8, '#2F5FA8'), B(0.05, 0.62, 0.9, 0.6, 0.06, 0.7, '#CFE4F0')] },
+    officefridge: {
+      // An office fridge: a freezer door over a tall door with a handle each, a gap between, a few magnets and a note. The front is local +y.
+      parts: () => [B(0, 0, 0, 0.7, 0.7, 1.9, '#E3E9EE'), B(0.005, 0.005, 1.9, 0.69, 0.69, 0.02, '#CBD3DA'),
+        F(0, 0.7, 0.7, 0.76, (T) => {
+          const fy = 0.701;
+          T.poly([[0.02, fy, 1.28], [0.68, fy, 1.28], [0.68, fy, 1.88], [0.02, fy, 1.88]], '#F2F5F8', 'rgba(0,0,0,.2)');                    // the freezer door
+          T.poly([[0.02, fy, 0.06], [0.68, fy, 0.06], [0.68, fy, 1.24], [0.02, fy, 1.24]], '#EAEFF3', 'rgba(0,0,0,.2)');                    // the main door
+          T.poly([[0.02, fy, 1.24], [0.68, fy, 1.24], [0.68, fy, 1.28], [0.02, fy, 1.28]], '#8E98A6');                                      // the gap
+          T.box(0.57, 0.7, 1.34, 0.035, 0.03, 0.34, '#9AA4B2'); T.box(0.57, 0.7, 0.78, 0.035, 0.03, 0.34, '#9AA4B2');                      // the handles
+          T.poly([[0.12, fy, 1.0], [0.2, fy, 1.0], [0.2, fy, 1.09], [0.12, fy, 1.09]], '#F2C14E');                                          // a note
+          T.poly([[0.24, fy, 0.9], [0.29, fy, 0.9], [0.29, fy, 0.95], [0.24, fy, 0.95]], '#3D8BD6');                                        // a magnet
+          T.poly([[0.02, fy, 0], [0.68, fy, 0], [0.68, fy, 0.06], [0.02, fy, 0.06]], '#2B2F38');                                            // the kick plate
+        }, { onTop: true })],
+    },
+    officevending: {
+      // A snack machine: a lit sign over a window of snacks on coils, a keypad and a coin slot on the right, a flap at the bottom. The front is local +y.
+      parts: () => [B(0, 0, 0, 0.7, 0.7, 1.8, '#2F5FA8'), B(0.005, 0.005, 1.8, 0.69, 0.69, 0.02, '#244B86'),
+        F(0, 0.7, 0.7, 0.76, (T) => {
+          const fy = 0.701;
+          T.poly([[0.04, fy, 1.66], [0.66, fy, 1.66], [0.66, fy, 1.76], [0.04, fy, 1.76]], '#F2C14E', '#C99A2E');                            // the lit sign
+          T.poly([[0.05, fy, 0.62], [0.46, fy, 0.62], [0.46, fy, 1.62], [0.05, fy, 1.62]], '#16202E', '#0E1622');                            // the glass
+          const PACKS = ['#E0453A', '#F2C14E', '#3F9A5A', '#3D8BD6', '#B76AC9', '#F08A3A'];
+          [1.46, 1.24, 1.02, 0.80].forEach((z, r) => {
+            for (let k = 0; k < 5; k++) { const x = 0.07 + k * 0.078, c = PACKS[(r * 2 + k) % PACKS.length]; T.poly([[x, fy, z], [x + 0.06, fy, z], [x + 0.06, fy, z + 0.14], [x, fy, z + 0.14]], c); }
+            T.line([0.06, fy, z - 0.01], [0.45, fy, z - 0.01], '#6B7482', 1);
+          });
+          T.poly([[0.49, fy, 0.62], [0.65, fy, 0.62], [0.65, fy, 1.62], [0.49, fy, 1.62]], '#1D3E7A');                                        // the panel
+          T.poly([[0.51, fy, 1.46], [0.63, fy, 1.46], [0.63, fy, 1.56], [0.51, fy, 1.56]], '#9BE8B4', '#2F6B4F');                            // its display
+          for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) { const x = 0.51 + c * 0.04, z = 1.3 - r * 0.07; T.poly([[x, fy, z], [x + 0.03, fy, z], [x + 0.03, fy, z + 0.05], [x, fy, z + 0.05]], '#C9D4E5'); }
+          T.poly([[0.54, fy, 0.84], [0.6, fy, 0.84], [0.6, fy, 0.9], [0.54, fy, 0.9]], '#0E1622');                                          // the coin slot
+          T.poly([[0.07, fy, 0.1], [0.46, fy, 0.1], [0.46, fy, 0.46], [0.07, fy, 0.46]], '#10141B', '#0A0D12');                              // the delivery flap
+          T.poly([[0.0, fy, 0], [0.7, fy, 0], [0.7, fy, 0.07], [0.0, fy, 0.07]], '#1F4580');
+        }, { onTop: true })],
+    },
     garden: {    
       parts: () => [F(0, 0, 2.0, 1.0, (T, o, t) => { T.box(0, 0, 0, 2.0, 1.0, 0.28, '#8A6A50'); T.poly([[0.08, 0.08, 0.281], [1.92, 0.08, 0.281], [1.92, 0.92, 0.281], [0.08, 0.92, 0.281]], (o.wet || 0) > 0.3 ? '#4A3426' : '#7A5E44');
         if (usingSlot(o.id + ':t')) { const [gx, gy] = T.W(1.0, 0.5); PFX.emit(o.id + ':splash', 'splash', o.level, gx, gy, 0.55, 1); }

@@ -1,6 +1,7 @@
 import { checkPlacement, snapEdges, snapToWall, wallSnaps, slideAlong, type WallSnap, nearestFit, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, surfaceUnder, putOn, takeOff, carryOnTop, fridgeUnder, swapModel, type PlacementCheck, type Pose } from '../state/arrange';
 import { looksFor, changeLook, parseLook } from '../state/skins';
 import { TYPES, footprint, displayName, type ObjectInstance } from '../state/objects';
+import { IS_DEMO } from '../kernel/config';
 import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, WX, WY, roomName } from '../state/house';
 import { buildWorld } from '../state/agents';
 import { addFood } from '../state/vitals';
@@ -268,6 +269,19 @@ export function createArrange(g: Game): Partial<Game> {
     refit(o);
     void start;
   }
+  /** The demo: the office's pieces as lines of the starting layout (`INITIAL_OBJS`), copied to the clipboard, so a finished arrangement can go into the main game. */
+  function copyOfficeLayout(): void {
+    const lines = world.objs.filter((o) => o.level === 5 && TYPES[o.type]).map((o) => `  { id: '${o.id}', type: '${o.type}', level: 5, x: ${Math.round(o.x * 100) / 100}, y: ${Math.round(o.y * 100) / 100}, rot: ${o.rot} },`);
+    const text = lines.join('\n');
+    (window as unknown as { __officeLayout?: string }).__officeLayout = text;
+    const done = (): void => log(`Copied the office layout (${lines.length} pieces). Paste it to send it on.`);
+    const fallback = (): void => {
+      const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch { log('Could not copy. The layout is in the console.'); console.log(text); }
+      ta.remove();
+    };
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+  }
   function recolourHeld(): void {
     const o = heldObj ?? selectedObj ?? hoverObj;
     const col = o && nextColour(o);
@@ -417,6 +431,7 @@ export function createArrange(g: Game): Partial<Game> {
     const o = selectedObj;
     const wall = selectedWall ? walls.find((w) => w.id === selectedWall) ?? null : null;
     return {
+      exportable: IS_DEMO && view.level === 5,
       floors: [...LEVEL_NAMES],
       order: FLOOR_ORDER.filter(l => l !== ATTIC || hasAttic()),
       stored: [...storage.map(o => ({ id: o.id, name: displayName(o), color: o.col })), ...art.storedWallObjs().map((w) => ({ id: w.id, name: w.name, color: w.col }))],
@@ -548,5 +563,5 @@ export function createArrange(g: Game): Partial<Game> {
     dragCandidate = null;
     wallDrag = null;
   }
-  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, wallAt, selectWall, takeDownWall, rehangWall, commitMove, rotateSelected, toggleWallSnap, slideAlongWall, recolourHeld, useLook, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, setDown, putBack, putFoodAway, inHand, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
+  return { copyOfficeLayout, storage, toggleArrange, enterArrange, exitArrange, selectObject, wallAt, selectWall, takeDownWall, rehangWall, commitMove, rotateSelected, toggleWallSnap, slideAlongWall, recolourHeld, useLook, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, setDown, putBack, putFoodAway, inHand, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
 }

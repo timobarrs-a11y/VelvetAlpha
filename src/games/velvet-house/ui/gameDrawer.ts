@@ -38,6 +38,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onArrangePick: (id) => { const o = world.objs.find(q => q.id === id); if (o) g.selectObject(o); else if (id.startsWith('wall-')) g.selectWall(id); },
     onArrangeRotate: () => g.rotateSelected(),
     onArrangeWall: () => g.toggleWallSnap(),
+    onArrangeCopy: () => g.copyOfficeLayout(),
     onArrangeSlide: (side) => g.slideAlongWall(side),
     onArrangeSet: () => g.setDown(),
     onArrangeBack: () => g.putBack(),

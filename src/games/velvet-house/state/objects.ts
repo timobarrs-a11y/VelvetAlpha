@@ -172,7 +172,8 @@ export const TYPES: Record<string, ObjectTypeDef> = {
     spots: { f: { stand: [0.25, 1.0], dir: [0, -1], tag: 'o_files' } } },
   officeplant: { W: 0.5, D: 0.5, h: 1.2, fixed: true, name: 'Office plant',
     spots: { f: { stand: [0.25, 0.95], dir: [0, -1], tag: 'o_plant' } } },
-  officecounter: { W: 2.2, D: 0.62, h: 1.3, fixed: true, name: 'Break room counter' },
+  officecounter: { W: 1.2, D: 0.62, h: 1.2, fixed: true, name: 'Sink counter',
+    spots: { f: { stand: [0.6, 1.05], dir: [0, -1], tag: 'o_sink' } } },
   // The coffee station: a low counter with the machine and the mugs, set along the window wall (rot 3, its front toward the room).
   officecoffee: { W: 1.1, D: 0.55, h: 1.35, fixed: true, name: 'Coffee station',
     spots: { f: { stand: [0.55, 1.0], dir: [0, -1], tag: 'o_coffee' } } },
@@ -408,7 +409,7 @@ export const STARTER_TV_IDS = ['walltv'];
 /** The office's own pieces. A house saved before the office existed is given them once, so they are there when it is unlocked (see `kernel/config.ts`). */
 export const STARTER_OFFICE_IDS = ['off-desk2', 'off-desk3', 'off-desk4', 'off-desk5', 'off-chair2', 'off-chair3', 'off-chair4', 'off-chair5', 'off-printer', 'off-cooler', 'off-cabinet', 'off-plant', 'off-counter', 'off-fridge', 'off-vending', 'off-runner', 'off-boardspot', 'off-doorspot', 'off-coffee', 'off-boss', 'off-bosschair', 'off-visitor', 'off-rug'];
 /** Bumped when the office's layout changes: a house saved with an older layout has its office pieces replaced (and only those) once on load. */
-export const OFFICE_LAYOUT = 7;
+export const OFFICE_LAYOUT = 8;
 
 export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'stair01', type: 'flightY', level: 0, x: 9.0, y: 0, rot: 0 },
@@ -431,16 +432,16 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'off-chair4', type: 'officechair', level: 5, x: 3.2, y: 3.85, rot: 0 },
   { id: 'off-chair5', type: 'officechair', level: 5, x: 3.2, y: 6.05, rot: 0 },
   // The vending machine stands where the printer was, on the back wall between the whiteboard and the meeting door; the printer is at the front right.
-  { id: 'off-vending', type: 'officevending', level: 5, x: 2.8, y: 0.1, rot: 0 },
-  { id: 'off-cooler', type: 'officecooler', level: 5, x: 6.15, y: 0.2, rot: 0 },
-  { id: 'off-cabinet', type: 'officecabinet', level: 5, x: 0.2, y: 7.2, rot: 2 },
+  { id: 'off-vending', type: 'officevending', level: 5, x: 2.5, y: 0.1, rot: 0 },
+  { id: 'off-cooler', type: 'officecooler', level: 5, x: 6.15, y: 0.1, rot: 0 },
+  { id: 'off-cabinet', type: 'officecabinet', level: 5, x: 0.1, y: 2.7, rot: 3 },
   { id: 'off-boardspot', type: 'officeboardspot', level: 5, x: 0.85, y: 0.3, rot: 0 },
   { id: 'off-doorspot', type: 'officedoorspot', level: 5, x: 4.75, y: 0.3, rot: 0 },
   // The plant stands in the front-left corner beside the filing cabinet, turned to face the room; the coffee station is under the first window.
-  { id: 'off-plant', type: 'officeplant', level: 5, x: 0.95, y: 7.4, rot: 2 },
-  { id: 'off-coffee', type: 'officecoffee', level: 5, x: 0.1, y: 1.0, rot: 3 },
-  { id: 'off-counter', type: 'officecounter', level: 5, x: 7.0, y: 5.0, rot: 0 },
-  { id: 'off-fridge', type: 'officefridge', level: 5, x: 9.25, y: 5.0, rot: 0 },
+  { id: 'off-plant', type: 'officeplant', level: 5, x: 0.1, y: 0.1, rot: 3 },
+  { id: 'off-coffee', type: 'officecoffee', level: 5, x: 0.1, y: 0.8, rot: 3 },
+  { id: 'off-counter', type: 'officecounter', level: 5, x: 3.3, y: 0.1, rot: 0 },
+  { id: 'off-fridge', type: 'officefridge', level: 5, x: 0.1, y: 2.0, rot: 3 },
   { id: 'off-printer', type: 'officeprinter', level: 5, x: 8.3, y: 7.2, rot: 2 },
   { id: 'off-runner', type: 'officerunner', level: 5, x: 4.7, y: 0.0, rot: 0 },
   { id: 'off-rug', type: 'officerug', level: 5, x: 7.0, y: 0.2, rot: 0 },

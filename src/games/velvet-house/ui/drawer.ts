@@ -28,6 +28,7 @@ export interface DrawerCallbacks {
   onArrangePick?: (id: string) => void;
   onArrangeRotate?: () => void;
   onArrangeWall?: () => void;
+  onArrangeCopy?: () => void;
   onArrangeSlide?: (side: number) => void;
   onArrangeSet?: () => void;
   onArrangeBack?: () => void;
@@ -88,6 +89,8 @@ export interface ArrangeItem {
 }
 
 export interface ArrangeState {
+  /** The demo, on the office floor: a button copies where every office piece is, to be pasted into the game's layout. */
+  exportable?: boolean;
   floors: string[];
   // Floor numbers in the order to list them (the attic only once built).
   order: number[];
@@ -347,6 +350,7 @@ export function createDrawer(cb: DrawerCallbacks): {
             ${sel.loose ? `<button data-arr="back" title="Put it back where it was (Esc)">${ARR_ICON.back}<span>Put it back</span></button>` : ''}
             ${sel.canColour ? `<button data-arr="colour" title="Change colour (C)">${ARR_ICON.colour}<span>Colour</span></button>` : ''}
             ${sel.canStore ? `<button data-arr="store" title="Put it in storage">${ARR_ICON.store}<span>Store</span></button>` : ''}
+            ${a.exportable ? '<button data-arr="copy" title="Copy where every office piece is">Copy layout</button>' : ''}
             <button data-arr="close" class="vh-arr-close" title="Leave arrange mode">Close</button>
           </div>
           </div>
@@ -356,7 +360,7 @@ export function createDrawer(cb: DrawerCallbacks): {
           ${sel.wall ? '<p class="vh-arr-why vh-arr-ok">Drag it along the wall, up or down.</p>' : sel.loose && !sel.fits ? `<p class="vh-arr-why">${esc(sel.reason ?? "It doesn't fit there.")} Move it, or put it back.</p>` : sel.loose ? '<p class="vh-arr-why vh-arr-ok">Drag it, turn it, then tap Set it down.</p>' : ''}
         </div>`
       : `<p class="vh-arr-hint">${ARR_ICON.hand}<span>Tap a piece below, or tap one in the house, then drag it where you want it.</span></p>
-          <div class="vh-arr-acts"><button data-arr="close" class="vh-arr-close" title="Leave arrange mode">Close</button></div>`;
+          <div class="vh-arr-acts">${a.exportable ? '<button data-arr="copy" title="Copy where every office piece is">Copy layout</button>' : ''}<button data-arr="close" class="vh-arr-close" title="Leave arrange mode">Close</button></div>`;
     const order = [a.level, ...a.order.filter(l => l !== a.level)];
     const groups = order.map((level) => {
       const name = a.floors[level];
@@ -394,6 +398,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     sec.querySelectorAll<HTMLElement>('[data-arr-unstore]').forEach(b => b.addEventListener('click', () => cb.onArrangeUnstore?.(b.dataset.arrUnstore!)));
     sec.querySelector('[data-arr="rotate"]')?.addEventListener('click', () => cb.onArrangeRotate?.());
     sec.querySelector('[data-arr="wall"]')?.addEventListener('click', () => cb.onArrangeWall?.());
+    sec.querySelector('[data-arr="copy"]')?.addEventListener('click', () => cb.onArrangeCopy?.());
     sec.querySelector('[data-arr="slide-l"]')?.addEventListener('click', () => cb.onArrangeSlide?.(-1));
     sec.querySelector('[data-arr="slide-r"]')?.addEventListener('click', () => cb.onArrangeSlide?.(1));
     sec.querySelector('[data-arr="set"]')?.addEventListener('click', () => cb.onArrangeSet?.());

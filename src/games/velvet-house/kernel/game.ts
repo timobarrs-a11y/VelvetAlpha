@@ -159,6 +159,8 @@ export interface Game {
   rotateSelected(): void;
   /** Arrange: set the selected piece against the nearest wall (again to free it), and slide it along the wall (-1 toward the screen's left, 1 toward its right). */
   toggleWallSnap(): void;
+  /** The demo: copy where every office piece is (ready to paste into the game's starting layout). */
+  copyOfficeLayout(): void;
   slideAlongWall(side: number): void;
   tryDevMoney(text: string): boolean;
   tryUnlock(text: string): boolean;
