@@ -296,7 +296,10 @@ export function createStudio(g: Game): Partial<Game> {
       <div class="vh-st-row">${tool('pencil', 'Draw')}${tool('erase', 'Erase')}${tool('fill', 'Fill')}${chip('Mirror', 'data-pxmirror', '1', px.mirror)}</div>
       <div class="vh-st-row">${chip('8 × 8', 'data-pxsize', '8', px.w === 8)}${chip('16 × 16', 'data-pxsize', '16', px.w === 16)}
         <button type="button" class="vh-st-chip" data-pxundo ${px.undo.length ? '' : 'disabled'}>Undo</button><button type="button" class="vh-st-chip" data-pxclear>Clear</button></div>
-      ${slider('data-pxscale', 'Print size', 0.25, 4, 0.025, cur.pattern?.scale ?? 1)}`;
+      ${slider('data-pxscale', 'Print size', 0.25, 4, 0.025, cur.pattern?.scale ?? 1)}
+      <h5>The yard</h5>
+      <p class="vh-st-hint">Lay this picture on the grass of the yard. It also works with a code someone shared.</p>
+      <div class="vh-st-row"><button type="button" class="vh-st-primary" data-pxyard ${cur.pattern?.kind === 'pixel' ? '' : 'disabled'}>Use on the yard</button><button type="button" class="vh-st-chip" data-pxyardoff>Back to grass</button></div>`;
   }
 
   function drawPixelGrid(): void {
@@ -506,6 +509,8 @@ export function createStudio(g: Game): Partial<Game> {
     }
     if (d.pxundo !== undefined) { const prev = px.undo.pop(); if (prev) { px.data = prev; applyPixels(); renderPane(); } return; }
     if (d.pxclear !== undefined) { pushUndo(); px.data.fill(0); applyPixels(); renderPane(); return; }
+    if (d.pxyard !== undefined && cur.pattern?.kind === 'pixel' && cur.pattern.pixels) { g.art.setYardDesign(cur.pattern.pixels); say('The yard has your design now.'); return; }
+    if (d.pxyardoff !== undefined) { g.art.setYardDesign(null); say('The yard is back to grass.'); return; }
     if (d.st === 'make') return make();
     if (d.st === 'surprise') { cur = generateGarment(Math.floor(Math.random() * 0xffffff), { rarity: 'rare' }); cur = { ...cur, rarity: 'one-of-a-kind' }; renderPane(); drawPreview(performance.now() / 1000); say('Something new.'); return; }
     if (d.remix) {

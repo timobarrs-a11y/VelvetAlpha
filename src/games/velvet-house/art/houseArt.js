@@ -4169,7 +4169,7 @@ export function createHouseArt(ctx0, opts = {}) {
     });
   }
 
-  const YARD = { tiles: [], rainAt: 0, rainUntil: 0, rainCheck: -1, rainLogged: false };
+  const YARD = { tiles: [], rainAt: 0, rainUntil: 0, rainCheck: -1, rainLogged: false, design: null };
   for (let i = 0; i < 10; i++) for (let j = 0; j < 8; j++) YARD.tiles.push({ i, j, len: 0.3 + rand() * 0.15, water: 0.6 + rand() * 0.2, weed: 0, seed: rand(), burn: 0, mowedAt: -9999, leaves: 0, snow: 0 });
   const isPatio = (i, j) => i <= 2 && j >= 2 && j <= 4;
   const tileAt = (x, y) => YARD.tiles[Math.min(9, Math.max(0, Math.floor(x))) * 8 + Math.min(7, Math.max(0, Math.floor(y)))];
@@ -4185,6 +4185,32 @@ export function createHouseArt(ctx0, opts = {}) {
     const dark = 1 - t.len * 0.16 + (absMin() - t.mowedAt < 2160 ? (t.j % 2 ? 0.06 : -0.05) : 0);
     return `rgb(${c.map(v => Math.round(Math.min(255, v * dark))).join(',')})`;
   }
+  // A player's own pixel design (8 or 16 cells a side, one palette colour per cell; 0 is empty). It is drawn once into a
+  // small canvas, and each grass tile paints that canvas through its own isometric transform, so it repeats per tile.
+  let yardPat = null, yardPatKey = '';
+  function yardDesignPattern() {
+    const d = YARD.design; if (!d) return null;
+    const key = `${d.w}|${d.palette.join(',')}|${d.data}`;
+    if (key !== yardPatKey) {
+      const cv = document.createElement('canvas'); cv.width = d.w; cv.height = d.w;
+      const c2 = cv.getContext('2d');
+      for (let k = 0; k < d.data.length; k++) { const v = +d.data[k]; if (v) { c2.fillStyle = d.palette[v - 1]; c2.fillRect(k % d.w, Math.floor(k / d.w), 1, 1); } }
+      yardPat = ctx.createPattern(cv, 'repeat'); yardPat.setTransform(new DOMMatrix([1 / d.w, 0, 0, 1 / d.w, 0, 0]));
+      yardPatKey = key;
+    }
+    return yardPat;
+  }
+  function paintYardDesign(i, j) {
+    const pat = yardDesignPattern(); if (!pat) return;
+    const o = iso(i, j, 0), ex = iso(i + 1, j, 0), ey = iso(i, j + 1, 0);
+    ctx.save(); ctx.imageSmoothingEnabled = false; ctx.fillStyle = pat;
+    ctx.transform(ex[0] - o[0], ex[1] - o[1], ey[0] - o[0], ey[1] - o[1], o[0], o[1]);
+    ctx.fillRect(0, 0, 1, 1); ctx.restore();
+  }
+  /** Sets the yard's design from a pixel picture, or takes it away (null: back to plain grass). */
+  function setYardDesign(d) {
+    YARD.design = d && d.w && d.data && d.data.length === d.w * d.w ? { w: d.w, palette: d.palette.slice(0, 7), data: d.data } : null;
+  }
   function drawYardGround() {
     YARD.tiles.forEach(t => {
       const { i, j } = t;
@@ -4193,8 +4219,10 @@ export function createHouseArt(ctx0, opts = {}) {
         for (let k = 1; k <= 3; k++) { const pts = []; const r = 0.1 + k * 0.12; for (let a = 0; a <= Math.PI * 2 + 0.01; a += 0.3) pts.push([i + 0.5 + Math.cos(a + k * 0.7 + j) * r * (1 + 0.25 * Math.sin(a * 2 + i)), j + 0.5 + Math.sin(a + k * 0.7 + j) * r * 0.8, 0.001]); poly(pts, null, 'rgba(160,116,60,.55)', 1); }
         return; }
       const col = grassColor(t); poly([[i, j, 0], [i + 1, j, 0], [i + 1, j + 1, 0], [i, j + 1, 0]], col, 'rgba(40,70,30,.12)', 0.6);
+      // A player's own design replaces the scattered leaves: its empty cells keep the grass.
+      if (YARD.design) paintYardDesign(i, j);
       // Little leaves scattered over the grass, dark and light, turned by place so no two tiles match.
-      for (let k = 0; k < 7; k++) { const h = ((i * 73 + j * 151 + k * 97) * 2654435761) >>> 0; const u = 0.1 + (h % 80) / 100, v = 0.1 + ((h >>> 8) % 80) / 100, rot = ((h >>> 16) % 4) * Math.PI / 2; const c2 = Math.cos(rot), s2 = Math.sin(rot); const tri = [[0, -0.1], [0.075, 0.07], [-0.075, 0.07]].map(([x, y]) => [i + u + x * c2 - y * s2, j + v + x * s2 + y * c2, 0.002]); poly(tri, (h >>> 3) % 3 === 0 ? '#2C8A3C' : '#5CC05E', null); }
+      if (!YARD.design) for (let k = 0; k < 7; k++) { const h = ((i * 73 + j * 151 + k * 97) * 2654435761) >>> 0; const u = 0.1 + (h % 80) / 100, v = 0.1 + ((h >>> 8) % 80) / 100, rot = ((h >>> 16) % 4) * Math.PI / 2; const c2 = Math.cos(rot), s2 = Math.sin(rot); const tri = [[0, -0.1], [0.075, 0.07], [-0.075, 0.07]].map(([x, y]) => [i + u + x * c2 - y * s2, j + v + x * s2 + y * c2, 0.002]); poly(tri, (h >>> 3) % 3 === 0 ? '#2C8A3C' : '#5CC05E', null); }
       if ((t.snow || 0) > 0.05) { poly([[i, j, 0.004], [i + 1, j, 0.004], [i + 1, j + 1, 0.004], [i, j + 1, 0.004]], `rgba(246,248,250,${Math.min(0.96, t.snow * 1.1)})`); if (t.snow > 0.5) return; }
       if ((t.leaves || 0) > 0.12) { const n = Math.floor(t.leaves * 9); for (let k = 0; k < n; k++) { const [sx, sy] = iso(i + ((k * 41 + i * 17 + j * 5) % 10) / 10, j + ((k * 29 + j * 13 + i * 7) % 10) / 10, 0.005); ell(sx, sy, 2.6, 1.4, ['#C2632B', '#D98F2B', '#8A5A3B', '#B5482A'][(k + i + j) % 4], null, k); } }
       if (t.len > 0.3) { const n = Math.floor(t.len * 8), hgt = 3 + t.len * 10, bc = shade(col.startsWith('rgb') ? '#4E8A3A' : col, -0.1); ctx.strokeStyle = t.water < 0.3 ? 'rgba(140,120,60,.8)' : 'rgba(58,110,44,.85)'; ctx.lineWidth = 1; ctx.beginPath(); for (let k = 0; k < n; k++) { const px = i + ((k * 37 + i * 13 + j * 7) % 10) / 10, py = j + ((k * 53 + j * 11 + i * 3) % 10) / 10, [sx, sy] = iso(px, py, 0), sw = Math.sin(animT * 1.5 + px * 2 + py) * 1.5; ctx.moveTo(sx - 1.5, sy); ctx.lineTo(sx + sw - 0.5, sy - hgt); ctx.moveTo(sx + 1.5, sy); ctx.lineTo(sx + sw + 1.5, sy - hgt * 0.8); } ctx.stroke(); }
@@ -4461,7 +4489,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (Array.isArray(s.ROOMLOOK)) ROOMLOOK.forEach((r, i) => { Object.keys(r).forEach(k => delete r[k]); Object.assign(r, s.ROOMLOOK[i] || {}); });
     WALLOBJS.length = 0; (s.WALLOBJS || []).forEach(w => { if (w && WTYPES[w.type]) { if (!w.id) w.id = wallId(); WALLOBJS.push(w); } });
     WALLSTORE.length = 0; (s.WALLSTORE || []).forEach(w => { if (w && WTYPES[w.type]) { if (!w.id) w.id = wallId(); WALLSTORE.push(w); } });
-    if (s.yard && Array.isArray(s.yard.t)) { s.yard.t.forEach((a, k) => { const t = YARD.tiles[k]; if (t && Array.isArray(a)) [t.len, t.water, t.weed, t.burn, t.mowedAt] = a; }); YARD.rainAt = s.yard.rainAt || 0; YARD.rainUntil = s.yard.rainUntil || 0; YARD.rainCheck = s.yard.rainCheck ?? -1; }
+    if (s.yard && Array.isArray(s.yard.t)) { s.yard.t.forEach((a, k) => { const t = YARD.tiles[k]; if (t && Array.isArray(a)) [t.len, t.water, t.weed, t.burn, t.mowedAt] = a; }); YARD.rainAt = s.yard.rainAt || 0; YARD.rainUntil = s.yard.rainUntil || 0; YARD.rainCheck = s.yard.rainCheck ?? -1; setYardDesign(s.yard.design); }
     if (typeof s.dishes === 'number') dishes = s.dishes;
     if (typeof s.power === 'boolean') power = s.power;
     if (typeof s.laundryPile === 'number') laundryPile = s.laundryPile;
@@ -5557,7 +5585,7 @@ export function createHouseArt(ctx0, opts = {}) {
     ROOMLOOK: ROOMLOOK.map(r => JSON.parse(JSON.stringify(r))),
     WALLOBJS: WALLOBJS.map(w => Object.assign({}, w)),
     WALLSTORE: WALLSTORE.map(w => Object.assign({}, w)),
-    yard: { t: YARD.tiles.map(t => [t.len, t.water, t.weed, t.burn, t.mowedAt]), rainAt: YARD.rainAt, rainUntil: YARD.rainUntil, rainCheck: YARD.rainCheck },
+    yard: { t: YARD.tiles.map(t => [t.len, t.water, t.weed, t.burn, t.mowedAt]), rainAt: YARD.rainAt, rainUntil: YARD.rainUntil, rainCheck: YARD.rainCheck, design: YARD.design },
   });
   const lookInfo = (kind, key) => (kind === 'paper' ? PAPERS[key] : kind === 'floor' ? FLOORS[key] : null) || null;
   function toggleObjectLight(id) { const next = objectLights.get(id) !== true; objectLights.set(id, next); return next; }
@@ -5788,5 +5816,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, roomLook, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, roomLook, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, setYardDesign, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
 }

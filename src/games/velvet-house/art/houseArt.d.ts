@@ -7,6 +7,9 @@ import type { QualityTier } from '../engine/qualityTier';
 
 export type WallMode = 'cut' | 'up' | 'down';
 
+/** A player's pixel picture for the yard: `data` is one digit per cell (0 empty, 1 to 7 a palette colour), `w` cells a side. */
+export interface YardDesign { w: number; palette: string[]; data: string }
+
 export interface PersonFrame {
   level: number;
   x: number;
@@ -147,7 +150,9 @@ export interface HouseArt {
   /** Makes pictures (photos by url, or gradients by colour stops) available as wallpaper ids. */
   registerPictures(list: Array<{ id: string; base: string; url?: string; stops?: Array<[number, string]> }>): void;
   /** The paint, wallpaper and floor of each level, for saving. */
-  exportLooks(): { LOOKS: Array<{ paint: string; paper: string | null; floor: string }>; ROOMLOOK: Array<Record<string, unknown>>; WALLOBJS: unknown[]; yard: { t: number[][]; rainAt: number; rainUntil: number; rainCheck: number } };
+  exportLooks(): { LOOKS: Array<{ paint: string; paper: string | null; floor: string }>; ROOMLOOK: Array<Record<string, unknown>>; WALLOBJS: unknown[]; yard: { t: number[][]; rainAt: number; rainUntil: number; rainCheck: number; design: YardDesign | null } };
+  /** Lays a player's pixel design on the yard's grass, or takes it away (null: plain grass). */
+  setYardDesign(design: YardDesign | null): void;
   getLooks(): Array<{ paint: string; paper: string | null; floor: string }>;
   /** The drawing recipe for a wallpaper or floor id, for shop thumbnails. */
   lookInfo(kind: 'paper' | 'floor', key: string): { pat?: string; kind?: string; base?: string; ink?: string; ink2?: string; a?: string; b?: string; line?: string; url?: string; stops?: Array<[number, string]> } | null;
