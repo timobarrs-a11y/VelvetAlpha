@@ -1,7 +1,7 @@
 import { ATTIC } from '../state/house';
 import { LEVEL_COUNT, FLOOR_ORDER } from '../state/scenes';
 import { type AgentId } from '../state/agents';
-import { qualityManager } from '../engine/qualityTier';
+import { applyPlayerQuality, type PlayerQuality } from '../engine/qualityTier';
 import { SPEEDS, WALL_MODES, IS_DEMO } from '../kernel/config';
 import { WEATHER_OVERRIDES, type WeatherOverride } from '../state/weather';
 import type { Game } from '../kernel/game';
@@ -9,10 +9,10 @@ import type { Game } from '../kernel/game';
 export function createControls(g: Game): Partial<Game> {
   const { app, people, view, canvas, btn, personEl, hasAttic } = g;
   // Controls
-  const QUALITY_CHOICES = [null, 'high', 'medium', 'low'] as const;
-  const QUALITY_LABELS = ['Auto', 'High', 'Medium', 'Low'];
-  try { g.s.qualityIdx = Math.max(0, Math.min(3, Number(localStorage.getItem('velvet-quality')) || 0)); } catch {}
-  const applyQuality = (): void => qualityManager.setPlayerOverride(QUALITY_CHOICES[g.s.qualityIdx]);
+  const QUALITY_CHOICES: PlayerQuality[] = ['auto', 'high', 'medium', 'low', 'ultra'];
+  const QUALITY_LABELS = ['Auto', 'High', 'Medium', 'Low', 'Ultra'];
+  try { g.s.qualityIdx = Math.max(0, Math.min(4, Number(localStorage.getItem('velvet-quality')) || 0)); } catch {}
+  const applyQuality = (): void => applyPlayerQuality(QUALITY_CHOICES[g.s.qualityIdx]);
   applyQuality();
   g.fit();
   const syncControls = (): void => {

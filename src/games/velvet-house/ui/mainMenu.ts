@@ -1,7 +1,7 @@
 import { SAVE_KEY } from '../kernel/config';
 import { loadSave } from '../state/save';
 import { isCurrentContent, CONTENT_VERSION } from '../state/saveMigration';
-import { qualityManager } from '../engine/qualityTier';
+import { applyPlayerQuality } from '../engine/qualityTier';
 import { fpsOn, setFpsOn } from '../engine/fpsMeter';
 import { postToParent } from '../bridge/protocol';
 import { clockText, DAYS, weekday } from '../state/time';
@@ -19,7 +19,7 @@ import { CODE_QUEUE_KEY } from '../systems/codeQueue';
 
 export type LaunchChoice = 'continue' | 'new' | 'demo';
 
-const QUALITY = [['Auto', null], ['High', 'high'], ['Medium', 'medium'], ['Low', 'low']] as const;
+const QUALITY = [['Auto', 'auto'], ['High', 'high'], ['Medium', 'medium'], ['Low', 'low'], ['Ultra', 'ultra']] as const;
 const esc = (t: string): string => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 interface SaveSummary { day: number; when: string; money: number; names: string }
@@ -153,7 +153,7 @@ export function showMainMenu(): Promise<LaunchChoice> {
 
     const settings = (): void => {
       let idx = 0;
-      try { idx = Math.max(0, Math.min(3, Number(localStorage.getItem('velvet-quality')) || 0)); } catch { /* none */ }
+      try { idx = Math.max(0, Math.min(4, Number(localStorage.getItem('velvet-quality')) || 0)); } catch { /* none */ }
       root.innerHTML = `
         <div class="vh-menu-card">
           <h2 class="vh-menu-h">Settings</h2>
@@ -165,7 +165,7 @@ export function showMainMenu(): Promise<LaunchChoice> {
       root.querySelectorAll<HTMLButtonElement>('[data-q]').forEach((b) => b.addEventListener('click', () => {
         const i = Number(b.dataset.q);
         try { localStorage.setItem('velvet-quality', String(i)); } catch { /* none */ }
-        qualityManager.setPlayerOverride(QUALITY[i][1]);
+        applyPlayerQuality(QUALITY[i][1]);
         root.querySelectorAll('[data-q]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
       }));
       root.querySelectorAll<HTMLButtonElement>('[data-fps]').forEach((b) => b.addEventListener('click', () => {

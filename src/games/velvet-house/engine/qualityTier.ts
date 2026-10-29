@@ -74,6 +74,12 @@ class QualityManager {
     return this.playerOverride ?? this.tier;
   }
 
+  /** Ultra: draw at the screen's full pixel ratio (up to 3x). Only while the game is at its top tier; slow devices still step down. */
+  private ultra = false;
+  setUltra(on: boolean): void {
+    this.ultra = on;
+  }
+
   setPlayerOverride(tier: QualityTier | null): void {
     this.playerOverride = tier;
   }
@@ -84,6 +90,8 @@ class QualityManager {
 
   /** Suggests a device pixel ratio capped by the current quality step. */
   resolveDpr(nativeDpr: number): number {
+    // Ultra draws at least 2x even on a normal screen: the picture is drawn larger and shrunk down, which smooths edges (supersampling).
+    if (this.ultra && this.getTier() === 'high') return Math.min(Math.max(nativeDpr, 2), 3);
     const base = Math.min(nativeDpr, 2);
     if (this.getTier() === 'low') return Math.min(base, 1);
     if (this.getTier() === 'medium') return Math.min(base, 1.5);
@@ -92,3 +100,11 @@ class QualityManager {
 }
 
 export const qualityManager = new QualityManager();
+
+/** The player's graphics choice: Auto, Ultra, High, Medium or Low. Ultra is High plus the full pixel ratio. */
+export type PlayerQuality = 'auto' | 'ultra' | 'high' | 'medium' | 'low';
+
+export function applyPlayerQuality(q: PlayerQuality): void {
+  qualityManager.setUltra(q === 'ultra');
+  qualityManager.setPlayerOverride(q === 'auto' ? null : q === 'ultra' ? 'high' : q);
+}
