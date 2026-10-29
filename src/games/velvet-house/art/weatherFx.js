@@ -23,10 +23,15 @@ function sprite(w, h, paint) {
   return cv;
 }
 
-// A ring that spreads on the ground, drawn once.
-const SPLASH = sprite(24, 12, (c, w, h) => {
-  c.fillStyle = 'rgba(225,238,255,.22)'; c.beginPath(); c.ellipse(w / 2, h / 2, w / 2 - 2, h / 2 - 2, 0, 0, TAU); c.fill();
-  c.strokeStyle = 'rgba(240,248,255,.95)'; c.lineWidth = 1.1; c.beginPath(); c.ellipse(w / 2, h / 2, w / 2 - 2, h / 2 - 2, 0, 0, TAU); c.stroke();
+// A splash: two uneven rings that do not sit centred on each other, and three droplets flicked up. Drawn once, then
+// scaled and faded while it plays.
+const SPLASH = sprite(40, 24, (c, w, h) => {
+  c.strokeStyle = 'rgba(240,248,255,.9)'; c.lineWidth = 1.2;
+  c.beginPath(); c.ellipse(w / 2 - 1, h / 2 + 1, 14, 5.2, 0.08, 0, TAU); c.stroke();
+  c.strokeStyle = 'rgba(225,240,255,.55)'; c.lineWidth = 0.8;
+  c.beginPath(); c.ellipse(w / 2 + 2, h / 2, 8.5, 3, -0.12, 0, TAU); c.stroke();
+  c.fillStyle = 'rgba(245,250,255,.95)';
+  for (const [dx, dy, r] of [[-11, -7, 1.1], [10, -9, 1.3], [1, -12, 0.9]]) { c.beginPath(); c.arc(w / 2 + dx, h / 2 + dy, r, 0, TAU); c.fill(); }
 });
 
 // A soft white dot, drawn once.
@@ -38,12 +43,12 @@ const FLAKE = sprite(8, 8, (c, w, h) => {
 
 /** A fixed pool: parallel typed arrays, reused. `n` is how many are alive; dead ones are swapped out. */
 function pool(max) {
-  return { n: 0, max, x: new Float32Array(max), y: new Float32Array(max), z: new Float32Array(max), v: new Float32Array(max), p: new Float32Array(max) };
+  return { n: 0, max, x: new Float32Array(max), y: new Float32Array(max), z: new Float32Array(max), v: new Float32Array(max), p: new Float32Array(max), ax: new Float32Array(max), ay: new Float32Array(max) };
 }
 
 function kill(P, k) {
   const last = --P.n;
-  P.x[k] = P.x[last]; P.y[k] = P.y[last]; P.z[k] = P.z[last]; P.v[k] = P.v[last]; P.p[k] = P.p[last];
+  P.x[k] = P.x[last]; P.y[k] = P.y[last]; P.z[k] = P.z[last]; P.v[k] = P.v[last]; P.p[k] = P.p[last]; P.ax[k] = P.ax[last]; P.ay[k] = P.ay[last];
 }
 
 function tileAt(tiles, x, y) {
@@ -64,6 +69,8 @@ export function createWeatherFx() {
       const i = P.n++;
       P.x[i] = Math.random() * 10; P.y[i] = Math.random() * 8; P.z[i] = 3.2 + Math.random() * 0.6;
       P.v[i] = makeV(); P.p[i] = Math.random() * TAU;
+      // Each drop's own sideways speed, so rain comes down slanted and not all in one direction.
+      P.ax[i] = 0.7 + Math.random() * 0.9; P.ay[i] = 0.15 + Math.random() * 0.45;
     }
   }
 
@@ -77,7 +84,7 @@ export function createWeatherFx() {
       if (s.raining && s.snow) spawn(snow, caps.snow, () => -(1.1 + Math.random() * 0.6));
 
       for (let k = rain.n - 1; k >= 0; k--) {
-        rain.z[k] += rain.v[k] * dt; rain.x[k] += 0.45 * dt; rain.y[k] += 0.18 * dt;
+        rain.z[k] += rain.v[k] * dt; rain.x[k] += rain.ax[k] * dt; rain.y[k] += rain.ay[k] * dt;
         if (rain.z[k] <= 0) {
           if (splash.n < splash.max) { const q = splash.n++; splash.x[q] = rain.x[k]; splash.y[q] = rain.y[k]; splash.p[q] = 0; }
           const tt = tileAt(tiles, rain.x[k], rain.y[k]);
@@ -118,8 +125,10 @@ export function createWeatherFx() {
       }
       for (let k = 0; k < splash.n; k++) {
         const [sx, sy] = iso(splash.x[k], splash.y[k], 0.01);
-        c.globalAlpha = (1 - splash.p[k] / SPLASH_LIFE) * 0.9;
-        c.drawImage(SPLASH, sx - 12, sy - 6, 24, 12);
+        // It opens out as it fades: small at the hit, wider and paler by the end.
+        const t = splash.p[k] / SPLASH_LIFE, sc = 0.45 + 0.75 * t;
+        c.globalAlpha = (1 - t) * 0.9;
+        c.drawImage(SPLASH, sx - 20 * sc, sy - 12 * sc, 40 * sc, 24 * sc);
       }
       c.globalAlpha = 1;
     },
@@ -131,7 +140,8 @@ export function createWeatherFx() {
         c.strokeStyle = 'rgba(205,220,240,.5)'; c.lineWidth = 1;
         c.beginPath();
         for (let k = 0; k < rain.n; k++) {
-          const [tx, ty] = iso(rain.x[k], rain.y[k], rain.z[k] + 0.42);
+          // The streak runs back along the drop's own velocity, so a slanted drop draws a slanted streak.
+          const [tx, ty] = iso(rain.x[k] - rain.ax[k] * 0.05, rain.y[k] - rain.ay[k] * 0.05, rain.z[k] + 0.45);
           const [bx, by] = iso(rain.x[k], rain.y[k], rain.z[k]);
           c.moveTo(tx, ty); c.lineTo(bx, by);
         }
