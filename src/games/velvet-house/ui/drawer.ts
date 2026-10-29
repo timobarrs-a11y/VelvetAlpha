@@ -16,6 +16,7 @@ import { clockText, season, weekday, DAYS } from '../state/time';
 import type { OwnedCloth, WardrobePersona } from '../state/clothing';
 import { CROPS, CROP_IDS, DRY_AT, cropOf } from '../state/crops';
 import { stageAt } from '../state/plantGrowth';
+import { cropIconUrl } from '../art/cropArt.js';
 
 export type DrawerPage = 'shop' | 'arrange' | 'goals' | 'do' | 'phone' | 'partner' | 'you' | 'studio' | 'home' | 'log' | '';
 
@@ -450,7 +451,7 @@ export function createDrawer(cb: DrawerCallbacks): {
         : '';
       const lockHint = locked ? `<span class="vh-lock">${lock!.hint}</span>` : '';
       return `<div class="vh-shop-card ${cls}" data-item="${item.id}">
-        <div class="vh-shop-icon" data-icon="${item.id}" style="${iconStyle(item, state)}">${item.image ? `<img class="vh-seed-img" src="${item.image}" alt="">` : ''}</div>
+        <div class="vh-shop-icon" data-icon="${item.id}" style="${iconStyle(item, state)}">${item.crop ? `<img class="vh-seed-img" src="${cropIconUrl(item.crop)}" alt="">` : ''}</div>
         <div class="vh-shop-info">
           <strong>${item.name}</strong>
           ${item.promo ? '<span class="vh-promo-tag">Promo</span>' : ''}

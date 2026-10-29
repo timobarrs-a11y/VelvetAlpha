@@ -19,9 +19,9 @@ export interface CropDef {
 }
 
 export const CROPS: Record<CropId, CropDef> = {
-  flower: { name: 'Sunflowers', seedId: 'seed-flower', color: '#F2C230', price: 6 },
-  fruit: { name: 'Strawberries', seedId: 'seed-fruit', color: '#D8384F', price: 8 },
-  vegetable: { name: 'Carrots', seedId: 'seed-vegetable', color: '#E8772E', price: 5 },
+  flower: { name: 'Tulips', seedId: 'seed-flower', color: '#E9457A', price: 6 },
+  fruit: { name: 'Apples', seedId: 'seed-fruit', color: '#E63B3B', price: 8 },
+  vegetable: { name: 'Pumpkins', seedId: 'seed-vegetable', color: '#F08A24', price: 5 },
 };
 
 export const CROP_IDS = Object.keys(CROPS) as CropId[];
