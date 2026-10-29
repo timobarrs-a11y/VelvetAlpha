@@ -24,10 +24,12 @@ export function FirstPostWatcher() {
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    // The lookups below are async: if the component unmounts first, don't open a channel nobody will close.
+    let cancelled = false;
 
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || cancelled) return;
 
       // Check for existing posts the user hasn't been notified about
       const alreadySeen = sessionStorage.getItem(STORAGE_KEY) === 'true';
@@ -39,6 +41,7 @@ export function FirstPostWatcher() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1);
+      if (cancelled) return;
 
       if (existing && existing.length > 0) {
         const first = existing[0];
@@ -66,6 +69,7 @@ export function FirstPostWatcher() {
     })();
 
     return () => {
+      cancelled = true;
       if (channel) supabase.removeChannel(channel);
     };
   }, []);
