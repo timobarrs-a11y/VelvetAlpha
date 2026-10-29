@@ -19,6 +19,8 @@ export function installDevHooks(g: Game): void {
       // Send someone somewhere (a test for the stairs).
       goto: (who: 'jordan' | 'maya', level: number, x: number, y: number) => { const p = who === 'maya' ? people[1] : people[0]; p.scripted = true; startGoto(g.house, p, { level, x, y }); },
       setMinutes: (m: number) => { world.minutes = m; },
+      // Jump to a day, so each season can be looked at (a week each: spring 1-7, summer 8-14, autumn 15-21, winter 22-28).
+      setDay: (d: number) => { world.day = d; },
       // The game clock, as minutes since day 0 (does it run, or hold still?).
       minutes: () => world.day * 1440 + world.minutes,
       saveGame: g.doSave,
