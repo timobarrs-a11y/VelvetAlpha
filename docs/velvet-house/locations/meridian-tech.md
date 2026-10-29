@@ -6,8 +6,10 @@ flavour (see the open questions).*
 
 ## The idea in one line
 
-A work day is a short **scenario** of 3 to 5 objectives. Some you tap and they are done; the rest are **timed**, like a garden bed: you start them,
-a timer runs (one to three minutes), you go and do other things at home, and when you come back the objective is finished.
+A work day is **discovery**. The player sees a short list of 3 to 5 things to get done today, loosely connected so they tell a small story, and has to
+work out which thing in the office does each one (the meeting room, the boss, the computer, the printer, the phone). Tapping a thing opens what you can do there; each
+action takes a set amount of time, like a garden bed: you start it, a timer runs, and when it is finished the line on the list is ticked. The game never says
+"scenario" to the player: it is just today's list.
 
 ## Going to work: automatic, or yours
 
@@ -21,117 +23,151 @@ a timer runs (one to three minutes), you go and do other things at home, and whe
   timer windows are for: Jordan is in a meeting, so the player directs the companion.
 - **Playing a day pays more than autopilot** (a bonus per objective and per finished scenario), but autopilot never loses money.
 
-## Timed objectives (the garden pattern)
+## How a day plays: discovery
 
-An objective is a small piece of state, much like a garden bed: `ready`, `running` (with a timer), `done`. The garden system already gives us the
-pieces: state that saves with the house, a tick that moves it on, a bar and a time-left line on Orders and Goals, and a collect button.
+*Replaces the earlier "tap this prop for this objective" model and its fixed scenarios. The director's words: the scenarios "should play out like discovery"; the player is
+told what needs doing and "figures out which tappable asset helps achieve that", which is "more or less common sense", but "the user [has] to initiate it".*
 
-| Kind | How it plays | Example |
+**Three parts, and nothing else:**
+
+1. **Stations.** Every working prop in the office is a station. Tapping it opens a short menu of the **actions** you can take there (the desk computer: about 20 tasks; the
+   phone: about 10 calls; the printer: print, scan, copy, fix the jam, restock paper; the meeting-room door: the kinds of meeting; the boss: the things you can talk to him about;
+   the whiteboard, filing cabinet, cooler, coffee machine, vending machine, fridge and plant: one or two each). The player picks one.
+2. **Actions.** An action is a small, timed piece of state, the same shape as a garden bed: `ready`, `running` (with a timer), `done`. Jordan walks to the station, does it
+   using the animations the game already has (sit and type at the desk, stand at the printer, stand at the phone, walk to the door and go out of sight for a meeting), and
+   when the timer ends it is done. Every action has **a set time**; the player can leave and do things at home while it runs, and a bar on Orders and Goals shows it, as the
+   garden's does.
+3. **Today's list.** On arriving, the player sees 3 to 5 lines in plain words. Each line is satisfied by **any action that matches it** (see "How a line matches", below). The
+   line never says where to tap. The day is over when the list is done.
+
+**Example day**, as the player reads it, and where they would find each:
+
+| Today | What satisfies it | Where a player works it out |
 |---|---|---|
-| **Tap** | Tap the thing in the office; a short animation; done | Fix the printer, answer the phone, sign the contract |
-| **Timed, unseen** | Jordan walks to a door and goes in. You **do not see inside**. A timer of 1 to 3 minutes runs. He walks out when it ends | Attend the meeting, present to the client, lunch with Tony |
-| **Timed, at the desk** | Tap the computer; he works and a shorter timer runs; the screen shows progress | Write the report, prepare the slides |
+| Sit in on the team meeting | a meeting (team) | the door under the Meridian sign |
+| Talk to Dale about your idea | the boss: pitch an idea | Dale, in his office (sit in the visitor chair) |
+| Write up that email | an email task | the computer on the desk |
+| Get this paper scanned | the printer: scan | the copier in the corner |
+| Call home | a call: home | the desk phone |
 
-- **The timer runs while you are elsewhere.** The point of the timer is the window it gives the player: check on the companion, plant seeds, buy food,
-  water the trees, and come back to a finished objective. The objective shows as a bar on Orders and Goals (the same growth bar the garden uses), with
-  "ripe in about 2 min" style text and a notice when it ends.
-- **Timer units:** game minutes, scaled so that one to three real minutes pass at the default speed. It runs at the game's speed settings like the
-  garden does, and saves and loads with the house.
-- **Where the player is does not matter.** An objective can be started from the office scene (tap the door or the printer) or from the objective
-  card on Orders, so a player who is busy at home can keep the day moving.
-- **Unseen means no animation.** Because we never see a meeting, we draw no meeting: only Jordan walking to the door, the door closing, a "meeting in
-  progress" sign lit over it, and the door opening again. That is the whole cost of a meeting, and it is the reason a meeting can last three minutes.
-- **Stakes, so there is a reason to finish** (the next section). The pay on autopilot is never taken away; what is at stake is Jordan's time and the quality of the day.
+**Not always the same.** Days are drawn from a pool of **threads**: a thread is 3 to 5 line templates around one small story (the pitch, the audit, the client visit, the quiet
+Friday), and the lines accept families of actions rather than one, so the same line can be met several ways ("get your idea down in writing" accepts an email, a report or a
+slideshow). The same props therefore do different jobs on different days, and the player is never handed a fixed script.
+
+**Rules**
+- **The player starts everything.** No fixed appointments and no deadlines on the clock; a timer only runs once the player has started it. (The director's earlier decision.)
+- **One thing at a time per person.** Jordan can run one action at a time; the others wait for the player. The companion is at home on a played day and takes orders there.
+- **A set time per action.** Short ones are 30 to 60 seconds of real time at the default speed, long ones one to three minutes; the timer runs with the game speed and saves
+  with the house, like the garden's.
+- **Unseen means no animation:** only the meeting door is unseen. Jordan walks to it and goes out of sight, the sign glows red, and he walks back out when it ends. Everything
+  else happens in view.
+- **Doing something that is not on the list is allowed.** It takes its time and does what it does (a video game gives a little fun, a coffee a little energy) but it does not
+  tick a line, and the day does not end until the list is done, so it costs the evening (see the stakes, below). Nothing is forbidden; the player is trading.
+- **Visible from the list, not from the world.** The list says what is wanted; it does not highlight props. (Open question: a gentle hint after a long idle spell.)
+
+### How a line matches
+
+Every action carries **tags** (`write`, `slides`, `paper`, `call`, `home`, `boss`, `meeting`, `scan`, `food`, and so on) and a station. A list line wants one or more tags, and is
+ticked by the first finished action carrying one of them. So "Write up that email" wants `email`; "Get your idea down in writing" wants any of `email`, `report`, `slides`;
+"Call home" wants `call-home`. This is data, so a new thread is a few lines of text and tags, and a new action is one row in the registry; neither needs new code.
+
+Some actions **leave something behind**, which later actions can use: a finished report, slides or flyer can be printed at the printer; a printed paper makes the next meeting
+*prepared*; a resume lets a recruiter's call be returned; a scanned paper can be sent in an email. These are loose links to reward thinking ahead, never a requirement that blocks
+the day.
+
+### Computer actions (20)
+
+| # | Action | Time | Tags | Leaves behind |
+|---|---|---|---|---|
+| 1 | Write an email | 45 s | `email`, `write` | |
+| 2 | Reply to messages | 30 s | `email` | |
+| 3 | Craft a PowerPoint | 2 min | `slides`, `write` | slides (printable) |
+| 4 | Write a report | 2 min | `report`, `write` | report (printable) |
+| 5 | Work on a project | 2.5 min | `project` | progress on the project |
+| 6 | Update the spreadsheet | 1 min | `numbers` | |
+| 7 | Work on your resume | 1.5 min | `resume`, `write` | resume (printable) |
+| 8 | Book travel | 1 min | `travel` | |
+| 9 | Research a competitor | 1.5 min | `research` | notes |
+| 10 | Review a contract | 1.5 min | `contract` | contract (printable, signable) |
+| 11 | File an expense report | 1 min | `numbers` | |
+| 12 | Do an online training course | 2 min | `training` | |
+| 13 | Schedule a meeting | 30 s | `meeting-prep` | |
+| 14 | Pay a bill online | 45 s | `home-errand` | a home bill paid |
+| 15 | Shop online | 1 min | `personal` | an order, money spent |
+| 16 | Read the news | 30 s | `personal` | |
+| 17 | Play a video game | 1.5 min | `game`, `personal` | a little fun |
+| 18 | Chat with a friend | 45 s | `personal`, `social` | |
+| 19 | Design a flyer | 1.5 min | `design`, `write` | flyer (printable) |
+| 20 | Debug a problem | 2 min | `project`, `fix` | |
+
+The `personal` ones (15 to 18) never satisfy a work line, but they are there on purpose: a player who wants to slack can, and a line like "take a break" can ask for them.
+
+### Phone actions (10)
+
+| # | Action | Time | Tags |
+|---|---|---|---|
+| 1 | Call home | 45 s | `call`, `call-home` (the companion at home is pleased) |
+| 2 | Call a client | 1 min | `call`, `client` |
+| 3 | Call family | 45 s | `call`, `personal` |
+| 4 | Order lunch for the team | 30 s | `call`, `food` |
+| 5 | Check voicemail | 30 s | `call`, `messages` |
+| 6 | Call a repair person for the house | 1 min | `call`, `home-errand` |
+| 7 | Call the bank | 1 min | `call`, `numbers` |
+| 8 | Return a recruiter's call | 1 min | `call`, `resume` (best after the resume is written) |
+| 9 | Make a sales call | 1.5 min | `call`, `client` |
+| 10 | Book a table for dinner | 30 s | `call`, `personal` |
+
+### The other stations
+
+| Station | Actions (time) |
+|---|---|
+| Meeting-room door (unseen) | team meeting (2 min), present to the client (3 min), one-on-one (1.5 min), weekly review (3 min on Fridays) |
+| Dale, the boss (visitor chair, only while he is in) | pitch an idea (1.5 min), give a progress update (1 min), ask for a raise or a day off (1.5 min), ask for feedback (1 min), small talk (30 s) |
+| Printer | print (needs something printable, 45 s), scan (45 s), copy (30 s), fix the jam (45 s, offered only when it is jammed), restock paper (30 s) |
+| Whiteboard | brainstorm (1 min) |
+| Filing cabinet | find a document (45 s) |
+| Water cooler | chat with a coworker (45 s) |
+| Coffee machine | make a coffee (30 s) |
+| Vending machine | buy a snack (30 s) |
+| Fridge | have lunch (2 min) |
+| Plant | water it (30 s; it wilts and perks up by the garden's rules) |
+
+Meetings and talks to the boss are **timed actions with no animation**: the unseen meeting is only the walk and the sign; the boss talk is Jordan sitting in the visitor chair
+for the time, using the sit pose the game already has.
+
+### Choosing the day
+
+- **Tier** follows the career rung: early days draw simple threads (3 lines, short actions); later ones draw 5 lines with more of the long actions.
+- **Day one is a fixed thread** (a bit of everything); **every Friday** is the weekly-review thread; the rest are drawn at random from the tier, never the same thread twice in a row.
+- **Light and weather can swap a line, not the day** (for example a clear-afternoon "deal with the glare" can become "water the plant" on a rainy day), using `state/daylight.ts` and
+  `state/weather.ts`.
+- **Finishing the list** is a good day: a bonus and progress up the career ladder.
+
+### Where it lives in the code (to build)
+
+- `content/office.ts`: the **action registry** (`id`, `station`, `label`, `minutes`, `tags`, `leaves`) and the **thread templates** (`id`, `tier`, `lines: [{ text, wants: tags }]`). Data only.
+- `state/office.ts`: today's list, the running action and its timer (ticked with the game clock like `gardenTick`), what has been left behind, saved with the house. It is
+  owned by this system; the companion chat only reads it and never ticks a line or moves an action along.
+- `ui/`: the station menu (a small sheet over the tapped prop), the list on Orders and Goals, the timer bar (the garden's `growBar`).
+- Not a story scene: nothing here is a script in `content/scripts.ts`, so no contract is needed; the first-day intro, if we write one, is a scene and does need one.
 
 ## Why finish: the stakes
 
 The lock is on **Jordan**, not on the camera. The player can still go home and swap a wallpaper while a timer runs; what they cannot do is have Jordan
 there.
 
-1. **The workday ends when the work does.** Jordan comes home only when the scenario is done. If objectives remain at the usual end of shift he stays
+1. **The workday ends when the work does.** Jordan comes home only when today's list is done. If lines remain at the usual end of shift he stays
    late, which shortens the evening: his free time, the companion's company and the hobbies.
 2. **Home needs him.** While Jordan is away the companion keeps the house going, but some things are his: he cooks the big meal, and anything the
    player queues for him waits. Needs still drain at work, so a long shift brings him home hungry. A late finish costs the evening he would have spent
    on these.
 3. **You choose when to start, and the order.** There are no set times. Nothing starts until the player starts it, and a timer then runs on its own,
    which is what lets them go and do other things. What the order changes is how well it goes: presenting after you have written and printed the
-   report is *prepared*; presenting without it is *unprepared*. The player decides, and thinks about what else to do while each timer runs.
-4. **Quality tiers,** to be confirmed: a finished scenario is *prepared*, *rushed* or *unprepared*, and that sets the pay bonus, the weekly review and
+   slides is *prepared*; presenting without them is *unprepared*. The player decides, and thinks about what else to do while each timer runs.
+4. **Quality tiers,** to be confirmed: a finished day is *prepared*, *rushed* or *unprepared*, and that sets the pay bonus, the weekly review and
    promotion. Autopilot keeps the plain wage and nothing more.
 
 *Items 1 to 3 are my recommendation; item 4 is optional and still to confirm. There are no fixed appointments or deadlines on the clock.*
-
-## Scenarios (variety from the same assets)
-
-A scenario is an ordered outline of a work day: 3 to 5 objectives from the library below, using the same props in a different order. The same prop does a
-different job each time: the printer is `fix`, `print`, `scan` or `restock`; the computer is `work` or `reply`; the one door is every meeting.
-
-| Scenario | Tier | Objectives, in order | Timers | Why it plays differently |
-|---|---|---|---|---|
-| **First day** | 1 | `answer` → `coffee` → `reply` → `meeting` | about 3.5 min | Fixed for day one: a bit of everything and one short meeting. Nothing depends on anything |
-| **Quiet day** | 1 | `reply` → `fix` → `chat` → `lunch` | about 3.5 min | Easy, mostly short timers in view; a good day to run home errands during lunch |
-| **Jam day** | 1 | `fix` → `work` → `lunch` → `meeting` | about 6 min | The printer fix comes first, then the email pile, then two unseen blocks |
-| **Paperwork day** | 2 | `mail` → `reply` → `sign` → `shred` → `file` | about 0.75 min | Almost no waiting: the player stays in the office tapping. For someone who does not want to leave the desk |
-| **Presentation day** | 2 | `work` → `restock` → `print` → `meeting` → `answer` | about 4 min | Write it, print it (the paper must be restocked first), present it, then the call |
-| **Client day** | 2 | `answer` → `work` → `print` → `meeting` → `sign` | about 4 min | The call starts it and the contract ends it. Print before the meeting for a prepared meeting |
-| **Brainstorm day** | 2 | `plan` → `work` → `scan` → `meeting` → `snack` | about 5.5 min | Starts at the whiteboard; a scan feeds the meeting and a snack breaks up the long blocks |
-| **Audit day** | 2 | `file` → `scan` → `work` → `print` → `sign` | about 2 min | Every long block waits on a tap: the missing document comes first |
-| **Hot afternoon** | 2 | `thermostat` → `blinds` → `work` → `lunch` → `chat` | about 4.75 min | Uses the weather: the glare slot becomes "water the plant" on a rainy day or in the evening |
-| **Big client** | 3 | `answer` → `plan` → `work` → `print` → `meeting` | about 4.75 min | The long one: five objectives, two big timers, and the order is the whole puzzle |
-| **Friday wrap-up** | 3 | `file` → `work` → `print` → `meeting` → `water` | about 4 min | Always Friday. The weekly review is the meeting; the plant gets its water before the weekend |
-
-*Timers add up the waiting only (a long timer is two minutes, a short one three-quarters of a minute); taps take a moment. All eleven pass the rules below.*
-
-**The rules every scenario follows** (checked when I wrote them):
-- 3 to 5 objectives, none repeated, at least one tap and at least one timer, and at most two unseen blocks (`meeting`, `lunch`).
-- Dependencies point forward: `print` comes after a `work`, `restock` comes before the `print` that needs paper, a `print` or `scan` comes before the `meeting` it feeds,
-  and a `shred` comes after something that makes paper (`sign`, `file`, `mail`).
-- Every one of the 20 types appears in at least one scenario, so no prop sits idle. (The checks above found one scenario with no tap, which I fixed.)
-
-**Choosing the day**
-- **Tier** follows the career rung: tier 1 for the first days, tier 2 once they are promoted, tier 3 after that; a higher rung still draws the easier ones sometimes.
-- **Day one is always `First day`; every Friday is `Friday wrap-up`;** the other days are drawn at random from the tier, never the same scenario twice in a row.
-- **Weather and light decide a slot, not the day:** `blinds` is only offered on a clear afternoon, so on a rainy or evening day that slot becomes `water`. The sun
-  and rain already come from `state/daylight.ts` and `state/weather.ts`.
-- **A player who wants no waiting** gets `Paperwork day` from time to time; one who loves leaving gets the long ones.
-- **Finishing a scenario** is a good day: a bonus and progress up the career ladder. Each rung unlocks something in the office (a better desk, a window seat).
-
-### The objective library (20 types)
-
-| # | Type | Kind | Prop | Needs / notes |
-|---|---|---|---|---|
-| 1 | `fix` | Tap | Printer | Fix the jam |
-| 2 | `print` | Tap | Printer | Needs a finished `work`; needs paper (see `restock`) |
-| 3 | `answer` | Tap | Desk phone | The phone rings and a light shows |
-| 4 | `sign` | Tap | Desk | Sign the contract |
-| 5 | `work` | Timed, at the desk | Computer | Write the report or prepare the slides |
-| 6 | `reply` | Timed, at the desk | Computer | Short: answer a message or email |
-| 7 | `meeting` | Timed, unseen | Door under the sign | The team meeting, the presentation or the client |
-| 8 | `lunch` | Timed, unseen | Break room | Lunch with a coworker |
-| 9 | `coffee` | Timed, short | Coffee machine | A coffee run; the break room, in view, the machine fills a cup |
-| 10 | `chat` | Timed, short | Water cooler | A cooler chat that builds a relationship with a coworker |
-| 11 | `restock` | Tap | Printer paper | Must be done before a big `print`, or the printer runs out |
-| 12 | `file` | Tap | Filing cabinet | Find a missing document that another objective needs |
-| 13 | `scan` | Tap | Printer | Scan or fax: a second use for the printer |
-| 14 | `plan` | Timed, short | Whiteboard | Brainstorm at the whiteboard; Jordan writes and draws on it |
-| 15 | `snack` | Timed, short | Vending machine | Walk over, pick a snack; restores a little food, a pick of three |
-| 16 | `shred` | Tap | Shredder | Shred the old papers; a quick satisfying tap, and some `sign` or `file` tasks leave papers to shred |
-| 17 | `mail` | Tap | Mail cart | Sort and deliver the mail; the letters become a `reply` or `sign` later |
-| 18 | `water` | Tap | Office plant | Water the plant; it grows or wilts like the garden (see below) |
-| 19 | `blinds` | Tap | Window blinds | Fix the afternoon glare on the screens; uses the real sun (see below) |
-| 20 | `thermostat` | Tap | Thermostat | Settle the argument about the temperature; a small comedy beat |
-
-- **The office plant uses the garden's rules** (`water`): the same wetness and drying, slowed by night, so a plant left alone through a long weekend is droopy
-  on Monday. It is the cheapest tie-in between the work week and the garden at home.
-- **The blinds use the day and night system** (`blinds`): on a clear afternoon the sun on the window wall glares on the monitors, which is when the
-  objective appears; on a rainy or evening shift it never does.
-- **Vending and paper stock run out** and are refilled by `restock`, so one objective keeps coming back for a reason.
-- **Short timers** (`coffee`, `chat`, `reply`, `plan`, `snack`) are 30 to 60 seconds; **long** ones (`work`, `meeting`, `lunch`) are one to three minutes.
-- **Seen vs unseen:** only `meeting` and `lunch` take Jordan out of sight. The short ones happen in view, in the break room or at the desk, and need small
-  animations (a cup filling, a typing loop).
-- **Dependencies** are the planning the player does: `print` needs a finished `work` and paper, a big `meeting` goes better after `print`, and a `file` can
-  unlock a `work`. Each dependency is only a requirement to start, never a clock.
-a finished `work`), `meeting` (unseen, timed), `lunch` (unseen, timed). A scenario is a list of these with their order and any dependency.
 
 ## Layout: one meeting room, behind the sign
 
@@ -223,9 +259,9 @@ once on load (`kernel/config.ts`), with the content version unchanged.
   through its side panel; its light is green only while the desk is in use), the keyboard, a **mouse on its pad** and a **desk phone** (base and handset, pushed against the back of the desk to leave the front clear) for the later tappable actions. There is no mug or other loose prop.
   A house saved with an older layout has only its office pieces replaced once on load (`OFFICE_LAYOUT`).
 
-## Build order (pieces first; scenarios last)
+## Build order (pieces first; the day's list last)
 
-Scenarios are built from the pieces, so they wait until the pieces exist. Each step is its own small change, checked in the real game on desktop and
+The day's list is built from the pieces, so they wait until the pieces exist. Each step is its own small change, checked in the real game on desktop and
 phone at all four camera turns before the next. A mockup of the target room is in `office-mock.html` (open it in a browser; add `?night=1` for night).
 
 1. **The shell:** the level, the walls, the doorways, the meeting-room doors and the window wall, with an empty floor and the floor-bar entry. Old saves
@@ -234,10 +270,9 @@ phone at all four camera turns before the next. A mockup of the target room is i
    Each with its states (the computer working, the printer printing or jammed, the phone ringing, the door shut with its sign lit).
 3. **Light and weather:** ceiling light, window wall by day and night, dusk at a late finish, rain on the glass.
 4. **People:** Jordan walking, sitting, typing, using the printer and the phone, and walking to a door and going out of sight; a few coworkers sitting still.
-5. **The objective engine:** the timed-objective state, the tick, the bar on Orders and Goals, save and load. Tested with a fake objective.
-6. **Objective types:** the twenty in the library above, each on its prop. Start with the tap ones (`fix`, `answer`, `sign`, `file`, `restock`, `scan`, `shred`,
-   `mail`, `water`, `blinds`, `thermostat`), then the short timers (`coffee`, `chat`, `reply`, `plan`, `snack`), then the long ones (`work`, `print`, `meeting`, `lunch`).
-7. **Scenarios:** the outlines that combine them, and how a day is chosen.
+5. **Tappable stations:** the station menu on the desk, phone, printer, door, boss and the rest, each showing its actions (no timers yet). *(Next step.)*
+6. **The action engine:** the timed state, the tick, the bar on Orders and Goals, save and load. Tested with a fake action.
+7. **The registry and the list:** the 20 computer actions, the 10 phone calls and the other stations as data; the thread templates and how a day is chosen; the line matcher.
 8. **Taking control:** the prompt at the leave hour, the scene switch, the companion staying home, and the return.
 
 ## Open questions
@@ -260,3 +295,7 @@ phone at all four camera turns before the next. A mockup of the target room is i
 9. **Story scenes:** scripted moments (a first-day intro, the review, an outage) each need their own contract in `docs/velvet-house/scenes/` before
    they are built, so they are out of scope here.
 10. **Name:** Meridian Tech is fine as a fictional name. Check it is not a real company before shipping.
+11. **Hints:** the list never says where to tap. Should a line pulse its station after a long idle spell, or never?
+12. **Off-list actions:** allowed, and they cost time without ticking a line. Should some give a real reward (a game, a coffee), or should the boss notice a long game (Dale is in the room most of the day)?
+13. **Left-behind items:** are printable papers and a resume a single shared stack on the desk, or one item each? The first is much simpler.
+14. **Animations for the actions:** the computer ones use the existing desk pose; phone calls, printing and scanning need a stand-and-use pose, which the game does not have yet. Use the stand pose for now?
