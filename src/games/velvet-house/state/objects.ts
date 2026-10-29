@@ -169,7 +169,7 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   officecabinet: { W: 0.5, D: 0.6, h: 1.2, fixed: true, name: 'Filing cabinet',
     spots: { f: { stand: [0.25, 1.0], dir: [0, -1], tag: 'o_files' } } },
   officeplant: { W: 0.5, D: 0.5, h: 1.2, fixed: true, name: 'Office plant',
-    spots: { f: { stand: [0.25, 0.95], dir: [0, -1], tag: 'o_plant' } } },
+    spots: { f: { stand: [0.0, 0.95], dir: [0, -1], tag: 'o_plant' } } },
   officecounter: { W: 1.2, D: 0.62, h: 1.2, fixed: true, name: 'Sink counter',
     spots: { f: { stand: [0.6, 1.05], dir: [0, -1], tag: 'o_sink' } } },
   // The coffee station: a low counter with the machine and the mugs, set along the window wall (rot 3, its front toward the room).
@@ -179,10 +179,10 @@ export const TYPES: Record<string, ObjectTypeDef> = {
     spots: { f: { stand: [0.35, 1.1], dir: [0, -1], tag: 'o_fridge' } } },
   officevending: { W: 0.7, D: 0.7, h: 1.8, fixed: true, name: 'Vending machine',
     spots: { f: { stand: [0.35, 1.15], dir: [0, -1], tag: 'o_vending' } } },
-  // Where to stand for the two things on the wall (the whiteboard, and the door under the sign): nothing is drawn, nothing blocks, and the piece cannot be picked up.
-  officeboardspot: { W: 1.0, D: 0.5, h: 0.1, fixed: true, blocks: [], name: 'Whiteboard spot',
+  // Where to stand for the two things on the wall (the whiteboard, and the door under the sign): nothing is drawn, nothing blocks (they count as rugs, which lie under everything), and the piece cannot be picked up.
+  officeboardspot: { W: 1.0, D: 0.5, h: 0.1, fixed: true, rug: true, blocks: [], name: 'Whiteboard spot',
     spots: { s: { stand: [0.5, 0.6], dir: [0, -1], tag: 'o_board' } } },
-  officedoorspot: { W: 1.0, D: 0.5, h: 0.1, fixed: true, blocks: [], name: 'Meeting room door spot',
+  officedoorspot: { W: 1.0, D: 0.5, h: 0.1, fixed: true, rug: true, blocks: [], name: 'Meeting room door spot',
     spots: { s: { stand: [0.5, 0.6], dir: [0, -1], tag: 'o_door' } } },
   daybed: { W: 1.9, D: 0.9, h: 0.8, name: 'Guest daybed', store: true },
   snowman: { W: 0.6, D: 0.6, h: 1.4, name: 'Snowman' },

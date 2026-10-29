@@ -44,6 +44,23 @@ const overlaps = (a: Rect, b: Rect, gap = 0.02) => a[0] < b[2] - gap && a[2] > b
 // the edge is a fence with no thickness. Pieces there can sit flush against it and against each other.
 const margin = (level: number): { lo: number; hi: number } => (isOutdoor(level) ? { lo: 0, hi: 0 } : { lo: 0.08, hi: 0.05 });
 
+// A desk's chair tucks in under it: a single seat may overlap a desk's edge by up to half a tile (never with its middle over the desk), so a
+// chair can be lined up snug against its desk instead of stopping short of it.
+const DESK_TYPES = new Set(['officedesk', 'bossdesk']);
+const TUCK = 0.5;
+function tucksUnder(chair: ObjectInstance, desk: ObjectInstance): boolean {
+  if (!DESK_TYPES.has(desk.type)) return false;
+  const spots = TYPES[chair.type]?.spots;
+  if (!spots || !Object.values(spots).some((s) => s.base === 'seat')) return false;
+  const [cw, cd] = footprint(chair), [dw, dd] = footprint(desk);
+  if (Math.max(cw, cd) > 0.95) return false;
+  const cx = chair.x + cw / 2, cy = chair.y + cd / 2;
+  const e = 1e-6;
+  if (cx > desk.x + e && cx < desk.x + dw - e && cy > desk.y + e && cy < desk.y + dd - e) return false;
+  const ox = Math.min(chair.x + cw, desk.x + dw) - Math.max(chair.x, desk.x), oy = Math.min(chair.y + cd, desk.y + dd) - Math.max(chair.y, desk.y);
+  return ox <= TUCK + 1e-6 || oy <= TUCK + 1e-6;
+}
+
 export interface PlacementCheck {
   ok: boolean;
   // Why not, in words for the player.
@@ -68,7 +85,7 @@ export function checkPlacement(objs: ObjectInstance[], held: ObjectInstance, peo
     for (const o of objs) {
       if (o === held || o.on || o.level !== held.level || isRug(o.type) || isMount(o.type) || !TYPES[o.type]) continue;
       const other = TYPES[o.type].wall && TYPES[held.type].wall ? rectsOf(o) : TYPES[o.type].wall ? [] : rectsOf(o);
-      if (mine.some(m => other.some(r => overlaps(m, r)))) return { ok: false, reason: `It bumps into the ${(TYPES[o.type].name ?? 'furniture').toLowerCase()}.` };
+      if (mine.some(m => other.some(r => overlaps(m, r))) && !(tucksUnder(held, o) || tucksUnder(o, held))) return { ok: false, reason: `It bumps into the ${(TYPES[o.type].name ?? 'furniture').toLowerCase()}.` };
     }
     for (const w of LEVELS[held.level].walls) {
       const wall: Rect = w.x !== undefined ? [w.x - 0.06, w.a, w.x + 0.06, w.b] : [w.a, w.y! - 0.06, w.b, w.y! + 0.06];
