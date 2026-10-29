@@ -4290,6 +4290,20 @@ export function createHouseArt(ctx0, opts = {}) {
     if (nbFacing(1, 0) || nbFacing(-1, 0)) poly([[wx, y + 0.5, 0.65], [wx, y + 1.3, 0.65], [wx, y + 1.3, 1.15], [wx, y + 0.5, 1.15]], raining() ? '#8E99A8' : '#A9C3D3', '#F7F3EE', 0.8);
     box(x - 0.1, y - 0.1, 1.5, 2.2, 2.2, 0.12, '#5A4A44');
   }
+  function nbPole(x, y) {
+    if (!nbBehind(x - 0.3, y - 0.3, x + 0.3, y + 0.3)) return;
+    const zt = 3.7, za = 3.35, [sx, sy] = iso(x, y, 0), arm = shade('#5A4A44', 0.05);
+    ell(sx + 5, sy + 1, 7, 3, 'rgba(28,40,26,.25)');
+    line3([x, y, 0], [x, y, zt], '#5A4A44', 3);
+    line3([x, y - 0.6, za], [x, y + 0.6, za], arm, 2.2);
+    for (const off of [-0.5, 0.5]) {
+      const [ix, iy] = iso(x, y + off, za + 0.08); circle(ix, iy, 1.7, '#9CB5B8');
+      // The wire to the next pole sags between them.
+      ctx.strokeStyle = 'rgba(40,36,44,.65)'; ctx.lineWidth = 1; ctx.beginPath();
+      for (let s = 0; s <= 10; s++) { const u = s / 10, [wx, wy] = iso(x, y + off + u * WY, za + 0.08 - 0.5 * 4 * u * (1 - u)); s ? ctx.lineTo(wx, wy) : ctx.moveTo(wx, wy); }
+      ctx.stroke();
+    }
+  }
   function nbLot(x0, x1, y0, y1, seed, grass) {
     poly([[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]], grass);
     // The same tiles and blades as the yard's own lawn, so the two read as one lawn.
@@ -4346,9 +4360,9 @@ export function createHouseArt(ctx0, opts = {}) {
     }
     // Our own house behind the back wall: the upper floor and the roof above the wall the yard draws.
     rows.push({ key: vs(-NB.depth / 2, WY / 2), d: () => nbHouse(-0.3, 0, WY, 1, 5.4, '#D9CDBD', '#5A4A44', 0.5, { z0: 2.6 }) });
+    // Utility poles down the lane's verge, in world space like everything else: the crossarm runs along the lane (so it slopes with the grid), and the wires sag to the next pole.
+    for (let k = -R; k <= R; k++) { const px = NB.lane0 - 0.5, py = k * WY + 2; rows.push({ key: vs(px, py), d: () => nbPole(px, py) }); }
     rows.sort((a, b) => a.key - b.key).forEach(r => r.d());
-    // Utility poles down the lane.
-    for (let k = -R; k <= R; k++) { const y = k * WY + 2; if (!nbBehind(NB.lane0 - 0.7, y - 0.2, NB.lane0 - 0.3, y + 0.2)) continue; const [px, py] = iso(NB.lane0 - 0.5, y, 0); limb(px, py, px, py - 120, '#5A4A44', 2.4); limb(px - 14, py - 112, px + 14, py - 118, '#5A4A44', 1.8); }
     }
   }
   // Haze toward the top (the light pass darkens it at night with the yard), then the edges fade to nothing, so the neighbourhood never ends on a line.
