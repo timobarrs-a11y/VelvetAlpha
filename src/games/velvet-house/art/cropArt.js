@@ -4,16 +4,26 @@
  * and the shop uses the same drawing for the seed packet's picture.
  */
 
-function tulip(c) {
+/**
+ * A tulip from a stalk: a closed bud when `open` is 0, the cup opening as it grows, and a full bloom at 1. The leaf
+ * joins the stalk, so the plant reads as one plant.
+ */
+function tulip(c, open) {
+  const top = -12 - 8 - 6 * open, w = 3 + 3.5 * open;
   c.strokeStyle = '#3F8F47'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -12); c.stroke();
-  c.fillStyle = '#4F9A4C'; c.beginPath(); c.moveTo(0, -6); c.quadraticCurveTo(-5, -9, -6.5, -12.5); c.quadraticCurveTo(-2, -11, 0, -6); c.fill();
+  c.fillStyle = '#4F9A4C'; c.beginPath(); c.moveTo(0, -4); c.quadraticCurveTo(-3, -6, -7, -9.5); c.quadraticCurveTo(-3.5, -7.5, 0, -4); c.fill();
   c.fillStyle = '#B8325E';
-  c.beginPath(); c.moveTo(-5.5, -12); c.quadraticCurveTo(-6.5, -20, -2.5, -24); c.lineTo(0, -21); c.lineTo(2.5, -24);
-  c.quadraticCurveTo(6.5, -20, 5.5, -12); c.quadraticCurveTo(0, -9.5, -5.5, -12); c.fill();
+  c.beginPath(); c.moveTo(-w, -12); c.quadraticCurveTo(-w - 1.5, top + 5, 0, top - 1); c.quadraticCurveTo(w + 1.5, top + 5, w, -12);
+  c.quadraticCurveTo(0, -9.5, -w, -12); c.fill();
   c.fillStyle = '#E9457A';
-  c.beginPath(); c.moveTo(-3.5, -12); c.quadraticCurveTo(-4.5, -19, 0, -23.5); c.quadraticCurveTo(4.5, -19, 3.5, -12);
-  c.quadraticCurveTo(0, -9.5, -3.5, -12); c.fill();
-  c.fillStyle = 'rgba(255,255,255,.5)'; c.beginPath(); c.ellipse(-1.6, -17, 0.7, 2.2, 0.2, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.moveTo(-w * 0.6, -12); c.quadraticCurveTo(-w * 0.7, top + 3, 0, top); c.quadraticCurveTo(w * 0.7, top + 3, w * 0.6, -12);
+  c.quadraticCurveTo(0, -10, -w * 0.6, -12); c.fill();
+  if (open > 0.5) { // the outer petals fall open once the bloom is past halfway
+    c.fillStyle = '#D9356A';
+    c.beginPath(); c.moveTo(-w * 0.9, -12); c.quadraticCurveTo(-w - 2.5 * open, -17, -w - 1 * open, top + 6); c.quadraticCurveTo(-w, -13, -w * 0.9, -12); c.fill();
+    c.beginPath(); c.moveTo(w * 0.9, -12); c.quadraticCurveTo(w + 2.5 * open, -17, w + 1 * open, top + 6); c.quadraticCurveTo(w, -13, w * 0.9, -12); c.fill();
+  }
+  c.fillStyle = 'rgba(255,255,255,.5)'; c.beginPath(); c.ellipse(-1.6, -16 + 2 * open, 0.7, 2.2, 0.2, 0, Math.PI * 2); c.fill();
 }
 
 function apple(c) {
@@ -43,12 +53,12 @@ function pumpkin(c) {
 }
 
 /** Draws one crop at (x, y), its base on the ground, `s` times its normal size. */
-export function drawCrop(ctx, x, y, s, crop, angle = 0) {
+export function drawCrop(ctx, x, y, s, crop, angle = 0, stage = 'final') {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
   ctx.scale(s, s);
-  if (crop === 'flower') tulip(ctx);
+  if (crop === 'flower') tulip(ctx, { seed: 0, small: 0.25, mid: 0.65, final: 1 }[stage] ?? 1);
   else if (crop === 'fruit') apple(ctx);
   else if (crop === 'vegetable') pumpkin(ctx);
   ctx.restore();
