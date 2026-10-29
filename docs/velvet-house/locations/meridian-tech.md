@@ -213,14 +213,14 @@ once on load (`kernel/config.ts`), with the content version unchanged.
   cooler for five to ten minutes and comes back. **Nobody may sit in the visitor chair unless he is at his desk** (`world.bossIn`): the seat is refused while he is away.
 - **Work clothes:** anyone from the household on the office floor is drawn in a navy blazer, burgundy tie and dark trousers (their saved wardrobe is untouched). Dale has a
   suit of his own, `bosssuit`: charcoal, double-breasted, gold buttons, a gold tie and a pocket square, with grey hair, so he is never mistaken for anyone else.
-- **Layout (version 4):** four narrow desks in two rows with a 1.3 tile aisle between them, the whiteboard wall kept clear, the vending machine against the back wall beside the whiteboard, the
+- **Layout (version 5):** four narrow desks in two rows with a 1.3 tile aisle between them, the whiteboard wall kept clear, the vending machine against the back wall beside the whiteboard, the
   water cooler beside the meeting door, the boss's corner at the back right, and the break area (counter, fridge) at the front right. A **navy aisle runner** (`officerunner`, 1.1 x 6.4) is laid from
-  the meeting-room door straight down the open aisle. The **copier** stands free in the bottom-right, drawers and paper tray toward the camera with a clear strip of floor in front of them
-  (the camera only ever sees the +x and +y faces, so a front turned toward the room would be hidden; the old spot hard against the wall left no room to stand), and the break-room table is gone.
+  the meeting-room door straight down the open aisle. The **copier** stands in the bottom-right corner against the front wall, turned (rot 2) so its front (drawers, paper tray, control panel) faces into
+  the room, where a person walks up and stands to use it. The camera sees that front only from behind, as with the boss's desk; the top (lid, glass, panel, buttons) is what shows. The break-room table is gone.
   **Every chair is a piece of its own** (`officechair`, `bosschair`, `visitorchair`), so it can be moved and turned like any other piece; the pieces are `fixed` against the player, who cannot
   rearrange the office. The boss's chair is dark leather and the visitor's chair charcoal fabric, so neither disappears into the red rug.
 - **A staff desk** carries, all painted in one pass over the top so the depth order cannot tangle: the monitor (lit while someone sits), a **PC tower** (drive bay, power button and light, vents, a fan
-  through its side panel; its light is green only while the desk is in use), the keyboard, a **mouse on its pad**, a mug and a **desk phone** (base, handset, red light) for the later tappable actions.
+  through its side panel; its light is green only while the desk is in use), the keyboard, a **mouse on its pad** and a **desk phone** (base and handset, pushed against the back of the desk to leave the front clear) for the later tappable actions. There is no mug or other loose prop.
   A house saved with an older layout has only its office pieces replaced once on load (`OFFICE_LAYOUT`).
 
 ## Build order (pieces first; scenarios last)

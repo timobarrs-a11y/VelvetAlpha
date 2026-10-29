@@ -393,7 +393,7 @@ export const STARTER_TV_IDS = ['walltv'];
 /** The office's own pieces. A house saved before the office existed is given them once, so they are there when it is unlocked (see `kernel/config.ts`). */
 export const STARTER_OFFICE_IDS = ['off-desk2', 'off-desk3', 'off-desk4', 'off-desk5', 'off-chair2', 'off-chair3', 'off-chair4', 'off-chair5', 'off-printer', 'off-cooler', 'off-cabinet', 'off-plant', 'off-counter', 'off-fridge', 'off-vending', 'off-runner', 'off-boss', 'off-bosschair', 'off-visitor', 'off-rug'];
 /** Bumped when the office's layout changes: a house saved with an older layout has its office pieces replaced (and only those) once on load. */
-export const OFFICE_LAYOUT = 4;
+export const OFFICE_LAYOUT = 5;
 
 export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'stair01', type: 'flightY', level: 0, x: 9.0, y: 0, rot: 0 },
@@ -422,7 +422,7 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'off-plant', type: 'officeplant', level: 5, x: 5.2, y: 6.6, rot: 0 },
   { id: 'off-counter', type: 'officecounter', level: 5, x: 7.0, y: 5.0, rot: 0 },
   { id: 'off-fridge', type: 'officefridge', level: 5, x: 9.25, y: 5.0, rot: 0 },
-  { id: 'off-printer', type: 'officeprinter', level: 5, x: 8.3, y: 6.3, rot: 0 },
+  { id: 'off-printer', type: 'officeprinter', level: 5, x: 8.3, y: 7.2, rot: 2 },
   { id: 'off-runner', type: 'officerunner', level: 5, x: 4.7, y: 0.0, rot: 0 },
   { id: 'off-rug', type: 'officerug', level: 5, x: 7.0, y: 0.2, rot: 0 },
   { id: 'off-boss', type: 'bossdesk', level: 5, x: 8.0, y: 1.0, rot: 2 },
