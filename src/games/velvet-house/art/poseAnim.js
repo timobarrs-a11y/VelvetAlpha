@@ -158,15 +158,29 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
         lean: 0.05 + wave(t, 7, ph) * 0.02, nod: wave(t, 9, ph) * 0.02, snap: true,
         grip: { 1: 'point', [-1]: 'fist' },
       };
-    case 'desk':
-      // Typing: short taps in turn.
-      return {
-        hands: {
-          1: [0.3, 0.05 + wave(t, 1.1, ph) * 0.05, -0.2 + Math.max(0, wave(t, 16, ph)) * 0.1],
-          [-1]: [0.3, 0.05 - wave(t, 1.1, ph) * 0.05, -0.2 + Math.max(0, wave(t, 16, ph + Math.PI)) * 0.1],
-        },
-        lean: 0.03 + wave(t, 0.5, ph) * 0.012, nod: wave(t, 0.9, ph) * 0.018, snap: true,
-      };
+    case 'desk': {
+      // Typing, in bursts: fast alternating taps with the fingers dancing, the head dipping to the screen; then a beat to read it, a hand
+      // over to the mouse, and back to the keys.
+      const u = ((t + ph) % 7) / 7;
+      const tap = (k) => Math.max(0, wave(t, 17, ph + k)), dance = (k) => wave(t, 9, ph + k);
+      if (u < 0.62) {
+        const swing = wave(t, 1.3, ph);
+        return {
+          hands: {
+            1: [0.3 + dance(0) * 0.025, 0.07 + swing * 0.07 + dance(1) * 0.02, -0.21 + tap(0) * 0.09],
+            [-1]: [0.3 + dance(2) * 0.025, 0.07 - swing * 0.07 + dance(3) * 0.02, -0.21 + tap(Math.PI) * 0.09],
+          },
+          lean: 0.045 + wave(t, 0.6, ph) * 0.012, nod: -0.012 + wave(t, 1.9, ph) * 0.016, snap: true,
+        };
+      }
+      if (u < 0.8) {
+        // Reading what was written: the hands hover, the head lifts a little.
+        return { hands: { 1: [0.28, 0.1, -0.14 + wave(t, 2.2, ph) * 0.01], [-1]: [0.28, 0.1, -0.14] }, lean: 0.01, nod: 0.016 };
+      }
+      // The mouse: the right hand slides over and clicks, the left stays on the keys.
+      const slide = wave(t, 3.3, ph) * 0.03, click = Math.max(0, wave(t, 8, ph));
+      return { hands: { 1: [0.32 + slide, 0.2 + slide * 0.6, -0.22 + click * 0.025], [-1]: [0.3, 0.06, -0.2] }, lean: 0.03, nod: -0.006, snap: true };
+    }
     case 'water': {
       const tip = pulse(t, 4, 0.6, ph);
       return {

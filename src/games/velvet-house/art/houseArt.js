@@ -3033,12 +3033,13 @@ export function createHouseArt(ctx0, opts = {}) {
       // painted in one pass over it (back to front), so the depth order cannot tangle.
       parts: () => [B(0.03, 0.05, 0, 0.05, 0.55, 0.72, '#B9B09A'), B(1.12, 0.05, 0, 0.05, 0.55, 0.72, '#B9B09A'), B(0.08, 0.05, 0.12, 1.04, 0.03, 0.6, '#A59C86'),
         B(0, 0, 0.72, 1.2, 0.62, 0.05, '#CDBFA3', { name: 'top' }), B(0, 0, 0.77, 1.2, 0.04, 0.46, '#8E98A6'),
-        F(0, 0, 1.2, 0.62, (T, o) => {
+        F(0, 0, 1.2, 0.62, (T, o, t) => {
           const on = deskInUse(o), z0 = 0.77;
           // The monitor, at the back, then the PC tower at the left end.
           T.box(0.58, 0.12, z0, 0.1, 0.08, 0.14, '#2B2F38'); T.box(0.41, 0.09, z0 + 0.13, 0.5, 0.05, 0.3, '#23272F');
           T.poly([[0.44, 0.141, 0.93], [0.88, 0.141, 0.93], [0.88, 0.141, 1.17], [0.44, 0.141, 1.17]], on ? '#9FD0FF' : '#1B2230');
-          if (on) [1.12, 1.07, 1.02, 0.97].forEach((z, i) => T.line([0.48, 0.142, z], [0.48 + (i % 2 ? 0.26 : 0.34), 0.142, z], '#FFFFFF', 1));
+          // Text appears on the screen line by line as it is typed, then clears and starts again.
+          if (on) { const k = (t * 0.22) % 1; [1.12, 1.07, 1.02, 0.97].forEach((z, i) => { const f = Math.max(0, Math.min(1, k * 4.4 - i)); if (f > 0.02) T.line([0.48, 0.142, z], [0.48 + (i % 2 ? 0.26 : 0.34) * f, 0.142, z], '#FFFFFF', 1); }); }
           T.box(0.1, 0.12, z0, 0.2, 0.44, 0.46, '#2E323B');
           const fy = 0.561;
           T.poly([[0.12, fy, z0 + 0.36], [0.28, fy, z0 + 0.36], [0.28, fy, z0 + 0.4], [0.12, fy, z0 + 0.4]], '#15181D');                    // the drive bay
@@ -3052,13 +3053,15 @@ export function createHouseArt(ctx0, opts = {}) {
           for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; ring.push([sx + 0.001, cy + Math.cos(a) * 0.1, cz + Math.sin(a) * 0.1]); }
           for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; hub.push([sx + 0.002, cy + Math.cos(a) * 0.03, cz + Math.sin(a) * 0.03]); }
           T.poly(ring, '#1B1E24'); T.poly(hub, '#6B7280');
+          // The keyboard; while the desk is in use, a few keys light and fade as they are pressed.
+          T.box(0.4, 0.4, z0, 0.36, 0.13, 0.02, '#3A3F4A');
+          if (on) for (let i = 0; i < 5; i++) { const q = Math.max(0, Math.sin(t * (9 + i * 1.7) + i * 2.1)); if (q > 0.6) T.box(0.42 + ((i * 7 + Math.floor(t * 6 + i * 3)) % 9) * 0.035, 0.42 + (i % 3) * 0.035, z0 + 0.02, 0.025, 0.025, 0.008, '#B8C2D4'); }
           // The mouse pad and the mouse: a pale shell with a split for the buttons and a wheel, easy to tell from the dark pad.
           T.box(0.77, 0.33, z0, 0.16, 0.24, 0.008, '#2B2F38');
           T.box(0.81, 0.39, z0 + 0.008, 0.08, 0.13, 0.035, '#E4E7EC'); T.line([0.81, 0.44, z0 + 0.043], [0.89, 0.44, z0 + 0.043], '#6B7280', 1); T.line([0.85, 0.39, z0 + 0.043], [0.85, 0.44, z0 + 0.043], '#6B7280', 1); T.box(0.842, 0.4, z0 + 0.044, 0.016, 0.035, 0.006, '#3A3F4A');
           // The desk phone at the right end: a base with a keypad, the handset across its cradle and a red light.
           T.box(0.95, 0.1, z0, 0.22, 0.24, 0.06, '#4A5262'); T.box(0.98, 0.18, z0 + 0.06, 0.12, 0.14, 0.012, '#8E98A6'); T.box(0.94, 0.12, z0 + 0.06, 0.06, 0.2, 0.05, '#1E2128'); T.box(1.13, 0.12, z0 + 0.06, 0.06, 0.2, 0.05, '#1E2128'); T.box(0.94, 0.16, z0 + 0.11, 0.25, 0.12, 0.04, '#1E2128');
-        }, { onTop: true }),
-        B(0.4, 0.4, 0.77, 0.36, 0.13, 0.02, '#3A3F4A')],
+        }, { onTop: true })],
     },
     officechair: {
       parts: () => [B(0.12, 0.2, 0.0, 0.36, 0.2, 0.04, '#2B2F38'), B(0.27, 0.27, 0.04, 0.06, 0.06, 0.36, '#2B2F38'),

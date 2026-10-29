@@ -237,6 +237,62 @@ export function snapEdges(objs: ObjectInstance[], o: ObjectInstance, reach = 0.3
   if (Math.abs(ny - o.y) <= reach) o.y = ny;
 }
 
+// ---- Snap to a wall, then slide along it ---------------------------------------------------------------------------------
+
+/** A piece set against a wall: where it is, and the run of the wall it can slide along (`axis` is the coordinate that changes). */
+export interface WallSnap { x: number; y: number; rot: number; axis: 'x' | 'y'; lo: number; hi: number }
+
+/**
+ * The nearest wall of the piece's floor (its outer edge, or one inside the house) and the pose that sets the piece's back against it,
+ * turned to face into the room, keeping its place along the wall where it can. A piece set on a surface, a rug or a mounted piece
+ * has no wall to stand against; so does one longer than every wall near it. `o` is left as it was.
+ */
+export function snapToWall(objs: ObjectInstance[], o: ObjectInstance): WallSnap | null {
+  const t = TYPES[o.type];
+  if (!t || o.on || isRug(o.type) || isMount(o.type) || t.small) return null;
+  void objs;
+  const m = margin(o.level), rot0 = o.rot, x0 = o.x, y0 = o.y;
+  const cx = x0 + footprint(o)[0] / 2, cy = y0 + footprint(o)[1] / 2;
+  let best: (WallSnap & { cost: number }) | null = null;
+  const consider = (rot: number, perp: 'x' | 'y', at: number, from: number, to: number): void => {
+    // Rot 0 has its back at low y, 1 at high x, 2 at high y, 3 at low x (as `backToWall` reads it).
+    o.rot = rot;
+    const [fw, fd] = footprint(o), len = perp === 'y' ? fw : fd;
+    const hi = to - len;
+    if (hi < from - 0.3) return;
+    const lo = Math.min(from, hi), top = Math.max(from, hi);
+    const here = perp === 'y' ? x0 : y0, along = Math.min(top, Math.max(lo, Math.round(here * 4) / 4));
+    const x = perp === 'y' ? along : at, y = perp === 'y' ? at : along;
+    const cost = Math.hypot(x + fw / 2 - cx, y + fd / 2 - cy);
+    if (!best || cost < best.cost) best = { x, y, rot, axis: perp === 'y' ? 'x' : 'y', lo, hi: top, cost };
+  };
+  const spanX: [number, number] = [m.lo, WX - m.hi], spanY: [number, number] = [m.lo, WY - m.hi];
+  consider(0, 'y', m.lo, spanX[0], spanX[1]);
+  { o.rot = 2; const fd = footprint(o)[1]; consider(2, 'y', WY - m.hi - fd, spanX[0], spanX[1]); }
+  consider(3, 'x', m.lo, spanY[0], spanY[1]);
+  { o.rot = 1; const fw = footprint(o)[0]; consider(1, 'x', WX - m.hi - fw, spanY[0], spanY[1]); }
+  for (const w of LEVELS[o.level].walls) {
+    if (w.x !== undefined) {
+      consider(3, 'x', w.x + 0.06, w.a, w.b);
+      { o.rot = 1; const fw = footprint(o)[0]; consider(1, 'x', w.x - 0.06 - fw, w.a, w.b); }
+    } else {
+      consider(0, 'y', w.y! + 0.06, w.a, w.b);
+      { o.rot = 2; const fd = footprint(o)[1]; consider(2, 'y', w.y! - 0.06 - fd, w.a, w.b); }
+    }
+  }
+  o.rot = rot0; o.x = x0; o.y = y0;
+  if (!best) return null;
+  const { cost, ...snap } = best as WallSnap & { cost: number };
+  void cost;
+  return snap;
+}
+
+/** Move a piece set against a wall to `v` along it (a quarter tile at a time), keeping it on the wall's run. */
+export function slideAlong(o: ObjectInstance, snap: WallSnap, v: number): void {
+  const a = Math.min(snap.hi, Math.max(snap.lo, Math.round(v * 4) / 4));
+  if (snap.axis === 'x') o.x = a; else o.y = a;
+}
+
 /**
  * The nearest place around where `o` is now that it fits (flush to what is there, as `snapEdges` would leave it), or null when
  * nothing within `radius` does. A piece that is used from one side (a bed, a counter) may be turned to fit, a half turn or a quarter
