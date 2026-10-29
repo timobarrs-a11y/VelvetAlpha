@@ -187,3 +187,10 @@ Each one is a short chain. Days pick three to five.
 - Days don't repeat the same chain. Each scenario has a set of days it can't sit on, so a scenario can't run two days in
   a row.
 - The weekend has none of these.
+
+### Where scenarios come from (both)
+
+- **From the game:** each morning the game assigns the day's anchor scenario and two or three others, as above.
+- **From the player:** the Orders page lists the scenarios that are available today, and the player can start one
+  (for example, "Go and see Dale"). A player-started scenario counts toward the day's objectives in place of an
+  assigned one, and it still can't repeat the day before.
