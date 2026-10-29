@@ -2638,24 +2638,47 @@ export function createHouseArt(ctx0, opts = {}) {
   // ---- Trees: seven species, drawn in code so each follows the seasons and sways in the wind. ----
   // Every one is hex-coloured so `shade` can lighten and darken it, and every one is drawn from its base point so it stands on its tile.
   const treeSnow = () => seasonIdx() === 3 && YARD.tiles.some(q => q.snow > 0.3);
-  // A trunk that flares at the foot and narrows up; `lean` is how far the top sits to one side.
+  // A trunk that flares at the foot and narrows up (`lean` is how far the top sits to one side), lit on its left like everything else
+  // here (the sun is front-left), with bark lines, a dark edge and roots spreading into the grass.
   function trunkShape(bx, by, h, wBase, wTop, lean, col) {
-    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(bx - wBase, by + 1);
-    ctx.quadraticCurveTo(bx - wTop - 1 + lean * 0.3, by - h * 0.4, bx - wTop + lean, by - h); ctx.lineTo(bx + wTop + lean, by - h);
-    ctx.quadraticCurveTo(bx + wTop + 1 + lean * 0.3, by - h * 0.4, bx + wBase, by + 1); ctx.closePath(); ctx.fill();
+    const path = () => { ctx.beginPath(); ctx.moveTo(bx - wBase, by + 1); ctx.quadraticCurveTo(bx - wTop - 1 + lean * 0.3, by - h * 0.4, bx - wTop + lean, by - h); ctx.lineTo(bx + wTop + lean, by - h); ctx.quadraticCurveTo(bx + wTop + 1 + lean * 0.3, by - h * 0.4, bx + wBase, by + 1); ctx.closePath(); };
+    const g = ctx.createLinearGradient(bx - wBase, 0, bx + wBase, 0); g.addColorStop(0, shade(col, 0.16)); g.addColorStop(0.55, col); g.addColorStop(1, shade(col, -0.3));
+    path(); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = 'rgba(30,20,15,.45)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.save(); path(); ctx.clip(); ctx.strokeStyle = 'rgba(30,20,15,.22)'; ctx.lineWidth = 1;
+    for (let k = 0; k < 5; k++) { const u = -0.7 + k * 0.35, x0 = bx + u * wBase, x1 = bx + u * wTop + lean; ctx.beginPath(); ctx.moveTo(x0, by); ctx.quadraticCurveTo((x0 + x1) / 2 + (k % 2 ? 2 : -2), by - h * 0.5, x1, by - h); ctx.stroke(); }
+    ctx.restore();
+    ell(bx - wBase * 0.7, by + 1, wBase * 0.7, 2.2, shade(col, -0.1)); ell(bx + wBase * 0.8, by + 1.5, wBase * 0.6, 2, shade(col, -0.25));
   }
-  // A crown of overlapping blobs: dark underneath, lighter on top, then a few highlights, each stirred a little by the wind.
+  // A steady scatter that does not change from frame to frame (so blossom, leaves and apples stay put), unlike a formula that lines up.
+  const scatter = (k, s) => Math.abs(Math.sin(k * 12.9898 + s * 78.233) * 43758.5453 % 1);
+  // A crown of leaf clumps drawn as one mass: a dark edge round the whole outline (not round each clump), the sun falling across all of it from
+  // the front-left (lit top-left, shaded bottom-right), a dark crescent under each clump so they read as clumps, and leaves in three tones
+  // scattered over the top. The wind stirs the clumps a little.
   function crown(bx, by, blobs, c, sw) {
-    const mv = (k) => sw * (0.4 + (k % 3) * 0.3);
-    blobs.forEach(([dx, dy, r], k) => circle(bx + dx + mv(k), by + dy, r, shade(c, -0.14)));
-    blobs.forEach(([dx, dy, r], k) => circle(bx + dx - 2 + mv(k), by + dy - 3, r * 0.86, c));
-    blobs.forEach(([dx, dy, r], k) => circle(bx + dx - 5 + mv(k), by + dy - 7, r * 0.45, shade(c, 0.12)));
+    const P = blobs.map(([dx, dy, r], k) => [bx + dx + sw * (0.4 + (k % 3) * 0.3), by + dy, r]), lit = shade(c, 0.22), dark = shade(c, -0.3), mid = shade(c, -0.12);
+    const x0 = Math.min(...P.map(([x, , r]) => x - r)), x1 = Math.max(...P.map(([x, , r]) => x + r)), y0 = Math.min(...P.map(([, y, r]) => y - r)), y1 = Math.max(...P.map(([, y, r]) => y + r));
+    const cx0 = (x0 + x1) / 2, cy0 = (y0 + y1) / 2, span = (x1 - x0 + y1 - y0) / 2;
+    P.forEach(([x, y, r]) => circle(x, y + 1, r + 1.5, 'rgba(25,45,20,.62)'));
+    P.forEach(([x, y, r]) => circle(x, y, r, c));
+    ctx.save(); ctx.beginPath(); P.forEach(([x, y, r]) => { ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, Math.PI * 2); }); ctx.clip();
+    const g = ctx.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, 'rgba(255,255,205,.30)'); g.addColorStop(0.5, 'rgba(255,255,205,0)'); g.addColorStop(1, 'rgba(8,28,8,.42)'); ctx.fillStyle = g; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    P.forEach(([x, y, r]) => {
+      ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(12,32,12,.3)'; ctx.lineWidth = r * 0.38; ctx.beginPath(); ctx.arc(x, y, r * 0.86, 0.1, 1.6); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,210,.2)'; ctx.lineWidth = r * 0.24; ctx.beginPath(); ctx.arc(x, y, r * 0.78, 3.3, 4.7); ctx.stroke();
+    });
+    P.forEach(([x, y, r], k) => {
+      const n = Math.round(r * 1.3);
+      for (let i = 0; i < n; i++) {
+        const a = scatter(i + k * 31, 11) * 6.283, d = Math.sqrt(scatter(i + k * 31, 12)) * r * 0.92, lx = x + Math.cos(a) * d, ly = y + Math.sin(a) * d * 0.9, sun = (-(lx - cx0) - (ly - cy0)) / span;
+        ctx.fillStyle = sun > 0.12 ? lit : sun < -0.18 ? dark : mid; ctx.globalAlpha = 0.7;
+        ctx.beginPath(); ctx.ellipse(lx, ly, 2.8, 1.7, scatter(i + k * 31, 13) * 3.1416, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+    ctx.restore(); ctx.globalAlpha = 1;
   }
   const bareLimbs = (bx, by, list, w, col) => list.forEach(([x1, y1, x2, y2]) => limb(bx + x1, by + y1, bx + x2, by + y2, col, w));
   const snowOn = (bx, by, pts) => pts.forEach(([dx, dy]) => ell(bx + dx, by + dy, 5, 2, 'rgba(244,246,248,.95)'));
-  const treeShadow = (bx, by, rx) => ell(bx + 8, by + 2, rx, rx * 0.4, 'rgba(30,50,20,.18)');
-  // A steady scatter that does not change from frame to frame (so blossom and apples stay put), unlike a formula that lines up.
-  const scatter = (k, s) => Math.abs(Math.sin(k * 12.9898 + s * 78.233) * 43758.5453 % 1);
+  const treeShadow = (bx, by, rx) => { ell(bx + 12, by + 3, rx * 1.1, rx * 0.44, 'rgba(25,45,20,.12)'); ell(bx + 10, by + 2, rx * 0.85, rx * 0.34, 'rgba(25,45,20,.16)'); ell(bx + 6, by + 1, rx * 0.5, rx * 0.2, 'rgba(25,45,20,.2)'); };
   const fall = (bx, by, n, col, spread, top, t, r = 2) => { for (let k = 0; k < n; k++) { const ph = (t * 0.25 + scatter(k, 5)) % 1; circle(bx - spread + scatter(k, 1) * spread * 2 + Math.sin(t + k) * 8, by - top + ph * top, r, col); } };
 
   function drawOak(T, t) {
@@ -2675,12 +2698,17 @@ export function createHouseArt(ctx0, opts = {}) {
     if (si === 0) { for (let k = 0; k < 18; k++) circle(bx - 44 + scatter(k, 2) * 88 + sw * 0.5, by - 46 - scatter(k, 3) * 34, 2.4, '#E98FAE'); fall(bx, by, 10, '#FBD6E0', 40, 60, t); }
   }
   function drawPine(T, t) {
-    const [bx, by] = T.P(0.7, 0.7, 0), sw = Math.sin(t * 0.8) * 1.2;
-    treeShadow(bx, by, 40); rr(bx - 4, by - 16, 8, 16, 2, '#5A3E2E');
-    [[30, 22, 18], [24, 20, 40], [18, 18, 60], [11, 16, 80]].forEach(([w, hh, y], k) => {
-      const s = sw * k * 0.3, tip = [bx + s, by - y - hh], l = [bx - w + s * 0.3, by - y + 12], r = [bx + w + s * 0.3, by - y + 12];
-      ctx.fillStyle = shade('#2F6B40', k * 0.05 - 0.05); ctx.beginPath(); ctx.moveTo(...l); ctx.lineTo(...r); ctx.lineTo(...tip); ctx.closePath(); ctx.fill();
-      if (treeSnow()) { ctx.fillStyle = 'rgba(244,246,248,.95)'; ctx.beginPath(); ctx.moveTo(tip[0] - w * 0.55, tip[1] + hh * 0.55); ctx.lineTo(tip[0] + w * 0.55, tip[1] + hh * 0.55); ctx.lineTo(...tip); ctx.closePath(); ctx.fill(); }
+    const [bx, by] = T.P(0.7, 0.7, 0), sw = Math.sin(t * 0.8) * 1.2, snowy = treeSnow();
+    treeShadow(bx, by, 42); trunkShape(bx, by, 20, 6, 4, 0, '#5A3E2E');
+    // Four tiers, each with a ragged lower edge, lit on the left and shaded on the right, edged dark; back to front so each sits over the one above.
+    [[16, 18, 78, 0.3], [22, 20, 58, 0.22], [28, 22, 38, 0.14], [34, 24, 18, 0.06]].forEach(([w, hh, y, k], i) => {
+      const s = sw * (3 - i) * 0.3, tip = [bx + s, by - y - hh], base = by - y + 12, c = shade('#2F6B40', k - 0.12);
+      const edge = () => { ctx.beginPath(); ctx.moveTo(...tip); ctx.lineTo(bx - w + s * 0.3, base); for (let j = 1; j <= 6; j++) ctx.lineTo(bx - w + (2 * w * j) / 6 + s * 0.3, base + (j % 2 ? 4 : -1)); ctx.closePath(); };
+      edge(); ctx.fillStyle = c; ctx.fill();
+      ctx.save(); edge(); ctx.clip(); ctx.fillStyle = 'rgba(8,30,12,.34)'; ctx.beginPath(); ctx.moveTo(...tip); ctx.lineTo(bx + w + 4, base + 6); ctx.lineTo(bx + 1, base + 6); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(190,235,170,.22)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(tip[0] - 1, tip[1] + 3); ctx.lineTo(bx - w * 0.8 + s * 0.3, base - 1); ctx.stroke(); ctx.restore();
+      edge(); ctx.strokeStyle = 'rgba(15,40,20,.55)'; ctx.lineWidth = 1; ctx.stroke();
+      if (snowy) { ctx.fillStyle = 'rgba(244,246,248,.95)'; ctx.beginPath(); ctx.moveTo(tip[0] - w * 0.55, tip[1] + hh * 0.55); ctx.lineTo(tip[0] + w * 0.55, tip[1] + hh * 0.55); ctx.lineTo(...tip); ctx.closePath(); ctx.fill(); }
     });
   }
   function drawBirch(T, t) {
@@ -2704,15 +2732,20 @@ export function createHouseArt(ctx0, opts = {}) {
   }
   function drawPalm(T, t) {
     const [bx, by] = T.P(0.7, 0.7, 0), sw = Math.sin(t * 0.8) * 2;
-    treeShadow(bx, by, 40); trunkShape(bx, by, 78, 6, 4, 12, '#9C7A55');
-    for (let k = 0; k < 8; k++) limb(bx - 5 + k * 1.5, by - 8 - k * 9, bx + 5 + k * 1.5, by - 8 - k * 9, '#7C5E40', 1.2);
+    treeShadow(bx, by, 42); trunkShape(bx, by, 78, 6, 4, 12, '#A58260');
+    for (let k = 0; k < 9; k++) limb(bx - 5 + k * 1.5, by - 6 - k * 8.5, bx + 5 + k * 1.5, by - 8 - k * 8.5, 'rgba(70,48,30,.55)', 1.3);
     const tx = bx + 12, ty = by - 80, c = '#3F9A4A';
-    for (let k = 0; k < 8; k++) {
-      const a = -3.0 + k * 0.5, ex = tx + Math.cos(a) * 38 + sw * (k % 2 ? 1 : -1) * 0.6, ey = ty + Math.sin(a) * 18 + 16;
-      ctx.strokeStyle = shade(c, k % 2 ? 0.06 : -0.08); ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.quadraticCurveTo(tx + Math.cos(a) * 22, ty + Math.sin(a) * 18 - 14, ex, ey); ctx.stroke();
-      if (treeSnow()) circle((tx + ex) / 2, (ty + ey) / 2 - 4, 3, 'rgba(244,246,248,.9)');
+    // Fronds are drawn back to front, each a curved spine edged dark with leaflets along both sides, tapering to the tip.
+    for (let k = 0; k < 9; k++) {
+      const a = -3.1 + k * 0.5, ex = tx + Math.cos(a) * 40 + sw * (k % 2 ? 1 : -1) * 0.6, ey = ty + Math.sin(a) * 18 + 18, cx = tx + Math.cos(a) * 22, cy = ty + Math.sin(a) * 18 - 14;
+      const at = (u) => [(1 - u) * (1 - u) * tx + 2 * (1 - u) * u * cx + u * u * ex, (1 - u) * (1 - u) * ty + 2 * (1 - u) * u * cy + u * u * ey], col = shade(c, Math.sin(a) > -0.2 ? -0.1 : 0.06);
+      ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(15,45,22,.6)'; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.quadraticCurveTo(cx, cy, ex, ey); ctx.stroke();
+      ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke();
+      for (let j = 1; j <= 9; j++) { const u = j / 10, [px, py] = at(u), [qx, qy] = at(u + 0.04), nx = -(qy - py), ny = qx - px, ln = Math.hypot(nx, ny) || 1, len = 8 - u * 5;
+        ctx.strokeStyle = shade(c, j % 2 ? 0.1 : -0.06); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(px + (nx / ln) * len * 0.3, py + (ny / ln) * len * 0.3 + 1); ctx.lineTo(px + (nx / ln) * len, py + (ny / ln) * len + 3); ctx.moveTo(px - (nx / ln) * len * 0.3, py - (ny / ln) * len * 0.3 + 1); ctx.lineTo(px - (nx / ln) * len, py - (ny / ln) * len + 3); ctx.stroke(); }
+      if (treeSnow()) circle((tx + ex) / 2, (ty + ey) / 2 - 3, 3, 'rgba(244,246,248,.9)');
     }
-    circle(tx - 3, ty + 7, 3.2, '#6B4A2B'); circle(tx + 4, ty + 8, 3.2, '#5E4023'); circle(tx, ty + 11, 3, '#6B4A2B');
+    circle(tx - 3, ty + 7, 3.4, '#6B4A2B'); circle(tx + 4, ty + 8, 3.4, '#5E4023'); circle(tx, ty + 11, 3.2, '#6B4A2B');
   }
   function drawApple(T, t) {
     const [bx, by] = T.P(0.7, 0.7, 0), si = seasonIdx(), sw = Math.sin(t * 0.7) * 1.3;
