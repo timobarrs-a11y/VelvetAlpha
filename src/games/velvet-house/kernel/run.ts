@@ -7,6 +7,7 @@ import { gardenTick } from '../state/crops';
 import { weatherTick, weatherOf } from '../state/weather';
 import { advanceClock } from '../engine/loop';
 import { startFixedLoop } from '../engine/fixedLoop';
+import { createFpsMeter } from '../engine/fpsMeter';
 import { blendFrames } from '../view/interpolate';
 import { qualityManager } from '../engine/qualityTier';
 import { LayerCache } from '../engine/layerCache';
@@ -36,6 +37,7 @@ export function startGameLoop(g: Game): void {
   };
   // Where everyone and everything was at the start of the latest simulation step, to blend toward the current state.
   let stepStart = { chars: people.map(g.toFrame), pets: g.petFrames() };
+  const fps = createFpsMeter();
   startFixedLoop(
     (dt) => {
       stepStart = { chars: people.map(g.toFrame), pets: g.petFrames() };
@@ -94,6 +96,7 @@ export function startGameLoop(g: Game): void {
       if (goalsTimer <= 0) { goalsTimer = 0.25; g.goalsTick(); g.outfitTick(); g.overseerTick(); g.roomServiceTick(); g.candlesTick(); }
     },
     (alpha, frameDt) => {
+      fps.frame(frameDt);
       const prevSim = simCache;
       simCache = { day: world.day, minutes: world.minutes, objs: [...world.objs], chars: people.map(g.toFrame) };
       const interpMinutes = prevSim.minutes + (simCache.minutes - prevSim.minutes) * alpha;

@@ -2,6 +2,7 @@ import { SAVE_KEY } from '../kernel/config';
 import { loadSave } from '../state/save';
 import { isCurrentContent, CONTENT_VERSION } from '../state/saveMigration';
 import { qualityManager } from '../engine/qualityTier';
+import { fpsOn, setFpsOn } from '../engine/fpsMeter';
 import { postToParent } from '../bridge/protocol';
 import { clockText, DAYS, weekday } from '../state/time';
 import { hasChoice, anyHouse, askWho, listenForCompanions, onCompanionsChanged } from '../bridge/companions';
@@ -158,6 +159,7 @@ export function showMainMenu(): Promise<LaunchChoice> {
           <h2 class="vh-menu-h">Settings</h2>
           <div class="vh-menu-row"><span>Graphics</span><div class="vh-menu-seg">${QUALITY.map(([label], i) => `<button data-q="${i}" aria-pressed="${i === idx}">${label}</button>`).join('')}</div></div>
           <p class="vh-menu-sub">Auto lowers the detail by itself if the game runs slowly. Pick Low on an older phone.</p>
+          <div class="vh-menu-row"><span>Frame rate</span><div class="vh-menu-seg"><button data-fps="0" aria-pressed="${!fpsOn()}">Hide</button><button data-fps="1" aria-pressed="${fpsOn()}">Show</button></div></div>
           <button class="vh-menu-btn vh-menu-primary" data-m="back"><span>Back</span></button>
         </div>`;
       root.querySelectorAll<HTMLButtonElement>('[data-q]').forEach((b) => b.addEventListener('click', () => {
@@ -165,6 +167,10 @@ export function showMainMenu(): Promise<LaunchChoice> {
         try { localStorage.setItem('velvet-quality', String(i)); } catch { /* none */ }
         qualityManager.setPlayerOverride(QUALITY[i][1]);
         root.querySelectorAll('[data-q]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      }));
+      root.querySelectorAll<HTMLButtonElement>('[data-fps]').forEach((b) => b.addEventListener('click', () => {
+        setFpsOn(b.dataset.fps === '1');
+        root.querySelectorAll('[data-fps]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
       }));
       root.querySelector('[data-m=back]')?.addEventListener('click', home);
     };
