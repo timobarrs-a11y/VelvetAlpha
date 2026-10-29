@@ -73,12 +73,12 @@ export function createArrange(g: Game): Partial<Game> {
     if (!heldObj) return;
     heldCheck = heldObj.type === 'food' && fridgeUnder(world.objs, heldObj) ? { ok: true } : checkPlacement(world.objs, heldObj, peopleOnFloor());
   }
-  // Put somewhere it does not fit: slide it to the nearest place close by that it does, if there is one.
+  // Put somewhere it does not fit: slide it (and turn it, if it is used from one side) to the nearest place close by that it does, if there is one.
   function fitNearby(o: ObjectInstance, radius = 2): boolean {
     const f = nearestFit(world.objs, o, peopleOnFloor(), radius);
     if (!f) return false;
     const prev: Pose = { x: o.x, y: o.y, rot: o.rot };
-    o.x = f.x; o.y = f.y;
+    o.x = f.x; o.y = f.y; o.rot = f.rot;
     carryOnTop(world.objs, o, prev);
     return true;
   }

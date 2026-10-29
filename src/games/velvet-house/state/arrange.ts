@@ -238,22 +238,31 @@ export function snapEdges(objs: ObjectInstance[], o: ObjectInstance, reach = 0.3
 }
 
 /**
- * The nearest place around where `o` is now that it fits (flush to what is there, as `snapEdges` would leave it), or null when nothing
- * within `radius` does. `o` itself is left as it was.
+ * The nearest place around where `o` is now that it fits (flush to what is there, as `snapEdges` would leave it), or null when
+ * nothing within `radius` does. A piece that is used from one side (a bed, a counter) may be turned to fit, a half turn or a quarter
+ * costing a little distance, so a bed set against a fence with its front to the fence comes back facing into the yard.
+ * `o` itself is left as it was.
  */
-export function nearestFit(objs: ObjectInstance[], o: ObjectInstance, people: Array<{ level: number; x: number; y: number }> = [], radius = 2): { x: number; y: number } | null {
-  const ox = o.x, oy = o.y, offs: Array<[number, number, number]> = [];
-  for (let dx = -radius; dx <= radius + 1e-9; dx += 0.25) for (let dy = -radius; dy <= radius + 1e-9; dy += 0.25) if (dx || dy) offs.push([dx, dy, Math.hypot(dx, dy)]);
+export function nearestFit(objs: ObjectInstance[], o: ObjectInstance, people: Array<{ level: number; x: number; y: number }> = [], radius = 2): { x: number; y: number; rot: number } | null {
+  const ox = o.x, oy = o.y, rot0 = o.rot, offs: Array<[number, number, number]> = [];
+  for (let dx = -radius; dx <= radius + 1e-9; dx += 0.25) for (let dy = -radius; dy <= radius + 1e-9; dy += 0.25) offs.push([dx, dy, Math.hypot(dx, dy)]);
   offs.sort((a, b) => a[2] - b[2]);
+  const turns: Array<[number, number]> = TYPES[o.type]?.spots ? [[0, 0], [2, 0.25], [1, 0.4], [3, 0.4]] : [[0, 0]];
+  let best: { x: number; y: number; rot: number; cost: number } | null = null;
   try {
-    // The nearest 160 spots are tried: a fit that close is the one the player meant, and each try walks the whole floor.
-    for (const [dx, dy] of offs.slice(0, 160)) {
-      o.x = ox + dx; o.y = oy + dy;
-      snapEdges(objs, o);
-      if (checkPlacement(objs, o, people).ok) return { x: o.x, y: o.y };
+    // Only the nearest 160 spots are tried for each turn: a fit that close is the one the player meant, and each try walks the whole floor.
+    for (const [turn, pen] of turns) {
+      o.rot = (rot0 + turn) % 4;
+      for (const [dx, dy, d] of offs.slice(0, 160)) {
+        if (turn === 0 && !dx && !dy) continue;
+        if (best && d + pen >= best.cost) break;
+        o.x = ox + dx; o.y = oy + dy;
+        snapEdges(objs, o);
+        if (checkPlacement(objs, o, people).ok) { best = { x: o.x, y: o.y, rot: o.rot, cost: d + pen }; break; }
+      }
     }
-    return null;
-  } finally { o.x = ox; o.y = oy; }
+    return best && { x: best.x, y: best.y, rot: best.rot };
+  } finally { o.x = ox; o.y = oy; o.rot = rot0; }
 }
 
 // Move a held piece so its centre sits under the pointer, snapped to a
