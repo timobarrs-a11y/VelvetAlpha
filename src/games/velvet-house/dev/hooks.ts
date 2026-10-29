@@ -2,6 +2,7 @@ import { TYPES } from '../state/objects';
 import { checkPlacement } from '../state/arrange';
 import { CATALOG } from '../state/catalog';
 import { checkLamp, type WallLamp } from '../state/wallLamps';
+import { ACTIVITIES } from '../state/activities';
 import { isWalking, poseOf, startGoto, startChain } from '../state/agents';
 import { bossLeave } from '../state/boss';
 import { type SampleFn } from '../state/companionAI';
@@ -24,6 +25,14 @@ export function installDevHooks(g: Game): void {
       setDay: (d: number) => { world.day = d; },
       // Put someone on a floor (without the stairs), and start an activity chain for them: to see the office's desks used.
       placePerson: (who: 'jordan' | 'maya', level: number, x: number, y: number) => { const p = who === 'maya' ? people[1] : people[0]; p.level = level; p.x = x; p.y = y; p.task = null; p.scripted = true; },
+      // Hold someone in a pose, facing a way, to look at the animation (they are made scripted so nothing else moves them).
+      showPose: (who: 'jordan' | 'maya', pose: string, face: [number, number] = [0, 1]) => {
+        const p = who === 'maya' ? people[1] : people[0], id = `_pose_${pose}`;
+        (ACTIVITIES as Record<string, unknown>)[id] = { pose, dur: Infinity, gives: {}, verb: pose };
+        p.scripted = true; p.face = face; p.task = { act: id, slot: null, phase: 'do', route: [], time: 0, dur: 1e9, next: [] } as never;
+      },
+      // Change the pose of the activity someone is doing right now (so a seated person can be shown on the phone).
+      swapPose: (who: 'jordan' | 'maya', pose: string) => { const p = who === 'maya' ? people[1] : people[0], a = p.task && (ACTIVITIES as Record<string, { pose: string }>)[p.task.act]; if (a) a.pose = pose; },
       bossLeave: (minutes = 8) => { const d = people.find((q) => q.id === 'dale'); if (d) bossLeave(g.house, d, world.day * 1440 + world.minutes, minutes); },
       startChain: (who: 'jordan' | 'maya', chain: string) => { const p = who === 'maya' ? people[1] : people[0]; p.scripted = true; return startChain(g.house, p, chain, null, () => Math.random()); },
       // The office: unlock it (it joins the floor bar), and light or clear the meeting-room sign.

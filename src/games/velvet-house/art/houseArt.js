@@ -4916,7 +4916,7 @@ export function createHouseArt(ctx0, opts = {}) {
   function setMood(v) { mood = Math.max(0, Math.min(1, Number(v) || 0)); }
 
   // Things in hand for an activity, drawn over the arms.
-  const PROP_ZOOM = { spoon: 1.5, fork: 1.6, cup: 1.4, phone: 1.5, knife: 1.5, brush: 1.5, pen: 1.5, comb: 1.5, spatula: 1.4, apple: 1.3, rag: 1.3, can: 1.3, ball: 1.3, roller: 1.2 };
+  const PROP_ZOOM = { spoon: 1.5, fork: 1.6, cup: 1.4, phone: 1.5, handset: 1.7, sheet: 1.2, folder: 1.2, knife: 1.5, brush: 1.5, pen: 1.5, comb: 1.5, spatula: 1.4, apple: 1.3, rag: 1.3, can: 1.3, ball: 1.3, roller: 1.2 };
   function drawProps(rig, hand, c, t, hd, local, pass) {
     (rig.props || []).forEach(p => {
       // The guitar's body sits behind the hands that play it; everything else is held in front.
@@ -4936,6 +4936,10 @@ export function createHouseArt(ctx0, opts = {}) {
           if (p.steam) for (let k = 0; k < 2; k++) { const u = (t * 0.9 + k * 0.5) % 1; ctx.globalAlpha = 0.55 * (1 - u); limb(h[0] - 1 + k * 2 + Math.sin(u * 6 + k) * 0.8, h[1] - 5 - u * 6, h[0] - 1 + k * 2 + Math.sin(u * 6 + k + 1) * 0.8, h[1] - 7 - u * 6, '#FFFFFF', 0.9); ctx.globalAlpha = 1; }
           break;
         case 'phone': rr(h[0] - 1.6, h[1] - 3.5, 3.2, 6, 0.8, '#1E1B2E'); if (p.scroll != null) limb(h[0] - 0.6, h[1] - 2.6 + p.scroll * 4, h[0] + 0.6, h[1] - 2.6 + p.scroll * 4, '#7FB2FF', 0.8); break;
+        case 'handset': limb(h[0] - 0.5, h[1] - 5.5, h[0] + 0.8, h[1] + 4, '#4A5262', 2.6); circle(h[0] - 0.5, h[1] - 5.5, 1.9, '#3A3F4A'); circle(h[0] + 0.8, h[1] + 4, 1.9, '#3A3F4A'); break;
+        case 'sheet': rr(h[0] - 3.5, h[1] - 6, 7, 8.5, 0.5, '#F6F3EC'); ctx.fillStyle = 'rgba(60,60,70,.45)'; for (let k = 0; k < 3; k++) ctx.fillRect(h[0] - 2.4, h[1] - 4.6 + k * 2.2, 4.8, 0.7); break;
+        case 'folder': rr(h[0] - 4, h[1] - 7, 8, 9, 0.8, '#D9B36A'); rr(h[0] - 4, h[1] - 8.2, 3.6, 1.6, 0.6, '#D9B36A'); rr(h[0] - 2.6, h[1] - 6, 6, 6.5, 0.4, '#F6F3EC'); break;
+        case 'stream': for (let i = 0; i < 3; i++) { const u = (t * 2.6 + i / 3) % 1; limb(h[0] + 0.3, h[1] - 15 + u * 11, h[0] + 0.3, h[1] - 13 + u * 11, `rgba(150,200,255,${0.9 - u * 0.4})`, 1.1); } break;
         case 'dumbbell': limb(h[0] - 4, h[1], h[0] + 4, h[1], '#3B3F4A', 1.8); circle(h[0] - 4, h[1], 2.2, '#2A2D35'); circle(h[0] + 4, h[1], 2.2, '#2A2D35'); break;
         case 'brush': limb(h[0], h[1], h[0] + 2, h[1] - 6, '#8A5A3B', 1.2); circle(h[0] + 2, h[1] - 6, 1.1, '#E48AAE'); break;
         case 'palette': ell(h[0], h[1] - 1, 5, 3, '#D9B98C'); circle(h[0] - 2, h[1] - 2, 0.9, '#E5484D'); circle(h[0] + 1, h[1] - 2.5, 0.9, '#3B82F6'); circle(h[0] + 2.5, h[1] - 0.5, 0.9, '#22C55E'); break;
@@ -5400,7 +5404,7 @@ export function createHouseArt(ctx0, opts = {}) {
     // behind the torso (the far arm) or in front of it.
     const SLEEVES = { tank: 0, tee: 0.55, jersey: 0.5, dress: 0.4, cheer: 0, cop: 0.55, scrubs: 0.55, hero: 0.55, uniform: 0.55, sundress: 0.4 };
     const sleeve = L.topGarment ? (SLEEVE_BY_CUT[L.topGarment.cut] ?? 1) : L.topStyle ? (SLEEVES[L.topStyle] ?? 1) : 0.55;
-    const NOT_HELD = new Set(['notes', 'water', 'splash']), OPEN_KINDS = new Set(['book', 'plate', 'parcel', 'cloth', 'paper']);
+    const NOT_HELD = new Set(['notes', 'water', 'splash', 'stream']), OPEN_KINDS = new Set(['book', 'plate', 'parcel', 'cloth', 'paper']);
     // Props too wide to grip by a handle: no fingers drawn over them.
     const NO_FINGERS = new Set(['guitar', 'gloves']);
     const mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];

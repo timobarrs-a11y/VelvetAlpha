@@ -135,6 +135,24 @@ The `personal` ones (15 to 18) never satisfy a work line, but they are there on 
 Meetings and talks to the boss are **timed actions with no animation**: the unseen meeting is only the walk and the sign; the boss talk is Jordan sitting in the visitor chair
 for the time, using the sit pose the game already has.
 
+### Stand-and-use poses (built, shared by the whole game)
+
+The game had sit and type, and a few single-purpose stand poses. It now has seven reusable poses (`art/poseAnim.js`), each for a *kind of thing you work*, so every station here and every
+appliance at home uses the same few animations:
+
+| Pose | What it looks like | Used by (office / elsewhere) |
+|---|---|---|
+| `operate` | Taps the control panel, looks at the screen, waits, then takes what comes out (a sheet in hand) | printer print, scan and copy, vending machine / the fortune teller today, later washer, microwave, ATM |
+| `dispense` | Holds a cup under a spout until it fills (a stream), then a sip | water cooler, coffee machine / making coffee at home today |
+| `board` | Writes lines across a vertical surface with a marker, then steps back and points | whiteboard / later a chalkboard |
+| `files` | Pulls a drawer, walks the fingers through it, draws out a folder and reads it | filing cabinet / later dressers and shelves |
+| `talk` | A standing conversation: speaks with both hands, then listens and nods | the boss's office, the cooler chat / the companion's chat, hanging out and party chatter today |
+| `handset` | Standing call on a wall or desk phone, the free hand gesturing | any wall phone |
+| `deskcall` | The same call seated at the desk, the other hand taking notes | the desk phone, from the chair |
+
+New props for them: `handset`, `sheet`, `folder`, `stream`. In the game these are already in use for making coffee (`dispense`), the companion's chat and hanging out (`talk`) and the
+fortune teller (`operate`); the office actions pick the rest up as they are built. A pose is chosen by the action's `pose` field, so a new action costs one row.
+
 ### Choosing the day
 
 - **Tier** follows the career rung: early days draw simple threads (3 lines, short actions); later ones draw 5 lines with more of the long actions.
@@ -298,4 +316,4 @@ phone at all four camera turns before the next. A mockup of the target room is i
 11. **Hints:** the list never says where to tap. Should a line pulse its station after a long idle spell, or never?
 12. **Off-list actions:** allowed, and they cost time without ticking a line. Should some give a real reward (a game, a coffee), or should the boss notice a long game (Dale is in the room most of the day)?
 13. **Left-behind items:** are printable papers and a resume a single shared stack on the desk, or one item each? The first is much simpler.
-14. **Animations for the actions:** the computer ones use the existing desk pose; phone calls, printing and scanning need a stand-and-use pose, which the game does not have yet. Use the stand pose for now?
+14. **Animations for the actions:** answered. The stand-and-use poses are built (see above), so calls, printing, scanning, the whiteboard and the filing cabinet each have their own.
