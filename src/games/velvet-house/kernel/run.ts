@@ -6,6 +6,7 @@ import { rollDay, nightStart, wakeHour } from '../state/routine';
 import { gardenTick, treeTick } from '../state/crops';
 import { weatherTick, weatherOf, seasonOf } from '../state/weather';
 import { bossTick } from '../state/boss';
+import { UNSEEN_ACTS } from '../content/office';
 import { advanceClock } from '../engine/loop';
 import { startFixedLoop } from '../engine/fixedLoop';
 import { createFpsMeter } from '../engine/fpsMeter';
@@ -95,6 +96,8 @@ export function startGameLoop(g: Game): void {
       for (const npc of people.slice(2)) tickAgent(house, npc, null, dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
       const dale = people.find((p) => p.id === 'dale');
       if (dale) bossTick(house, dale, world.day * 1440 + world.minutes, hourF, gameMin, () => rng.next());
+      // The sign over the meeting-room door glows red while anyone is in there.
+      art.setMeeting(people.some((p) => p.task?.phase === 'do' && UNSEEN_ACTS.has(p.task.act)));
       const followed = view.follow && people.find((p) => p.id === view.follow);
       if (followed && !followed.onStairs && followed.level !== view.level) g.setLevel(followed.level, true);
 

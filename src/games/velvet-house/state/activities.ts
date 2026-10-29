@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
+import { OFFICE_ACTIONS, actionActivity } from '../content/office';
+
 export type NeedKey = 'energy' | 'food' | 'hygiene' | 'fun' | 'comfort' | 'social';
 
 export interface ActivityGives {
@@ -160,6 +162,9 @@ export const ACTIVITIES: Record<string, ActivityMeta> = {
 for (const [act, appeal] of Object.entries({ tend: 6, window: 4, freelance: 3, laundry: 4, rummage: 3, lift: 3, plants: 3 })) {
   ACTIVITIES[act] = { ...ACTIVITIES[act], appeal };
 }
+
+// The office's actions (content/office.ts): each runs as an activity with a set time, on the office floor only.
+for (const a of OFFICE_ACTIONS) ACTIVITIES[actionActivity(a)] = { pose: a.pose, dur: a.secs, gives: a.gives ?? {}, verb: a.verb, level: 5 };
 
 export const CHAINS: Record<string, string[]> = {
   cookeat: ['cook', 'eat'],

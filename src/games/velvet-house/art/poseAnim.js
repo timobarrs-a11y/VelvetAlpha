@@ -285,7 +285,8 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
       const k = Math.min(1, (u - 0.62) / 0.14);
       return { hands: { 1: [0.2 - k * 0.0, 0.06, -0.34 + k * 0.3], [-1]: [0.14, 0.14, -0.1 + k * 0.0 - 0.2] }, headDown: k > 0.5, lean: 0.02, props: [{ kind: 'folder', side: 1 }] };
     }
-    case 'talk': {
+    case 'talk':
+    case 'sittalk': {
       // A standing conversation: speaking with both hands, then listening with a nod.
       const sp = pulse(t, 7, 0.62, ph), g1 = Math.max(0, wave(t, 2.9, ph)), g2 = Math.max(0, wave(t, 2.3, ph + 1.7));
       return {
@@ -547,7 +548,7 @@ export const ANIMATED_POSES = [
   'cook', 'eat', 'eatOut', 'sip', 'shower', 'read', 'phone', 'tv', 'run', 'lift', 'stretch', 'switch',
   'reach', 'listen', 'arcade', 'desk', 'water', 'mop', 'pet', 'play', 'mow', 'swim', 'roll', 'wipe',
   'jacks', 'snack', 'meditate', 'jumprope',
-  'operate', 'dispense', 'board', 'files', 'talk', 'handset', 'deskcall',
+  'operate', 'dispense', 'board', 'files', 'talk', 'sittalk', 'handset', 'deskcall',
 ];
 
 export { TAU };

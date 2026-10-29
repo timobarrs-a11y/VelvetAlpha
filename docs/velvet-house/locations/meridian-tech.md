@@ -277,6 +277,18 @@ once on load (`kernel/config.ts`), with the content version unchanged.
   through its side panel; its light is green only while the desk is in use), the keyboard, a **mouse on its pad** and a **desk phone** (base and handset, pushed against the back of the desk to leave the front clear) for the later tappable actions. There is no mug or other loose prop.
   A house saved with an older layout has only its office pieces replaced once on load (`OFFICE_LAYOUT`).
 
+## Status: stations (built)
+
+- **Data:** `content/office.ts` holds the stations and every action (20 computer, 10 phone, 5 for Dale, 4 meetings, 4 printer, and one or two for each of the whiteboard, filing cabinet, cooler, coffee machine,
+  vending machine, fridge and plant) with its time, tags and pose. Each is registered as an activity `o_<id>` on the office floor (`state/activities.ts`) and looks for its station's spot tag (`state/agents.ts`).
+- **Spots:** every working piece carries its spot (`state/objects.ts`), so moving the piece in Arrange moves the spot with it. The whiteboard and the meeting door are part of the wall, so each has an invisible
+  anchor piece (`officeboardspot`, `officedoorspot`) that cannot be moved. The filing cabinet is turned (rot 2) so its front faces the room. Layout version 6.
+- **Taps:** `systems/interact.ts` (`showStation`) for pieces, `systems/input.ts` for Dale and the wall (`art.hitFeature`). The sheet is `ui/stationMenu.ts`: tabs where a station has two kinds of action (the desk:
+  Computer and Phone), the time beside each action, closes on a pick, a tap outside, or Escape. The desk opens from the desk or its chair, and sits Jordan in that desk's own chair (`startActAt`).
+- **The boss:** his sheet is greyed with "Dale isn't at his desk right now" while he is away, and the visitor's chair stays refused (the earlier rule).
+- **Meetings:** Jordan walks to the door and is out of sight for the length of the meeting; the sign glows red while anyone is in there.
+- **Not built yet:** the day's list and objective matching, what an action leaves behind, the jammed printer (so no "fix the jam"), and the cooler chat (there are no coworkers yet).
+
 ## Build order (pieces first; the day's list last)
 
 The day's list is built from the pieces, so they wait until the pieces exist. Each step is its own small change, checked in the real game on desktop and
@@ -288,7 +300,7 @@ phone at all four camera turns before the next. A mockup of the target room is i
    Each with its states (the computer working, the printer printing or jammed, the phone ringing, the door shut with its sign lit).
 3. **Light and weather:** ceiling light, window wall by day and night, dusk at a late finish, rain on the glass.
 4. **People:** Jordan walking, sitting, typing, using the printer and the phone, and walking to a door and going out of sight; a few coworkers sitting still.
-5. **Tappable stations:** the station menu on the desk, phone, printer, door, boss and the rest, each showing its actions (no timers yet). *(Next step.)*
+5. **Tappable stations (built):** tap a working piece (or the whiteboard, the door under the sign, or Dale) and a sheet lists what can be done there with the time each takes; picking one sends Jordan to do it for that long. The actions run as ordinary activities, so there is no objective list yet (step 7).
 6. **The action engine:** the timed state, the tick, the bar on Orders and Goals, save and load. Tested with a fake action.
 7. **The registry and the list:** the 20 computer actions, the 10 phone calls and the other stations as data; the thread templates and how a day is chosen; the line matcher.
 8. **Taking control:** the prompt at the leave hour, the scene switch, the companion staying home, and the return.

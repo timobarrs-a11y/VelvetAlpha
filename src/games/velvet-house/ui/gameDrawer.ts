@@ -9,6 +9,7 @@ import { gardenAction, treeAction } from '../systems/garden';
 import { AVATAR_HATS } from '../state/clothing';
 import { createDialogue, createTray, createTownSign } from '../ui/dialogue';
 import { SAVE_KEY } from '../kernel/config';
+import { createStationMenu } from '../ui/stationMenu';
 import type { Game } from '../kernel/game';
 
 export function createGameDrawer(g: Game): Partial<Game> {
@@ -151,5 +152,6 @@ export function createGameDrawer(g: Game): Partial<Game> {
   // UI: Tray
   const tray = createTray();
   stage.appendChild(tray.el);
-  return { drawer, dialogue, tray, townSign };
+  const stationMenu = createStationMenu(stage);
+  return { drawer, dialogue, tray, stationMenu, townSign };
 }

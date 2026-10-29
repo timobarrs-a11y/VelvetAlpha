@@ -34,6 +34,11 @@ export function createInput(g: Game): void {
       const [jx, jy] = art.project(jordan.x, jordan.y, jordan.z);
       if (Math.hypot(sx - jx, sy - jy) < 30) { g.toggleFollow('jordan'); return; }
     }
+    // The office: the boss himself (a tap on him is a talk with him).
+    if (view.level === 5) {
+      const dale = people.find((p) => p.id === 'dale' && p.level === 5);
+      if (dale) { const [dx, dy] = art.project(dale.x, dale.y, dale.z); if (Math.hypot(sx - dx, sy - dy) < 28) { g.showStation('boss', null, e.clientX, e.clientY); return; } }
+    }
     // Try clicking on objects. Touch one and it comes alive: the TV flickers
     // on, the washer spins, the fridge swings open. This comes before the
     // room's lights, so tapping the TV doesn't switch on the lamp beside it.
@@ -44,6 +49,11 @@ export function createInput(g: Game): void {
       log(reaction);
       g.showObjectActions(obj, e.clientX, e.clientY, true);
       return;
+    }
+    // The office's wall: the whiteboard and the meeting door (a piece in front of them wins, above).
+    if (!obj && view.level === 5) {
+      const feat = art.hitFeature(5, sx, sy, ['whiteboard', 'meetdoor']), station = feat ? g.featureStation(feat) : null;
+      if (station) { g.showStation(station, null, e.clientX, e.clientY); return; }
     }
     const lightState = art.toggleLightAt(view.level, sx, sy);
     if (lightState !== null) {

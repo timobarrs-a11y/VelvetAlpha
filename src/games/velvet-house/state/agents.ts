@@ -1,4 +1,5 @@
 import type { Garment } from './garment';
+import { OFFICE_ACTIONS, STATIONS, actionActivity } from '../content/office';
 import type { HeadImages } from './headSprites';
 import type { BodyImages } from './bodySprites';
 import { TYPES, blocksOf, isRug, isWall, isMount, type ObjectInstance } from './objects';
@@ -146,6 +147,9 @@ const ACT_TAGS: Record<string, string[]> = {
   sideDesk: ['desk'], sideBake: ['stove'],
 };
 
+// The office's actions each look for their station's spot (content/office.ts).
+for (const a of OFFICE_ACTIONS) ACT_TAGS[actionActivity(a)] = [STATIONS[a.station].tag];
+
 const CHOICES = [
   'sleep', 'nap', 'cookeat', 'coffee', 'shower', 'bath', 'read', 'phone', 'tv',
   'workout', 'stretch', 'records', 'arcade', 'claw', 'pinball', 'swing', 'vr', 'fortune', 'gumball', 'tiki', 'diffuse', 'musicbox', 'glam', 'zen', 'plants', 'piano', 'easel', 'aquarium',
@@ -157,7 +161,7 @@ const CHOICES = [
   'laundry', 'rummage', 'lift', 'jumprope', 'shadowbox',
 ];
 
-export const SITTING_POSES = new Set(['tv', 'read', 'phone', 'desk', 'eat', 'sip', 'eatOut']);
+export const SITTING_POSES = new Set(['tv', 'read', 'phone', 'desk', 'eat', 'sip', 'eatOut', 'deskcall', 'sittalk']);
 
 function tagsFor(act: string, id: AgentId): string[] {
   return OWN_SIDE[act]?.[id] ?? ACT_TAGS[act] ?? [];
@@ -361,6 +365,19 @@ function startAct(world: HouseWorld, ch: Agent, act: string, next: string[], oth
     goal = [ch.level, gx, gy];
   }
   ch.task = { act, slot: slot ?? null, phase: 'walk', route: routeTo(world, ch, ...goal), time: 0, dur: meta?.dur ?? 8, next };
+  return true;
+}
+
+/**
+ * An activity at one particular spot (the piece the player tapped), not the nearest free one. False when the spot is not there, is taken,
+ * or is the chair in front of the boss's desk while he is away.
+ */
+export function startActAt(world: HouseWorld, ch: Agent, act: string, slotId: string, other: Agent | null): boolean {
+  const slot = world.slots.find((s) => s.id === slotId);
+  if (!slot || takenBy(other).has(slot.id) || (slot.tag === 'bossvisit' && !world.bossIn)) return false;
+  const meta = ACTIVITIES[act];
+  ch.task = { act, slot, phase: 'walk', route: routeTo(world, ch, slot.level, slot.stand[0], slot.stand[1]), time: 0, dur: meta?.dur ?? 8, next: [] };
+  ch.lastChain = act;
   return true;
 }
 

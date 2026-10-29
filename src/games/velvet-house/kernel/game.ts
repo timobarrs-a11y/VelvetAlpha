@@ -127,6 +127,7 @@ export interface Game {
   drawer: ReturnType<typeof createDrawer>;
   dialogue: ReturnType<typeof createDialogue>;
   tray: ReturnType<typeof createTray>;
+  stationMenu: ReturnType<typeof import('../ui/stationMenu').createStationMenu>;
   cam: { z: number; fx: number; fy: number; tz: number; tfx: number; tfy: number };
 
   // camera
@@ -223,6 +224,9 @@ export interface Game {
   escapeArrange(): void;
   abortDrag(): void;
   // tapping things
+  /** The office: open a station's menu for the piece tapped (null for the wall), and which station a wall feature is. */
+  showStation(station: import('../content/office').StationId, obj: ObjectInstance | null, x: number, y: number): void;
+  featureStation(kind: string): import('../content/office').StationId | null;
   findObjectAt(sx: number, sy: number): ObjectInstance | null;
   showObjectActions(obj: ObjectInstance, x: number, y: number, poked?: boolean): void;
   handleObjectAction(obj: ObjectInstance, tag: string): void;

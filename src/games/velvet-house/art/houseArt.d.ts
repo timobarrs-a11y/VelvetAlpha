@@ -112,6 +112,8 @@ export interface HouseArt {
   wallObjsAll(): Array<{ id: string; type: string; name: string; level: number; col?: string }>;
   /** The wall piece under a view point on the walls the view shows, if any. */
   hitWallObj(level: number, sx: number, sy: number): string | null;
+  /** The kind of wall feature under a view point among `kinds` (the whiteboard, the meeting door), or null. */
+  hitFeature(level: number, sx: number, sy: number, kinds: string[]): string | null;
   /** The view point at a wall piece's centre. */
   wallObjView(id: string): [number, number] | null;
   /** Slides a wall piece so its centre follows a view point (less the grab offset), kept on its wall. */

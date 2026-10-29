@@ -163,13 +163,26 @@ export const TYPES: Record<string, ObjectTypeDef> = {
     spots: { s: { stand: [0.3, 1.15], pos: [0.3, 0.32, 0.46], dir: [0, -1], tag: 'bossvisit', base: 'seat' } } },
   officerug: { W: 3.0, D: 3.0, h: 0.02, fixed: true, rug: true, blocks: [], name: 'Boss rug' },
   officerunner: { W: 1.1, D: 6.4, h: 0.02, fixed: true, rug: true, blocks: [], name: 'Aisle runner' },
-  officeprinter: { W: 1.6, D: 0.75, h: 1.25, fixed: true, name: 'Printer' },
-  officecooler: { W: 0.4, D: 0.4, h: 1.45, fixed: true, name: 'Water cooler' },
-  officecabinet: { W: 0.5, D: 0.6, h: 1.2, fixed: true, name: 'Filing cabinet' },
-  officeplant: { W: 0.5, D: 0.5, h: 1.2, fixed: true, name: 'Office plant' },
-  officecounter: { W: 2.2, D: 0.62, h: 1.3, fixed: true, name: 'Break room counter' },
-  officefridge: { W: 0.7, D: 0.7, h: 1.9, fixed: true, name: 'Office fridge' },
-  officevending: { W: 0.7, D: 0.7, h: 1.8, fixed: true, name: 'Vending machine' },
+  // Each working piece carries the spot to stand at to use it (a tag per station: content/office.ts). The front is local +y, so a piece against a wall is turned to face into the room.
+  officeprinter: { W: 1.6, D: 0.75, h: 1.25, fixed: true, name: 'Printer',
+    spots: { f: { stand: [0.8, 1.2], dir: [0, -1], tag: 'o_printer' } } },
+  officecooler: { W: 0.4, D: 0.4, h: 1.45, fixed: true, name: 'Water cooler',
+    spots: { f: { stand: [0.2, 0.85], dir: [0, -1], tag: 'o_cooler' } } },
+  officecabinet: { W: 0.5, D: 0.6, h: 1.2, fixed: true, name: 'Filing cabinet',
+    spots: { f: { stand: [0.25, 1.0], dir: [0, -1], tag: 'o_files' } } },
+  officeplant: { W: 0.5, D: 0.5, h: 1.2, fixed: true, name: 'Office plant',
+    spots: { f: { stand: [0.25, 0.95], dir: [0, -1], tag: 'o_plant' } } },
+  officecounter: { W: 2.2, D: 0.62, h: 1.3, fixed: true, name: 'Break room counter',
+    spots: { coffee: { stand: [0.45, 1.05], dir: [0, -1], tag: 'o_coffee' } } },
+  officefridge: { W: 0.7, D: 0.7, h: 1.9, fixed: true, name: 'Office fridge',
+    spots: { f: { stand: [0.35, 1.1], dir: [0, -1], tag: 'o_fridge' } } },
+  officevending: { W: 0.7, D: 0.7, h: 1.8, fixed: true, name: 'Vending machine',
+    spots: { f: { stand: [0.35, 1.15], dir: [0, -1], tag: 'o_vending' } } },
+  // Where to stand for the two things on the wall (the whiteboard, and the door under the sign): nothing is drawn, nothing blocks, and the piece cannot be picked up.
+  officeboardspot: { W: 1.0, D: 0.5, h: 0.1, fixed: true, blocks: [], name: 'Whiteboard spot',
+    spots: { s: { stand: [0.5, 0.6], dir: [0, -1], tag: 'o_board' } } },
+  officedoorspot: { W: 1.0, D: 0.5, h: 0.1, fixed: true, blocks: [], name: 'Meeting room door spot',
+    spots: { s: { stand: [0.5, 0.6], dir: [0, -1], tag: 'o_door' } } },
   daybed: { W: 1.9, D: 0.9, h: 0.8, name: 'Guest daybed', store: true },
   snowman: { W: 0.6, D: 0.6, h: 1.4, name: 'Snowman' },
   bench: { W: 1.6, D: 0.6, h: 0.9, name: 'Garden bench', store: true,
@@ -391,9 +404,9 @@ export const STARTER_RUG_IDS = ['rug1', 'rug2'];
 export const STARTER_TV_IDS = ['walltv'];
 
 /** The office's own pieces. A house saved before the office existed is given them once, so they are there when it is unlocked (see `kernel/config.ts`). */
-export const STARTER_OFFICE_IDS = ['off-desk2', 'off-desk3', 'off-desk4', 'off-desk5', 'off-chair2', 'off-chair3', 'off-chair4', 'off-chair5', 'off-printer', 'off-cooler', 'off-cabinet', 'off-plant', 'off-counter', 'off-fridge', 'off-vending', 'off-runner', 'off-boss', 'off-bosschair', 'off-visitor', 'off-rug'];
+export const STARTER_OFFICE_IDS = ['off-desk2', 'off-desk3', 'off-desk4', 'off-desk5', 'off-chair2', 'off-chair3', 'off-chair4', 'off-chair5', 'off-printer', 'off-cooler', 'off-cabinet', 'off-plant', 'off-counter', 'off-fridge', 'off-vending', 'off-runner', 'off-boardspot', 'off-doorspot', 'off-boss', 'off-bosschair', 'off-visitor', 'off-rug'];
 /** Bumped when the office's layout changes: a house saved with an older layout has its office pieces replaced (and only those) once on load. */
-export const OFFICE_LAYOUT = 5;
+export const OFFICE_LAYOUT = 6;
 
 export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'stair01', type: 'flightY', level: 0, x: 9.0, y: 0, rot: 0 },
@@ -418,7 +431,9 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   // The vending machine stands where the printer was, on the back wall between the whiteboard and the meeting door; the printer is at the front right.
   { id: 'off-vending', type: 'officevending', level: 5, x: 2.8, y: 0.1, rot: 0 },
   { id: 'off-cooler', type: 'officecooler', level: 5, x: 6.15, y: 0.2, rot: 0 },
-  { id: 'off-cabinet', type: 'officecabinet', level: 5, x: 0.2, y: 7.2, rot: 0 },
+  { id: 'off-cabinet', type: 'officecabinet', level: 5, x: 0.2, y: 7.2, rot: 2 },
+  { id: 'off-boardspot', type: 'officeboardspot', level: 5, x: 0.85, y: 0.3, rot: 0 },
+  { id: 'off-doorspot', type: 'officedoorspot', level: 5, x: 4.75, y: 0.3, rot: 0 },
   { id: 'off-plant', type: 'officeplant', level: 5, x: 5.2, y: 6.6, rot: 0 },
   { id: 'off-counter', type: 'officecounter', level: 5, x: 7.0, y: 5.0, rot: 0 },
   { id: 'off-fridge', type: 'officefridge', level: 5, x: 9.25, y: 5.0, rot: 0 },

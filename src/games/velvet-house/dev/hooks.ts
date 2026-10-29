@@ -55,6 +55,7 @@ export function installDevHooks(g: Game): void {
       storedCount: () => storage.length,
       settle: () => { g.s.settleDone = true; },
       resetCamera: () => g.resetCamera(),
+      unfollow: () => { view.follow = null; g.syncControls(); g.resetCamera(); },
       personClientPos: (who: 'jordan' | 'maya'): [number, number] => {
         const a = who === 'maya' ? people[1] : people[0];
         const [vx, vy] = art.project(a.x, a.y, a.z + 0.7);

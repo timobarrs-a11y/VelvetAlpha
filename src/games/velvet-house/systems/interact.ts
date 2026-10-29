@@ -1,5 +1,6 @@
 import { TYPES, type ObjectInstance } from '../state/objects';
-import { startChain } from '../state/agents';
+import { startChain, startActAt } from '../state/agents';
+import { STATIONS, actionsAt, actionActivity, stationOfType, OFFICE_ACTIONS, type StationId } from '../content/office';
 import { chainOf } from '../state/activities';
 import { relocate } from '../state/arrange';
 import { FRUIT_TREES } from '../state/crops';
@@ -27,7 +28,49 @@ export function createInteract(g: Game): Partial<Game> {
     return art.hitObject(view.level, sx, sy, ids);
   }
 
+  // ---- The office: tap a working piece (or the whiteboard, the meeting door, Dale) and a sheet lists what can be done there ----
+  /** The spot an office station is used from, for the piece tapped: the chair at a desk, the visitor's chair for the boss, the piece's own spot, or the nearest one on the floor. */
+  function stationSlot(station: StationId, obj: ObjectInstance | null): string | null {
+    const tag = STATIONS[station].tag, here = house.slots.filter((s) => s.tag === tag && s.level === view.level);
+    if (station === 'desk' && obj) {
+      const chair = obj.type === 'officechair' ? obj : world.objs.filter((c) => c.type === 'officechair' && c.level === obj.level)
+        .sort((a, b) => Math.hypot(a.x + 0.3 - (obj.x + 0.6), a.y - obj.y) - Math.hypot(b.x + 0.3 - (obj.x + 0.6), b.y - obj.y))[0];
+      return chair ? `${chair.id}:s` : null;
+    }
+    const own = obj ? here.find((s) => s.id.startsWith(`${obj.id}:`)) : null;
+    return (own ?? here[0])?.id ?? null;
+  }
+  function showStation(station: StationId, obj: ObjectInstance | null, x: number, y: number): void {
+    const info = STATIONS[station], slot = stationSlot(station, obj);
+    const boss = station === 'boss', away = boss && !house.bossIn;
+    g.stationMenu.show({
+      title: info.title,
+      note: away ? "Dale isn't at his desk right now." : !slot ? 'Nobody can get to this right now.' : undefined,
+      groups: info.groups,
+      items: actionsAt(station).map((a) => ({ id: a.id, label: a.label, secs: a.secs, group: a.group })),
+      disabled: away || !slot,
+    }, x, y, (id) => { if (slot) stationAction(id, slot); });
+  }
+  /** Send Jordan to do one of the office's actions at the spot; it runs for the action's set time. */
+  function stationAction(id: string, slotId: string): void {
+    const a = OFFICE_ACTIONS.find((q) => q.id === id), jordan = people[0], other = people[1];
+    if (!a) return;
+    if (jordan.away) { log(`${jordan.name} is at work until ${CORNER_MARKET.end - 12} PM.`); return; }
+    world.life.working = null;
+    if (!startActAt(house, jordan, actionActivity(a), slotId, other)) {
+      log(a.station === 'boss' && !house.bossIn ? "Dale isn't at his desk." : `${jordan.name} can't do that right now.`);
+      return;
+    }
+    view.follow = 'jordan';
+    if (jordan.level !== view.level) g.setLevel(jordan.level, true);
+    g.syncControls();
+  }
+  /** A tap on something in the office that is not a piece: the whiteboard or the meeting door. */
+  function featureStation(kind: string): StationId | null { return kind === 'whiteboard' ? 'whiteboard' : kind === 'meetdoor' ? 'door' : null; }
+
   function showObjectActions(obj: ObjectInstance, x: number, y: number, poked = false): void {
+    const station = obj.level === 5 ? stationOfType(obj.type) : null;
+    if (station) { showStation(station, obj, x, y); return; }
     const spots = TYPES[obj.type]?.spots;
     const isLight = Boolean(TYPES[obj.type]?.light);
     const acts: TrayAction[] = [];
@@ -155,5 +198,5 @@ export function createInteract(g: Game): Partial<Game> {
     if (jordan.level !== view.level) g.setLevel(jordan.level, true);
     g.syncControls();
   }
-  return { findObjectAt, showObjectActions, handleObjectAction, handleOrder, counterPartAt };
+  return { showStation, featureStation, findObjectAt, showObjectActions, handleObjectAction, handleOrder, counterPartAt };
 }

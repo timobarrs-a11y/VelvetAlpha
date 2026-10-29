@@ -13,7 +13,7 @@ import { isOutdoor } from './scenes';
 // rule is what lets the household find the washer wherever you put it.
 
 // Stairs and the openings above them are part of the house, not furniture.
-const STRUCTURAL = new Set(['flightX', 'flightY', 'holeX', 'holeY']);
+const STRUCTURAL = new Set(['flightX', 'flightY', 'holeX', 'holeY', 'officeboardspot', 'officedoorspot']);
 
 export function isMovable(o: ObjectInstance): boolean {
   return !!TYPES[o.type] && !STRUCTURAL.has(o.type);

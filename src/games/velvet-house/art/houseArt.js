@@ -431,6 +431,16 @@ export function createHouseArt(ctx0, opts = {}) {
   /** Every wall piece in the house, for the Arrange list. */
   function wallObjsAll() { return WALLOBJS.filter((w) => WTYPES[w.type]).map((w) => ({ id: w.id, type: w.type, name: wallName(w), level: w.level, col: w.col })); }
   /** The id of the wall piece under a view point on the walls the view shows, if any. */
+  /** The kind of wall feature (the whiteboard, the meeting door with its sign) under a view point, among `kinds`, or null. */
+  function hitFeature(level, sx, sy, kinds) {
+    let hit = null;
+    LEVELS[level].feats.forEach((f) => {
+      if (!kinds.includes(f.k) || !BACK[VR].includes(f.p)) return;
+      const P = (u, z) => iso(...wallPoint(f.p, u, z)), pad = f.k === 'meetdoor' ? 0.4 : 0;
+      if (inPoly(sx, sy, [P(f.u[0] - pad, f.z[0]), P(f.u[1] + pad, f.z[0]), P(f.u[1] + pad, f.z[1] + (f.k === 'meetdoor' ? 0.6 : 0)), P(f.u[0] - pad, f.z[1] + (f.k === 'meetdoor' ? 0.6 : 0))])) hit = f.k;
+    });
+    return hit;
+  }
   function hitWallObj(level, sx, sy) { let hit = null; WALLOBJS.forEach((w) => { if (w.level === level && WTYPES[w.type] && BACK[VR].includes(w.p) && inPoly(sx, sy, wallQuad(w))) hit = w; }); return hit ? hit.id : null; }
   /** The view point at a wall piece's centre, for framing and tests. */
   function wallObjView(id) { const w = WALLOBJS.find((x) => x.id === id); if (!w || !WTYPES[w.type]) return null; const T = WTYPES[w.type]; return iso(...wallPoint(w.p, w.u + T.w / 2, w.z + T.h / 2)); }
@@ -3112,6 +3122,9 @@ export function createHouseArt(ctx0, opts = {}) {
           T.box(0.1, 0.7, 0.55, 0.62, 0.15, 0.025, '#C9CED6'); T.box(0.14, 0.72, 0.575, 0.54, 0.11, 0.03, '#FFFFFF');                  // the output tray and its paper
         })],
     },
+    // Nothing is drawn for the two spots (the whiteboard and the meeting door are part of the wall).
+    officeboardspot: { parts: () => [] },
+    officedoorspot: { parts: () => [] },
     officecooler: {
       parts: () => [B(0, 0, 0, 0.4, 0.4, 0.9, '#E8EEF2'), B(0.05, 0.05, 0.9, 0.3, 0.3, 0.55, '#7FC0E6')],
     },
@@ -6205,5 +6218,5 @@ export function createHouseArt(ctx0, opts = {}) {
   // Shake a tree: it shudders, and what was ripe on it drops, bounces and is gone.
   function shakeTree(id, fell) { SHAKES.set(id, { t0: animT, n: fell }); }
   const setMeeting = (on) => { officeMeeting = !!on; };
-  return { setMeeting, shakeTree, render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, roomLook, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
+  return { setMeeting, shakeTree, render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, roomLook, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, hitFeature, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
 }
