@@ -29,6 +29,7 @@ export interface DrawerCallbacks {
   onArrangeSet?: () => void;
   onArrangeBack?: () => void;
   onArrangeColour?: () => void;
+  onArrangeClose?: () => void;
   onArrangeLook?: (skin: string) => void;
   onArrangeFloor?: (level: number) => void;
   onArrangeStore?: () => void;
@@ -150,6 +151,8 @@ export interface DrawerState {
   deliveryPending: boolean;
   mayaStatus: string;
   garden?: { bed: boolean; crop: string | null; grow: number; wet: number; dead: boolean; dry: number; packets: Record<string, number> };
+  /** Timed things in progress, for the meters on the Goals page. */
+  timed?: { label: string; pct: number; note: string; tone: 'ok' | 'mid' | 'low' }[];
   closet: OwnedCloth[];
   personas: WardrobePersona[];
   wearing: { top: string; topStyle: string; bottom: string; bottomStyle?: string; hat?: string; topGarment?: Garment; bottomGarment?: Garment };
@@ -330,13 +333,15 @@ export function createDrawer(cb: DrawerCallbacks): {
             ${sel.loose ? `<button data-arr="back" title="Put it back where it was (Esc)">${ARR_ICON.back}<span>Put it back</span></button>` : ''}
             ${sel.canColour ? `<button data-arr="colour" title="Change colour (C)">${ARR_ICON.colour}<span>Colour</span></button>` : ''}
             ${sel.canStore ? `<button data-arr="store" title="Put it in storage">${ARR_ICON.store}<span>Store</span></button>` : ''}
+            <button data-arr="close" class="vh-arr-close" title="Leave arrange mode">Close</button>
           </div>
           </div>
           ${sel.looks.length > 1 ? `<div class="vh-arr-looks"><span>${ARR_ICON.look}Look</span>${sel.looks.map(l => `<button data-arr-look="${esc(l.id)}" aria-pressed="${l.active}">${esc(l.name)}</button>`).join('')}</div>` : ''}
           ${sel.moveTo.length ? `<div class="vh-arr-floors"><span>Carry to</span>${sel.moveTo.map(l => `<button data-arr-floor="${l}">${esc(a.floors[l])}</button>`).join('')}</div>` : ''}
           ${sel.wall ? '<p class="vh-arr-why vh-arr-ok">Drag it along the wall, up or down.</p>' : sel.loose && !sel.fits ? `<p class="vh-arr-why">${esc(sel.reason ?? "It doesn't fit there.")} Move it, or put it back.</p>` : sel.loose ? '<p class="vh-arr-why vh-arr-ok">Drag it, turn it, then tap Set it down.</p>' : ''}
         </div>`
-      : `<p class="vh-arr-hint">${ARR_ICON.hand}<span>Tap a piece below, or tap one in the house, then drag it where you want it.</span></p>`;
+      : `<p class="vh-arr-hint">${ARR_ICON.hand}<span>Tap a piece below, or tap one in the house, then drag it where you want it.</span></p>
+          <div class="vh-arr-acts"><button data-arr="close" class="vh-arr-close" title="Leave arrange mode">Close</button></div>`;
     const order = [a.level, ...a.order.filter(l => l !== a.level)];
     const groups = order.map((level) => {
       const name = a.floors[level];
@@ -376,6 +381,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     sec.querySelector('[data-arr="set"]')?.addEventListener('click', () => cb.onArrangeSet?.());
     sec.querySelector('[data-arr="back"]')?.addEventListener('click', () => cb.onArrangeBack?.());
     sec.querySelector('[data-arr="colour"]')?.addEventListener('click', () => cb.onArrangeColour?.());
+    sec.querySelector('[data-arr="close"]')?.addEventListener('click', () => cb.onArrangeClose?.());
     sec.querySelectorAll<HTMLElement>('[data-arr-look]').forEach(b => b.addEventListener('click', () => cb.onArrangeLook?.(b.dataset.arrLook ?? '')));
     sec.querySelectorAll<HTMLElement>('[data-arr-floor]').forEach(b => b.addEventListener('click', () => cb.onArrangeFloor?.(Number(b.dataset.arrFloor))));
   }
@@ -561,10 +567,14 @@ export function createDrawer(cb: DrawerCallbacks): {
       </div>`;
     })() : `<div class="vh-life-goal"><p>Choose a life goal to start earning rewards.</p></div>`;
 
+    // Timed things in progress: side jobs and the garden bed, each with a bar that moves as the work goes on.
+    const timedHtml = state.timed?.length ? `<div class="vh-timed"><h4>In progress</h4>${state.timed.map(t =>
+      `<div class="vh-timed-row"><span>${esc(t.label)}</span><div class="vh-bar"><i data-tone="${t.tone}" style="width:${t.pct}%"></i></div><small>${t.pct}%${t.note ? ` · ${esc(t.note)}` : ''}</small></div>`).join('')}</div>` : '';
     if (!put(sec, `<div class="vh-goals">
       <h4>Move-in checklist</h4>
       <ul class="vh-checklist">${settleItems}</ul>
       ${lifeGoalHtml}
+      ${timedHtml}
     </div>`)) return;
   }
 
