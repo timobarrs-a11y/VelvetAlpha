@@ -59,3 +59,48 @@ The day's mix is picked from this list, so each day has a different shape:
 3. The kitchen and the lavatory as activities with their own animations.
 4. The five coworkers, as visitors, with their desks and breaks.
 5. The daily variety list, picked each morning.
+
+## More things to do (each one is a real action, with a short animation and a result)
+
+**Desk and computer**
+- Answer emails: a short queue of messages; each one takes a few game minutes and some are urgent.
+- Reply-all storm: a thread blows up, and Jordan has to choose: reply, ignore, or escalate.
+- Update the spreadsheet: a long task that gives a small money bonus at the end of the week.
+- Fix a bug: a ticket with three steps; the steps can be done in any order.
+- Take a call: a customer on the line, three short choices.
+- Make a presentation: slides fill in one at a time while he works on the next.
+- Browse the staff directory: learn names, unlock a coworker's break habit.
+
+**Team and social**
+- Chat with Kayleigh by the printer: a short conversation with a choice of reply.
+- Help Ozzie with the server room: he asks for a cable, the ladder, and a hand.
+- Lunch with Tony: a meal at the table; Tony tells a story; Jordan's bond with Tony grows.
+- Join the team photo: stand in line, smile for the camera, the photo goes on the board.
+- Birthday cake in the kitchen: a shared snack, one slice each.
+- Bring a plant for Dale's office: a small gift that changes his mood.
+
+**Kitchen**
+- Make a coffee (already planned) and a tea; different cups, different sizes.
+- Heat up lunch in the microwave: a short timer, then eat at the table.
+- Wash a mug at the sink: a tiny chore, nothing lost if skipped.
+- Buy a snack from the vending machine: coins from his wallet.
+- Fill the water jug for the meeting room.
+
+**Lavatory**
+- Wash hands and check the mirror.
+- Take a break in a stall: a short, quiet timer with the phone.
+- Fix the hand dryer: a small repair mini-task, with Raven's help if she's around.
+
+**Hallway and building**
+- Pin a note to the notice board.
+- Walk to the lift and ride it to another floor: a short animation with a glance at the other floor.
+- Check the fire-door drill sign: a quick walk with a chance to talk to Raven.
+- Refill the water cooler.
+- Look out of the window at the car park: a short pause that gives a bit of rest.
+
+**Phone (any room)**
+- Pay a bill, call the designer, check on the plants at home, read a message.
+
+## Objectives, with a new one per room
+
+Each day picks three from the full list, plus the board meeting when it falls on the day.
