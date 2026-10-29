@@ -3131,7 +3131,25 @@ export function createHouseArt(ctx0, opts = {}) {
     officecabinet: { parts: () => [B(0, 0, 0, 0.5, 0.6, 1.2, '#8E98A6')] },
     officeplant: { parts: () => [B(0.05, 0.05, 0, 0.4, 0.4, 0.32, '#B07A55'), B(0.1, 0.1, 0.32, 0.3, 0.3, 0.8, '#3F7A4A')] },
     officecounter: {
-      parts: () => [B(0, 0, 0, 2.2, 0.62, 0.9, '#C9C3B8'), B(0.2, 0.08, 0.9, 0.5, 0.4, 0.4, '#2B2F38')],
+      parts: () => [B(0, 0, 0, 2.2, 0.62, 0.9, '#C9C3B8'), B(0, 0, 0.9, 2.2, 0.62, 0.05, '#8E6B4E', { name: 'top' })],
+    },
+    officecoffee: {
+      // The coffee station: a cabinet with two doors, a wood top, a machine with its glass pot, a stack of mugs and a tin. Its front is local +y; the piece is set against the window wall turned (rot 3).
+      parts: () => [B(0, 0, 0, 1.1, 0.55, 0.85, '#C9C3B8'), B(0, 0, 0.85, 1.1, 0.55, 0.05, '#8E6B4E', { name: 'top' }),
+        F(0, 0, 1.1, 0.55, (T) => {
+          const fy = 0.551;
+          [0.55].forEach(x => T.line([x, fy, 0.06], [x, fy, 0.8], 'rgba(60,50,40,.45)', 1.2));
+          [0.45, 0.65].forEach(x => T.box(x - 0.015, fy, 0.45, 0.03, 0.012, 0.12, '#8E98A6'));
+          const z0 = 0.9;
+          T.box(0.08, 0.1, z0, 0.36, 0.3, 0.06, '#2B2F38');                                      // the machine's base
+          T.box(0.08, 0.34, z0, 0.36, 0.06, 0.4, '#23272F');                                     // its back column
+          T.box(0.08, 0.1, z0 + 0.4, 0.36, 0.3, 0.07, '#23272F');                                 // its head
+          T.box(0.17, 0.16, z0 + 0.06, 0.14, 0.14, 0.2, '#BFE3EE');                                 // the glass pot
+          T.box(0.2, 0.19, z0 + 0.06, 0.08, 0.08, 0.1, '#5A3A22');                                  // the coffee in it
+          T.box(0.36, 0.12, z0 + 0.4, 0.04, 0.04, 0.02, '#5BE08A');                                 // its light
+          T.box(0.62, 0.14, z0, 0.1, 0.1, 0.1, '#E8E2D6'); T.box(0.78, 0.22, z0, 0.1, 0.1, 0.1, '#7FB8C9'); T.box(0.62, 0.3, z0, 0.1, 0.1, 0.1, '#E8E2D6');   // the mugs
+          T.box(0.86, 0.32, z0, 0.16, 0.16, 0.12, '#C9A24A');                                     // the tin
+        }, { onTop: true })],
     },
     officefridge: { parts: () => [B(0, 0, 0, 0.7, 0.7, 1.9, '#E8EEF2')] },
     officevending: { parts: () => [B(0, 0, 0, 0.7, 0.7, 1.8, '#2F5FA8'), B(0.05, 0.62, 0.9, 0.6, 0.06, 0.7, '#CFE4F0')] },

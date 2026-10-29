@@ -27,7 +27,7 @@ export const STATIONS: Record<StationId, StationInfo> = {
   filing: { title: 'Filing cabinet', tag: 'o_files', taps: ['officecabinet'] },
   cooler: { title: 'Water cooler', tag: 'o_cooler', taps: ['officecooler'] },
   vending: { title: 'Vending machine', tag: 'o_vending', taps: ['officevending'] },
-  coffee: { title: 'Coffee machine', tag: 'o_coffee', taps: ['officecounter'] },
+  coffee: { title: 'Coffee machine', tag: 'o_coffee', taps: ['officecoffee'] },
   fridge: { title: 'Fridge', tag: 'o_fridge', taps: ['officefridge'] },
   plant: { title: 'Office plant', tag: 'o_plant', taps: ['officeplant'] },
 };
