@@ -18,6 +18,7 @@ import { stageAt } from '../state/plantGrowth';
 import { drawCrop, drawGroundSpot } from './cropArt.js';
 import { createWeatherFx, hull } from './weatherFx.js';
 import { drawTree, mix as treeMix } from './treeArt.js';
+import { darknessAt } from '../state/daylight';
 const wfx = createWeatherFx();
 import { CROPS } from '../state/crops';
 import { defaultWallLamps, lampRoom } from '../state/wallLamps';
@@ -149,8 +150,7 @@ export function createHouseArt(ctx0, opts = {}) {
   // A scene can pull the room toward evening without moving the clock, to show off the lights (see setDim).
   let dimTarget = 0, dimNow = 0;
   function darkness() { const base = baseDarkness(); return dimNow > base ? dimNow : base; }
-  function baseDarkness() { const h = hour(), si = seasonIdx(), eve = [0, 1, -1, -2.5][si], morn = [0, -0.5, 0.4, 0.8][si], night0 = 21 + eve, dusk0 = 18 + eve, dawn0 = 5.5 + morn, light0 = 7.5 + morn;
-    if (h >= night0 || h < dawn0) return 0.42; if (h >= dusk0) return (h - dusk0) / (night0 - dusk0) * 0.42; if (h < light0) return (light0 - h) / (light0 - dawn0) * 0.42; return 0; }
+  function baseDarkness() { return darknessAt(hour(), seasonIdx()); }
   function skyColor() { const h = hour(); if (raining() && darkness() < 0.3) return seasonIdx() === 3 ? '#D2D8E0' : '#9AA6B5'; if (darkness() > 0.3) return '#2A2F55'; if (h >= 17.5 && h < 21) return '#F0B98E'; if (h < 7.5) return '#E9C7B5'; return '#BFE2F0'; }
 
   const LOOKS = [{ paint: '#B9B4AF', paper: 'block', floor: 'concrete' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#D9CDBD', paper: null, floor: 'wood' }, { paint: '#E4D6C2', paper: 'shiplap', floor: 'wood' }];

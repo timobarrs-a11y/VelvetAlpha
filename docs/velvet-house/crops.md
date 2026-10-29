@@ -54,3 +54,14 @@ standing up through its stages, and then the fruit, small and green at first and
 
 State lives on the tree itself (`grow` 0 to 1, `fruit` 0 to 1, `wet`), so it saves and loads with the house. A tree placed without
 `grow` starts as a sapling. Orders and Goals show a bar and the time left for every garden bed and every fruit tree.
+
+## Day, night and weather
+
+`state/daylight.ts` is the one place that knows what the sun is doing. The art's darkness, the weather's cloud and the garden all read it.
+
+- **The sun** follows the hour and the season: long summer evenings, short winter days (`sunAt`).
+- **Cloud** cuts it: rain takes about 60% of the light, snow about 45% (`skyFactor`).
+- **Growth** runs at `0.2 + 0.8 × light` of the midday rate, so a crop is slow at night and under cloud and full on a clear noon.
+- **Drying** is `0.5 + 0.5 × sun`: soil dries half as fast at night. Rain still waters a bed or sapling outright.
+- **Time-to-ripe** on Orders and Goals uses the day's average growth, so it is honest about the nights, and the bar says why when it is
+  slow ("slow in the dark", "slow under cloud").

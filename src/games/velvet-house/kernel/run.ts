@@ -82,8 +82,9 @@ export function startGameLoop(g: Game): void {
       tickFitness(g.flags, gameMin, !!jt && jt.phase === 'do' && (jt.act === 'workout' || jt.act === 'lift'));
       // The garden grows while it is watered; a bed drying out or a crop ripening is said once, when it happens.
       const raining = weatherTick(g.flags, world.day, world.minutes, rng, log);
-      for (const msg of gardenTick(world.objs, gameMin, raining, seasonOf(world.day))) log(msg);
-      for (const msg of treeTick(world.objs, gameMin, raining, seasonOf(world.day))) log(msg);
+      const snowing = !!weatherOf(g.flags).snow;
+      for (const msg of gardenTick(world.objs, gameMin, raining, seasonOf(world.day), world.minutes / 60, snowing)) log(msg);
+      for (const msg of treeTick(world.objs, gameMin, raining, seasonOf(world.day), world.minutes / 60, snowing)) log(msg);
       if (snackTick(world.household, g.flags, gameMin)) log('Somebody raided the fridge for a snack.');
       g.concernsTick(gameMin);
       g.petsTick(dt, gameMin, walkMul, hourF);
