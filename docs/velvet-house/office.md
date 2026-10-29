@@ -104,3 +104,31 @@ The day's mix is picked from this list, so each day has a different shape:
 ## Objectives, with a new one per room
 
 Each day picks three from the full list, plus the board meeting when it falls on the day.
+
+## Which actions can be objectives
+
+An objective is an action with a bar that fills in game time. Anything not listed here is flavour: it can be done for
+a moment, but it doesn't fill a bar.
+
+| Objective | Where | Fills in (game min) | What counts as progress | Done when |
+|---|---|---|---|---|
+| Attend the board meeting | Meeting room | 90 | Sitting through it; he is out of sight | Bar full |
+| Work on the project | Desk | 180 | Typing at the computer; he can stop and resume | Bar full |
+| Clear the ticket queue | Desk | 100 (5 tickets × 20) | Each ticket closed | All five closed |
+| Answer emails | Desk | 60 | Each message replied to | Inbox empty |
+| Update the spreadsheet | Desk | 120 | Rows filled in | Sheet full |
+| Make a presentation | Desk | 150 | Slides done in order | Last slide done |
+| Fix a bug | Desk | 90 | Three steps, any order | All three steps |
+| Take a call | Desk | 30 | Three choices made | Call ends |
+| Help Ozzie with the server room | Server room | 45 | Cable, ladder, hand | All three |
+| Lunch with Tony | Kitchen table | 40 | Eating and listening | Meal ends |
+| Heat up lunch and eat | Kitchen | 30 | Microwave, then eating | Plate cleared |
+| Fill the water jug | Kitchen | 10 | Jug filled | Jug full |
+| Check on the plants at home | Phone | 15 | Looking at the house's plants | Viewed |
+| Pay the bills | Phone | 5 | Each bill paid | None due |
+
+Flavour only (no bar): reply-all storm (a choice, then gone), make tea, wash a mug, buy a snack, bring a plant to
+Dale, the team photo, birthday cake, chat with Kayleigh, pin a note, ride the lift, check the fire-door sign, refill
+the cooler, look out of the window, take a stall break, fix the hand dryer, and read messages.
+
+Each day's three objectives come from the top of this table, and the board meeting falls on its own day.
