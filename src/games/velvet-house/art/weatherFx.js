@@ -1,0 +1,147 @@
+/**
+ * Rain and snow on the yard, built for speed:
+ *  - Fixed pools of drops, splashes and flakes, reused every frame. Nothing is created per frame except the projected
+ *    points, and the pools are sized by the quality tier.
+ *  - The splash ring and the snowflake are each drawn once to a small offscreen canvas, then stamped with drawImage.
+ *  - All the rain streaks go into one path with one stroke, so the GPU sees one draw call for the whole rain.
+ *  - Drops fall in the yard's own space and land on the ground: each landing makes a splash, and rain builds puddles
+ *    on the tile it hit, which dry slowly. Snow that lands adds to the lawn's snow.
+ *  - Drawing is split in two: the ground layer (puddles and splashes) goes under the furniture, and the air layer
+ *    (falling drops and flakes) goes over it.
+ */
+
+const TAU = Math.PI * 2;
+const SPLASH_LIFE = 0.36;
+const PUDDLE_DRY = 0.02;
+const PUDDLE_ADD = 0.016;
+const SNOW_ADD = 0.03;
+
+function sprite(w, h, paint) {
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  paint(cv.getContext('2d'), w, h);
+  return cv;
+}
+
+// A ring that spreads on the ground, drawn once.
+const SPLASH = sprite(24, 12, (c, w, h) => {
+  c.fillStyle = 'rgba(225,238,255,.22)'; c.beginPath(); c.ellipse(w / 2, h / 2, w / 2 - 2, h / 2 - 2, 0, 0, TAU); c.fill();
+  c.strokeStyle = 'rgba(240,248,255,.95)'; c.lineWidth = 1.1; c.beginPath(); c.ellipse(w / 2, h / 2, w / 2 - 2, h / 2 - 2, 0, 0, TAU); c.stroke();
+});
+
+// A soft white dot, drawn once.
+const FLAKE = sprite(8, 8, (c, w, h) => {
+  const g = c.createRadialGradient(4, 4, 0, 4, 4, 4);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.55, 'rgba(255,255,255,.85)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+});
+
+/** A fixed pool: parallel typed arrays, reused. `n` is how many are alive; dead ones are swapped out. */
+function pool(max) {
+  return { n: 0, max, x: new Float32Array(max), y: new Float32Array(max), z: new Float32Array(max), v: new Float32Array(max), p: new Float32Array(max) };
+}
+
+function kill(P, k) {
+  const last = --P.n;
+  P.x[k] = P.x[last]; P.y[k] = P.y[last]; P.z[k] = P.z[last]; P.v[k] = P.v[last]; P.p[k] = P.p[last];
+}
+
+function tileAt(tiles, x, y) {
+  const i = Math.min(9, Math.max(0, Math.floor(x))), j = Math.min(7, Math.max(0, Math.floor(y)));
+  return tiles[i * 8 + j];
+}
+
+export function createWeatherFx() {
+  const rain = pool(900);
+  const snow = pool(600);
+  const splash = pool(260);
+  let time = 0;
+
+  function spawn(P, cap, makeV) {
+    const want = Math.min(P.max, cap);
+    const room = Math.min(want - P.n, Math.ceil(want * 0.04)); // fill in about a second, a little each frame
+    for (let k = 0; k < room; k++) {
+      const i = P.n++;
+      P.x[i] = Math.random() * 10; P.y[i] = Math.random() * 8; P.z[i] = 3.2 + Math.random() * 0.6;
+      P.v[i] = makeV(); P.p[i] = Math.random() * TAU;
+    }
+  }
+
+  return {
+    /**
+     * Moves the weather on by `dt` seconds. `s` says what is falling; `caps` is how many drops the quality tier allows.
+     */
+    step(dt, s, tiles, caps) {
+      time += dt;
+      if (s.raining && !s.snow) spawn(rain, caps.rain, () => -(8.5 + Math.random() * 2));
+      if (s.raining && s.snow) spawn(snow, caps.snow, () => -(1.1 + Math.random() * 0.6));
+
+      for (let k = rain.n - 1; k >= 0; k--) {
+        rain.z[k] += rain.v[k] * dt; rain.x[k] += 0.45 * dt; rain.y[k] += 0.18 * dt;
+        if (rain.z[k] <= 0) {
+          if (splash.n < splash.max) { const q = splash.n++; splash.x[q] = rain.x[k]; splash.y[q] = rain.y[k]; splash.p[q] = 0; }
+          const tt = tileAt(tiles, rain.x[k], rain.y[k]);
+          if (tt) tt.puddle = Math.min(1, (tt.puddle || 0) + PUDDLE_ADD);
+          kill(rain, k);
+        }
+      }
+
+      for (let k = snow.n - 1; k >= 0; k--) {
+        const sway = Math.sin(time * 1.3 + snow.p[k]) * 0.5;
+        snow.z[k] += snow.v[k] * dt; snow.x[k] += (0.2 + sway) * dt;
+        if (snow.z[k] <= 0) {
+          const tt = tileAt(tiles, snow.x[k], snow.y[k]);
+          if (tt) tt.snow = Math.min(1, (tt.snow || 0) + SNOW_ADD);
+          kill(snow, k);
+        }
+      }
+
+      for (let k = splash.n - 1; k >= 0; k--) {
+        splash.p[k] += dt;
+        if (splash.p[k] >= SPLASH_LIFE) kill(splash, k);
+      }
+
+      // Puddles dry slowly once the rain stops.
+      if (!s.raining) for (const tt of tiles) if (tt.puddle) tt.puddle = Math.max(0, tt.puddle - PUDDLE_DRY * dt);
+    },
+
+    /** The ground layer: puddles and splashes, drawn under the furniture. */
+    drawGround(c, iso, tiles) {
+      for (const tt of tiles) {
+        const p = tt.puddle || 0;
+        if (p < 0.04) continue;
+        const [sx, sy] = iso(tt.i + 0.5, tt.j + 0.5, 0.01);
+        c.fillStyle = `rgba(70,100,130,${0.42 * p})`;
+        c.beginPath(); c.ellipse(sx, sy, 14 * p + 4, 7 * p + 2, 0, 0, TAU); c.fill();
+        c.fillStyle = `rgba(230,240,255,${0.28 * p})`;
+        c.beginPath(); c.ellipse(sx - 2, sy - 1, 5 * p + 1, 2 * p + 0.6, 0, 0, TAU); c.fill();
+      }
+      for (let k = 0; k < splash.n; k++) {
+        const [sx, sy] = iso(splash.x[k], splash.y[k], 0.01);
+        c.globalAlpha = (1 - splash.p[k] / SPLASH_LIFE) * 0.9;
+        c.drawImage(SPLASH, sx - 12, sy - 6, 24, 12);
+      }
+      c.globalAlpha = 1;
+    },
+
+    /** The air layer: falling drops in one stroke, and snowflakes stamped. Drawn over the house. */
+    drawAir(c, iso) {
+      if (rain.n) {
+        c.save();
+        c.strokeStyle = 'rgba(205,220,240,.5)'; c.lineWidth = 1;
+        c.beginPath();
+        for (let k = 0; k < rain.n; k++) {
+          const [tx, ty] = iso(rain.x[k], rain.y[k], rain.z[k] + 0.42);
+          const [bx, by] = iso(rain.x[k], rain.y[k], rain.z[k]);
+          c.moveTo(tx, ty); c.lineTo(bx, by);
+        }
+        c.stroke();
+        c.restore();
+      }
+      for (let k = 0; k < snow.n; k++) {
+        const [sx, sy] = iso(snow.x[k], snow.y[k], snow.z[k]);
+        c.drawImage(FLAKE, sx - 4, sy - 4, 8, 8);
+      }
+    },
+  };
+}
