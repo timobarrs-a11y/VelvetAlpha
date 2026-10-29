@@ -652,13 +652,24 @@
   .vh-speech { bottom: auto; top: calc(7% + 10px); left: 8px; width: calc(100% - 16px); z-index: 3; }
   .vh-scard { width: calc(100% - 32px); }
   .vh-objective { top: 54px; left: 8px; max-width: calc(100% - 16px); }
-  /* Arranging: the panel takes the top, so the objective waits just above the floor buttons. */
-  .vh-stage.vh-arranging .vh-objective { top: auto; bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 114px); }
-  /* Arranging: the day, season and money chips slide away, and the panel and any line of dialogue take their place. */
+  /* Arranging: the day, season and money chips step away (below), and the objective and any line of dialogue move to the top. */
   .vh-hud { transition: transform .25s ease, opacity .2s ease; }
-  .vh-stage.vh-arranging .vh-hud { transform: translateY(-140%); opacity: 0; }
-  .vh-stage.vh-arranging .vh-drawer[data-open="arrange"] { top: 8px; }
-  .vh-stage.vh-arranging .vh-speech { top: 184px; }
+  /* Arranging, the panel is docked under the house, in the bottom band, not laid over it: the floor, speed and People bars
+     and the dock step away (Close puts them back), the house keeps the whole screen above the panel, and every
+     touch on the house is a touch on the house. */
+  .vh-stage.vh-arranging > .vh-hud, .vh-stage.vh-arranging > .vh-people, .vh-stage.vh-arranging > .vh-controls,
+  .vh-stage.vh-arranging > .vh-vitals, .vh-stage.vh-arranging > .vh-dock { display: none; }
+  .vh-stage.vh-arranging > .vh-drawer[data-open="arrange"] {
+    position: static; order: 3; flex: 0 0 auto; width: auto; height: auto; max-height: 54%; margin: 0;
+    top: auto; left: auto; right: auto; bottom: auto;
+    border: 0; border-top: 1px solid var(--arr-line); border-radius: 18px 18px 0 0;
+    box-shadow: 0 -8px 28px rgba(0,0,0,.35); padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+  .vh-stage.vh-arranging > .vh-drawer[data-open="arrange"] .vh-drawer-body { overflow-y: auto; }
+  .vh-stage.vh-arranging .vh-objective { top: 8px; bottom: auto; }
+  .vh-stage.vh-arranging .vh-speech { top: 8px; }
+  .vh-stage.vh-arranging .vh-log { top: 8px !important; bottom: auto !important; }
+  .vh-stage.vh-arranging .vh-lampbar { top: 8px; bottom: auto; }
   /* The town sign rides above the floor buttons, not over the dock; it steps aside while a panel or a lesson needs the room. */
   .vh-town-sign { bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 112px); left: 12px; }
   .vh-stage.vh-arranging .vh-town-sign, .vh-stage[data-script="cutscene"] .vh-town-sign { display: none; }
