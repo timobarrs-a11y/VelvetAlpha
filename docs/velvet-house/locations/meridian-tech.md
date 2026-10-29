@@ -213,9 +213,12 @@ once on load (`kernel/config.ts`), with the content version unchanged.
   cooler for five to ten minutes and comes back. **Nobody may sit in the visitor chair unless he is at his desk** (`world.bossIn`): the seat is refused while he is away.
 - **Work clothes:** anyone from the household on the office floor is drawn in a navy blazer, burgundy tie and dark trousers (their saved wardrobe is untouched). Dale has a
   suit of his own, `bosssuit`: charcoal, double-breasted, gold buttons, a gold tie and a pocket square, with grey hair, so he is never mistaken for anyone else.
-- **Layout (version 2):** four narrow desks in two rows with a 1.3 tile aisle between them, the whiteboard wall kept clear, a copier-style printer beside it, the water cooler beside the meeting
-  door, the boss's corner at the back right, and the break area (counter, fridge, vending machine, table) at the front right. A house saved with an older layout has only its office pieces replaced
-  once on load (`OFFICE_LAYOUT`).
+- **Layout (version 3):** four narrow desks in two rows with a 1.3 tile aisle between them, the whiteboard wall kept clear, the vending machine against the back wall beside the whiteboard, the
+  water cooler beside the meeting door, the boss's corner at the back right, and the copier-style printer at the bottom right (front corner) beside the counter and fridge. **Every chair is a piece
+  of its own** (`officechair`, `bosschair`, `visitorchair`), so it can be moved and turned like any other piece; the pieces are `fixed` against the player, who cannot rearrange the office.
+  The boss's chair is dark leather and the visitor's chair charcoal fabric, so neither disappears into the red rug. Each staff desk carries a **desk phone** (base, handset, red light), modelled
+  into the desk art now so the later tappable actions (answer a call) have something to attach to. A house saved with an older layout has only its office pieces replaced once on load
+  (`OFFICE_LAYOUT`).
 
 ## Build order (pieces first; scenarios last)
 

@@ -53,7 +53,7 @@ export function createHouseArt(ctx0, opts = {}) {
   // The wall lamps (they can be moved: see systems/wallLamps.ts) and what is selected or held among them.
   let LAMPS = defaultWallLamps(), lampUi = null;
   const offstage = () => ({ name: '', away: true, level: -1, x: -10, y: -10, task: null, queue: [], needs: {} });
-  let jordan = offstage(), maya = offstage();
+  let jordan = offstage(), maya = offstage(), others = [];
   const GUESTS = [];
   const has = (id) => owned.has(id);
   const cv = ctx0.canvas;
@@ -463,7 +463,9 @@ export function createHouseArt(ctx0, opts = {}) {
   const B = (x, y, z, w, d, h, c, f = {}) => Object.assign({ box: [x, y, z, w, d, h], c }, f);
   const F = (x1, y1, x2, y2, fn, f = {}) => Object.assign({ rect: [x1, y1, x2, y2], fn }, f);
   const doing = (ch, name) => ch.task && ch.task.name === name && ch.task.phase === 'do';
-  const usingSlot = (sid, names) => [jordan, maya].some(c => c.task && c.task.phase === 'do' && c.task.slot === sid && (!names || names.includes(c.task.name)));
+  // A desk's screen lights while someone sits in the chair tucked in at it (the chairs are pieces of their own).
+  const deskInUse = (o, wide = 0.6, deep = 1.5) => OBJS.some(c => (c.type === 'officechair' || c.type === 'bosschair') && c.level === o.level && Math.abs(c.x + (c.type === 'bosschair' ? 0.45 : 0.3) - (o.x + (o.type === 'bossdesk' ? 1.0 : 0.6))) < wide + (o.type === 'bossdesk' ? 0.5 : 0) && Math.abs(c.y - o.y) < deep && usingSlot(c.id + ':s'));
+  const usingSlot = (sid, names) => [jordan, maya, ...others].some(c => c.task && c.task.phase === 'do' && c.task.slot === sid && (!names || names.includes(c.task.name)));
   function steamAt(T, lx, ly, lz, t, n = 4, rise = 0.8) { const [x, y] = T.W(lx, ly); PFX.emit(`${T.o.id}:${lx},${ly}`, 'steam', T.o.level, x, y, lz, (n / 4) * (rise / 0.8)); }
   // A flight of stairs. The same numbers draw it from below (a flight rising to the floor above) and from above (the
   // stairwell cut into that floor, seen going down), so the two views are the same stairs. TOP is the height of a floor.
@@ -3026,36 +3028,45 @@ export function createHouseArt(ctx0, opts = {}) {
     treeapple: { parts: () => [F(0.2, 0.2, 1.0, 1.0, treeAt('apple', 0.6, 0.6, { 0: ['#FBF3F5', 8, 34, 60], 2: ['#B6A23A', 4, 34, 60] }))] },
     // ---- the office ----
     officedesk: {
-      // A 1.2 x 0.62 top on side panels, a low partition behind it, a monitor (its screen lights while someone works), keyboard, mouse, mug and papers, and the chair
-      // behind it. Same proportions as the home desk, so the avatar sits and stands with the game's own animation.
+      // A 1.2 x 0.62 top on side panels, a low partition behind it, a monitor (its screen lights while someone sits at it), keyboard, mouse, mug and papers. The
+      // chair is a piece of its own (officechair), tucked in at the desk's front.
       parts: () => [B(0.03, 0.05, 0, 0.05, 0.55, 0.72, '#B9B09A'), B(1.12, 0.05, 0, 0.05, 0.55, 0.72, '#B9B09A'), B(0.08, 0.05, 0.12, 1.04, 0.03, 0.6, '#A59C86'),
         B(0, 0, 0.72, 1.2, 0.62, 0.05, '#CDBFA3', { name: 'top' }), B(0, 0, 0.77, 1.2, 0.04, 0.46, '#8E98A6'),
         F(0.3, 0.05, 0.9, 0.3, (T, o) => {
-          const on = usingSlot(o.id + ':d');
+          const on = deskInUse(o);
           T.box(0.52, 0.12, 0.77, 0.1, 0.08, 0.14, '#2B2F38'); T.box(0.35, 0.09, 0.9, 0.5, 0.05, 0.3, '#23272F');
           T.poly([[0.38, 0.141, 0.93], [0.82, 0.141, 0.93], [0.82, 0.141, 1.17], [0.38, 0.141, 1.17]], on ? '#9FD0FF' : '#1B2230');
           if (on) [1.12, 1.07, 1.02, 0.97].forEach((z, i) => T.line([0.42, 0.142, z], [0.42 + (i % 2 ? 0.26 : 0.34), 0.142, z], '#FFFFFF', 1));
         }, { onTop: true }),
-        B(0.4, 0.38, 0.77, 0.4, 0.14, 0.02, '#3A3F4A'), B(0.86, 0.4, 0.77, 0.06, 0.09, 0.02, '#3A3F4A'), B(1.0, 0.14, 0.77, 0.09, 0.09, 0.11, '#C2413A'), B(0.08, 0.2, 0.77, 0.2, 0.3, 0.01, '#E8E2D6'),
-        B(0.57, 0.98, 0.05, 0.06, 0.06, 0.37, '#2B2F38'), B(0.42, 0.9, 0.0, 0.36, 0.22, 0.05, '#2B2F38'),
-        B(0.35, 0.75, 0.42, 0.5, 0.45, 0.07, '#3A4150', { name: 'seat' }), B(0.35, 1.17, 0.49, 0.5, 0.06, 0.5, '#3A4150')],
+        B(0.4, 0.38, 0.77, 0.4, 0.14, 0.02, '#3A3F4A'), B(0.82, 0.4, 0.77, 0.06, 0.09, 0.02, '#3A3F4A'), B(0.14, 0.3, 0.77, 0.09, 0.09, 0.11, '#C2413A'), B(0.06, 0.06, 0.77, 0.2, 0.2, 0.01, '#E8E2D6'),
+        // The desk phone, left of the keyboard: a base with a keypad, the handset across its cradle and a small red light, so the desk can be tapped to take a call later.
+        F(0.9, 0.3, 1.2, 0.58, (T) => { T.box(0.92, 0.32, 0.77, 0.24, 0.24, 0.06, '#4A5262'); T.box(0.95, 0.4, 0.83, 0.12, 0.14, 0.012, '#8E98A6'); T.box(0.91, 0.34, 0.83, 0.06, 0.2, 0.05, '#1E2128'); T.box(1.12, 0.34, 0.83, 0.06, 0.2, 0.05, '#1E2128'); T.box(0.91, 0.38, 0.88, 0.27, 0.12, 0.04, '#1E2128'); T.box(1.04, 0.35, 0.842, 0.05, 0.05, 0.012, '#E0453A'); }, { onTop: true })],
     },
-    // The boss's desk: dark walnut, twice the size, drawer pedestals either side, a green leather blotter, a brass lamp and nameplate, and a deep burgundy leather
-    // chair behind it. Drawn facing the way a desk faces (the chair on the +y side); the piece is placed turned (rot 2) so he faces the room.
+    // A swivel chair: a five-point base, a gas column, a padded seat and back. Faces -y when not turned; its seat spot is where the avatar sits.
+    officechair: {
+      parts: () => [B(0.12, 0.2, 0.0, 0.36, 0.2, 0.04, '#2B2F38'), B(0.27, 0.27, 0.04, 0.06, 0.06, 0.36, '#2B2F38'),
+        B(0.05, 0.1, 0.4, 0.5, 0.45, 0.07, '#3A4150', { name: 'seat' }), B(0.05, 0.5, 0.47, 0.5, 0.07, 0.5, '#3A4150')],
+    },
+    // The boss's desk: dark walnut, twice the size, drawer pedestals either side, a green leather blotter, a brass lamp and nameplate. The piece is placed turned (rot 2) so the
+    // boss works on the far side, facing the room; its chair (bosschair) is a piece of its own.
     bossdesk: {
-      parts: () => [B(0.05, 0.05, 0, 0.5, 0.8, 0.72, '#4E3224'), B(1.45, 0.05, 0, 0.5, 0.8, 0.72, '#4E3224'), B(0.55, 0.05, 0.1, 0.9, 0.04, 0.6, '#43281C'),
-        B(0, 0, 0.72, 2.0, 0.9, 0.07, '#6B4630', { name: 'top' }),
-        B(0.62, 0.22, 0.79, 0.76, 0.46, 0.012, '#2B3A2F'),
-        F(0.8, 0.04, 1.3, 0.3, (T, o) => { const on = usingSlot(o.id + ':d'); T.box(0.95, 0.12, 0.79, 0.1, 0.08, 0.15, '#1E2128'); T.box(0.78, 0.09, 0.93, 0.44, 0.05, 0.3, '#1E2128'); T.poly([[0.81, 0.141, 0.96], [1.19, 0.141, 0.96], [1.19, 0.141, 1.2], [0.81, 0.141, 1.2]], on ? '#9FD0FF' : '#1B2230'); }, { onTop: true }),
-        F(0.1, 0.1, 0.5, 0.5, (T, o) => { T.box(0.14, 0.14, 0.79, 0.14, 0.14, 0.03, '#C9A24A'); T.line([0.21, 0.21, 0.82], [0.21, 0.21, 1.05], '#C9A24A', 2); T.box(0.1, 0.1, 1.04, 0.22, 0.22, 0.1, '#2F6B4F'); }, { onTop: true }),
-        B(1.55, 0.55, 0.79, 0.34, 0.07, 0.07, '#C9A24A'), B(1.6, 0.2, 0.79, 0.28, 0.2, 0.06, '#1E2128'),
-        B(0.6, 1.05, 0.42, 0.8, 0.62, 0.1, '#6A2A2E', { name: 'seat' }), B(0.6, 1.62, 0.52, 0.8, 0.12, 1.0, '#6A2A2E'), B(0.55, 1.05, 0.5, 0.06, 0.55, 0.28, '#3B1B1E'), B(1.39, 1.05, 0.5, 0.06, 0.55, 0.28, '#3B1B1E'),
-        B(0.95, 1.3, 0.04, 0.1, 0.1, 0.38, '#1E2128'), B(0.75, 1.2, 0.0, 0.5, 0.35, 0.05, '#1E2128')],
+      parts: () => [B(0.05, 0.05, 0, 0.5, 0.85, 0.72, '#4E3224'), B(1.45, 0.05, 0, 0.5, 0.85, 0.72, '#4E3224'), B(0.55, 0.05, 0.1, 0.9, 0.04, 0.6, '#43281C'),
+        B(0, 0, 0.72, 2.0, 0.95, 0.07, '#6B4630', { name: 'top' }),
+        B(0.62, 0.3, 0.79, 0.76, 0.46, 0.012, '#2B3A2F'),
+        F(0.8, 0.04, 1.3, 0.3, (T, o) => { const on = deskInUse(o); T.box(0.95, 0.12, 0.79, 0.1, 0.08, 0.15, '#1E2128'); T.box(0.78, 0.09, 0.93, 0.44, 0.05, 0.3, '#1E2128'); T.poly([[0.81, 0.141, 0.96], [1.19, 0.141, 0.96], [1.19, 0.141, 1.2], [0.81, 0.141, 1.2]], on ? '#9FD0FF' : '#1B2230'); }, { onTop: true }),
+        F(0.1, 0.1, 0.5, 0.5, (T) => { T.box(0.14, 0.14, 0.79, 0.14, 0.14, 0.03, '#C9A24A'); T.line([0.21, 0.21, 0.82], [0.21, 0.21, 1.05], '#C9A24A', 2); T.box(0.1, 0.1, 1.04, 0.22, 0.22, 0.1, '#2F6B4F'); }, { onTop: true }),
+        B(1.55, 0.62, 0.79, 0.34, 0.07, 0.07, '#C9A24A'), B(1.6, 0.22, 0.79, 0.28, 0.2, 0.06, '#1E2128')],
+    },
+    // A big leather chair: a swivel base on a column, a deep seat, arms, and a tall back. Placed turned (rot 2) so it faces the room from behind the desk.
+    bosschair: {
+      parts: () => [B(0.2, 0.18, 0.0, 0.5, 0.36, 0.05, '#1E2128'), B(0.38, 0.32, 0.05, 0.12, 0.12, 0.35, '#1E2128'),
+        B(0.05, 0.1, 0.4, 0.8, 0.62, 0.1, '#33241E', { name: 'seat' }), B(0.05, 0.6, 0.5, 0.8, 0.14, 1.0, '#33241E'),
+        B(0.0, 0.1, 0.5, 0.07, 0.55, 0.28, '#1F1613'), B(0.83, 0.1, 0.5, 0.07, 0.55, 0.28, '#1F1613')],
     },
     visitorchair: {
       // An upholstered chair for the visitor, its back toward the room and its seat toward the boss's desk.
       parts: () => [B(0.05, 0.05, 0, 0.05, 0.05, 0.4, '#2B2F38'), B(0.5, 0.05, 0, 0.05, 0.05, 0.4, '#2B2F38'), B(0.05, 0.5, 0, 0.05, 0.05, 0.4, '#2B2F38'), B(0.5, 0.5, 0, 0.05, 0.05, 0.4, '#2B2F38'),
-        B(0.02, 0.1, 0.4, 0.56, 0.46, 0.08, '#6A2A2E', { name: 'seat' }), B(0.02, 0.52, 0.48, 0.56, 0.07, 0.5, '#6A2A2E')],
+        B(0.02, 0.1, 0.4, 0.56, 0.46, 0.08, '#4A5262', { name: 'seat' }), B(0.02, 0.52, 0.48, 0.56, 0.07, 0.5, '#4A5262')],
     },
     officerug: {
       // The boss's rug: deep red with a gold border.
@@ -4804,7 +4815,7 @@ export function createHouseArt(ctx0, opts = {}) {
     // washer spins during laundry, the shower runs while they shower.
     const who = (c, name) => c ? { name, away: !!c.hidden && false, level: c.level, x: c.x, y: c.y,
       task: c.act ? { name: c.act, phase: 'do', slot: c.slot || null } : null, queue: [], needs: {} } : offstage();
-    if (s.chars) { jordan = who(s.chars[0], 'Jordan'); maya = who(s.chars[1], 'Maya'); }
+    if (s.chars) { jordan = who(s.chars[0], 'Jordan'); maya = who(s.chars[1], 'Maya'); others = s.chars.slice(2).map((c) => who(c, 'visitor')); }
     // Arrange mode: walls come down, and the overlay below shows what can move.
     arrState = s.arrange || null;
     arranging = !!arrState;

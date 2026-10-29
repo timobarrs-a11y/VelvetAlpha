@@ -148,14 +148,16 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   pool: { W: 3.2, D: 2.0, h: 0.2, fixed: true, name: 'Pool',
     spots: { w: { stand: [1.6, 2.45], pos: [1.6, 1.0, 0.0], dir: [0, 1], tag: 'swim', base: 'water' } } },
   // The office's pieces (set dressing for now; each gets its job from the objectives, see docs/velvet-house/locations/meridian-tech.md).
-  // The same proportions as the home desk (1.2 wide, the chair inside the footprint): a 1.2 wide top, 0.62 deep, and the chair behind it. The seat is a
-  // spot like every other seat, so the existing sit-down and stand-up animation applies; `stand` is the clear tile in front where the chair is pulled out.
-  // Narrow on purpose, so two people can walk side by side down the aisle between the two rows.
-  officedesk: { W: 1.2, D: 1.3, h: 1.25, fixed: true, name: 'Office desk',
-    spots: { d: { stand: [0.6, 1.9], pos: [0.6, 1.0, 0.49], dir: [0, -1], tag: 'officework', base: 'seat' } } },
-  // The boss's desk: bigger and plainer to look at, turned (rot 2) to face the room, with a chair for visitors in front of it.
-  bossdesk: { W: 2.0, D: 1.8, h: 1.35, fixed: true, name: 'Boss desk',
-    spots: { d: { stand: [1.0, 2.4], pos: [1.0, 1.35, 0.5], dir: [0, -1], tag: 'bosswork', base: 'seat' } } },
+  // Desks and chairs are separate pieces, each with a position and a turn of its own: a desk is only a desk (1.2 x 0.7, narrow so two people can walk side by side down the aisle
+  // between the rows), and the chair is tucked in at its front. The seat is a spot like every other seat, so the game's sit-down and stand-up animation applies; `stand` is the
+  // clear space behind the chair where it is pulled out.
+  officedesk: { W: 1.2, D: 0.7, h: 1.25, fixed: true, name: 'Office desk' },
+  officechair: { W: 0.6, D: 0.6, h: 1.0, fixed: true, name: 'Office chair',
+    spots: { s: { stand: [0.3, 1.1], pos: [0.3, 0.32, 0.49], dir: [0, -1], tag: 'officework', base: 'seat' } } },
+  // The boss's desk and his chair: bigger, placed turned (rot 2) so he works on the far side facing the room. His chair is entered from the side (the desk is against the back).
+  bossdesk: { W: 2.0, D: 0.95, h: 1.35, fixed: true, name: 'Boss desk' },
+  bosschair: { W: 0.9, D: 0.8, h: 1.5, fixed: true, name: 'Boss chair',
+    spots: { s: { stand: [1.25, 0.4], pos: [0.45, 0.38, 0.5], dir: [0, -1], tag: 'bosswork', base: 'seat' } } },
   // The visitor's chair, facing the boss's desk. Nobody sits in it unless the boss is at his desk (see state/boss.ts).
   visitorchair: { W: 0.6, D: 0.6, h: 0.95, fixed: true, name: 'Visitor chair',
     spots: { s: { stand: [0.3, 1.15], pos: [0.3, 0.32, 0.46], dir: [0, -1], tag: 'bossvisit', base: 'seat' } } },
@@ -389,9 +391,9 @@ export const STARTER_RUG_IDS = ['rug1', 'rug2'];
 export const STARTER_TV_IDS = ['walltv'];
 
 /** The office's own pieces. A house saved before the office existed is given them once, so they are there when it is unlocked (see `kernel/config.ts`). */
-export const STARTER_OFFICE_IDS = ['off-desk2', 'off-desk3', 'off-desk4', 'off-desk5', 'off-printer', 'off-cooler', 'off-cabinet', 'off-plant', 'off-counter', 'off-fridge', 'off-vending', 'off-table', 'off-boss', 'off-visitor', 'off-rug'];
+export const STARTER_OFFICE_IDS = ['off-desk2', 'off-desk3', 'off-desk4', 'off-desk5', 'off-chair2', 'off-chair3', 'off-chair4', 'off-chair5', 'off-printer', 'off-cooler', 'off-cabinet', 'off-plant', 'off-counter', 'off-fridge', 'off-vending', 'off-table', 'off-boss', 'off-bosschair', 'off-visitor', 'off-rug'];
 /** Bumped when the office's layout changes: a house saved with an older layout has its office pieces replaced (and only those) once on load. */
-export const OFFICE_LAYOUT = 2;
+export const OFFICE_LAYOUT = 3;
 
 export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'stair01', type: 'flightY', level: 0, x: 9.0, y: 0, rot: 0 },
@@ -409,17 +411,23 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'off-desk3', type: 'officedesk', level: 5, x: 0.4, y: 5.4, rot: 0 },
   { id: 'off-desk4', type: 'officedesk', level: 5, x: 2.9, y: 3.2, rot: 0 },
   { id: 'off-desk5', type: 'officedesk', level: 5, x: 2.9, y: 5.4, rot: 0 },
-  { id: 'off-printer', type: 'officeprinter', level: 5, x: 2.6, y: 0.1, rot: 0 },
+  { id: 'off-chair2', type: 'officechair', level: 5, x: 0.7, y: 3.85, rot: 0 },
+  { id: 'off-chair3', type: 'officechair', level: 5, x: 0.7, y: 6.05, rot: 0 },
+  { id: 'off-chair4', type: 'officechair', level: 5, x: 3.2, y: 3.85, rot: 0 },
+  { id: 'off-chair5', type: 'officechair', level: 5, x: 3.2, y: 6.05, rot: 0 },
+  // The vending machine stands where the printer was, on the back wall between the whiteboard and the meeting door; the printer is at the front right.
+  { id: 'off-vending', type: 'officevending', level: 5, x: 2.8, y: 0.1, rot: 0 },
   { id: 'off-cooler', type: 'officecooler', level: 5, x: 6.15, y: 0.2, rot: 0 },
   { id: 'off-cabinet', type: 'officecabinet', level: 5, x: 0.2, y: 7.2, rot: 0 },
   { id: 'off-plant', type: 'officeplant', level: 5, x: 5.2, y: 6.6, rot: 0 },
-  { id: 'off-counter', type: 'officecounter', level: 5, x: 7.2, y: 5.0, rot: 0 },
-  { id: 'off-fridge', type: 'officefridge', level: 5, x: 9.2, y: 5.0, rot: 0 },
-  { id: 'off-vending', type: 'officevending', level: 5, x: 9.2, y: 6.0, rot: 0 },
-  { id: 'off-table', type: 'officetable', level: 5, x: 7.8, y: 6.5, rot: 0 },
+  { id: 'off-counter', type: 'officecounter', level: 5, x: 7.0, y: 5.0, rot: 0 },
+  { id: 'off-fridge', type: 'officefridge', level: 5, x: 9.25, y: 5.0, rot: 0 },
+  { id: 'off-table', type: 'officetable', level: 5, x: 7.5, y: 6.2, rot: 0 },
+  { id: 'off-printer', type: 'officeprinter', level: 5, x: 8.3, y: 7.0, rot: 0 },
   { id: 'off-rug', type: 'officerug', level: 5, x: 7.0, y: 0.2, rot: 0 },
-  { id: 'off-boss', type: 'bossdesk', level: 5, x: 7.7, y: 0.9, rot: 2 },
-  { id: 'off-visitor', type: 'visitorchair', level: 5, x: 8.4, y: 3.0, rot: 0 },
+  { id: 'off-boss', type: 'bossdesk', level: 5, x: 8.0, y: 1.0, rot: 2 },
+  { id: 'off-bosschair', type: 'bosschair', level: 5, x: 8.5, y: 0.2, rot: 2 },
+  { id: 'off-visitor', type: 'visitorchair', level: 5, x: 8.7, y: 2.2, rot: 0 },
   { id: 'tree', type: 'tree', level: 3, x: 7.6, y: 0.5, rot: 0 },
   { id: 'garden', type: 'garden', level: 3, x: 3.6, y: 0.35, rot: 0, grow: 0.35, wet: 0.6 },
   { id: 'sprinkler', type: 'sprinkler', level: 3, x: 5.6, y: 4.4, rot: 0 },
