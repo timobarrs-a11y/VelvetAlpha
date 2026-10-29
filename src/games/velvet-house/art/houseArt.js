@@ -4173,7 +4173,9 @@ export function createHouseArt(ctx0, opts = {}) {
   for (let i = 0; i < 10; i++) for (let j = 0; j < 8; j++) YARD.tiles.push({ i, j, len: 0.3 + rand() * 0.15, water: 0.6 + rand() * 0.2, weed: 0, seed: rand(), burn: 0, mowedAt: -9999, leaves: 0, snow: 0 });
   const isPatio = (i, j) => i <= 2 && j >= 2 && j <= 4;
   const tileAt = (x, y) => YARD.tiles[Math.min(9, Math.max(0, Math.floor(x))) * 8 + Math.min(7, Math.max(0, Math.floor(y)))];
-  const raining = () => absMin() >= YARD.rainAt && absMin() < YARD.rainUntil;
+  // The weather comes in with every frame from the game's state (see state/weather.ts), so the art and the garden agree.
+  let weatherNow = { on: false, rainAt: 0, rainUntil: 0 };
+  const raining = () => absMin() >= weatherNow.rainAt && absMin() < weatherNow.rainUntil;
 
   function grassColor(t) {
     const w = Math.min(1, t.water * 1.4), dry = [194, 176, 96], wet = [94, 158, 69];
@@ -5452,6 +5454,7 @@ export function createHouseArt(ctx0, opts = {}) {
   }
 
   function render(s) {
+    if (s.weather) weatherNow = s.weather;
     // What the household is doing to the house (the power, the dishes, the fridge) comes in with every frame, so the art never shows stale state.
     if (s.house) { power = s.house.power; dishes = s.house.dishes; laundryPile = s.house.laundryPile; fridge = s.house.fridge; parcel = s.house.parcel || null; if (s.house.owned) owned = s.house.owned; }
     sync(s);

@@ -59,7 +59,7 @@ export function cropOf(id: string | null | undefined): CropDef | null {
  * that the crop will die if it stays dry, the death itself, or a crop that has just ripened. Each is said once, on the
  * change, not every tick.
  */
-export function gardenTick(objs: ObjectInstance[], gameMin: number): string[] {
+export function gardenTick(objs: ObjectInstance[], gameMin: number, raining = false): string[] {
   const msgs: string[] = [];
   for (const bed of objs) {
     if (bed.type !== 'garden') continue;
@@ -67,6 +67,8 @@ export function gardenTick(objs: ObjectInstance[], gameMin: number): string[] {
     const wasWet = (bed.wet ?? 0) > DRY_AT;
     const hadGrow = bed.grow ?? 0;
     const hadDry = bed.dry ?? 0;
+    // Rain soaks a bed that has a crop in it, so a rainy day waters it for free.
+    if (raining && crop) bed.wet = Math.max(bed.wet ?? 0, WATERED);
     bed.wet = Math.max(0, (bed.wet ?? 0) - gameMin * WET_FADE_PER_MIN);
     if (!crop || bed.dead) continue;
     if (bed.wet > DRY_AT) {

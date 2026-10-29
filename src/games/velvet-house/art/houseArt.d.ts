@@ -68,6 +68,8 @@ export interface PetFrame {
 }
 
 export interface HouseFrame {
+  /** The weather from the game's state: rain or snow falls while `rainAt <= time < rainUntil` (game minutes). */
+  weather?: { on: boolean; rainAt: number; rainUntil: number };
   level: number;
   rot: number;
   minutes: number;

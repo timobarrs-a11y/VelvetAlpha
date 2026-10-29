@@ -4,6 +4,7 @@ import { financeTick } from '../state/finance';
 import { sideJobsTick } from '../state/sideJobs';
 import { rollDay, nightStart, wakeHour } from '../state/routine';
 import { gardenTick } from '../state/crops';
+import { weatherTick, weatherOf } from '../state/weather';
 import { advanceClock } from '../engine/loop';
 import { startFixedLoop } from '../engine/fixedLoop';
 import { blendFrames } from '../view/interpolate';
@@ -77,7 +78,8 @@ export function startGameLoop(g: Game): void {
       const jt = people[0].task;
       tickFitness(g.flags, gameMin, !!jt && jt.phase === 'do' && (jt.act === 'workout' || jt.act === 'lift'));
       // The garden grows while it is watered; a bed drying out or a crop ripening is said once, when it happens.
-      for (const msg of gardenTick(world.objs, gameMin)) log(msg);
+      const raining = weatherTick(g.flags, world.day, world.minutes, rng, log);
+      for (const msg of gardenTick(world.objs, gameMin, raining)) log(msg);
       if (snackTick(world.household, g.flags, gameMin)) log('Somebody raided the fridge for a snack.');
       g.concernsTick(gameMin);
       g.petsTick(dt, gameMin, walkMul, hourF);
@@ -101,7 +103,7 @@ export function startGameLoop(g: Game): void {
 
       art.render({
         level: view.level, rot: view.rot, minutes: interpMinutes, day: world.day,
-        t: view.t, dt: frameDt, objs: world.objs, wallMode: WALL_MODES[view.wallIdx].mode,
+        t: view.t, dt: frameDt, objs: world.objs, wallMode: WALL_MODES[view.wallIdx].mode, weather: weatherOf(g.flags),
         chars: blendFrames(stepStart.chars, people.map(g.toFrame), alpha),
         pets: blendFrames(stepStart.pets, g.petFrames(), alpha),
         arrange: g.arrangeFrame(),
