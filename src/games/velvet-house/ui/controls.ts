@@ -2,7 +2,8 @@ import { ATTIC } from '../state/house';
 import { LEVEL_COUNT, FLOOR_ORDER } from '../state/scenes';
 import { type AgentId } from '../state/agents';
 import { qualityManager } from '../engine/qualityTier';
-import { SPEEDS, WALL_MODES } from '../kernel/config';
+import { SPEEDS, WALL_MODES, IS_DEMO } from '../kernel/config';
+import { WEATHER_OVERRIDES, type WeatherOverride } from '../state/weather';
 import type { Game } from '../kernel/game';
 
 export function createControls(g: Game): Partial<Game> {
@@ -21,6 +22,7 @@ export function createControls(g: Game): Partial<Game> {
     });
     btn('walls').textContent = WALL_MODES[view.wallIdx].label;
     btn('speed').textContent = `${SPEEDS[view.speedIdx]}x`;
+    if (IS_DEMO) btn('weather').textContent = `Weather: ${(g.flags.weatherOverride ?? 'auto')}`;
     btn('quality').textContent = QUALITY_LABELS[g.s.qualityIdx];
     btn('pause').setAttribute('aria-pressed', String(view.paused));
     btn('pause').textContent = view.paused ? 'Play' : 'Pause';
@@ -86,6 +88,15 @@ export function createControls(g: Game): Partial<Game> {
   btn('pause').addEventListener('click', togglePause);
   btn('skipwork').addEventListener('click', () => { if (people[0].away) { g.s.skipping = true; btn('skipwork').hidden = true; } });
   btn('speed').addEventListener('click', () => { view.speedIdx = (view.speedIdx + 1) % SPEEDS.length; syncControls(); });
+  // The demo's weather button: forces rain, snow or clear on demand, so each kind can be checked. Auto follows the seasons.
+  if (IS_DEMO) {
+    btn('weather').hidden = false;
+    btn('weather').addEventListener('click', () => {
+      const cur = (g.flags.weatherOverride ?? 'auto') as WeatherOverride;
+      g.flags.weatherOverride = WEATHER_OVERRIDES[(WEATHER_OVERRIDES.indexOf(cur) + 1) % WEATHER_OVERRIDES.length];
+      syncControls();
+    });
+  }
 
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;

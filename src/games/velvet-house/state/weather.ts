@@ -17,7 +17,13 @@ export interface WeatherState {
   rainUntil: number;
   /** Whether it was raining at the last tick, so starts and stops are said once. */
   on: boolean;
+  /** Whether the rain falls as snow (winter, or forced on by the demo's weather button). */
+  snow?: boolean;
 }
+
+/** The demo's weather button: `auto` follows the seasons; the others force the weather until changed. */
+export type WeatherOverride = 'auto' | 'rain' | 'snow' | 'clear';
+export const WEATHER_OVERRIDES: WeatherOverride[] = ['auto', 'rain', 'snow', 'clear'];
 
 export const NO_WEATHER: WeatherState = { day: -1, rainAt: 0, rainUntil: 0, on: false };
 
@@ -49,9 +55,14 @@ export function weatherTick(flags: Record<string, unknown>, day: number, minutes
       w.rainAt = 0; w.rainUntil = 0;
     }
   }
+  const override = (flags.weatherOverride ?? 'auto') as WeatherOverride;
+  if (override === 'clear') { w.rainAt = 0; w.rainUntil = 0; }
+  else if (override === 'rain' || override === 'snow') { w.rainAt = absMin - 1; w.rainUntil = absMin + 1e9; }
+  const snowing = override === 'snow' || (override === 'auto' && seasonOf(day) === 3);
+  w.snow = snowing;
   const now = isRaining(w, absMin);
-  if (now && !w.on) log(seasonOf(day) === 3 ? 'It starts to snow.' : 'It starts to rain.');
-  if (!now && w.on) log(seasonOf(day) === 3 ? 'The snow stops.' : 'The rain stops.');
+  if (now && !w.on) log(snowing ? 'It starts to snow.' : 'It starts to rain.');
+  if (!now && w.on) log(snowing ? 'The snow stops.' : 'The rain stops.');
   w.on = now;
   flags.weather = w;
   return now;
