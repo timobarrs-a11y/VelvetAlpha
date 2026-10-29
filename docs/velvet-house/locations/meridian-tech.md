@@ -53,12 +53,13 @@ there.
 2. **Home needs him.** While Jordan is away the companion keeps the house going, but some things are his: he cooks the big meal, and anything the
    player queues for him waits. Needs still drain at work, so a long shift brings him home hungry. A late finish costs the evening he would have spent
    on these.
-3. **Appointments are fixed.** A meeting starts at a set time, and what you did before it decides how it goes. Not having written and printed the
-   report by then means the presentation is *unprepared*, and it scores lower.
+3. **You choose when to start, and the order.** There are no set times. Nothing starts until the player starts it, and a timer then runs on its own,
+   which is what lets them go and do other things. What the order changes is how well it goes: presenting after you have written and printed the
+   report is *prepared*; presenting without it is *unprepared*. The player decides, and thinks about what else to do while each timer runs.
 4. **Quality tiers,** to be confirmed: a finished scenario is *prepared*, *rushed* or *unprepared*, and that sets the pay bonus, the weekly review and
    promotion. Autopilot keeps the plain wage and nothing more.
 
-*Items 1 to 3 are my recommendation; item 4 is optional and still to confirm.*
+*Items 1 to 3 are my recommendation; item 4 is optional and still to confirm. There are no fixed appointments or deadlines on the clock.*
 
 ## Scenarios (variety from the same assets)
 
