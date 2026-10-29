@@ -4327,6 +4327,12 @@ export function createHouseArt(ctx0, opts = {}) {
       edge: night > 0.5 ? 'rgba(10,14,34,.3)' : 'rgba(0,0,0,.12)',
     };
   }
+  // A square post where fences meet or end, so a fence never just butts into another and overlaps it.
+  function nbPost(x, y) {
+    const fc = fenceColors(0, 1), s = 0.09, keepOn = gOn; gOn = false;
+    box(x - s, y - s, 0, s * 2, s * 2, FENCE.tip + 0.03, shade(fc.board, 0.14));
+    gOn = keepOn;
+  }
   function nbFence(xa, ya, xb, yb) {
     const len = Math.hypot(xb - xa, yb - ya), n = Math.round(len / 0.2), ux = (xb - xa) / len, uy = (yb - ya) / len;
     // The face we see is the one turned toward the camera.
@@ -4420,7 +4426,7 @@ export function createHouseArt(ctx0, opts = {}) {
     nbOcc = []; nbGlows = [];
     // Back-to-front: fences go in the same sort as the houses, sheds and trees (a fence in front of a shed has to cover it), in short runs
     // so each run is sorted by its own depth.
-    const fenceRows = (xa, ya, xb, yb) => { const len = Math.hypot(xb - xa, yb - ya), n = Math.max(1, Math.round(len / 2)); for (let i = 0; i < n; i++) { const a = [xa + (xb - xa) * i / n, ya + (yb - ya) * i / n], b = [xa + (xb - xa) * (i + 1) / n, ya + (yb - ya) * (i + 1) / n]; rows.push({ key: vs((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), d: () => nbFence(a[0], a[1], b[0], b[1]) }); } };
+    const fenceRows = (xa, ya, xb, yb) => { rows.push({ key: vs(xa, ya) - 0.01, d: () => nbPost(xa, ya) }, { key: vs(xb, yb) + 0.01, d: () => nbPost(xb, yb) }); const len = Math.hypot(xb - xa, yb - ya), n = Math.max(1, Math.round(len / 2)); for (let i = 0; i < n; i++) { const a = [xa + (xb - xa) * i / n, ya + (yb - ya) * i / n], b = [xa + (xb - xa) * (i + 1) / n, ya + (yb - ya) * (i + 1) / n]; rows.push({ key: vs((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), d: () => nbFence(a[0], a[1], b[0], b[1]) }); } };
     for (let k = -R; k <= R + 1; k++) {
       if (k !== 0 && k !== 1) fenceRows(0, k * WY, WX, k * WY);
       const ys = k * WY + 4; fenceRows(NB.rear0, ys, NB.rear0 + 10, ys);
