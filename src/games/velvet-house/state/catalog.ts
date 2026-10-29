@@ -102,8 +102,8 @@ const hobby = (id: string, type: string, name: string, price: number, tags: stri
 });
 
 /** A packet of seeds: bought in the shop, planted in the garden bed from the Orders page. */
-const seed = (id: string, crop: string, name: string, price: number, image: string, desc: string): CatalogEntry => ({
-  id, name, price, desc, icon: 'seed', tab: 'Outdoor', tags: ['natural'], crop, image, repeat: true,
+const seed = (id: string, crop: string, name: string, price: number, desc: string): CatalogEntry => ({
+  id, name, price, desc, icon: 'seed', tab: 'Outdoor', tags: ['natural'], crop, repeat: true,
 });
 
 const outdoor = (id: string, type: string, name: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
@@ -829,9 +829,9 @@ export const CATALOG: CatalogEntry[] = [
   outdoor('beachchair', 'beachchair', 'Beach chair', 50, ['playful', 'cool', 'soft'], ['#5FB8D6', '#E0A43A', '#D24A7A']),
   outdoor('bench', 'bench', 'Garden bench', 90, ['natural', 'vintage', 'cozy']),
   outdoor('garden', 'garden', 'Garden bed', 50, ['natural', 'cozy']),
-  seed('seed-flower', 'flower', 'Sunflower seeds', 6, '/images/seeds/seed-flower.svg', 'A packet of sunflower seeds. Picked blooms brighten the living room.'),
-  seed('seed-fruit', 'fruit', 'Strawberry seeds', 8, '/images/seeds/seed-fruit.svg', 'A packet of strawberry seeds. Two meals of fruit when ripe.'),
-  seed('seed-vegetable', 'vegetable', 'Carrot seeds', 5, '/images/seeds/seed-vegetable.svg', 'A packet of carrot seeds. Two meals of vegetables when ripe.'),
+  seed('seed-flower', 'flower', 'Tulip seeds', 6, 'A packet of tulip seeds. Picked blooms brighten the living room.'),
+  seed('seed-fruit', 'fruit', 'Apple seeds', 8, 'A packet of apple seeds. Two meals of fruit when ripe.'),
+  seed('seed-vegetable', 'vegetable', 'Pumpkin seeds', 5, 'A packet of pumpkin seeds. Two meals of vegetables when ripe.'),
   outdoor('sprinkler', 'sprinkler', 'Sprinkler', 20, ['natural', 'playful']),
 
   // Pets

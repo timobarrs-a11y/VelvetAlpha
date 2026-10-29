@@ -21,7 +21,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
   // Picking something from a page (an order, a purchase, an outfit, a job) puts the page away, so the house is in
   // view while it happens. Arrange and the Design Studio are workbenches, and the steppers on the phone are settings:
   // those stay open until the player closes them.
-  const CLOSE_AFTER = ['onBuy', 'onBuyAvatarItem', 'onOrder', 'onPayBill', 'onPayBillId', 'onTakeOffer', 'onWorkJob', 'onCallIn',
+  const CLOSE_AFTER = ['onBuyAvatarItem', 'onOrder', 'onPayBill', 'onPayBillId', 'onTakeOffer', 'onWorkJob', 'onCallIn',
     'onOrderGroceries', 'onOrderTakeout', 'onTalk', 'onPickLifeGoal', 'onWear', 'onWearPersona'] as const;
   const closing = (cbs: Parameters<typeof createDrawer>[0]): Parameters<typeof createDrawer>[0] => {
     const out = { ...cbs } as Record<string, unknown>;
@@ -39,6 +39,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onArrangeSet: () => g.setDown(),
     onArrangeBack: () => g.putBack(),
     onArrangeColour: () => g.recolourHeld(),
+    onArrangeClose: () => drawer.close(),
     onArrangeLook: (id) => g.useLook(id),
     onArrangeFloor: (lv) => g.carryTo(lv),
     onArrangeStore: () => g.storeSelected(),
@@ -46,7 +47,8 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onArrangeTakeDown: () => g.takeDownWall(),
     onPickFloor: (lv) => g.setLevel(lv),
     onPickRoom: (room) => { g.view.room = room; g.refreshDrawer(); },
-    onBuy: (item, color) => g.handleBuy(item, color),
+    // Furniture goes straight into Arrange, so the player can place it; anything else (paint, seeds) puts the page away.
+    onBuy: (item, color) => { g.handleBuy(item, color); if (item.icon === 'obj') drawer.open('arrange'); else drawer.close(); },
     onPetOrder: (act, id) => g.petOrder(act, id),
     onGarden: (action, crop) => { gardenAction(world.objs, g.flags, world.household.fridge, action, crop, log); g.refreshDrawer(); },
     onBuyAvatarItem: (id) => g.handleBuyAvatarItem(id),

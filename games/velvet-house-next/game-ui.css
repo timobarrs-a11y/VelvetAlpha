@@ -806,3 +806,12 @@
   .vh-stage > .vh-vitals .vh-vital { margin: 3px 0; }
   .vh-stage > .vh-controls { padding: 6px 6px 0; }
 }
+
+/* Arrange's Close button: red, beside Colour. */
+.vh-arr-close { background: #C8372D !important; color: #fff !important; border-color: #E05A4F !important; }
+.vh-arr-close:hover { background: #A92A22 !important; }
+
+/* Timed things in progress on the Goals page. */
+.vh-timed { margin-top: 14px; }
+.vh-timed-row { display: grid; grid-template-columns: 1fr 90px; gap: 4px 10px; align-items: center; margin-bottom: 10px; }
+.vh-timed-row small { grid-column: 1 / -1; color: #A9A1AE; font-size: 11px; }

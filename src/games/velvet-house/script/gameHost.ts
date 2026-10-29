@@ -10,7 +10,7 @@ import { LINE_BOOK } from '../content/lines';
 import { validateContent } from './validate';
 import { ScriptEngine } from './engine';
 import { NEW_RUNTIME, type Cond, type FlagValue, type Mode, type GameEvent, type PlaceRef, type ScriptHost, type ScriptRuntime, type UiTarget, type WorldCond } from './types';
-import { run } from '../kernel/config';
+import { run, IS_DEMO } from '../kernel/config';
 import { createScriptUi } from '../ui/scriptUi';
 import { playArrival, type Arrival } from '../ui/arrivalIntro';
 import { season as seasonOf } from '../state/time';
@@ -303,7 +303,8 @@ export function createScripts(g: Game): Partial<Game> {
 
   // A new game opens with the story. A save from before scripts existed never sees the move-in. A save in the middle of
   // a script picks up where it was.
-  const noScript = run.attract || (import.meta.env.DEV && new URLSearchParams(location.search).has('noscript'));
+  // The demo is a sandbox: no opening, no Dez, no lessons. Every script counts as done.
+  const noScript = run.attract || IS_DEMO || (import.meta.env.DEV && new URLSearchParams(location.search).has('noscript'));
   const isNew = world.save === null;
   if (isNew && !noScript) {
     // The first day's furniture arrives in boxes, so the house starts without it.
@@ -314,7 +315,7 @@ export function createScripts(g: Game): Partial<Game> {
     // Nothing to eat yet: the first order is a lesson.
     world.household.fridge.basic = 0; world.household.fridge.fresh = 0;
   }
-  if (noScript) engine.markDone(['opening.', 'tutorial.']);
+  if (noScript) engine.markDone(IS_DEMO ? [''] : ['opening.', 'tutorial.']);
   else if (!hadRt) {
     if (isNew) engine.startNewGame();
     else engine.markDone(['opening.', 'tutorial.']);

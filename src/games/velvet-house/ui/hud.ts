@@ -7,6 +7,8 @@ import { statusText } from '../state/agents';
 import { type GoalContext } from '../state/goals';
 import { type DrawerState } from '../ui/drawer';
 import { phoneView } from '../ui/phone';
+import { SIDE_JOBS, progress } from '../state/sideJobs';
+import { cropOf, DRY_AT } from '../state/crops';
 import type { Game } from '../kernel/game';
 
 export function createHud(g: Game): Partial<Game> {
@@ -40,6 +42,7 @@ export function createHud(g: Game): Partial<Game> {
       partnerName, simName, townName,
       deliveryPending: !!world.household.delivery,
       mayaStatus: statusText(people[1]),
+      timed: timedRows(),
       garden: ((bed) => ({ bed: !!bed, crop: bed?.crop ?? null, grow: bed?.grow ?? 0, wet: bed?.wet ?? 0, dead: !!bed?.dead, dry: bed?.dry ?? 0, packets: (flags.seedPackets ?? {}) as Record<string, number> }))(world.objs.find(o => o.type === 'garden')),
       closet,
       personas: g.s.wardrobe?.personas ?? [],
@@ -50,6 +53,22 @@ export function createHud(g: Game): Partial<Game> {
       })),
     };
     drawer.render(drawerState);
+  }
+
+  // What is in progress, for the Goals page: each side job Jordan has taken, and the garden bed while it has a crop.
+  function timedRows(): { label: string; pct: number; note: string; tone: 'ok' | 'mid' | 'low' }[] {
+    const rows: { label: string; pct: number; note: string; tone: 'ok' | 'mid' | 'low' }[] = [];
+    for (const t of world.life.taken) {
+      rows.push({ label: `${SIDE_JOBS[t.job].title} (${t.client})`, pct: progress(t), note: world.life.working === t.id ? 'working on it now' : 'waiting', tone: 'ok' });
+    }
+    const bed = world.objs.find(o => o.type === 'garden');
+    const crop = cropOf(bed?.crop);
+    if (bed && crop) {
+      const pct = Math.round((bed.grow ?? 0) * 100);
+      const dry = (bed.wet ?? 0) <= DRY_AT;
+      rows.push({ label: `${crop.name} in the garden`, pct, note: bed.dead ? 'died' : dry ? 'needs water' : pct >= 100 ? 'ripe' : 'growing', tone: bed.dead ? 'low' : dry ? 'mid' : 'ok' });
+    }
+    return rows;
   }
 
   // People refresh
