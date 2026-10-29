@@ -4227,6 +4227,7 @@ export function createHouseArt(ctx0, opts = {}) {
   // Everything sits on whole tiles like the yard: fences on tile edges, one clear tile between a fence and a shed, a tile of verge either side of the lane.
   const NB = { lane0: WX + 1, lane1: WX + 4, rear0: WX + 5, depth: 7, front: 5 };
   const nbBack = { cv: null, key: '' };
+  let nbWet = 0;
   const nbHash = (a, b) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
   // A face is seen when its outward normal turns toward the camera, which always sits at +a, +b.
   const nbFacing = (nx, ny) => { const [da, db] = VD(nx, ny); return da + db > 0; };
@@ -4355,6 +4356,9 @@ export function createHouseArt(ctx0, opts = {}) {
       nbBack.key = key;
     }
     ctx.drawImage(nbBack.cv, 0, 0, W, H);
+    // The weather carries on past the fence: the same rain or snow over the neighbourhood, behind the yard (which covers it where it lands).
+    nbWet += ((raining() ? 1 : 0) - nbWet) * Math.min(1, rdt * 1.5);
+    if (nbWet > 0.02) wfx.drawField(ctx, animT, { n: Math.round(dropCaps().rain * 2.2 * nbWet), snow: !!(weatherNow.snow ?? seasonIdx() === 3), W, H, TW, TH, ZH });
   }
   // How many drops the quality tier allows, scaled by how heavy the rain is (light, medium, heavy).
   function dropCaps() {

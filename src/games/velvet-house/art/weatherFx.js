@@ -145,6 +145,40 @@ export function createWeatherFx() {
       c.globalAlpha = 1;
     },
 
+    /**
+     * The weather over the neighbourhood behind the yard: drops that hold no state, each worked out from the clock alone, so it costs one
+     * stroke. They fall with the same slant and speed as the yard's own, and ring the ground where they land. `o` = { n, snow, W, H, TW, TH, ZH }.
+     */
+    drawField(c, t, o) {
+      const { n, snow, W, H, TW, TH, ZH } = o, fract = (v) => v - Math.floor(v), hs = (i, k) => fract(Math.sin(i * 12.9898 + k * 78.233) * 43758.5453);
+      if (n < 1) return;
+      c.save();
+      if (snow) {
+        c.fillStyle = 'rgba(246,248,250,.85)';
+        for (let i = 0; i < n; i++) {
+          const fall = 3.4 / (1.1 + hs(i, 3) * 0.6), cyc = (t + hs(i, 4) * fall) % fall, z = 3.4 * (1 - cyc / fall), lx = hs(i, 1) * (W + 40) - 20, ly = hs(i, 2) * H;
+          const sx = lx + Math.sin(t * 1.3 + hs(i, 5) * 6.28) * 6, sy = ly - z * ZH;
+          c.fillRect(sx, sy, 2, 2);
+        }
+        c.restore(); return;
+      }
+      c.strokeStyle = 'rgba(205,220,240,.5)'; c.lineWidth = 1; c.beginPath();
+      const rip = [];
+      for (let i = 0; i < n; i++) {
+        const vz = 8.5 + hs(i, 3) * 2, fall = 3.4 / vz, rest = 0.35, per = fall + rest, cyc = (t + hs(i, 4) * per) % per;
+        const ax = 0.7 + hs(i, 6) * 0.9, ay = 0.15 + hs(i, 7) * 0.45, lx = hs(i, 1) * (W + 40) - 20, ly = hs(i, 2) * H;
+        if (cyc < fall) {
+          const z = 3.4 * (1 - cyc / fall), k = (zz) => [lx - (ax - ay) * TW * zz / vz, ly - (ax + ay) * TH * zz / vz - zz * ZH], [tx, ty] = k(z + 0.45), [bx, by] = k(z);
+          c.moveTo(tx, ty); c.lineTo(bx, by);
+        } else rip.push(lx, ly, (cyc - fall) / rest);
+      }
+      c.stroke();
+      c.strokeStyle = 'rgba(230,240,255,.3)'; c.beginPath();
+      for (let k = 0; k < rip.length; k += 3) { const a = rip[k + 2], r = 1.5 + a * 5; c.moveTo(rip[k] + r, rip[k + 1]); c.ellipse(rip[k], rip[k + 1], r, r / 2, 0, 0, TAU); }
+      c.stroke();
+      c.restore();
+    },
+
     /** The air layer: falling drops in one stroke, and snowflakes stamped. Drawn over the house. */
     drawAir(c, iso, clip) {
       // Rain and snow stay inside the lot: the clip is the lot's outline, so nothing falls in the sky past the walls.
