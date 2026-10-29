@@ -3028,21 +3028,38 @@ export function createHouseArt(ctx0, opts = {}) {
     treeapple: { parts: () => [F(0.2, 0.2, 1.0, 1.0, treeAt('apple', 0.6, 0.6, { 0: ['#FBF3F5', 8, 34, 60], 2: ['#B6A23A', 4, 34, 60] }))] },
     // ---- the office ----
     officedesk: {
-      // A 1.2 x 0.62 top on side panels, a low partition behind it, a monitor (its screen lights while someone sits at it), keyboard, mouse, mug and papers. The
-      // chair is a piece of its own (officechair), tucked in at the desk's front.
+      // A 1.2 x 0.62 top on side panels, a low partition behind it, a monitor (its screen lights while someone sits at it), a keyboard, a mouse on its pad, a mug, a desk phone
+      // and a PC tower standing at the left end. The chair is a piece of its own (officechair), tucked in at the desk's front. Everything that stands on the top is
+      // painted in one pass over it (back to front), so the depth order cannot tangle.
       parts: () => [B(0.03, 0.05, 0, 0.05, 0.55, 0.72, '#B9B09A'), B(1.12, 0.05, 0, 0.05, 0.55, 0.72, '#B9B09A'), B(0.08, 0.05, 0.12, 1.04, 0.03, 0.6, '#A59C86'),
         B(0, 0, 0.72, 1.2, 0.62, 0.05, '#CDBFA3', { name: 'top' }), B(0, 0, 0.77, 1.2, 0.04, 0.46, '#8E98A6'),
-        F(0.3, 0.05, 0.9, 0.3, (T, o) => {
-          const on = deskInUse(o);
-          T.box(0.52, 0.12, 0.77, 0.1, 0.08, 0.14, '#2B2F38'); T.box(0.35, 0.09, 0.9, 0.5, 0.05, 0.3, '#23272F');
-          T.poly([[0.38, 0.141, 0.93], [0.82, 0.141, 0.93], [0.82, 0.141, 1.17], [0.38, 0.141, 1.17]], on ? '#9FD0FF' : '#1B2230');
-          if (on) [1.12, 1.07, 1.02, 0.97].forEach((z, i) => T.line([0.42, 0.142, z], [0.42 + (i % 2 ? 0.26 : 0.34), 0.142, z], '#FFFFFF', 1));
+        F(0, 0, 1.2, 0.62, (T, o) => {
+          const on = deskInUse(o), z0 = 0.77;
+          // The monitor, at the back, then the PC tower at the left end.
+          T.box(0.58, 0.12, z0, 0.1, 0.08, 0.14, '#2B2F38'); T.box(0.41, 0.09, z0 + 0.13, 0.5, 0.05, 0.3, '#23272F');
+          T.poly([[0.44, 0.141, 0.93], [0.88, 0.141, 0.93], [0.88, 0.141, 1.17], [0.44, 0.141, 1.17]], on ? '#9FD0FF' : '#1B2230');
+          if (on) [1.12, 1.07, 1.02, 0.97].forEach((z, i) => T.line([0.48, 0.142, z], [0.48 + (i % 2 ? 0.26 : 0.34), 0.142, z], '#FFFFFF', 1));
+          T.box(0.1, 0.12, z0, 0.2, 0.44, 0.46, '#2E323B');
+          const fy = 0.561;
+          T.poly([[0.12, fy, z0 + 0.36], [0.28, fy, z0 + 0.36], [0.28, fy, z0 + 0.4], [0.12, fy, z0 + 0.4]], '#15181D');                    // the drive bay
+          T.poly([[0.12, fy, z0 + 0.3], [0.28, fy, z0 + 0.3], [0.28, fy, z0 + 0.33], [0.12, fy, z0 + 0.33]], '#22262E');
+          T.box(0.15, fy, z0 + 0.2, 0.05, 0.012, 0.05, '#4A5262');                                                                        // the power button
+          T.box(0.235, fy, z0 + 0.215, 0.03, 0.012, 0.03, on ? '#5BE08A' : '#2E5A3E');                                                     // its light
+          [0.06, 0.09, 0.12, 0.15].forEach(z => T.line([0.13, fy + 0.001, z0 + z], [0.27, fy + 0.001, z0 + z], '#15181D', 1));            // the vents
+          const sx = 0.301, cy = 0.34, cz = z0 + 0.23;                                                                                    // the side panel and its fan
+          T.poly([[sx, 0.16, z0 + 0.05], [sx, 0.52, z0 + 0.05], [sx, 0.52, z0 + 0.42], [sx, 0.16, z0 + 0.42]], '#3A4150');
+          const ring = [], hub = [];
+          for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; ring.push([sx + 0.001, cy + Math.cos(a) * 0.1, cz + Math.sin(a) * 0.1]); }
+          for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; hub.push([sx + 0.002, cy + Math.cos(a) * 0.03, cz + Math.sin(a) * 0.03]); }
+          T.poly(ring, '#1B1E24'); T.poly(hub, '#6B7280');
+          // The mouse pad and the mouse: a pale shell with a split for the buttons and a wheel, easy to tell from the dark pad.
+          T.box(0.77, 0.33, z0, 0.16, 0.24, 0.008, '#2B2F38');
+          T.box(0.81, 0.39, z0 + 0.008, 0.08, 0.13, 0.035, '#E4E7EC'); T.line([0.81, 0.44, z0 + 0.043], [0.89, 0.44, z0 + 0.043], '#6B7280', 1); T.line([0.85, 0.39, z0 + 0.043], [0.85, 0.44, z0 + 0.043], '#6B7280', 1); T.box(0.842, 0.4, z0 + 0.044, 0.016, 0.035, 0.006, '#3A3F4A');
+          // The desk phone at the right end: a base with a keypad, the handset across its cradle and a red light.
+          T.box(0.95, 0.32, z0, 0.22, 0.24, 0.06, '#4A5262'); T.box(0.98, 0.4, z0 + 0.06, 0.12, 0.14, 0.012, '#8E98A6'); T.box(0.94, 0.34, z0 + 0.06, 0.06, 0.2, 0.05, '#1E2128'); T.box(1.13, 0.34, z0 + 0.06, 0.06, 0.2, 0.05, '#1E2128'); T.box(0.94, 0.38, z0 + 0.11, 0.25, 0.12, 0.04, '#1E2128'); T.box(1.06, 0.35, z0 + 0.072, 0.05, 0.05, 0.012, '#E0453A');
         }, { onTop: true }),
-        B(0.4, 0.38, 0.77, 0.4, 0.14, 0.02, '#3A3F4A'), B(0.82, 0.4, 0.77, 0.06, 0.09, 0.02, '#3A3F4A'), B(0.14, 0.3, 0.77, 0.09, 0.09, 0.11, '#C2413A'), B(0.06, 0.06, 0.77, 0.2, 0.2, 0.01, '#E8E2D6'),
-        // The desk phone, left of the keyboard: a base with a keypad, the handset across its cradle and a small red light, so the desk can be tapped to take a call later.
-        F(0.9, 0.3, 1.2, 0.58, (T) => { T.box(0.92, 0.32, 0.77, 0.24, 0.24, 0.06, '#4A5262'); T.box(0.95, 0.4, 0.83, 0.12, 0.14, 0.012, '#8E98A6'); T.box(0.91, 0.34, 0.83, 0.06, 0.2, 0.05, '#1E2128'); T.box(1.12, 0.34, 0.83, 0.06, 0.2, 0.05, '#1E2128'); T.box(0.91, 0.38, 0.88, 0.27, 0.12, 0.04, '#1E2128'); T.box(1.04, 0.35, 0.842, 0.05, 0.05, 0.012, '#E0453A'); }, { onTop: true })],
+        B(0.4, 0.4, 0.77, 0.36, 0.13, 0.02, '#3A3F4A'), B(0.98, 0.14, 0.77, 0.09, 0.09, 0.11, '#C2413A')],
     },
-    // A swivel chair: a five-point base, a gas column, a padded seat and back. Faces -y when not turned; its seat spot is where the avatar sits.
     officechair: {
       parts: () => [B(0.12, 0.2, 0.0, 0.36, 0.2, 0.04, '#2B2F38'), B(0.27, 0.27, 0.04, 0.06, 0.06, 0.36, '#2B2F38'),
         B(0.05, 0.1, 0.4, 0.5, 0.45, 0.07, '#3A4150', { name: 'seat' }), B(0.05, 0.5, 0.47, 0.5, 0.07, 0.5, '#3A4150')],
@@ -3072,6 +3089,10 @@ export function createHouseArt(ctx0, opts = {}) {
       // The boss's rug: deep red with a gold border.
       parts: () => [F(0, 0, 3.0, 3.0, (T) => { const q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1); q(0, 0, 3.0, 3.0, 0.01, '#6A2A2E'); q(0.12, 0.12, 2.88, 2.88, 0.012, null, '#C9A24A'); q(0.25, 0.25, 2.75, 2.75, 0.012, null, 'rgba(201,162,74,.5)'); })],
     },
+    officerunner: {
+      // A long corporate runner laid from the meeting room door down the aisle: charcoal-blue with a pale edge stripe and a darker inner border.
+      parts: () => [F(0, 0, 1.1, 6.4, (T) => { const q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1); q(0, 0, 1.1, 6.4, 0.01, '#3C4A63'); q(0.07, 0, 1.03, 6.33, 0.012, null, '#9AA7BD'); q(0.15, 0, 0.95, 6.25, 0.012, null, 'rgba(154,167,189,.45)'); })],
+    },
     officeprinter: {
       // A floor-standing copier: a cabinet with two paper drawers, a white body, a scanner lid with a glass top, an angled control panel with buttons, and a tray with paper.
       parts: () => [B(0.05, 0.05, 0, 1.5, 0.6, 0.5, '#8E98A6'), B(0, 0, 0.5, 1.6, 0.7, 0.5, '#F1EEE8'), B(0.04, 0.04, 1.0, 1.1, 0.62, 0.07, '#DDE1E7'),
@@ -3094,7 +3115,6 @@ export function createHouseArt(ctx0, opts = {}) {
     },
     officefridge: { parts: () => [B(0, 0, 0, 0.7, 0.7, 1.9, '#E8EEF2')] },
     officevending: { parts: () => [B(0, 0, 0, 0.7, 0.7, 1.8, '#2F5FA8'), B(0.05, 0.62, 0.9, 0.6, 0.06, 0.7, '#CFE4F0')] },
-    officetable: { parts: () => [B(0, 0, 0, 0.9, 0.9, 0.7, '#C8B79B')] },
     garden: {    
       parts: () => [F(0, 0, 2.0, 1.0, (T, o, t) => { T.box(0, 0, 0, 2.0, 1.0, 0.28, '#8A6A50'); T.poly([[0.08, 0.08, 0.281], [1.92, 0.08, 0.281], [1.92, 0.92, 0.281], [0.08, 0.92, 0.281]], (o.wet || 0) > 0.3 ? '#4A3426' : '#7A5E44');
         if (usingSlot(o.id + ':t')) { const [gx, gy] = T.W(1.0, 0.5); PFX.emit(o.id + ':splash', 'splash', o.level, gx, gy, 0.55, 1); }

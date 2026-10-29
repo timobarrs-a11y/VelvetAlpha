@@ -162,6 +162,7 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   visitorchair: { W: 0.6, D: 0.6, h: 0.95, fixed: true, name: 'Visitor chair',
     spots: { s: { stand: [0.3, 1.15], pos: [0.3, 0.32, 0.46], dir: [0, -1], tag: 'bossvisit', base: 'seat' } } },
   officerug: { W: 3.0, D: 3.0, h: 0.02, fixed: true, rug: true, blocks: [], name: 'Boss rug' },
+  officerunner: { W: 1.1, D: 6.4, h: 0.02, fixed: true, rug: true, blocks: [], name: 'Aisle runner' },
   officeprinter: { W: 1.6, D: 0.75, h: 1.25, fixed: true, name: 'Printer' },
   officecooler: { W: 0.4, D: 0.4, h: 1.45, fixed: true, name: 'Water cooler' },
   officecabinet: { W: 0.5, D: 0.6, h: 1.2, fixed: true, name: 'Filing cabinet' },
@@ -169,7 +170,6 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   officecounter: { W: 2.2, D: 0.62, h: 1.3, fixed: true, name: 'Break room counter' },
   officefridge: { W: 0.7, D: 0.7, h: 1.9, fixed: true, name: 'Office fridge' },
   officevending: { W: 0.7, D: 0.7, h: 1.8, fixed: true, name: 'Vending machine' },
-  officetable: { W: 0.9, D: 0.9, h: 0.7, fixed: true, name: 'Break room table' },
   daybed: { W: 1.9, D: 0.9, h: 0.8, name: 'Guest daybed', store: true },
   snowman: { W: 0.6, D: 0.6, h: 1.4, name: 'Snowman' },
   bench: { W: 1.6, D: 0.6, h: 0.9, name: 'Garden bench', store: true,
@@ -391,9 +391,9 @@ export const STARTER_RUG_IDS = ['rug1', 'rug2'];
 export const STARTER_TV_IDS = ['walltv'];
 
 /** The office's own pieces. A house saved before the office existed is given them once, so they are there when it is unlocked (see `kernel/config.ts`). */
-export const STARTER_OFFICE_IDS = ['off-desk2', 'off-desk3', 'off-desk4', 'off-desk5', 'off-chair2', 'off-chair3', 'off-chair4', 'off-chair5', 'off-printer', 'off-cooler', 'off-cabinet', 'off-plant', 'off-counter', 'off-fridge', 'off-vending', 'off-table', 'off-boss', 'off-bosschair', 'off-visitor', 'off-rug'];
+export const STARTER_OFFICE_IDS = ['off-desk2', 'off-desk3', 'off-desk4', 'off-desk5', 'off-chair2', 'off-chair3', 'off-chair4', 'off-chair5', 'off-printer', 'off-cooler', 'off-cabinet', 'off-plant', 'off-counter', 'off-fridge', 'off-vending', 'off-runner', 'off-boss', 'off-bosschair', 'off-visitor', 'off-rug'];
 /** Bumped when the office's layout changes: a house saved with an older layout has its office pieces replaced (and only those) once on load. */
-export const OFFICE_LAYOUT = 3;
+export const OFFICE_LAYOUT = 4;
 
 export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'stair01', type: 'flightY', level: 0, x: 9.0, y: 0, rot: 0 },
@@ -422,8 +422,8 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'off-plant', type: 'officeplant', level: 5, x: 5.2, y: 6.6, rot: 0 },
   { id: 'off-counter', type: 'officecounter', level: 5, x: 7.0, y: 5.0, rot: 0 },
   { id: 'off-fridge', type: 'officefridge', level: 5, x: 9.25, y: 5.0, rot: 0 },
-  { id: 'off-table', type: 'officetable', level: 5, x: 7.5, y: 6.2, rot: 0 },
-  { id: 'off-printer', type: 'officeprinter', level: 5, x: 8.3, y: 7.0, rot: 0 },
+  { id: 'off-printer', type: 'officeprinter', level: 5, x: 8.3, y: 6.3, rot: 0 },
+  { id: 'off-runner', type: 'officerunner', level: 5, x: 4.7, y: 0.0, rot: 0 },
   { id: 'off-rug', type: 'officerug', level: 5, x: 7.0, y: 0.2, rot: 0 },
   { id: 'off-boss', type: 'bossdesk', level: 5, x: 8.0, y: 1.0, rot: 2 },
   { id: 'off-bosschair', type: 'bosschair', level: 5, x: 8.5, y: 0.2, rot: 2 },
