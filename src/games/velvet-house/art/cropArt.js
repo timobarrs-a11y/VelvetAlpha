@@ -54,6 +54,25 @@ export function drawCrop(ctx, x, y, s, crop, angle = 0) {
   ctx.restore();
 }
 
+/**
+ * A ground vine on the soil of one bed spot: leaves lie flat and vines reach out, and at mid and final size a pumpkin
+ * sits on the ground near its base. Dead vines stay flat and brown.
+ */
+export function drawVineSpot(ctx, x, y, crop, stage, dead, t, k) {
+  const sway = Math.sin(t * 2.2 + k * 0.9) * 0.12;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(sway);
+  const leaf = dead ? '#8A6A3A' : '#3F7D4E', leafLight = dead ? '#A8864E' : '#5CA05E';
+  ctx.strokeStyle = leaf; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(5, -1, 11, 1.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-4, -1.5, -9, 0.5); ctx.stroke();
+  ctx.fillStyle = leafLight; ctx.beginPath(); ctx.ellipse(4, -2, 3.2, 1.6, -0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = leaf; ctx.beginPath(); ctx.ellipse(-4, -1.5, 3, 1.4, 0.3, 0, Math.PI * 2); ctx.fill();
+  if (!dead && (stage === 'mid' || stage === 'final')) drawCrop(ctx, 1, 0.5, stage === 'final' ? 0.45 : 0.3, crop, 0);
+  ctx.restore();
+}
+
 const icons = new Map();
 
 /** A picture of a crop for the shop: the same drawing, rendered once to an image and kept. */

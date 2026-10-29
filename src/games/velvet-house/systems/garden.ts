@@ -62,6 +62,12 @@ export function gardenAction(
   if (id === 'flower') log(`Picked the ${CROPS[id].name.toLowerCase()}. They brighten up the living room.`);
   else { fridge.fresh += 2; log(`Picked the ${CROPS[id].name.toLowerCase()}. Two meals' worth went into the fridge.`); }
   flags.harvests = ((flags.harvests as number) ?? 0) + 1;
+  if (CROPS[id].harvest === 'repeat') {
+    // A bush keeps its roots: it goes back to mid-size and fruits again.
+    bed.grow = 0.5;
+    log(`The ${current.name.toLowerCase()} will fruit again.`);
+    return;
+  }
   bed.crop = null;
   bed.grow = 0;
   bed.dry = 0;

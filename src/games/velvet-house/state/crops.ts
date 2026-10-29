@@ -9,9 +9,18 @@ import type { ObjectInstance } from './objects';
 
 export type CropId = 'flower' | 'fruit' | 'vegetable';
 
+/** How a crop grows and is drawn: a stalk with a bloom, a bush with fruit, or vines spread on the ground. */
+export type GrowthForm = 'stem-bloom' | 'bush-fruit' | 'ground-vine';
+/** `once`: picked and gone. `repeat`: picked, then it regrows to mid-size and fruits again. */
+export type HarvestRule = 'once' | 'repeat';
+
 export interface CropDef {
   name: string;
   seedId: string;
+  form: GrowthForm;
+  harvest: HarvestRule;
+  /** Game minutes of watered growth from seed to ripe (see docs/velvet-house/crops.md). */
+  ripeMinutes: number;
   /** The colour of the crop's tips once it is growing. */
   color: string;
   /** The shop price of one packet. */
@@ -19,9 +28,9 @@ export interface CropDef {
 }
 
 export const CROPS: Record<CropId, CropDef> = {
-  flower: { name: 'Tulips', seedId: 'seed-flower', color: '#E9457A', price: 6 },
-  fruit: { name: 'Apples', seedId: 'seed-fruit', color: '#E63B3B', price: 8 },
-  vegetable: { name: 'Pumpkins', seedId: 'seed-vegetable', color: '#F08A24', price: 5 },
+  flower: { name: 'Tulips', seedId: 'seed-flower', form: 'stem-bloom', harvest: 'once', ripeMinutes: 16 * 60, color: '#E9457A', price: 6 },
+  fruit: { name: 'Apples', seedId: 'seed-fruit', form: 'bush-fruit', harvest: 'repeat', ripeMinutes: 16 * 60, color: '#E63B3B', price: 8 },
+  vegetable: { name: 'Pumpkins', seedId: 'seed-vegetable', form: 'ground-vine', harvest: 'once', ripeMinutes: 24 * 60, color: '#F08A24', price: 5 },
 };
 
 export const CROP_IDS = Object.keys(CROPS) as CropId[];
@@ -57,7 +66,7 @@ export function gardenTick(objs: ObjectInstance[], gameMin: number): string[] {
     bed.wet = Math.max(0, (bed.wet ?? 0) - gameMin * WET_FADE_PER_MIN);
     if (!crop || bed.dead) continue;
     if (bed.wet > DRY_AT) {
-      bed.grow = Math.min(1, hadGrow + gameMin / RIPE_MINUTES);
+      bed.grow = Math.min(1, hadGrow + gameMin / crop.ripeMinutes);
       bed.dry = 0;
     } else {
       bed.dry = hadDry + gameMin;
