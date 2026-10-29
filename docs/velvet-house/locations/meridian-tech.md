@@ -63,23 +63,38 @@ there.
 
 ## Scenarios (variety from the same assets)
 
-A scenario is an ordered outline of a work day, 3 to 5 objectives, built from a small library of objective types using the same props in a different
-order. Some objectives depend on an earlier one (you cannot print what you have not written). The first scenario can be the plain one; later days
-draw from the rest and avoid repeating yesterday's.
+A scenario is an ordered outline of a work day: 3 to 5 objectives from the library below, using the same props in a different order. The same prop does a
+different job each time: the printer is `fix`, `print`, `scan` or `restock`; the computer is `work` or `reply`; the one door is every meeting.
 
-| Scenario | Outline |
-|---|---|
-| **Presentation day** | Write the report (computer, timed) → print it (printer, tap) → go to the meeting to present (timed, unseen) → answer the call afterwards (phone, tap) |
-| **Jam day** | Fix the printer (tap) → deal with the email pile (computer, timed) → lunch (timed, unseen) → afternoon meeting (timed, unseen) |
-| **Client day** | Take the client's call (phone, tap) → prepare the slides (computer, timed) → print the handouts (printer, tap) → client meeting (timed, unseen) → sign the contract (desk, tap) |
-| **Quiet day** | Catch up on email (timed) → fix the copier (tap) → team lunch (timed, unseen) |
+| Scenario | Tier | Objectives, in order | Timers | Why it plays differently |
+|---|---|---|---|---|
+| **First day** | 1 | `answer` → `coffee` → `reply` → `meeting` | about 3.5 min | Fixed for day one: a bit of everything and one short meeting. Nothing depends on anything |
+| **Quiet day** | 1 | `reply` → `fix` → `chat` → `lunch` | about 3.5 min | Easy, mostly short timers in view; a good day to run home errands during lunch |
+| **Jam day** | 1 | `fix` → `work` → `lunch` → `meeting` | about 6 min | The printer fix comes first, then the email pile, then two unseen blocks |
+| **Paperwork day** | 2 | `mail` → `reply` → `sign` → `shred` → `file` | about 0.75 min | Almost no waiting: the player stays in the office tapping. For someone who does not want to leave the desk |
+| **Presentation day** | 2 | `work` → `restock` → `print` → `meeting` → `answer` | about 4 min | Write it, print it (the paper must be restocked first), present it, then the call |
+| **Client day** | 2 | `answer` → `work` → `print` → `meeting` → `sign` | about 4 min | The call starts it and the contract ends it. Print before the meeting for a prepared meeting |
+| **Brainstorm day** | 2 | `plan` → `work` → `scan` → `meeting` → `snack` | about 5.5 min | Starts at the whiteboard; a scan feeds the meeting and a snack breaks up the long blocks |
+| **Audit day** | 2 | `file` → `scan` → `work` → `print` → `sign` | about 2 min | Every long block waits on a tap: the missing document comes first |
+| **Hot afternoon** | 2 | `thermostat` → `blinds` → `work` → `lunch` → `chat` | about 4.75 min | Uses the weather: the glare slot becomes "water the plant" on a rainy day or in the evening |
+| **Big client** | 3 | `answer` → `plan` → `work` → `print` → `meeting` | about 4.75 min | The long one: five objectives, two big timers, and the order is the whole puzzle |
+| **Friday wrap-up** | 3 | `file` → `work` → `print` → `meeting` → `water` | about 4 min | Always Friday. The weekly review is the meeting; the plant gets its water before the weekend |
 
-- **Same prop, different job:** the printer is "fix the jam" in one scenario and "print the file you just wrote" in the next. The computer is
-  "write the report" or "email the client". The meeting room is "the team meeting", "the presentation" or "the client". That is the variety, for the
-  cost of a handful of objects.
-- **Choosing a scenario:** by the day, weighted by career level (later days use the longer scenarios), with an easy first day.
-- **Finishing a scenario** is a good day: a bonus, and progress up the career ladder. Each rung unlocks something in the office (a better desk, a
-  window seat, a bigger meeting room).
+*Timers add up the waiting only (a long timer is two minutes, a short one three-quarters of a minute); taps take a moment. All eleven pass the rules below.*
+
+**The rules every scenario follows** (checked when I wrote them):
+- 3 to 5 objectives, none repeated, at least one tap and at least one timer, and at most two unseen blocks (`meeting`, `lunch`).
+- Dependencies point forward: `print` comes after a `work`, `restock` comes before the `print` that needs paper, a `print` or `scan` comes before the `meeting` it feeds,
+  and a `shred` comes after something that makes paper (`sign`, `file`, `mail`).
+- Every one of the 20 types appears in at least one scenario, so no prop sits idle. (The checks above found one scenario with no tap, which I fixed.)
+
+**Choosing the day**
+- **Tier** follows the career rung: tier 1 for the first days, tier 2 once they are promoted, tier 3 after that; a higher rung still draws the easier ones sometimes.
+- **Day one is always `First day`; every Friday is `Friday wrap-up`;** the other days are drawn at random from the tier, never the same scenario twice in a row.
+- **Weather and light decide a slot, not the day:** `blinds` is only offered on a clear afternoon, so on a rainy or evening day that slot becomes `water`. The sun
+  and rain already come from `state/daylight.ts` and `state/weather.ts`.
+- **A player who wants no waiting** gets `Paperwork day` from time to time; one who loves leaving gets the long ones.
+- **Finishing a scenario** is a good day: a bonus and progress up the career ladder. Each rung unlocks something in the office (a better desk, a window seat).
 
 ### The objective library (20 types)
 
