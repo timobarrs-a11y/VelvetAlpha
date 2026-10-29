@@ -7,10 +7,10 @@
 import { stageAt } from './plantGrowth';
 import type { ObjectInstance } from './objects';
 
-export type CropId = 'flower' | 'fruit' | 'vegetable';
+export type CropId = 'flower' | 'fruit' | 'vegetable' | 'carrot' | 'lettuce';
 
 /** How a crop grows and is drawn: a stalk with a bloom, a bush with fruit, or vines spread on the ground. */
-export type GrowthForm = 'stem-bloom' | 'bush-fruit' | 'ground-vine';
+export type GrowthForm = 'stem-bloom' | 'bush-fruit' | 'ground-vine' | 'root' | 'rosette';
 /** `once`: picked and gone. `repeat`: picked, then it regrows to mid-size and fruits again. */
 export type HarvestRule = 'once' | 'repeat';
 
@@ -19,6 +19,8 @@ export interface CropDef {
   seedId: string;
   form: GrowthForm;
   harvest: HarvestRule;
+  /** Meals of food each harvest adds to the fridge (0 for a flower). */
+  meals: number;
   /** Game minutes of watered growth from seed to ripe (see docs/velvet-house/crops.md). */
   ripeMinutes: number;
   /** The colour of the crop's tips once it is growing. */
@@ -28,9 +30,11 @@ export interface CropDef {
 }
 
 export const CROPS: Record<CropId, CropDef> = {
-  flower: { name: 'Tulips', seedId: 'seed-flower', form: 'stem-bloom', harvest: 'once', ripeMinutes: 16 * 60, color: '#E9457A', price: 6 },
-  fruit: { name: 'Apples', seedId: 'seed-fruit', form: 'bush-fruit', harvest: 'repeat', ripeMinutes: 16 * 60, color: '#E63B3B', price: 8 },
-  vegetable: { name: 'Pumpkins', seedId: 'seed-vegetable', form: 'ground-vine', harvest: 'once', ripeMinutes: 24 * 60, color: '#F08A24', price: 5 },
+  flower: { name: 'Tulips', seedId: 'seed-flower', form: 'stem-bloom', harvest: 'once', meals: 0, ripeMinutes: 16 * 60, color: '#E9457A', price: 6 },
+  fruit: { name: 'Apples', seedId: 'seed-fruit', form: 'bush-fruit', harvest: 'repeat', meals: 2, ripeMinutes: 16 * 60, color: '#E63B3B', price: 8 },
+  vegetable: { name: 'Pumpkins', seedId: 'seed-vegetable', form: 'ground-vine', harvest: 'once', meals: 2, ripeMinutes: 24 * 60, color: '#F08A24', price: 5 },
+  carrot: { name: 'Carrots', seedId: 'seed-carrot', form: 'root', harvest: 'once', meals: 2, ripeMinutes: 20 * 60, color: '#E8772E', price: 5 },
+  lettuce: { name: 'Lettuces', seedId: 'seed-lettuce', form: 'rosette', harvest: 'once', meals: 1, ripeMinutes: 12 * 60, color: '#7BC96F', price: 4 },
 };
 
 export const CROP_IDS = Object.keys(CROPS) as CropId[];

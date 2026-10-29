@@ -41,7 +41,7 @@ function apple(c) {
 }
 
 function pumpkin(c) {
-  c.strokeStyle = '#5A3A1E'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(0, -8.5); c.quadraticCurveTo(0.5, -10.5, 1.5, -11.5); c.stroke();
+  c.strokeStyle = '#5A3A1E'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, -8.5); c.quadraticCurveTo(0.5, -10.5, 1.5, -11.5); c.stroke();
   c.fillStyle = '#4F9A4C'; c.beginPath(); c.ellipse(3.6, -11.5, 3.2, 1.4, -0.3, 0, Math.PI * 2); c.fill();
   const g = c.createRadialGradient(-2, -6.5, 0.8, 0, -4.5, 8);
   g.addColorStop(0, '#FFB870'); g.addColorStop(0.5, '#F08A24'); g.addColorStop(1, '#9E4A0E');
@@ -49,6 +49,7 @@ function pumpkin(c) {
   c.strokeStyle = 'rgba(160,80,20,.5)'; c.lineWidth = 0.8;
   c.beginPath(); c.ellipse(-3, -4.5, 2.4, 5.2, 0, 0, Math.PI * 2); c.stroke();
   c.beginPath(); c.ellipse(3, -4.5, 2.4, 5.2, 0, 0, Math.PI * 2); c.stroke();
+  c.beginPath(); c.ellipse(0, -4.5, 1.2, 5.6, 0, 0, Math.PI * 2); c.stroke();
   c.fillStyle = 'rgba(255,255,255,.45)'; c.beginPath(); c.ellipse(-3.5, -7.5, 1.2, 1.6, 0.4, 0, Math.PI * 2); c.fill();
 }
 
@@ -61,6 +62,8 @@ export function drawCrop(ctx, x, y, s, crop, angle = 0, stage = 'final') {
   if (crop === 'flower') tulip(ctx, { seed: 0, small: 0.25, mid: 0.65, final: 1 }[stage] ?? 1);
   else if (crop === 'fruit') apple(ctx);
   else if (crop === 'vegetable') pumpkin(ctx);
+  else if (crop === 'carrot') carrot(ctx);
+  else if (crop === 'lettuce') lettuce(ctx);
   ctx.restore();
 }
 
@@ -82,6 +85,59 @@ export function drawVineSpot(ctx, x, y, crop, stage, dead, t, k) {
   // The pumpkin is drawn at its own size here: the spot itself is not scaled, so it is set to be a fruit of the bed.
   if (!dead && (stage === 'mid' || stage === 'final')) drawCrop(ctx, 2, 0.5, stage === 'final' ? 1.4 : 0.95, crop, 0);
   ctx.restore();
+}
+
+/** A carrot, shoulder at (0, -14): feathery fronds above, the orange root tapering down. */
+function carrot(c) {
+  c.strokeStyle = '#3F8F47'; c.lineWidth = 1.1;
+  for (const [x, y] of [[-4, -22], [-1.5, -24], [1.5, -24], [4, -22]]) { c.beginPath(); c.moveTo(0, -14); c.quadraticCurveTo(x * 0.4, (-14 + y) / 2, x, y); c.stroke(); }
+  c.fillStyle = '#E8772E'; c.beginPath(); c.moveTo(-4, -14); c.quadraticCurveTo(-4.5, -8, 0, -1.5); c.quadraticCurveTo(4.5, -8, 4, -14); c.quadraticCurveTo(0, -12.5, -4, -14); c.fill();
+  c.strokeStyle = 'rgba(150,70,20,.5)'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(-1.5, -10); c.lineTo(-2.5, -6); c.moveTo(1.5, -8); c.lineTo(1.8, -4); c.stroke();
+}
+
+/** A lettuce head seen from above-front: a ring of leaves, lighter in the middle. */
+function lettuce(c) {
+  for (let n = 0; n < 6; n++) {
+    const a = n * Math.PI / 3 - Math.PI / 2;
+    c.fillStyle = n % 2 ? '#5CB85E' : '#7BC96F';
+    c.beginPath(); c.ellipse(Math.cos(a) * 3.6, -4 + Math.sin(a) * 1.8, 3.6, 2.2, a, 0, Math.PI * 2); c.fill();
+  }
+  c.fillStyle = '#B8E39A'; c.beginPath(); c.ellipse(0, -5, 2.8, 1.8, 0, 0, Math.PI * 2); c.fill();
+}
+
+/**
+ * A root crop on its spot: only the fronds show above the soil. At final size the top of the root shows as an orange
+ * shoulder, and the whole root is only ever pulled up at harvest.
+ */
+function rootSpot(ctx, x, y, crop, stage, dead, t, k) {
+  const sway = Math.sin(t * 2.2 + k * 0.9) * 0.14;
+  const h = { seed: 4, small: 9, mid: 14, final: 19 }[stage] ?? 4;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(sway);
+  ctx.strokeStyle = dead ? '#8A6A3A' : '#3F8F47'; ctx.lineWidth = 1;
+  for (const dx of [-2, 0, 2]) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(dx * 0.5, -h * 0.6, dx * 1.4, -h); ctx.stroke(); }
+  if (!dead && stage === 'final') { ctx.fillStyle = '#E8772E'; ctx.beginPath(); ctx.ellipse(0, 0.5, 4.8, 2.2, 0, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
+
+/** A rosette crop on its spot: a ring of leaves flat on the soil, growing wider at each stage. */
+function rosetteSpot(ctx, x, y, crop, stage, dead, t, k) {
+  const sc = { seed: 0.9, small: 1.3, mid: 1.75, final: 2.1 }[stage] ?? 0.9;
+  const sway = Math.sin(t * 2.2 + k * 0.9) * 0.1;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(sway); ctx.scale(sc, sc);
+  for (let n = 0; n < 6; n++) {
+    const a = n * Math.PI / 3;
+    ctx.fillStyle = dead ? '#8A6A3A' : (n % 2 ? '#4F9A4C' : '#63AE5E');
+    ctx.beginPath(); ctx.ellipse(Math.cos(a) * 5, Math.sin(a) * 2.6, 4.2, 2.2, a, 0, Math.PI * 2); ctx.fill();
+  }
+  if (!dead && (stage === 'mid' || stage === 'final')) { ctx.fillStyle = '#B8E39A'; ctx.beginPath(); ctx.ellipse(0, 0, 2.6, 1.6, 0, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
+
+/** Draws a crop that lies on the soil, by its form. */
+export function drawGroundSpot(ctx, x, y, form, crop, stage, dead, t, k) {
+  if (form === 'ground-vine') drawVineSpot(ctx, x, y, crop, stage, dead, t, k);
+  else if (form === 'root') rootSpot(ctx, x, y, crop, stage, dead, t, k);
+  else if (form === 'rosette') rosetteSpot(ctx, x, y, crop, stage, dead, t, k);
 }
 
 const icons = new Map();
