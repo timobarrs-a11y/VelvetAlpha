@@ -16,7 +16,7 @@ import { parseFund } from '../state/devMoney';
 import { enqueue, readQueue } from '../state/codeQueue';
 import { CODE_QUEUE_KEY } from '../systems/codeQueue';
 
-export type LaunchChoice = 'continue' | 'new';
+export type LaunchChoice = 'continue' | 'new' | 'demo';
 
 const QUALITY = [['Auto', null], ['High', 'high'], ['Medium', 'medium'], ['Low', 'low']] as const;
 const esc = (t: string): string => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -55,12 +55,14 @@ export function showMainMenu(): Promise<LaunchChoice> {
           ${canContinue ? `<button class="vh-menu-btn vh-menu-primary" data-m="continue"><span>Continue</span><small>${summary ? `${esc(summary.names ? summary.names + ' · ' : '')}Day ${summary.day} · ${esc(summary.when)} · $${summary.money}` : 'Choose whose house'}</small></button>` : ''}
           <button class="vh-menu-btn ${canContinue ? '' : 'vh-menu-primary'}" data-m="new"><span>${canContinue ? 'New Game' : 'Start'}</span></button>
           <button class="vh-menu-btn" data-m="cheats"><span>Cheats</span></button>
+          <button class="vh-menu-btn" data-m="demo"><span>Demo</span></button>
           <button class="vh-menu-btn" data-m="settings"><span>Settings</span></button>
           <p class="vh-menu-build">Build ${esc(typeof __VELVET_BUILD__ === 'string' ? __VELVET_BUILD__ : 'dev')} · story ${CONTENT_VERSION}</p>
         </div>`;
       root.querySelector('[data-m=continue]')?.addEventListener('click', () => { void beginContinue(); });
       root.querySelector('[data-m=new]')?.addEventListener('click', () => { void beginNew(); });
       root.querySelector('[data-m=cheats]')?.addEventListener('click', cheats);
+      root.querySelector('[data-m=demo]')?.addEventListener('click', () => done('demo'));
       root.querySelector('[data-m=settings]')?.addEventListener('click', settings);
     };
 

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Carrot seeds">
+  <rect x="10" y="6" width="44" height="52" rx="6" fill="#FFF0E2" stroke="#A4531B" stroke-width="2"/>
+  <rect x="10" y="6" width="44" height="14" rx="6" fill="#E8772E"/>
+  <path d="M32 22c-5 0-7 8-6 16s3 16 6 18c3-2 5-10 6-18s-1-16-6-16z" fill="#E8772E"/>
+  <path d="M28 22c-2-6-1-10 0-12M32 22c0-6 0-9 0-11M36 22c2-6 1-10 0-12" fill="none" stroke="#3F7D4E" stroke-width="2.5" stroke-linecap="round"/>
+  <g stroke="#A4531B" stroke-width="1.2" stroke-linecap="round"><path d="M29 32h3M31 40h3M29 46h2"/></g>
+  <text x="32" y="58" font-family="Inter, system-ui, sans-serif" font-size="6" font-weight="700" text-anchor="middle" fill="#7A3212">CARROT</text>
+</svg>

@@ -139,7 +139,7 @@ export function snapshot(ctx: SaveContext, prev: Record<string, unknown> | null 
     yard: ctx.looks.yard,
     objs: ctx.objs.map(o => ({
       id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot,
-      col: o.col ?? null, skin: o.skin, pot: o.pot, pet: o.pet, grow: o.grow, wet: o.wet, art: o.art, contents: o.contents, on: o.on, z: o.z,
+      col: o.col ?? null, skin: o.skin, pot: o.pot, pet: o.pet, grow: o.grow, wet: o.wet, crop: o.crop ?? null, dry: o.dry, dead: o.dead, art: o.art, contents: o.contents, on: o.on, z: o.z,
     })),
     look: lookOut(ctx.look, 'male'),
     mayaLook: lookOut(ctx.mayaLook, 'female'),

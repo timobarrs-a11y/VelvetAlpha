@@ -13,10 +13,14 @@ export interface CatalogEntry {
   name: string;
   desc?: string;
   price: number;
-  icon: 'paint' | 'paper' | 'floor' | 'drapes' | 'set' | 'upgrade' | 'obj' | 'cloth' | 'wobj' | 'box' | 'bag' | 'pet' | 'home';
+  icon: 'paint' | 'paper' | 'floor' | 'drapes' | 'set' | 'upgrade' | 'obj' | 'cloth' | 'wobj' | 'box' | 'bag' | 'pet' | 'home' | 'seed';
   tab: string;
   tags?: string[];
   type?: string;
+  /** For seed packets: the crop it plants (see crops.ts). */
+  crop?: string;
+  /** A picture for the shop card, when the item has its own icon file. */
+  image?: string;
   /** A look of `type` (a key of TYPES[type].skins): buying it restyles the piece already on the main floor. */
   skin?: string;
   color?: string;
@@ -95,6 +99,11 @@ export const promo = (e: CatalogEntry): CatalogEntry => ({ ...e, promo: true });
 
 const hobby = (id: string, type: string, name: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
   id, name, price, icon: 'obj', tab: 'Hobbies', type, tags, cols, repeat: true,
+});
+
+/** A packet of seeds: bought in the shop, planted in the garden bed from the Orders page. */
+const seed = (id: string, crop: string, name: string, price: number, image: string, desc: string): CatalogEntry => ({
+  id, name, price, desc, icon: 'seed', tab: 'Outdoor', tags: ['natural'], crop, image, repeat: true,
 });
 
 const outdoor = (id: string, type: string, name: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
@@ -820,6 +829,9 @@ export const CATALOG: CatalogEntry[] = [
   outdoor('beachchair', 'beachchair', 'Beach chair', 50, ['playful', 'cool', 'soft'], ['#5FB8D6', '#E0A43A', '#D24A7A']),
   outdoor('bench', 'bench', 'Garden bench', 90, ['natural', 'vintage', 'cozy']),
   outdoor('garden', 'garden', 'Garden bed', 50, ['natural', 'cozy']),
+  seed('seed-flower', 'flower', 'Sunflower seeds', 6, '/images/seeds/seed-flower.svg', 'A packet of sunflower seeds. Picked blooms brighten the living room.'),
+  seed('seed-fruit', 'fruit', 'Strawberry seeds', 8, '/images/seeds/seed-fruit.svg', 'A packet of strawberry seeds. Two meals of fruit when ripe.'),
+  seed('seed-vegetable', 'vegetable', 'Carrot seeds', 5, '/images/seeds/seed-vegetable.svg', 'A packet of carrot seeds. Two meals of vegetables when ripe.'),
   outdoor('sprinkler', 'sprinkler', 'Sprinkler', 20, ['natural', 'playful']),
 
   // Pets

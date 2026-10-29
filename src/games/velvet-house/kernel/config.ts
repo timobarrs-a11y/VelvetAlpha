@@ -18,9 +18,14 @@ const VELVET_COMPANION_ID = (() => {
 
 // The live game keeps its own save slot. The legacy game uses `velvet-house-v1:<id>`, and sharing it meant
 // each could overwrite the other's progress.
-export const SAVE_KEY = VELVET_COMPANION_ID ? `velvet-sims:${VELVET_COMPANION_ID}` : 'velvet-sims';
+/** The demo (`?demo=1`) plays the same game in its own save slot, so it never touches a real house or its cloud copy. */
+export const IS_DEMO = (() => { try { return new URLSearchParams(location.search).has('demo'); } catch { return false; } })();
+export const SAVE_KEY = IS_DEMO
+  ? `velvet-sims-demo${VELVET_COMPANION_ID ? `:${VELVET_COMPANION_ID}` : ''}`
+  : VELVET_COMPANION_ID ? `velvet-sims:${VELVET_COMPANION_ID}` : 'velvet-sims';
 const LEGACY_SAVE_KEY = VELVET_COMPANION_ID ? `velvet-house-v1:${VELVET_COMPANION_ID}` : 'velvet-house-v1';
-export const SPEEDS = [1, 3, 10];
+/** The demo runs faster so the garden's growing and dying can be watched in minutes, not days. */
+export const SPEEDS = IS_DEMO ? [1, 10, 60, 180] : [1, 3, 10];
 export const WALL_MODES: { mode: WallMode; label: string }[] = [
   { mode: 'cut', label: 'Cutaway' },
   { mode: 'up', label: 'Walls up' },
@@ -82,7 +87,7 @@ export function loadWorld(): World {
   let save: Record<string, unknown> | null = null;
   try {
     // First run on the new slot: carry the house over from the old one (migrated, so the old copy stays as it was).
-    if (!run.attract && localStorage.getItem(SAVE_KEY) === null) {
+    if (!run.attract && !IS_DEMO && localStorage.getItem(SAVE_KEY) === null) {
       const old = migrateSave(JSON.parse(localStorage.getItem(LEGACY_SAVE_KEY) ?? 'null'));
       if (old) localStorage.setItem(SAVE_KEY, JSON.stringify(old));
     }
