@@ -17,7 +17,7 @@ import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR } from '../state/house';
 import { stageAt } from '../state/plantGrowth';
 import { drawCrop, drawGroundSpot } from './cropArt.js';
 import { createWeatherFx, hull } from './weatherFx.js';
-import { drawTree } from './treeArt.js';
+import { drawTree, mix as treeMix } from './treeArt.js';
 const wfx = createWeatherFx();
 import { CROPS } from '../state/crops';
 import { defaultWallLamps, lampRoom } from '../state/wallLamps';
@@ -4243,7 +4243,7 @@ export function createHouseArt(ctx0, opts = {}) {
       LEVELS[3].feats.forEach(f => { if (f.k === 'extwin') { const col = extWindowColor(1); poly(featPoly(f), '#F7F3EE', EDGE, 0.8); poly(featPoly(f, 0.07), col); const mu = (f.u[0] + f.u[1]) / 2; line3([0, mu, f.z[0] + 0.07], [0, mu, f.z[1] - 0.07], '#F7F3EE', 2); } else drawFeature(3, f); });
       poly([[-0.3, -0.3, WH], [0.12, -0.3, WH], [0.12, WY, WH], [-0.3, WY, WH]], '#5A4A44');
     }
-    back.filter(pl => pl !== 'L').forEach(pl => { const len = planeLen(pl), [ix, iy] = pl === 'B' ? [0, 1] : pl === 'R' ? [-1, 0] : [0, -1], sh = (k) => { const p0 = wallPoint(pl, 0, 0.003), p1 = wallPoint(pl, len, 0.003); poly([p0, p1, [p1[0] + ix * k, p1[1] + iy * k, 0.003], [p0[0] + ix * k, p0[1] + iy * k, 0.003]], 'rgba(28,40,26,.2)'); }; sh(0.22); sh(-0.14); for (let u = 0; u <= len + 0.01; u += 0.2) poly([wallPoint(pl, u, 0), wallPoint(pl, u + 0.13, 0), wallPoint(pl, u + 0.13, 1.15), wallPoint(pl, u + 0.065, 1.25), wallPoint(pl, u, 1.15)], '#EFE6D8', 'rgba(0,0,0,.12)', 0.6); [0.3, 0.85].forEach(z => poly([wallPoint(pl, 0, z), wallPoint(pl, len, z), wallPoint(pl, len, z + 0.08), wallPoint(pl, 0, z + 0.08)], '#DCD2C2')); });
+    back.filter(pl => pl !== 'L').forEach(pl => { const len = planeLen(pl), [ix, iy] = pl === 'B' ? [0, 1] : pl === 'R' ? [-1, 0] : [0, -1], fc = fenceColors(ix, iy), keepOn = gOn, sh = (k) => { const p0 = wallPoint(pl, 0, 0.003), p1 = wallPoint(pl, len, 0.003); poly([p0, p1, [p1[0] + ix * k, p1[1] + iy * k, 0.003], [p0[0] + ix * k, p0[1] + iy * k, 0.003]], 'rgba(28,40,26,.2)'); }; gOn = false; sh(0.22); sh(-0.14); for (let u = 0; u <= len + 0.01; u += 0.2) poly([wallPoint(pl, u, 0), wallPoint(pl, u + 0.13, 0), wallPoint(pl, u + 0.13, 1.15), wallPoint(pl, u + 0.065, 1.25), wallPoint(pl, u, 1.15)], fc.board, fc.edge, 0.6); [0.3, 0.85].forEach(z => poly([wallPoint(pl, 0, z), wallPoint(pl, len, z), wallPoint(pl, len, z + 0.08), wallPoint(pl, 0, z + 0.08)], fc.rail)); gOn = keepOn; });
     drawWallLights(3);
   }
   // The neighbourhood around the yard. This is a back yard, so the lot is seen from behind the houses: our house is behind its
@@ -4287,11 +4287,27 @@ export function createHouseArt(ctx0, opts = {}) {
     if (nearIsB) sB(); else sA();
     if (seed > 0.5) { const cy2 = ym + (seed - 0.5) * 2; box(xa + dep * 0.5, cy2 - 0.3, h - 0.3, 0.6, 0.6, rise + 0.6, '#9C6B45'); }
   }
+  // The fence's colours at this hour, for the face turned toward us: the yard's own fence and every neighbour's use these, so they always
+  // match. The sun is front-left (the +b face is lit, the +a face shaded); at dawn and dusk the lit side warms and the shade goes lilac,
+  // at night the whole fence turns to cool moonlit blue, darker on the shaded side, and rain greys it a little.
+  function fenceColors(nx, ny) {
+    const lit = VD(nx, ny)[1] > 0, dk = darkness(), night = Math.max(0, Math.min(1, (dk - 0.04) / 0.5)), h = hour();
+    const warm = Math.max(0, 1 - Math.abs(h - 6.6) / 1.6, 1 - Math.abs(h - 19.2) / 1.9) * (1 - night), rain = raining() ? 0.14 : 0, snow = seasonIdx() === 3;
+    const k = (c, dusk, moon) => { let o = treeMix(c, dusk, warm * 0.4); o = treeMix(o, moon, night * 0.88); return rain ? treeMix(o, '#98A2AE', rain) : o; };
+    return {
+      board: k(lit ? (snow ? '#F8FAFC' : '#F6EFE0') : (snow ? '#D6DEE6' : '#D8CCBA'), lit ? '#F4B27E' : '#A08CB0', lit ? '#95A2C6' : '#566080'),
+      rail: k(lit ? '#E8DCC8' : '#C2B5A2', lit ? '#E8A878' : '#8E7CA0', lit ? '#7C88AC' : '#48516E'),
+      edge: night > 0.5 ? 'rgba(10,14,34,.3)' : 'rgba(0,0,0,.12)',
+    };
+  }
   function nbFence(xa, ya, xb, yb) {
-    const len = Math.hypot(xb - xa, yb - ya), n = Math.round(len / 0.2), ux = (xb - xa) / len, uy = (yb - ya) / len, fc = seasonIdx() === 3 ? '#F4F6F8' : '#EFE6D8';
+    const len = Math.hypot(xb - xa, yb - ya), n = Math.round(len / 0.2), ux = (xb - xa) / len, uy = (yb - ya) / len;
+    // The face we see is the one turned toward the camera.
+    const n1 = [-uy, ux], n2 = [uy, -ux], vis = VD(n1[0], n1[1]).reduce((s, v) => s + v, 0) > 0 ? n1 : n2, fc = fenceColors(vis[0], vis[1]);
     for (const k of [0.22, -0.14]) poly([[xa, ya, 0.003], [xb, yb, 0.003], [xb - uy * k, yb + ux * k, 0.003], [xa - uy * k, ya + ux * k, 0.003]], 'rgba(28,40,26,.18)');
-    poly([[xa, ya, 0.28], [xb, yb, 0.28], [xb, yb, 0.36], [xa, ya, 0.36]], '#DCD2C2');
-    for (let k = 0; k < n; k++) { const x = xa + ux * k * 0.2, y = ya + uy * k * 0.2, px = ux * 0.13, py = uy * 0.13; poly([[x, y, 0], [x + px, y + py, 0], [x + px, y + py, 1.1], [x + px / 2, y + py / 2, 1.2], [x, y, 1.1]], fc, 'rgba(0,0,0,.12)', 0.6); }
+    // The same board and rails as the yard's own fence.
+    for (const z of [0.3, 0.85]) poly([[xa, ya, z], [xb, yb, z], [xb, yb, z + 0.08], [xa, ya, z + 0.08]], fc.rail);
+    for (let k = 0; k < n; k++) { const x = xa + ux * k * 0.2, y = ya + uy * k * 0.2, px = ux * 0.13, py = uy * 0.13; poly([[x, y, 0], [x + px, y + py, 0], [x + px, y + py, 1.15], [x + px / 2, y + py / 2, 1.25], [x, y, 1.15]], fc.board, fc.edge, 0.6); }
   }
   function nbTree(x, y, seed) {
     if (!nbBehind(x - 1.4, y - 1.4, x + 1.4, y + 1.4)) return;
@@ -4398,7 +4414,7 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.globalCompositeOperation = 'source-over';
   }
   function drawBackdrop() {
-    const key = `${VR}|${seasonIdx()}|${Math.round(darkness() * 20)}|${raining() ? 1 : 0}|${cv.width}`;
+    const key = `${VR}|${seasonIdx()}|${Math.round(darkness() * 20)}|${Math.floor(hour() * 2)}|${raining() ? 1 : 0}|${cv.width}`;
     if (nbBack.key !== key) {
       const keepCtx = ctx, keepOn = gOn;
       for (const part of ['ground', 'objects']) {
