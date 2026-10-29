@@ -17,7 +17,6 @@ import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR } from '../state/house';
 import { stageAt } from '../state/plantGrowth';
 import { drawCrop, drawGroundSpot } from './cropArt.js';
 import { createWeatherFx, hull } from './weatherFx.js';
-import { drawTownGround, drawPlot, drawTownFront } from '../../../features/velvet-world/art/streetArt.js';
 const wfx = createWeatherFx();
 import { CROPS } from '../state/crops';
 import { defaultWallLamps, lampRoom } from '../state/wallLamps';
@@ -4220,19 +4219,127 @@ export function createHouseArt(ctx0, opts = {}) {
     back.filter(pl => pl !== 'L').forEach(pl => { const len = planeLen(pl); for (let u = 0; u <= len + 0.01; u += 0.2) poly([wallPoint(pl, u, 0), wallPoint(pl, u + 0.13, 0), wallPoint(pl, u + 0.13, 1.15), wallPoint(pl, u + 0.065, 1.25), wallPoint(pl, u, 1.15)], '#EFE6D8', 'rgba(0,0,0,.12)', 0.6); [0.3, 0.85].forEach(z => poly([wallPoint(pl, 0, z), wallPoint(pl, len, z), wallPoint(pl, len, z + 0.08), wallPoint(pl, 0, z + 0.08)], '#DCD2C2')); });
     drawWallLights(3);
   }
-  // The street and the two neighbouring lots, in the yard's own screen space (the street module uses the same isometric
-  // formula, so translating by the yard's origin lines the street up with the lot).
+  // The neighbourhood around the yard. This is a back yard, so the lot is seen from behind the houses: our house is behind its
+  // x = 0 wall, the neighbours' back yards run along both sides (y < 0 and y > WY), the rows' back fences stand at x = WX, a lane
+  // runs behind them and the next street's back yards and the backs of its houses lie beyond. Everything is placed in world space
+  // and drawn through the yard's own camera (V / VR), so it turns with the lot. It is drawn once per camera / season / light and kept.
+  const NB = { lane0: WX + 0.7, lane1: WX + 3.7, rear0: WX + 4.3, depth: 7, front: 5.4 };
+  const nbBack = { cv: null, key: '' };
+  const nbHash = (a, b) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
+  // A face is seen when its outward normal turns toward the camera, which always sits at +a, +b.
+  const nbFacing = (nx, ny) => { const [da, db] = VD(nx, ny); return da + db > 0; };
+  // Tall things are only drawn behind the lot (view a or b <= 0); on the near side they would hang over the yard.
+  const nbBehind = (x1, y1, x2, y2) => { const r = vrect(x1, y1, x2, y2); return r[2] <= 0.2 || r[3] <= 0.2; };
+  function nbWindow(plane, at, u0, u1, z0, z1, lit) {
+    const q = plane === 'x' ? [[at, u0, z0], [at, u1, z0], [at, u1, z1], [at, u0, z1]] : [[u0, at, z0], [u1, at, z0], [u1, at, z1], [u0, at, z1]];
+    poly(q, lit === 1 ? '#F3C77A' : lit === 2 ? '#2B2F45' : raining() ? '#8E99A8' : '#A9C3D3', '#F7F3EE', 1);
+  }
+  // A house seen from its back. `rear` is the side the back wall faces along x (+1: the body lies at x < x0, -1: at x > x0).
+  function nbHouse(x0, y0, y1, rear, h, wall, roof, seed, o = {}) {
+    const dep = NB.depth, xa = rear > 0 ? x0 - dep : x0, xb = rear > 0 ? x0 : x0 + dep, z0 = o.z0 || 0;
+    if (!nbBehind(xa - 0.5, y0 - 0.5, xb + 0.5, y1 + 0.5)) return;
+    const dk = darkness() > 0.3, win = (k) => (dk ? (nbHash(seed * 7 + k, 3) > 0.55 ? 1 : 2) : 0);
+    box(xa, y0, z0, xb - xa, y1 - y0, h - z0, wall);
+    const rx = rear > 0 ? xb + 0.012 : xa - 0.012, rn = rear > 0 ? 1 : -1;
+    const floors = h > 4 ? [0.55, 2.75] : [0.55];
+    if (nbFacing(rn, 0)) {
+      const n = Math.max(2, Math.round((y1 - y0) / 2.2)), step = (y1 - y0) / n;
+      floors.forEach((fz, f) => { if (fz < z0) return; for (let k = 0; k < n; k++) { const u = y0 + step * (k + 0.5); if (f === 0 && z0 === 0 && k === (seed * 5 | 0) % n) { poly([[rx, u - 0.45, 0], [rx, u + 0.45, 0], [rx, u + 0.45, 2.0], [rx, u - 0.45, 2.0]], '#7A5236', '#F7F3EE', 1); continue; } nbWindow('x', rx, u - 0.45, u + 0.45, fz, fz + 1.2, win(f * 9 + k)); } });
+    }
+    [[y0, -1], [y1, 1]].forEach(([yy, sn]) => { if (!nbFacing(0, sn)) return; const sy = yy + sn * 0.012; for (let f = 0; f < floors.length; f++) { if (floors[f] < z0) continue; nbWindow('y', sy, (xa + xb) / 2 - 0.45, (xa + xb) / 2 + 0.45, floors[f], floors[f] + 1.2, win(40 + f)); } });
+    const ym = (y0 + y1) / 2, rise = (y1 - y0) * 0.32, ov = 0.3, ze = h - 0.1, snow = seasonIdx() === 3, rc = snow ? '#EEF2F5' : roof;
+    const slope = (ya, yb, sn) => poly([[xa - ov, ya, ze], [xb + ov, ya, ze], [xb + ov, yb, h + rise], [xa - ov, yb, h + rise]], shade(rc, sn > 0 ? -0.06 : 0.04), 'rgba(30,20,25,.18)', 0.8);
+    const nearIsB = nbFacing(0, 1);
+    const sA = () => slope(y0 - ov, ym, -1), sB = () => slope(y1 + ov, ym, 1);
+    if (nearIsB) sA(); else sB();
+    [[xb, 1], [xa, -1]].forEach(([gx, sn]) => { if (nbFacing(sn, 0)) poly([[gx, y0, h], [gx, y1, h], [gx, ym, h + rise]], shade(wall, sn > 0 ? -0.04 : -0.2), EDGE, 0.8); });
+    if (nearIsB) sB(); else sA();
+    if (seed > 0.5) { const cy2 = ym + (seed - 0.5) * 2; box(xa + dep * 0.5, cy2 - 0.3, h - 0.3, 0.6, 0.6, rise + 0.6, '#9C6B45'); }
+  }
+  function nbFence(xa, ya, xb, yb) {
+    const len = Math.hypot(xb - xa, yb - ya), n = Math.round(len / 0.2), ux = (xb - xa) / len, uy = (yb - ya) / len, fc = seasonIdx() === 3 ? '#F4F6F8' : '#EFE6D8';
+    poly([[xa, ya, 0.28], [xb, yb, 0.28], [xb, yb, 0.36], [xa, ya, 0.36]], '#DCD2C2');
+    for (let k = 0; k < n; k++) { const x = xa + ux * k * 0.2, y = ya + uy * k * 0.2, px = ux * 0.13, py = uy * 0.13; poly([[x, y, 0], [x + px, y + py, 0], [x + px, y + py, 1.1], [x + px / 2, y + py / 2, 1.2], [x, y, 1.1]], fc, 'rgba(0,0,0,.12)', 0.6); }
+  }
+  function nbTree(x, y, seed) {
+    if (!nbBehind(x - 1.4, y - 1.4, x + 1.4, y + 1.4)) return;
+    const si = seasonIdx(), [sx, sy] = iso(x, y, 0), pine = seed > 0.66, s = 0.8 + seed * 0.5;
+    ell(sx + 6, sy + 1, 22 * s, 8 * s, 'rgba(28,40,26,.2)');
+    rr(sx - 2, sy - 22 * s, 4, 22 * s, 1.5, '#5A3E2E');
+    if (pine) { const c = si === 3 ? '#8DA8A0' : '#3F7A4A'; for (let k = 0; k < 3; k++) { const w = (17 - k * 4) * s, yy = sy - (14 + k * 11) * s; ctx.fillStyle = shade(c, k * 0.05); ctx.beginPath(); ctx.moveTo(sx - w, yy + 8 * s); ctx.lineTo(sx + w, yy + 8 * s); ctx.lineTo(sx, yy - 12 * s); ctx.closePath(); ctx.fill(); } return; }
+    const c = ['#6CB45A', '#4E9A48', '#C9803A', '#A9B4B0'][si];
+    circle(sx - 8 * s, sy - 30 * s, 12 * s, shade(c, -0.08)); circle(sx + 8 * s, sy - 29 * s, 12 * s, shade(c, -0.12)); circle(sx, sy - 38 * s, 14 * s, c); circle(sx - 4 * s, sy - 42 * s, 8 * s, shade(c, 0.1));
+  }
+  function nbShed(x, y, seed) {
+    if (!nbBehind(x - 0.2, y - 0.2, x + 2.4, y + 2.1)) return;
+    const c = ['#8C6A4E', '#A9B8A6', '#B8A07C'][(seed * 3 | 0) % 3];
+    box(x, y, 0, 2.2, 1.9, 1.5, c);
+    box(x - 0.15, y - 0.15, 1.5, 2.5, 2.2, 0.12, '#5A4A44');
+  }
+  function nbLot(x0, x1, y0, y1, seed, season) {
+    const tone = nbHash(seed * 13, 5), c = shade(season, (tone - 0.5) * 0.12);
+    poly([[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]], c);
+    for (let x = x0; x < x1; x += 1) if (((x - x0) | 0) % 2 === 0) poly([[x, y0, 0.001], [x + 1, y0, 0.001], [x + 1, y1, 0.001], [x, y1, 0.001]], 'rgba(0,0,0,.035)');
+    const px = x0 + 1.2 + nbHash(seed, 2) * 2, py = y0 + 1 + nbHash(seed, 4) * (y1 - y0 - 3);
+    poly([[px, py, 0.01], [px + 2.4, py, 0.01], [px + 2.4, py + 2, 0.01], [px, py + 2, 0.01]], '#CFC9C0', 'rgba(60,50,40,.2)', 0.8);
+    if (nbHash(seed, 6) > 0.4) poly([[x1 - 3.2, y1 - 1.5, 0.01], [x1 - 1.4, y1 - 1.5, 0.01], [x1 - 1.4, y1 - 0.6, 0.01], [x1 - 3.2, y1 - 0.6, 0.01]], '#6B4A35');
+  }
+  function buildBackdrop() {
+    const si = seasonIdx(), grass = ['#86C26A', '#74B556', '#A9AB5C', '#E2E8EC'][si], dk = darkness(), asphalt = si === 3 ? '#6A6F78' : '#5A5E66';
+    const R = 14, big = 90, rows = [];
+    // Ground. The whole canvas is grass first, so no edge of the neighbourhood ever shows.
+    ctx.fillStyle = grass; ctx.fillRect(0, 0, W, H);
+    poly([[-big, -big, -0.02], [big, -big, -0.02], [big, big, -0.02], [-big, big, -0.02]], grass);
+    // The lane behind the back fences, with gravel shoulders and a concrete apron at each back gate.
+    poly([[NB.lane0 - 0.5, -big, -0.01], [NB.lane1 + 0.5, -big, -0.01], [NB.lane1 + 0.5, big, -0.01], [NB.lane0 - 0.5, big, -0.01]], si === 3 ? '#D5DADF' : '#B8AE9C');
+    poly([[NB.lane0, -big, 0], [NB.lane1, -big, 0], [NB.lane1, big, 0], [NB.lane0, big, 0]], asphalt);
+    for (let k = -R; k <= R; k++) { const y = k * WY + WY / 2 - 1, y2 = y + 2; poly([[WX, y, 0.005], [NB.lane0, y, 0.005], [NB.lane0, y2, 0.005], [WX, y2, 0.005]], '#CFC9C0'); }
+    for (let k = -R; k <= R; k++) for (let t = 0; t < 4; t++) { const y = k * WY + 1 + t * 2; poly([[NB.lane0 + 0.1, y, 0.002], [NB.lane0 + 0.1, y + 0.15, 0.002], [NB.lane1 - 0.1, y + 0.15, 0.002], [NB.lane1 - 0.1, y, 0.002]], 'rgba(0,0,0,.06)'); }
+    // Back yards: ours and the neighbours' on this side, then the next street's on the far side of the lane.
+    for (let k = -R; k <= R; k++) if (k !== 0) nbLot(0, WX, k * WY, k * WY + WY, k + 40, grass);
+    for (let k = -R; k <= R; k++) nbLot(NB.rear0, NB.rear0 + 10, k * WY + 4, k * WY + 4 + WY, k + 90, grass);
+    for (let k = -R; k <= R; k++) { nbLot(-NB.front, 0, k * WY, k * WY + WY, k + 140, grass); }
+    // Back-to-front: fences, then whatever stands up, sorted by depth in view space.
+    for (let k = -R; k <= R + 1; k++) {
+      if (k !== 0 && k !== 1) nbFence(0, k * WY, WX, k * WY);
+      const ys = k * WY + 4; nbFence(NB.rear0, ys, NB.rear0 + 10, ys);
+      if (k !== 0 && k < R + 1) nbFence(WX, k * WY, WX, k * WY + WY);
+      if (k < R + 1) { nbFence(NB.lane1 + 0.6, k * WY + 4, NB.lane1 + 0.6, k * WY + 4 + WY); }
+    }
+    const wallPal = ['#D9CDBD', '#B9C7CF', '#E3D3A8', '#C9A9A0', '#A9BFA8', '#E8E2D6'], roofPal = ['#5A4A44', '#4B5D6B', '#6E3B3B', '#3F3A3D'];
+    for (let k = -R; k <= R; k++) {
+      const s = nbHash(k + 11, 1), y0 = k * WY;
+      if (k !== 0) rows.push({ key: vs(-NB.depth / 2, y0 + WY / 2), d: () => nbHouse(0, y0 + 0.5, y0 + WY - 0.5, 1, s > 0.45 ? 5.4 : 2.9, wallPal[(s * 6 | 0) % 6], roofPal[(s * 13 | 0) % 4], s) });
+      const ry = k * WY + 4, rs = nbHash(k + 71, 1);
+      rows.push({ key: vs(NB.rear0 + 10 + NB.depth / 2, ry + WY / 2), d: () => nbHouse(NB.rear0 + 10, ry + 0.5, ry + WY - 0.5, -1, rs > 0.45 ? 5.4 : 2.9, wallPal[(rs * 6 | 0) % 6], roofPal[(rs * 13 | 0) % 4], rs) });
+      if (k !== 0) { const tx = 6 + nbHash(k, 8) * 3, ty = y0 + 1.5 + nbHash(k, 9) * (WY - 3); rows.push({ key: vs(tx, ty), d: () => nbTree(tx, ty, nbHash(k, 10)) }); if (nbHash(k, 12) > 0.5) rows.push({ key: vs(7.5, y0 + 0.4), d: () => nbShed(7.6, y0 + 0.4, nbHash(k, 13)) }); }
+      const qx = NB.rear0 + 1.5 + nbHash(k, 14) * 5, qy = ry + 1.5 + nbHash(k, 15) * (WY - 3); rows.push({ key: vs(qx, qy), d: () => nbTree(qx, qy, nbHash(k, 16)) });
+      if (nbHash(k, 17) > 0.5) rows.push({ key: vs(NB.rear0 + 0.6, ry + 0.4), d: () => nbShed(NB.rear0 + 0.6, ry + 0.4, nbHash(k, 18)) });
+    }
+    // Our own house behind the back wall: the upper floor and the roof above the wall the yard draws.
+    rows.push({ key: vs(-NB.depth / 2, WY / 2), d: () => nbHouse(-0.3, 0, WY, 1, 5.4, '#D9CDBD', '#5A4A44', 0.5, { z0: 2.6 }) });
+    rows.sort((a, b) => a.key - b.key).forEach(r => r.d());
+    // Utility poles down the lane.
+    for (let k = -R; k <= R; k++) { const y = k * WY * 1.0 + 2; if (!nbBehind(NB.lane0 - 0.2, y - 0.2, NB.lane0 + 0.2, y + 0.2)) continue; const [px, py] = iso(NB.lane0 - 0.2, y, 0); limb(px, py, px, py - 120, '#5A4A44', 2.4); limb(px - 14, py - 112, px + 14, py - 118, '#5A4A44', 1.8); }
+    // Haze toward the top and dusk at night, then the edges fade to nothing, so the neighbourhood never ends on a line.
+    const g = ctx.createLinearGradient(0, 0, 0, H * 0.55); g.addColorStop(0, si === 3 ? 'rgba(228,234,240,.5)' : 'rgba(214,226,232,.42)'); g.addColorStop(1, 'rgba(214,226,232,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    if (dk > 0.02) { ctx.fillStyle = `rgba(12,14,40,${Math.min(0.6, dk * 0.8)})`; ctx.fillRect(0, 0, W, H); }
+    ctx.globalCompositeOperation = 'destination-out';
+    [[0, 0, 40, 0], [W, 0, W - 40, 0], [0, 0, 0, 36], [0, H, 0, H - 32]].forEach(([x0, y0, x1, y1]) => { const e = ctx.createLinearGradient(x0, y0, x1, y1); e.addColorStop(0, 'rgba(0,0,0,1)'); e.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = e; ctx.fillRect(0, 0, W, H); });
+    ctx.globalCompositeOperation = 'source-over';
+  }
   function drawBackdrop() {
-    const env = { season: ['spring', 'summer', 'autumn', 'winter'][seasonIdx()], hour: hour(), night: darkness(), reducedMotion: false, zoom: 1 };
-    const plotAt = (id, x) => ({ id, member: false, origin: { x, y: 0 }, config: {}, profile: { name: '', earned: [] } });
-    const left = plotAt('nb-left', -WX), right = plotAt('nb-right', WX);
-    ctx.save();
-    ctx.translate(OX, OY);
-    drawTownGround(ctx, 1, env, { t: animT }, 0);
-    drawPlot(ctx, left, 0, 'back', env); drawPlot(ctx, right, 1, 'back', env);
-    drawPlot(ctx, left, 0, 'front', env); drawPlot(ctx, right, 1, 'front', env);
-    drawTownFront(ctx, 1, env, { t: animT });
-    ctx.restore();
+    const key = `${VR}|${seasonIdx()}|${Math.round(darkness() * 20)}|${raining() ? 1 : 0}|${cv.width}`;
+    if (nbBack.key !== key) {
+      if (!nbBack.cv) nbBack.cv = document.createElement('canvas');
+      nbBack.cv.width = cv.width; nbBack.cv.height = cv.height;
+      const keepCtx = ctx, keepOn = gOn, c2 = nbBack.cv.getContext('2d');
+      c2.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+      ctx = c2; gOn = false;
+      try { buildBackdrop(); } finally { ctx = keepCtx; gOn = keepOn; }
+      nbBack.key = key;
+    }
+    ctx.drawImage(nbBack.cv, 0, 0, W, H);
   }
   // How many drops the quality tier allows, scaled by how heavy the rain is (light, medium, heavy).
   function dropCaps() {
