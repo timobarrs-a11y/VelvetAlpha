@@ -14,6 +14,7 @@ import { LayerCache } from '../engine/layerCache';
 import { deliveryTick, dirtTick, laundryTick, newDayReset } from '../state/household';
 import { tickFitness, snackTick } from '../state/vitals';
 import { SPEEDS, WALL_MODES } from '../kernel/config';
+import { isOutdoor } from '../state/scenes';
 import type { Game } from '../kernel/game';
 
 // The Sims' fast-forwards: skipping the work day, and the night while everyone sleeps.
@@ -100,6 +101,8 @@ export function startGameLoop(g: Game): void {
       const prevSim = simCache;
       simCache = { day: world.day, minutes: world.minutes, objs: [...world.objs], chars: people.map(g.toFrame) };
       const interpMinutes = prevSim.minutes + (simCache.minutes - prevSim.minutes) * alpha;
+      // The yard is seen from the lane side (turns 1 and 2), where the house is out of the picture.
+      if (isOutdoor(view.level) && view.rot !== 1 && view.rot !== 2) view.rot = 2;
       const cacheKey = { level: view.level, rot: view.rot, wallMode: WALL_MODES[view.wallIdx].mode, zoomBucket: Math.floor(canvas.width / 400) };
       if (layerCache.keyChanged(cacheKey)) g.fit();
       g.applyCamera(frameDt);

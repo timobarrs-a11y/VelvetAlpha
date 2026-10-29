@@ -1,5 +1,5 @@
 import { ATTIC } from '../state/house';
-import { LEVEL_COUNT, FLOOR_ORDER } from '../state/scenes';
+import { LEVEL_COUNT, FLOOR_ORDER, isOutdoor } from '../state/scenes';
 import { type AgentId } from '../state/agents';
 import { applyPlayerQuality, type PlayerQuality } from '../engine/qualityTier';
 import { SPEEDS, WALL_MODES, IS_DEMO } from '../kernel/config';
@@ -65,7 +65,8 @@ export function createControls(g: Game): Partial<Game> {
     if (!keepFollow) view.follow = null;
     syncControls();
   };
-  const rotate = (): void => { softCut(); view.rot = (view.rot + 1) % 4; };
+  // In the yard the turn only swaps between the two sides that keep the house out of the picture (see kernel/run.ts).
+  const rotate = (): void => { softCut(); view.rot = isOutdoor(view.level) ? (view.rot === 1 ? 2 : 1) : (view.rot + 1) % 4; };
   const cycleWalls = (): void => { view.wallIdx = (view.wallIdx + 1) % WALL_MODES.length; syncControls(); };
   const togglePause = (): void => { view.paused = !view.paused; syncControls(); };
   const toggleFollow = (id: AgentId): void => {

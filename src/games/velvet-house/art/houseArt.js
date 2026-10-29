@@ -4215,7 +4215,7 @@ export function createHouseArt(ctx0, opts = {}) {
       LEVELS[3].feats.forEach(f => { if (f.k === 'extwin') { const col = extWindowColor(1); poly(featPoly(f), '#F7F3EE', EDGE, 0.8); poly(featPoly(f, 0.07), col); const mu = (f.u[0] + f.u[1]) / 2; line3([0, mu, f.z[0] + 0.07], [0, mu, f.z[1] - 0.07], '#F7F3EE', 2); } else drawFeature(3, f); });
       poly([[-0.3, -0.3, WH], [0.12, -0.3, WH], [0.12, WY, WH], [-0.3, WY, WH]], '#5A4A44');
     }
-    back.filter(pl => pl !== 'L').forEach(pl => { const len = planeLen(pl); for (let u = 0; u <= len + 0.01; u += 0.2) poly([wallPoint(pl, u, 0), wallPoint(pl, u + 0.13, 0), wallPoint(pl, u + 0.13, 1.15), wallPoint(pl, u + 0.065, 1.25), wallPoint(pl, u, 1.15)], '#EFE6D8', 'rgba(0,0,0,.12)', 0.6); [0.3, 0.85].forEach(z => poly([wallPoint(pl, 0, z), wallPoint(pl, len, z), wallPoint(pl, len, z + 0.08), wallPoint(pl, 0, z + 0.08)], '#DCD2C2')); });
+    back.filter(pl => pl !== 'L').forEach(pl => { const len = planeLen(pl), [ix, iy] = pl === 'B' ? [0, 1] : pl === 'R' ? [-1, 0] : [0, -1], sh = (k) => { const p0 = wallPoint(pl, 0, 0.003), p1 = wallPoint(pl, len, 0.003); poly([p0, p1, [p1[0] + ix * k, p1[1] + iy * k, 0.003], [p0[0] + ix * k, p0[1] + iy * k, 0.003]], 'rgba(28,40,26,.2)'); }; sh(0.22); sh(-0.14); for (let u = 0; u <= len + 0.01; u += 0.2) poly([wallPoint(pl, u, 0), wallPoint(pl, u + 0.13, 0), wallPoint(pl, u + 0.13, 1.15), wallPoint(pl, u + 0.065, 1.25), wallPoint(pl, u, 1.15)], '#EFE6D8', 'rgba(0,0,0,.12)', 0.6); [0.3, 0.85].forEach(z => poly([wallPoint(pl, 0, z), wallPoint(pl, len, z), wallPoint(pl, len, z + 0.08), wallPoint(pl, 0, z + 0.08)], '#DCD2C2')); });
     drawWallLights(3);
   }
   // The neighbourhood around the yard. This is a back yard, so the lot is seen from behind the houses: our house is behind its
@@ -4257,6 +4257,7 @@ export function createHouseArt(ctx0, opts = {}) {
   }
   function nbFence(xa, ya, xb, yb) {
     const len = Math.hypot(xb - xa, yb - ya), n = Math.round(len / 0.2), ux = (xb - xa) / len, uy = (yb - ya) / len, fc = seasonIdx() === 3 ? '#F4F6F8' : '#EFE6D8';
+    for (const k of [0.22, -0.14]) poly([[xa, ya, 0.003], [xb, yb, 0.003], [xb - uy * k, yb + ux * k, 0.003], [xa - uy * k, ya + ux * k, 0.003]], 'rgba(28,40,26,.18)');
     poly([[xa, ya, 0.28], [xb, yb, 0.28], [xb, yb, 0.36], [xa, ya, 0.36]], '#DCD2C2');
     for (let k = 0; k < n; k++) { const x = xa + ux * k * 0.2, y = ya + uy * k * 0.2, px = ux * 0.13, py = uy * 0.13; poly([[x, y, 0], [x + px, y + py, 0], [x + px, y + py, 1.1], [x + px / 2, y + py / 2, 1.2], [x, y, 1.1]], fc, 'rgba(0,0,0,.12)', 0.6); }
   }
@@ -4275,16 +4276,21 @@ export function createHouseArt(ctx0, opts = {}) {
     box(x, y, 0, 2.2, 1.9, 1.5, c);
     box(x - 0.15, y - 0.15, 1.5, 2.5, 2.2, 0.12, '#5A4A44');
   }
-  function nbLot(x0, x1, y0, y1, seed, season) {
-    const tone = nbHash(seed * 13, 5), c = shade(season, (tone - 0.5) * 0.12);
-    poly([[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]], c);
-    for (let x = x0; x < x1; x += 1) if (((x - x0) | 0) % 2 === 0) poly([[x, y0, 0.001], [x + 1, y0, 0.001], [x + 1, y1, 0.001], [x, y1, 0.001]], 'rgba(0,0,0,.035)');
+  function nbLot(x0, x1, y0, y1, seed, grass) {
+    poly([[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]], grass);
+    // The same tiles and blades as the yard's own lawn, so the two read as one lawn.
+    for (let i = x0; i < x1; i++) for (let j = y0; j < y1; j++) {
+      const [sx, sy] = iso(i + 0.5, j + 0.5, 0); if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) continue;
+      const h = nbHash(i * 31 + seed, j * 17 + 5);
+      poly([[i, j, 0], [i + 1, j, 0], [i + 1, j + 1, 0], [i, j + 1, 0]], shade(grass, 0.1 + (h - 0.5) * 0.05), 'rgba(40,70,30,.12)', 0.6);
+      for (let k = 0; k < 3; k++) { const px = i + nbHash(i + k, j * 7 + seed), py = j + nbHash(i * 5 + seed, j + k * 3), [bx, by] = iso(px, py, 0); limb(bx, by, bx - 1, by - 3, 'rgba(60,110,44,.55)', 1); limb(bx, by, bx + 1.5, by - 2.5, 'rgba(60,110,44,.55)', 1); }
+    }
     const px = x0 + 1.2 + nbHash(seed, 2) * 2, py = y0 + 1 + nbHash(seed, 4) * (y1 - y0 - 3);
     poly([[px, py, 0.01], [px + 2.4, py, 0.01], [px + 2.4, py + 2, 0.01], [px, py + 2, 0.01]], '#CFC9C0', 'rgba(60,50,40,.2)', 0.8);
     if (nbHash(seed, 6) > 0.4) poly([[x1 - 3.2, y1 - 1.5, 0.01], [x1 - 1.4, y1 - 1.5, 0.01], [x1 - 1.4, y1 - 0.6, 0.01], [x1 - 3.2, y1 - 0.6, 0.01]], '#6B4A35');
   }
   function buildBackdrop() {
-    const si = seasonIdx(), grass = ['#86C26A', '#74B556', '#A9AB5C', '#E2E8EC'][si], asphalt = si === 3 ? '#6A6F78' : '#5A5E66';
+    const si = seasonIdx(), grass = grassColor({ water: 0.72, len: 0.38, burn: 0, j: 0, mowedAt: -9999 }), asphalt = si === 3 ? '#6A6F78' : '#5A5E66';
     const R = 14, big = 90, rows = [];
     // Ground. The whole canvas is grass first, so no edge of the neighbourhood ever shows.
     ctx.fillStyle = grass; ctx.fillRect(0, 0, W, H);
