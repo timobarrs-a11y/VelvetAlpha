@@ -4243,7 +4243,18 @@ export function createHouseArt(ctx0, opts = {}) {
       LEVELS[3].feats.forEach(f => { if (f.k === 'extwin') { const col = extWindowColor(1); poly(featPoly(f), '#F7F3EE', EDGE, 0.8); poly(featPoly(f, 0.07), col); const mu = (f.u[0] + f.u[1]) / 2; line3([0, mu, f.z[0] + 0.07], [0, mu, f.z[1] - 0.07], '#F7F3EE', 2); } else drawFeature(3, f); });
       poly([[-0.3, -0.3, WH], [0.12, -0.3, WH], [0.12, WY, WH], [-0.3, WY, WH]], '#5A4A44');
     }
-    back.filter(pl => pl !== 'L').forEach(pl => { const len = planeLen(pl), [ix, iy] = pl === 'B' ? [0, 1] : pl === 'R' ? [-1, 0] : [0, -1], fc = fenceColors(ix, iy), keepOn = gOn, sh = (k) => { const p0 = wallPoint(pl, 0, 0.003), p1 = wallPoint(pl, len, 0.003); poly([p0, p1, [p1[0] + ix * k, p1[1] + iy * k, 0.003], [p0[0] + ix * k, p0[1] + iy * k, 0.003]], 'rgba(28,40,26,.2)'); }; gOn = false; sh(0.22); sh(-0.14); for (let u = 0; u <= len + 0.01; u += 0.2) poly([wallPoint(pl, u, 0), wallPoint(pl, u + 0.13, 0), wallPoint(pl, u + 0.13, 1.15), wallPoint(pl, u + 0.065, 1.25), wallPoint(pl, u, 1.15)], fc.board, fc.edge, 0.6); [0.3, 0.85].forEach(z => poly([wallPoint(pl, 0, z), wallPoint(pl, len, z), wallPoint(pl, len, z + 0.08), wallPoint(pl, 0, z + 0.08)], fc.rail)); gOn = keepOn; });
+    back.filter(pl => pl !== 'L').forEach(pl => { const len = planeLen(pl), [ix, iy] = pl === 'B' ? [0, 1] : pl === 'R' ? [-1, 0] : [0, -1], fc = fenceColors(ix, iy), keepOn = gOn, sh = (k) => { const p0 = wallPoint(pl, 0, 0.003), p1 = wallPoint(pl, len, 0.003); poly([p0, p1, [p1[0] + ix * k, p1[1] + iy * k, 0.003], [p0[0] + ix * k, p0[1] + iy * k, 0.003]], 'rgba(28,40,26,.2)'); }; gOn = false; sh(0.22); sh(-0.14); for (let u = 0; u <= len + 0.01; u += 0.2) poly([wallPoint(pl, u, 0), wallPoint(pl, u + 0.13, 0), wallPoint(pl, u + 0.13, FENCE.h), wallPoint(pl, u + 0.065, FENCE.tip), wallPoint(pl, u, FENCE.h)], fc.board, fc.edge, 0.6); FENCE.rails.forEach(z => poly([wallPoint(pl, 0, z), wallPoint(pl, len, z), wallPoint(pl, len, z + 0.08), wallPoint(pl, 0, z + 0.08)], fc.rail)); gOn = keepOn; });
+    // Where two of the yard's fences meet they end in one square post, so neither fence overlaps the other and the corner stands as tall as the fence.
+    const fp = back.filter(pl => pl !== 'L');
+    if (fp.length === 2) {
+      const ends = (pl) => [wallPoint(pl, 0, 0), wallPoint(pl, planeLen(pl), 0)], A = ends(fp[0]), B = ends(fp[1]);
+      for (const a1 of A) for (const b1 of B) if (Math.hypot(a1[0] - b1[0], a1[1] - b1[1]) < 0.01) {
+        const fc = fenceColors(0, 1), s = 0.09, keepOn = gOn; gOn = false;
+        box(a1[0] - s, a1[1] - s, 0, s * 2, s * 2, FENCE.tip + 0.03, shade(fc.board, 0.14));
+        poly([[a1[0] - s, a1[1] - s, FENCE.tip + 0.03], [a1[0] + s, a1[1] - s, FENCE.tip + 0.03], [a1[0] + s, a1[1] + s, FENCE.tip + 0.03], [a1[0] - s, a1[1] + s, FENCE.tip + 0.03]], fc.rail);
+        gOn = keepOn;
+      }
+    }
     drawWallLights(3);
   }
   // The neighbourhood around the yard. This is a back yard, so the lot is seen from behind the houses: our house is behind its
@@ -4255,6 +4266,8 @@ export function createHouseArt(ctx0, opts = {}) {
   const nbBack = { ground: null, objects: null, key: '' };
   // What rain can land on, recorded as the objects are drawn: a roof or canopy (a flat shape at a height) and the outline that hides what is behind it.
   let nbOcc = [];
+  // Lights in the neighbourhood (lit windows, the street lamps), drawn after the game's own night lighting so they glow instead of being darkened by it.
+  let nbGlows = [];
   let nbWet = 0;
   const nbHash = (a, b) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
   // A face is seen when its outward normal turns toward the camera, which always sits at +a, +b.
@@ -4263,13 +4276,25 @@ export function createHouseArt(ctx0, opts = {}) {
   const nbBehind = (x1, y1, x2, y2) => { const r = vrect(x1, y1, x2, y2); return r[2] <= 0.2 || r[3] <= 0.2; };
   function nbWindow(plane, at, u0, u1, z0, z1, lit) {
     const q = plane === 'x' ? [[at, u0, z0], [at, u1, z0], [at, u1, z1], [at, u0, z1]] : [[u0, at, z0], [u1, at, z0], [u1, at, z1], [u0, at, z1]];
-    poly(q, lit === 1 ? '#F3C77A' : lit === 2 ? '#2B2F45' : raining() ? '#8E99A8' : '#A9C3D3', '#F7F3EE', 1);
+    poly(q, lit === 1 ? '#FFD98A' : lit === 3 ? '#B4D6FF' : lit === 2 ? '#2B2F45' : raining() ? '#8E99A8' : '#A9C3D3', lit === 1 || lit === 3 ? 'rgba(255,240,200,.9)' : '#F7F3EE', 1);
+    if (lit === 1 || lit === 3) {
+      const mu = (u0 + u1) / 2, mz = (z0 + z1) / 2, [gx, gy] = plane === 'x' ? iso(at, mu, mz) : iso(mu, at, mz);
+      nbGlows.push({ x: gx, y: gy, r: 17, col: lit === 3 ? '170,205,255' : '255,200,120', a: lit === 3 ? 0.45 : 0.55 });
+    }
+  }
+  // Whether a neighbour's window has its light on at this hour: most come on between dusk and the late evening and go off before dawn, some
+  // are up early, and a few glow the blue of a television. (0: by day, plain glass; 1 warm light; 2 dark; 3 a screen's blue.)
+  function nbWindowState(seed, k) {
+    const r1 = nbHash(seed * 7 + k, 3), r2 = nbHash(seed * 7 + k, 4), r3 = nbHash(seed * 7 + k, 5), h = hour(), hh = h < 5 ? h + 24 : h;
+    const evening = hh >= 17.4 + r1 * 3.4 && hh < 22.2 + r2 * 4.6, early = r3 > 0.55 && h >= 5.2 + r1 * 1.2 && h < 7.4 + r2 * 0.8, on = evening || early;
+    if (darkness() < 0.06 && !on) return 0;
+    return on ? (r3 < 0.22 && hh > 19 ? 3 : 1) : darkness() > 0.12 ? 2 : 0;
   }
   // A house seen from its back. `rear` is the side the back wall faces along x (+1: the body lies at x < x0, -1: at x > x0).
   function nbHouse(x0, y0, y1, rear, h, wall, roof, seed, o = {}) {
     const dep = NB.depth, xa = rear > 0 ? x0 - dep : x0, xb = rear > 0 ? x0 : x0 + dep, z0 = o.z0 || 0;
     if (!nbBehind(xa - 0.5, y0 - 0.5, xb + 0.5, y1 + 0.5)) return;
-    const dk = darkness() > 0.3, win = (k) => (dk ? (nbHash(seed * 7 + k, 3) > 0.55 ? 1 : 2) : 0);
+    const win = (k) => nbWindowState(seed, k);
     box(xa, y0, z0, xb - xa, y1 - y0, h - z0, wall);
     const rx = rear > 0 ? xb + 0.012 : xa - 0.012, rn = rear > 0 ? 1 : -1;
     const floors = h > 4 ? [0.55, 2.75] : [0.55];
@@ -4290,6 +4315,8 @@ export function createHouseArt(ctx0, opts = {}) {
   // The fence's colours at this hour, for the face turned toward us: the yard's own fence and every neighbour's use these, so they always
   // match. The sun is front-left (the +b face is lit, the +a face shaded); at dawn and dusk the lit side warms and the shade goes lilac,
   // at night the whole fence turns to cool moonlit blue, darker on the shaded side, and rain greys it a little.
+  // How tall every fence is, the yard's own and the neighbours' alike: pickets, their pointed tips and the two rails.
+  const FENCE = { h: 0.98, tip: 1.07, rails: [0.26, 0.68] };
   function fenceColors(nx, ny) {
     const lit = VD(nx, ny)[1] > 0, dk = darkness(), night = Math.max(0, Math.min(1, (dk - 0.04) / 0.5)), h = hour();
     const warm = Math.max(0, 1 - Math.abs(h - 6.6) / 1.6, 1 - Math.abs(h - 19.2) / 1.9) * (1 - night), rain = raining() ? 0.14 : 0, snow = seasonIdx() === 3;
@@ -4306,8 +4333,8 @@ export function createHouseArt(ctx0, opts = {}) {
     const n1 = [-uy, ux], n2 = [uy, -ux], vis = VD(n1[0], n1[1]).reduce((s, v) => s + v, 0) > 0 ? n1 : n2, fc = fenceColors(vis[0], vis[1]);
     for (const k of [0.22, -0.14]) poly([[xa, ya, 0.003], [xb, yb, 0.003], [xb - uy * k, yb + ux * k, 0.003], [xa - uy * k, ya + ux * k, 0.003]], 'rgba(28,40,26,.18)');
     // The same board and rails as the yard's own fence.
-    for (const z of [0.3, 0.85]) poly([[xa, ya, z], [xb, yb, z], [xb, yb, z + 0.08], [xa, ya, z + 0.08]], fc.rail);
-    for (let k = 0; k < n; k++) { const x = xa + ux * k * 0.2, y = ya + uy * k * 0.2, px = ux * 0.13, py = uy * 0.13; poly([[x, y, 0], [x + px, y + py, 0], [x + px, y + py, 1.15], [x + px / 2, y + py / 2, 1.25], [x, y, 1.15]], fc.board, fc.edge, 0.6); }
+    for (const z of FENCE.rails) poly([[xa, ya, z], [xb, yb, z], [xb, yb, z + 0.08], [xa, ya, z + 0.08]], fc.rail);
+    for (let k = 0; k < n; k++) { const x = xa + ux * k * 0.2, y = ya + uy * k * 0.2, px = ux * 0.13, py = uy * 0.13; poly([[x, y, 0], [x + px, y + py, 0], [x + px, y + py, FENCE.h], [x + px / 2, y + py / 2, FENCE.tip], [x, y, FENCE.h]], fc.board, fc.edge, 0.6); }
   }
   function nbTree(x, y, seed) {
     if (!nbBehind(x - 1.4, y - 1.4, x + 1.4, y + 1.4)) return;
@@ -4327,15 +4354,27 @@ export function createHouseArt(ctx0, opts = {}) {
     // The door faces into the yard (+y, away from the fence the shed stands against); the wall seen from the other side gets a window.
     if (nbFacing(0, 1)) poly([[x + 0.6, y + 2.012, 0], [x + 1.4, y + 2.012, 0], [x + 1.4, y + 2.012, 1.1], [x + 0.6, y + 2.012, 1.1]], shade(c, -0.35), '#F7F3EE', 0.8);
     const wx = nbFacing(1, 0) ? x + 2.012 : x - 0.012;
-    if (nbFacing(1, 0) || nbFacing(-1, 0)) poly([[wx, y + 0.5, 0.65], [wx, y + 1.3, 0.65], [wx, y + 1.3, 1.15], [wx, y + 0.5, 1.15]], raining() ? '#8E99A8' : '#A9C3D3', '#F7F3EE', 0.8);
+    if (nbFacing(1, 0) || nbFacing(-1, 0)) {
+      const lit = darkness() > 0.2 && nbHash(seed * 11, 9) > 0.6;
+      poly([[wx, y + 0.5, 0.65], [wx, y + 1.3, 0.65], [wx, y + 1.3, 1.15], [wx, y + 0.5, 1.15]], lit ? '#FFD98A' : darkness() > 0.2 ? '#2B2F45' : raining() ? '#8E99A8' : '#A9C3D3', '#F7F3EE', 0.8);
+      if (lit) { const [gx, gy] = iso(wx, y + 0.9, 0.9); nbGlows.push({ x: gx, y: gy, r: 14, col: '255,200,120', a: 0.5 }); }
+    }
     box(x - 0.1, y - 0.1, 1.5, 2.2, 2.2, 0.12, '#5A4A44');
   }
-  function nbPole(x, y) {
+  function nbPole(x, y, lamp) {
     if (!nbBehind(x - 0.3, y - 0.3, x + 0.3, y + 0.3)) return;
     const zt = 3.7, za = 3.35, [sx, sy] = iso(x, y, 0), arm = shade('#5A4A44', 0.05);
     ell(sx + 5, sy + 1, 7, 3, 'rgba(28,40,26,.25)');
     line3([x, y, 0], [x, y, zt], '#5A4A44', 3);
     line3([x, y - 0.6, za], [x, y + 0.6, za], arm, 2.2);
+    // Every other pole carries a street lamp reaching out over the lane: a dark hood and a lens, and at night a pool of light on the road.
+    if (lamp) {
+      const lx = x + 1.5, lz = 3.5;
+      line3([x, y, lz - 0.1], [lx, y, lz], '#3F3A3F', 2.4);
+      const [hx, hy] = iso(lx, y, lz);
+      rr(hx - 5.5, hy - 2.5, 11, 4.4, 2, '#3A363C'); ell(hx, hy + 2.2, 3.6, 1.5, darkness() > 0.12 ? '#FFF0C0' : '#D8D2C0');
+      nbGlows.push({ x: hx, y: hy + 3, r: 22, col: '255,224,150', a: 0.8 }, { pool: true, x: iso(lx, y, 0)[0], y: iso(lx, y, 0)[1], rx: 3.4 * TW, ry: 3.4 * TH, col: '255,214,140', a: 0.5 });
+    }
     for (const off of [-0.5, 0.5]) {
       const [ix, iy] = iso(x, y + off, za + 0.08); circle(ix, iy, 1.7, '#9CB5B8');
       // The wire to the next pole sags between them.
@@ -4378,7 +4417,7 @@ export function createHouseArt(ctx0, opts = {}) {
     for (let k = -R; k <= R; k++) { nbLot(-NB.front, 0, k * WY, k * WY + WY, k + 140, lawn); }
     }
     if (part === 'objects') {
-    nbOcc = [];
+    nbOcc = []; nbGlows = [];
     // Back-to-front: fences go in the same sort as the houses, sheds and trees (a fence in front of a shed has to cover it), in short runs
     // so each run is sorted by its own depth.
     const fenceRows = (xa, ya, xb, yb) => { const len = Math.hypot(xb - xa, yb - ya), n = Math.max(1, Math.round(len / 2)); for (let i = 0; i < n; i++) { const a = [xa + (xb - xa) * i / n, ya + (yb - ya) * i / n], b = [xa + (xb - xa) * (i + 1) / n, ya + (yb - ya) * (i + 1) / n]; rows.push({ key: vs((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), d: () => nbFence(a[0], a[1], b[0], b[1]) }); } };
@@ -4401,7 +4440,7 @@ export function createHouseArt(ctx0, opts = {}) {
     // Our own house behind the back wall: the upper floor and the roof above the wall the yard draws.
     rows.push({ key: vs(-NB.depth / 2, WY / 2), d: () => nbHouse(-0.3, 0, WY, 1, 5.4, '#D9CDBD', '#5A4A44', 0.5, { z0: 2.6 }) });
     // Utility poles down the lane's verge, in world space like everything else: the crossarm runs along the lane (so it slopes with the grid), and the wires sag to the next pole.
-    for (let k = -R; k <= R; k++) { const px = NB.lane0 - 0.5, py = k * WY + 2; rows.push({ key: vs(px, py), d: () => nbPole(px, py) }); }
+    for (let k = -R; k <= R; k++) { const px = NB.lane0 - 0.5, py = k * WY + 2; rows.push({ key: vs(px, py), d: () => nbPole(px, py, k % 2 === 0) }); }
     rows.sort((a, b) => a.key - b.key).forEach(r => r.d());
     }
   }
@@ -4412,6 +4451,19 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.globalCompositeOperation = 'destination-out';
     [[0, 0, 40, 0], [W, 0, W - 40, 0], [0, 0, 0, 36], [0, H, 0, H - 32]].forEach(([x0, y0, x1, y1]) => { const e = ctx.createLinearGradient(x0, y0, x1, y1); e.addColorStop(0, 'rgba(0,0,0,1)'); e.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = e; ctx.fillRect(0, 0, W, H); });
     ctx.globalCompositeOperation = 'source-over';
+  }
+  // The neighbourhood's lights, over everything lit: lit windows, the street lamps and the pools they make on the lane. They come up as it
+  // gets dark and fade at dawn.
+  function drawNbGlows() {
+    const night = Math.max(0, Math.min(1, (darkness() - 0.05) / 0.3));
+    if (night < 0.02 || !nbGlows.length) return;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (const g of nbGlows) {
+      if (g.pool) { ctx.save(); ctx.translate(g.x, g.y); ctx.scale(1, g.ry / g.rx); const gr = ctx.createRadialGradient(0, 0, 2, 0, 0, g.rx); gr.addColorStop(0, `rgba(${g.col},${g.a * night * 0.55})`); gr.addColorStop(1, `rgba(${g.col},0)`); ctx.fillStyle = gr; ctx.fillRect(-g.rx, -g.rx, g.rx * 2, g.rx * 2); ctx.restore(); continue; }
+      const gr = ctx.createRadialGradient(g.x, g.y, 1, g.x, g.y, g.r); gr.addColorStop(0, `rgba(${g.col},${g.a * night})`); gr.addColorStop(1, `rgba(${g.col},0)`);
+      ctx.fillStyle = gr; ctx.fillRect(g.x - g.r, g.y - g.r, g.r * 2, g.r * 2);
+    }
+    ctx.restore();
   }
   function drawBackdrop() {
     const key = `${VR}|${seasonIdx()}|${Math.round(darkness() * 20)}|${Math.floor(hour() * 2)}|${raining() ? 1 : 0}|${cv.width}`;
@@ -5753,6 +5805,7 @@ export function createHouseArt(ctx0, opts = {}) {
     } finally { gOn = false; ctx = ctx0; gMat = MATERIAL.matte; }
     drawParticles(lv, false);
     lighting(lv, lights, deferred);
+    if (isOutdoor(lv)) drawNbGlows();
     drawParticles(lv, true);
     if (isOutdoor(lv)) drawRain();
     dofAmt += ((s.focus && tier() === 'high' ? 0.85 : 0) - dofAmt) * Math.min(1, rdt * 3);
