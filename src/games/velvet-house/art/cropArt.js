@@ -69,7 +69,8 @@ export function drawVineSpot(ctx, x, y, crop, stage, dead, t, k) {
   ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-4, -1.5, -9, 0.5); ctx.stroke();
   ctx.fillStyle = leafLight; ctx.beginPath(); ctx.ellipse(4, -2, 3.2, 1.6, -0.3, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = leaf; ctx.beginPath(); ctx.ellipse(-4, -1.5, 3, 1.4, 0.3, 0, Math.PI * 2); ctx.fill();
-  if (!dead && (stage === 'mid' || stage === 'final')) drawCrop(ctx, 1, 0.5, stage === 'final' ? 0.45 : 0.3, crop, 0);
+  // The pumpkin is drawn at its own size here: the spot itself is not scaled, so it is set to be a fruit of the bed.
+  if (!dead && (stage === 'mid' || stage === 'final')) drawCrop(ctx, 2, 0.5, stage === 'final' ? 1.4 : 0.95, crop, 0);
   ctx.restore();
 }
 
