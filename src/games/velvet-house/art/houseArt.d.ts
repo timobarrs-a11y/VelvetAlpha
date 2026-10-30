@@ -16,6 +16,8 @@ export interface PersonFrame {
   pose: string;
   walking: boolean;
   sit: boolean;
+  /** Lowering into a seat or getting up: which way, how far through (0 standing, 1 seated) and the seat's height; the body is moved between the stand spot and the seat. */
+  posture?: { dir: 'sit' | 'stand'; k: number; zSeat: number };
   hidden: boolean;
   seed: number;
   /** The activity in progress (e.g. 'piano'), for clips beyond the shared pose. */

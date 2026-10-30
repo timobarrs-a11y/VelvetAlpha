@@ -5482,10 +5482,14 @@ export function createHouseArt(ctx0, opts = {}) {
     const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.045 * amp;
     const clip = blendClip(c, rig, { drop: rig?.drop || 0, bob: rig?.bob || 0, lean: rig?.lean || 0, head: (rig?.nod || 0) - (rig?.headDown ? 0.05 : 0) + (rig?.lookUp ? 0.03 : 0) });
     // Seated: the hips, knees and feet come from the leg solver, so the shins keep their length on any seat.
-    const seat = c.sit ? seatLegs(c.z) : null;
+    const seat = c.sit ? seatLegs(c.posture ? c.posture.zSeat : c.z) : null;
+    // Lowering into a seat or getting up (the body is already moving between the stand spot and the seat): the hips go from standing height to seat height
+    // and the feet stay on the floor, the knees bending by the leg solver, with the body leaning in over the move.
+    const pe = c.posture ? smooth01(c.posture.dir === 'sit' ? c.posture.k : 1 - c.posture.k) : 1;
+    const moving = !!c.posture && pe < 1;
     const stairs = c.slope || 0;
-    const hipZ = (seat ? seat.hip[1] : 0.62 - 0.05 * amp - (stairs ? 0.06 : 0) - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
-    const [dx, dy] = c.face, lean = clip.v.lean + 0.025 * amp + stairs * 0.03;
+    const hipZ = (moving ? (0.57 * (1 - pe) + (seat.hip[1] + c.posture.zSeat - 0.0) * pe - c.z) : seat ? seat.hip[1] : 0.62 - 0.05 * amp - (stairs ? 0.06 : 0) - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
+    const [dx, dy] = c.face, lean = clip.v.lean + 0.025 * amp + stairs * 0.03 + (moving ? Math.sin(pe * Math.PI) * 0.07 : 0);
     const hip = P3(0, 0, hipZ), sh = P3(dx * lean, dy * lean, shZ), hd = P3(dx * lean * 1.25, dy * lean * 1.25, hdZ);
     // A turned head slides a little toward where it looks, as a neck does.
     const nk1 = P3(hdir[0] * 0.06, hdir[1] * 0.06, 0), nk0 = P3(dx * 0.06, dy * 0.06, 0);
@@ -5616,6 +5620,12 @@ export function createHouseArt(ctx0, opts = {}) {
         const foot = P3(dx * ff, dy * ff, fz), knee = P3(dx * kn[0], dy * kn[0], kn[1]);
         thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
         shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
+        return;
+      }
+      if (moving) {
+        const fw = Math.max(0, seat.foot[0] * pe), floor = -c.z, kn = legIK([0, hipZ], [fw, floor]);
+        const knee = P3(dx * kn[0], dy * kn[0], kn[1]), foot = P3(dx * fw, dy * fw, floor);
+        thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy); shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
       }
       if (seat) { const knee = P3(dx * seat.knee[0], dy * seat.knee[0], seat.knee[1]), foot = P3(dx * seat.foot[0], dy * seat.foot[0], seat.foot[1]); thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy); shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy); return; }
