@@ -561,7 +561,7 @@ export const LEG = { thigh: 0.31, shin: 0.31, hipRise: 0.03, sink: 0.08, stretch
 export const ARM = { length: 0.42 };
 export const FOOT = { length: 0.22, heel: 0.3 };
 /** The stride: half a stride of body travel per plant, and how far a foot reaches, in world units. */
-export const GAIT = { cycle: 0.68, reach: 0.17, lift: 0.075 };
+export const GAIT = { cycle: 1.1, reach: 0.27, lift: 0.085 };
 
 /**
  * Where one foot is in the stride, as [forward, lift] from under the hip. The phase runs
@@ -617,10 +617,11 @@ export function walkRig(phase, amp = 1) {
   const arm = (side) => {
     // The leg on this side is furthest forward at phase PI (side +1) / 0 (side -1); the arm is furthest back there.
     const sw = Math.cos(phase + (side > 0 ? 0 : Math.PI)) * amp;
-    const ang = sw * 0.55; // up to ~32 degrees forward and back
+    // A relaxed arm swings little and mostly forward of the body: about 12 degrees back and 22 forward, not the 32 each way of a march.
+    const ang = 0.08 + sw * 0.30;
     const hand = [Math.sin(ang) * L, 0.13, -Math.cos(ang) * L + 0.02];
     // The elbow sits halfway up, pushed forward as the arm swings back (the forearm folds), and a touch outward.
-    const elbow = [Math.sin(ang) * L * 0.5 + 0.03 + Math.max(0, -sw) * 0.05, 0.15, -Math.cos(ang) * L * 0.5];
+    const elbow = [Math.sin(ang) * L * 0.5 + 0.035 + Math.max(0, -sw) * 0.03, 0.15, -Math.cos(ang) * L * 0.5];
     return { hand, elbow };
   };
   const r = arm(1), l = arm(-1);

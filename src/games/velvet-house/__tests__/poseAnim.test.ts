@@ -264,7 +264,7 @@ describe('the walk', () => {
     // The legs: side +1 is furthest forward at phase PI, side -1 at phase 0 (gaitFoot).
     const r = walkRig(Math.PI, 1);
     expect(gaitFoot(Math.PI)[0]).toBeCloseTo(GAIT.reach, 6);
-    expect(r.hands[1][0], 'right arm back while the right leg is forward').toBeLessThan(-0.1);
+    expect(r.hands[1][0], 'right arm back while the right leg is forward').toBeLessThan(-0.05);
     expect(r.hands[-1][0], 'left arm forward while the left leg is back').toBeGreaterThan(0.1);
     for (let ph = 0; ph < Math.PI * 2; ph += 0.1) {
       const w = walkRig(ph, 1);
@@ -277,8 +277,11 @@ describe('the walk', () => {
 
   it('is a stride, not a flail: the hands travel far enough to read and no further', () => {
     const reach = Math.max(...Array.from({ length: 64 }, (_, i) => Math.abs(walkRig(i / 10, 1).hands[1][0])));
-    expect(reach).toBeGreaterThan(0.18);
-    expect(reach).toBeLessThan(0.26);
+    expect(reach).toBeGreaterThan(0.12);
+    expect(reach).toBeLessThan(0.2);
+    // ... and never far behind the body: a relaxed arm goes back about half as far as it comes forward.
+    const back = Math.min(...Array.from({ length: 64 }, (_, i) => walkRig(i / 10, 1).hands[1][0]));
+    expect(back).toBeGreaterThan(-0.11);
   });
 
   it('lets the arms hang when the walk fades out', () => {

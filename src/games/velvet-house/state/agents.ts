@@ -104,7 +104,7 @@ export interface HouseWorld {
   bossIn?: boolean;
 }
 
-const WALK_SPEED = 1.5;
+const WALK_SPEED = 1.3;
 const STAIR_SPEED = 0.6;
 // Turning: how fast they swing round (radians per second). Someone more than TURN_STOP off the
 // way they're heading stops and turns on the spot, and starts walking again once within TURN_GO.

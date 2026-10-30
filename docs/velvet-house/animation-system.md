@@ -1,6 +1,6 @@
 # Animation system: plan (the foundation for bespoke items, the story and visiting)
 
-*Planning note. Nothing here is built yet; section 2 is the audit it starts from.*
+*Planning note. Section 2 is the audit it starts from. Built so far: the walk fix (section 2a). Everything else is planned.*
 
 **The director's goal:** a game that separates itself from The Sims and Animal Crossing, which have a million items but rarely a *new animation* for a new item.
 New items arrive with their own memorable animation (the swing set because you want to see the swing; the basketball hoop because you want to shoot). So the
@@ -43,6 +43,18 @@ the use-poses added for stations (operate, dispense, board, files, talk, handset
    with its own motion.
 6. **Activities are one looping pose.** There is no way to say "approach, wind up, shoot, watch it go in, celebrate" as beats with durations and events.
 7. **One actor only.** Two people can talk side by side, but nothing coordinates a shared motion (a hug, a high-five, one pushing another on a swing).
+
+### 2a. The walk (fixed first)
+
+Captured frame by frame (a person moved a fixed step per frame, so the stride is the only variable). Two causes of "shuffling, hands swinging too far back":
+
+- **The stride was tiny and fast.** One full cycle was 0.68 tiles with a foot reach of 0.17, on a 1.2 tile tall person at 1.5 tiles a second: about 4.4 steps a second, each a few centimetres. Now the cycle is 1.1, the reach 0.27 and the lift 0.085 (a real step), the hips settle lower at full stride and rise over the planted leg a little more, and the walk is 1.3 tiles a second (`WALK_SPEED`): about 2.4 steps a second.
+- **The arms went back as far as forward** (32 degrees each way, a march). Now they hang slightly forward and swing about 12 degrees back and 22 forward, with the elbow a little softer (`walkRig`). The walk tests encode both limits.
+
+## Decisions (from the director)
+
+- **Visiting:** both live visits and touring a friend's house while its owner is away.
+- **Guests:** view only, never touch. A separate **shared mode** is something the owner switches on to let a guest play with things.
 
 ## 3. The target architecture
 
@@ -120,8 +132,7 @@ guess, and others; the shootout plan describes the pattern). What it lacks is th
    rebounder. The host's game accepts or refuses an interaction (the host's rules, as with Dale's visitor chair).
 4. **Presence and invites** reuse friends: "come over" is a Play-card-style invite to the host's house channel.
 
-Decisions to make before building it: live visits only, or also visiting a house while its owner is away (a "show me your house" tour); and how much a guest
-may change (nothing, move small things, or only interact).
+Decided: both live visits and away tours; a guest is view-only and cannot touch anything, except in an owner-enabled **shared mode** where the guest may use and move things. An away tour needs no live connection to the owner, only the cloud snapshot.
 
 ## 7. Risks
 

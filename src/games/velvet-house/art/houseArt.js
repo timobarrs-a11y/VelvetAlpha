@@ -5479,12 +5479,12 @@ export function createHouseArt(ctx0, opts = {}) {
     const dance = pose === 'dance' && !rig;
     // A walk rides up over the planted leg (under the hip at |sin| = 1, the other foot mid-swing) and dips as the feet
     // pass apart; the hips sit a touch lower than standing so the stride fits the legs.
-    const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.03 * amp;
+    const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.045 * amp;
     const clip = blendClip(c, rig, { drop: rig?.drop || 0, bob: rig?.bob || 0, lean: rig?.lean || 0, head: (rig?.nod || 0) - (rig?.headDown ? 0.05 : 0) + (rig?.lookUp ? 0.03 : 0) });
     // Seated: the hips, knees and feet come from the leg solver, so the shins keep their length on any seat.
     const seat = c.sit ? seatLegs(c.z) : null;
     const stairs = c.slope || 0;
-    const hipZ = (seat ? seat.hip[1] : 0.62 - 0.02 * amp - (stairs ? 0.06 : 0) - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
+    const hipZ = (seat ? seat.hip[1] : 0.62 - 0.05 * amp - (stairs ? 0.06 : 0) - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
     const [dx, dy] = c.face, lean = clip.v.lean + 0.025 * amp + stairs * 0.03;
     const hip = P3(0, 0, hipZ), sh = P3(dx * lean, dy * lean, shZ), hd = P3(dx * lean * 1.25, dy * lean * 1.25, hdZ);
     // A turned head slides a little toward where it looks, as a neck does.
