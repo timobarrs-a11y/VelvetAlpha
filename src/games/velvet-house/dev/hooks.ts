@@ -16,6 +16,7 @@ export function installDevHooks(g: Game): void {
   if (isDev) {
     (window as unknown as { __velvet?: Record<string, unknown> }).__velvet = {
       setView: (lv: number) => g.setLevel(lv),
+      setRot: (r: number) => { view.rot = r; },
       // Put a piece in the house (a test for new furniture).
       addObject: (type: string, level: number, x: number, y: number, col?: string, rot = 0) => { world.objs.push({ id: `t-${type}-${world.objs.length}`, type, level, x, y, rot, ...(col ? { col } : {}) }); g.relearnLayout(world.objs[world.objs.length - 1]); },
       // Send someone somewhere (a test for the stairs).

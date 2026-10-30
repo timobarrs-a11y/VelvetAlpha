@@ -3279,9 +3279,9 @@ export function createHouseArt(ctx0, opts = {}) {
         T.box(0.05, 0.13, 1.84, 0.8, 0.05, 0.6, '#EEF2F6');
         T.poly([[0.28, 0.1295, 1.9], [0.62, 0.1295, 1.9], [0.62, 0.1295, 2.2], [0.28, 0.1295, 2.2]], null, '#C2413A', 1.2);
         T.poly([[0.05, 0.1295, 1.84], [0.85, 0.1295, 1.84], [0.85, 0.1295, 2.44], [0.05, 0.1295, 2.44]], null, '#6B7482', 1.4);
-        const cx = 0.45, cy = 0.5, rr = 0.17, rz = 2.09 + (live && kick && !kick.made ? Math.sin(age * 26) * Math.exp(-age * 5) * 0.025 : 0), N = 12, ring = [];
+        const [cx, cy] = hoopRimLocal(o), rr = 0.16, rz = 2.09 + (live && kick && !kick.made ? Math.sin(age * 26) * Math.exp(-age * 5) * 0.025 : 0), N = 12, ring = [];
         for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2; ring.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz]); }
-        T.line([0.45, 0.17, rz], [0.45, cy - rr, rz], '#C2413A', 2);
+        T.line([cx, 0.18, rz], [cx, cy - rr, rz], '#C2413A', 2.6);
         const net = (k) => { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2; return [[cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz - 0.01], [cx + Math.cos(b) * rr * 0.6 + sw * 0.05, cy + Math.sin(b) * rr * 0.6 + sw * 0.03, rz - 0.3 + (live && kick && kick.made ? 0.02 * Math.sin(age * 18) : 0)]]; };
         for (let k = 0; k < N; k++) { const [p0, p1] = net(k); T.line(p0, p1, 'rgba(255,255,255,.85)', 0.9); }
         for (let k = 0; k < N; k++) { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2, f = 0.5, z = rz - 0.15; T.line([cx + Math.cos(a) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(a) * rr * (1 - 0.3 * f), z], [cx + Math.cos(b) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(b) * rr * (1 - 0.3 * f), z], 'rgba(255,255,255,.6)', 0.8); }
@@ -3957,6 +3957,12 @@ export function createHouseArt(ctx0, opts = {}) {
   // transforms
   // ======================================================================
   function xf(o, lx, ly) { const { W: w, D: d } = T_OF(o); switch (o.rot) { case 1: return [o.x + (d - ly), o.y + lx]; case 2: return [o.x + (w - lx), o.y + (d - ly)]; case 3: return [o.x + ly, o.y + (w - lx)]; default: return [o.x + lx, o.y + ly]; } }
+  /** Where the hoop's rim sits in the piece's own space: out from the board, and slid along it so that on screen it hangs centred under the board from this camera (the same spot the ball is aimed at). */
+  function hoopRimLocal(o) {
+    const cy = 0.38, a = xf(o, 0.45, 0.18), b = xf(o, 0.45, cy), e = xf(o, 0.55, cy);
+    const sa = iso(a[0], a[1], 0)[0], sb = iso(b[0], b[1], 0)[0], se = iso(e[0], e[1], 0)[0], per = (se - sb) / 0.1;
+    return [0.45 + (per ? Math.max(-0.2, Math.min(0.2, (sa - sb) / per)) : 0), cy];
+  }
   function xdir(o, dx, dy) { switch (o.rot) { case 1: return [-dy, dx]; case 2: return [-dx, -dy]; case 3: return [dy, -dx]; default: return [dx, dy]; } }
   function fp(o) { const t = T_OF(o); return o.rot % 2 ? [t.D, t.W] : [t.W, t.D]; }
   function xrect(o, r) { const a = xf(o, r[0], r[1]), b = xf(o, r[2], r[3]); return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])]; }
@@ -5511,7 +5517,7 @@ export function createHouseArt(ctx0, opts = {}) {
       if (hp.hoopKey !== key) { hp.hoopKey = key; hp.hoopT0 = t; }
       const ho = c.slot ? OBJS.find((q) => c.slot.startsWith(q.id + ':')) : null;
       if (ho) {
-        const [wx, wy] = xf(ho, 0.45, 0.5), vx = wx - c.x, vy = wy - c.y;
+        const [wx, wy] = xf(ho, ...hoopRimLocal(ho)), vx = wx - c.x, vy = wy - c.y;
         let ax = -c.face[1], ay = c.face[0];
         if (iso(c.x + ax, c.y + ay, 0)[0] < iso(c.x, c.y, 0)[0]) { ax = -ax; ay = -ay; }
         hoopEnv = { clock: t - hp.hoopT0, rim: { f: vx * c.face[0] + vy * c.face[1], s: vx * ax + vy * ay }, hoop: ho.id };
