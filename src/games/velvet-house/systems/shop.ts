@@ -173,7 +173,7 @@ export function createShop(g: Game): Partial<Game> {
       const level = item.tab === 'Attic' && hasAttic() ? ATTIC : view.level;
       const newObj: ObjectInstance = {
         id: `${item.type}-${Date.now() & 0xffff}`,
-        type: item.type, level, x: 5, y: 5, rot: item.type === 'hoop' ? 1 : 0, // a hoop starts turned so its board faces the backyard cameras
+        type: item.type, level, x: 5, y: 5, rot: item.type.startsWith('hoop') ? 1 : 0, // a hoop starts turned so its board faces the backyard cameras
         col: color || item.cols?.[0],
         ...(item.skin ? { skin: item.skin } : {}),
       };
