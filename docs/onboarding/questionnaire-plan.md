@@ -135,6 +135,66 @@ chat.
 - **Today always has something:** a goal step, a birthday, or a "between goals" suggestion
   (a game, a space that's busy, the companion).
 
+## Invited arrivals: Atlas already knows them
+
+Anyone can invite someone, and the invite can carry what they know about that person, plus a
+message for Atlas to pass on. The person arrives to an Atlas who already knows them, and the
+inviter gets the fun of setting it up. That fun is the reason to send an invite.
+
+### The invite form
+
+When a member makes an invite link, they can fill in as much or as little as they like:
+
+| Field | Example | Used for |
+|---|---|---|
+| Name, and how they know them | Linda, my mum | The one card arrives filled in; Atlas greets her by name |
+| What they're into | Gardening, crime novels, Fleetwood Mac | Pre-ticked in the interests picker; small-talk openers |
+| Something they want to do | Write down Gran's recipes | A goal Atlas can offer, as a question |
+| A note about them | She worries about everyone but herself | Atlas's tone |
+| **A message for Atlas to pass on** | "Tell her the garden gnome is still missing and I know nothing." | Delivered by Atlas, in his voice |
+
+Each fact is marked **say it** (Atlas may mention it) or **keep it in mind** (it only shapes how he
+talks to them). The message is always "say it".
+
+**The link carries a code, never the details** (`?ref=TIM4&i=8fk2q`). What the inviter wrote is
+stored against that code, so a forwarded link or a chat app's preview shows nothing personal, and
+nobody can edit it by changing the URL. Each link is for one person, works once, and expires after
+a few weeks.
+
+### The invited onboarding
+
+1. **The one card, already filled in** from the invite: their name, ready to confirm or change,
+   then nickname, birthday and gender. A line on top says who invited them.
+2. **Atlas, who knows them.** The small talk comes from the invite, and he asks, never asserts:
+
+   > Good afternoon, Miss Linda. I'm Atlas. Your son's told me a fair bit about you. Something
+   > about a garden that's the envy of the street?
+
+3. **The message, delivered with ceremony,** early in the small talk, as a butler passing on a
+   message he would rather not be associated with:
+
+   > Before I forget: your son asked me to pass something on. "The garden gnome is still missing
+   > and I know nothing." I merely deliver the post, Miss Linda.
+
+4. **The goal.** If the inviter gave one, Atlas offers it as a question when the segue comes ("He
+   mentioned your mother's recipes. Is that something you'd like to get down on paper?"). They can
+   take it or say what they actually came for.
+5. **The rest as for everyone:** the coach, the walkthrough, the quick-or-full choice. Interests
+   from the invite are already ticked, so the full ramp is shorter.
+
+The inviter is told when the person arrives ("Linda's here. Atlas passed on your message.").
+
+### Guardrails
+
+- **The person is in charge of their own profile.** Everything the inviter entered is a
+  suggestion until they confirm it; anything they correct or remove is dropped, and Atlas never
+  argues with it.
+- **Teasing, not cruelty.** The message is checked when the invite is made. A joke between friends
+  is fine; insults, anything sexual, threats, or something meant to upset are refused with a reason,
+  and the inviter can rewrite it. Atlas also won't pass on anything private about the person
+  (health, money, relationships) even if it's marked "say it".
+- **No invite, no problem.** If the code is missing, used or expired, they get the normal arrival.
+
 ## The arrival, in two acts
 
 ### Act 1: the one card, and the rest on the full ramp
@@ -557,3 +617,5 @@ February shows on the 28th in other years.
    chat; interests are the ramp to a goal, not a form up front.
 8. **Superseded from 26 October:** Someday is no longer a first-session screen; it's in the inline
    picker and on the full ramp. Atlas no longer opens with a remark on the avatar or house.
+9. **Invites carry what the inviter knows and a message for Atlas to pass on.** Invited people get
+   their own arrival: the card filled in, Atlas who knows them, the message delivered in his voice.
