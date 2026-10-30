@@ -144,7 +144,7 @@ const ACT_TAGS: Record<string, string[]> = {
   cook: ['stove'], coffee: ['coffee'], shower: ['shower'], bath: ['tub'],
   read: ['seat'], phone: ['seat'], tv: ['seat'],
   workout: ['tread'], lift: ['lift'], stretch: ['stretch'],
-  records: ['records'], arcade: ['arcade'], claw: ['claw'], pinball: ['pinball'], swing: ['swing'], vr: ['vr'], fortune: ['fortune'], gumball: ['gumball'], tiki: ['tiki'], diffuse: ['diffuse'], musicbox: ['musicbox'], glam: ['glam'], zen: ['zen'], plants: ['water'], window: ['window'],
+  hoops: ['hoop'], records: ['records'], arcade: ['arcade'], claw: ['claw'], pinball: ['pinball'], swing: ['swing'], vr: ['vr'], fortune: ['fortune'], gumball: ['gumball'], tiki: ['tiki'], diffuse: ['diffuse'], musicbox: ['musicbox'], glam: ['glam'], zen: ['zen'], plants: ['water'], window: ['window'],
   piano: ['piano'], easel: ['easel'], aquarium: ['aquarium'], guitar: ['guitar'],
   massage: ['massage'], hammock: ['hammock'], jukebox: ['jukebox'], bike: ['bike'],
   boxing: ['boxbag'], stargaze: ['stars'], fire: ['fireside'], swim: ['swim'],
@@ -162,7 +162,7 @@ for (const a of OFFICE_ACTIONS) ACT_TAGS[actionActivity(a)] = [STATIONS[a.statio
 
 const CHOICES = [
   'sleep', 'nap', 'cookeat', 'coffee', 'shower', 'bath', 'read', 'phone', 'tv',
-  'workout', 'stretch', 'records', 'arcade', 'claw', 'pinball', 'swing', 'vr', 'fortune', 'gumball', 'tiki', 'diffuse', 'musicbox', 'glam', 'zen', 'plants', 'piano', 'easel', 'aquarium',
+  'workout', 'stretch', 'hoops', 'records', 'arcade', 'claw', 'pinball', 'swing', 'vr', 'fortune', 'gumball', 'tiki', 'diffuse', 'musicbox', 'glam', 'zen', 'plants', 'piano', 'easel', 'aquarium',
   'guitar', 'massage', 'hammock', 'jukebox', 'bike', 'boxing', 'stargaze', 'fire', 'swim',
   // Everyday life on every floor, chosen even when nothing is urgent.
   'newspaper', 'tend', 'rakeYard', 'yardWorkout', 'phonePace',

@@ -841,6 +841,7 @@ export const CATALOG: CatalogEntry[] = [
   fruitTree('treepalm', 'treepalm', 'Palm tree', 140, ['natural', 'playful', 'warm']),
   fruitTree('treeapple', 'treeapple', 'Apple tree', 130, ['natural', 'cozy', 'playful']),
   outdoor('bench', 'bench', 'Garden bench', 90, ['natural', 'vintage', 'cozy']),
+  outdoor('hoop', 'hoop', 'Basketball hoop', 260, ['playful', 'bold', 'cool']),
   outdoor('garden', 'garden', 'Garden bed', 50, ['natural', 'cozy']),
   seed('seed-flower', 'flower', 'Tulip seeds', 6, 'A packet of tulip seeds. Picked blooms brighten the living room.'),
   seed('seed-fruit', 'fruit', 'Apple seeds', 8, 'A packet of apple seeds. Two meals of fruit when ripe.'),

@@ -3269,6 +3269,25 @@ export function createHouseArt(ctx0, opts = {}) {
       parts: () => [B(0, 0, 0, 1.9, 0.9, 0.35, '#8A6A50'), B(0.05, 0.05, 0.35, 1.8, 0.8, 0.14, '#E8DCC8'), B(0, 0, 0.35, 1.9, 0.12, 0.45, '#7A5E44'), B(1.5, 0.2, 0.49, 0.3, 0.5, 0.1, '#C8D7D1')] },
     snowman: {    
       parts: () => [F(0, 0, 0.6, 0.6, (T) => { const [x, y] = T.P(0.3, 0.3, 0); circle(x, y - 10, 13, '#F4F6F8'); circle(x, y - 30, 10, '#FBFCFD'); circle(x, y - 46, 7.5, '#FFFFFF'); circle(x - 2.5, y - 48, 1.2, '#1B1A1F'); circle(x + 2.5, y - 48, 1.2, '#1B1A1F'); ctx.fillStyle = '#E07A2B'; ctx.beginPath(); ctx.moveTo(x, y - 46); ctx.lineTo(x + 9, y - 44.5); ctx.lineTo(x, y - 44); ctx.fill(); rr(x - 8, y - 56, 16, 3, 1, '#2B2B30'); rr(x - 5, y - 64, 10, 9, 1.5, '#2B2B30'); limb(x - 9, y - 30, x - 20, y - 38, '#6B4A35', 1.5); limb(x + 9, y - 30, x + 20, y - 36, '#6B4A35', 1.5); rr(x - 8, y - 39, 16, 3.5, 1.5, '#C2413A'); })] },
+    hoop: {
+      // A freestanding hoop: a steel pole on a weighted base, a backboard with its square, an arm to a rim, and a net that swings when a ball goes through or hits.
+      parts: () => [F(0, 0, 0.9, 0.8, (T, o, t) => {
+        const kick = hoopKick.get(o.id), age = kick ? t - kick.at : 9, live = age >= 0 && age < 1.6;
+        const sw = live ? Math.sin(age * 22) * Math.exp(-age * 3.2) : 0;
+        T.box(0.2, 0.06, 0, 0.5, 0.4, 0.07, '#3A3F4A'); T.box(0.42, 0.1, 0.07, 0.06, 0.06, 2.12, '#4A4F58');
+        T.box(0.44, 0.14, 2.14, 0.03, 0.3, 0.04, '#4A4F58');
+        T.box(0.05, 0.13, 1.84, 0.8, 0.05, 0.6, '#EEF2F6');
+        T.poly([[0.28, 0.1295, 1.9], [0.62, 0.1295, 1.9], [0.62, 0.1295, 2.2], [0.28, 0.1295, 2.2]], null, '#C2413A', 1.2);
+        T.poly([[0.05, 0.1295, 1.84], [0.85, 0.1295, 1.84], [0.85, 0.1295, 2.44], [0.05, 0.1295, 2.44]], null, '#6B7482', 1.4);
+        const cx = 0.45, cy = 0.5, rr = 0.17, rz = 2.09 + (live && kick && !kick.made ? Math.sin(age * 26) * Math.exp(-age * 5) * 0.025 : 0), N = 12, ring = [];
+        for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2; ring.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz]); }
+        T.line([0.45, 0.17, rz], [0.45, cy - rr, rz], '#C2413A', 2);
+        const net = (k) => { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2; return [[cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz - 0.01], [cx + Math.cos(b) * rr * 0.6 + sw * 0.05, cy + Math.sin(b) * rr * 0.6 + sw * 0.03, rz - 0.3 + (live && kick && kick.made ? 0.02 * Math.sin(age * 18) : 0)]]; };
+        for (let k = 0; k < N; k++) { const [p0, p1] = net(k); T.line(p0, p1, 'rgba(255,255,255,.85)', 0.9); }
+        for (let k = 0; k < N; k++) { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2, f = 0.5, z = rz - 0.15; T.line([cx + Math.cos(a) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(a) * rr * (1 - 0.3 * f), z], [cx + Math.cos(b) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(b) * rr * (1 - 0.3 * f), z], 'rgba(255,255,255,.6)', 0.8); }
+        for (let i = 0; i < N; i++) T.line(ring[i], ring[(i + 1) % N], '#E0572B', 2.2);
+      })],
+    },
     bench: {     
       parts: () => [B(0.1, 0.1, 0, 0.08, 0.08, 0.42, '#5A4A40'), B(1.42, 0.1, 0, 0.08, 0.08, 0.42, '#5A4A40'), B(0, 0.05, 0.42, 1.6, 0.5, 0.06, '#9C6B45', { name: 'seat' }), B(0, 0, 0.48, 1.6, 0.08, 0.42, '#8A5E3B')],
        },
@@ -5031,6 +5050,9 @@ export function createHouseArt(ctx0, opts = {}) {
 
   // Things in hand for an activity, drawn over the arms.
   const PROP_ZOOM = { spoon: 1.5, fork: 1.6, cup: 1.4, phone: 1.5, handset: 1.7, sheet: 1.2, folder: 1.2, knife: 1.5, brush: 1.5, pen: 1.5, comb: 1.5, spatula: 1.4, apple: 1.3, rag: 1.3, can: 1.3, ball: 1.3, roller: 1.2 };
+  let hoopPs = null, curShZ = 0.99;
+  /** The rim and net of each hoop reacting to a ball: when the ball last arrived and whether it went in. */
+  const hoopKick = new Map();
   function drawProps(rig, hand, c, t, hd, local, pass) {
     (rig.props || []).forEach(p => {
       // The guitar's body sits behind the hands that play it; everything else is held in front.
@@ -5065,6 +5087,16 @@ export function createHouseArt(ctx0, opts = {}) {
         case 'parcel': { const a = hand[-1] || h, b = hand[1] || h; rr((a[0] + b[0]) / 2 - 5, (a[1] + b[1]) / 2 - 7, 10, 7, 1, '#C79A5B'); limb((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 7, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, '#E8D2A6', 1); break; }
         case 'cloth': { const a = hand[-1] || h, b = hand[1] || h; ctx.fillStyle = '#9EC5E8'; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(b[0], b[1] + 4 + (p.open || 0) * 4); ctx.lineTo(a[0], a[1] + 4 + (p.open || 0) * 4); ctx.fill(); break; }
         case 'ball': circle(h[0] + 3, h[1] - 6, 2.4, '#E5484D'); break;
+        case 'bball': {
+          // A basketball on its own: placed in the world by its own height, with a shadow on the floor under it.
+          const pos = local([p.f, p.s, p.z - curShZ], 1), gnd = local([p.f, p.s, -curShZ], 1);
+          ell(gnd[0], gnd[1], 3.6 - Math.min(2, p.z * 1.2), 1.5, 'rgba(0,0,0,.25)');
+          circle(pos[0], pos[1], 4.2, '#D9792B'); ctx.strokeStyle = 'rgba(60,25,10,.7)'; ctx.lineWidth = 0.7;
+          ctx.beginPath(); ctx.moveTo(pos[0] - 4.2, pos[1]); ctx.lineTo(pos[0] + 4.2, pos[1]); ctx.moveTo(pos[0], pos[1] - 4.2); ctx.lineTo(pos[0], pos[1] + 4.2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(pos[0], pos[1], 4.2, 0, Math.PI * 2); ctx.stroke();
+          circle(pos[0] - 1.3, pos[1] - 1.4, 1, 'rgba(255,230,190,.5)');
+          break;
+        }
         case 'paper': {
           // A broadsheet held open in both hands; a page lifts when they turn it.
           const a = hand[-1] || h, b = hand[1] || h, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
@@ -5467,7 +5499,20 @@ export function createHouseArt(ctx0, opts = {}) {
     // What this activity looks like right now (null: plain standing/walking).
     const standing = !c.walking && !c.sit && pose === 'stand';
     // Activity clip, or while standing around, an idle fidget now and then.
-    const rig = c.walking ? null : (poseRig(pose, t, c.seed, c.act, c.actMin || 0) || (standing && !c.lookAt ? idleRig(t, c.seed, c.expr) : null));
+    // Shooting hoops: where the rim is from here (forward and sideways from the feet, as the ball is drawn), and how long this round of play has run.
+    let hoopEnv = null;
+    if (pose === 'hoops' && !c.walking) {
+      const hp = hoopPs = poseState(c), key = c.act + '|' + c.slot;
+      if (hp.hoopKey !== key) { hp.hoopKey = key; hp.hoopT0 = t; }
+      const ho = c.slot ? OBJS.find((q) => c.slot.startsWith(q.id + ':')) : null;
+      if (ho) {
+        const [wx, wy] = xf(ho, 0.45, 0.5), vx = wx - c.x, vy = wy - c.y;
+        let ax = -c.face[1], ay = c.face[0];
+        if (iso(c.x + ax, c.y + ay, 0)[0] < iso(c.x, c.y, 0)[0]) { ax = -ax; ay = -ay; }
+        hoopEnv = { clock: t - hp.hoopT0, rim: { f: vx * c.face[0] + vy * c.face[1], s: vx * ax + vy * ay }, hoop: ho.id };
+      }
+    }
+    const rig = c.walking ? null : (poseRig(pose, t, c.seed, c.act, c.actMin || 0, hoopEnv) || (standing && !c.lookAt ? idleRig(t, c.seed, c.expr) : null));
     const bl = pose === 'sleep' ? 1 : blinkAmt(t, c.seed), idle = (!rig || rig.idle) && !c.walking && !c.sit && pose !== 'sleep' && pose !== 'dance';
     const breathe = Math.sin(t * 1.9 + c.seed * 2) * (idle ? 0.012 : 0.005);
     // Walking, the hair swings once a stride, with the feet, not on a clock of its own.
@@ -5490,6 +5535,8 @@ export function createHouseArt(ctx0, opts = {}) {
     const stairs = c.slope || 0;
     const hipZ = (moving ? (0.57 * (1 - pe) + (seat.hip[1] + c.posture.zSeat - 0.0) * pe - c.z) : seat ? seat.hip[1] : 0.62 - 0.05 * amp - (stairs ? 0.06 : 0) - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
     const [dx, dy] = c.face, lean = clip.v.lean + 0.025 * amp + stairs * 0.03 + (moving ? Math.sin(pe * Math.PI) * 0.07 : 0);
+    curShZ = shZ;
+    if (hoopEnv && rig && rig.rim && rig.rim.since > 0 && rig.rim.since < 0.3 && hoopKick.get(hoopEnv.hoop)?.round !== rig.rim.round) hoopKick.set(hoopEnv.hoop, { at: t - rig.rim.since, made: rig.rim.made, round: rig.rim.round });
     const hip = P3(0, 0, hipZ), sh = P3(dx * lean, dy * lean, shZ), hd = P3(dx * lean * 1.25, dy * lean * 1.25, hdZ);
     // A turned head slides a little toward where it looks, as a neck does.
     const nk1 = P3(hdir[0] * 0.06, hdir[1] * 0.06, 0), nk0 = P3(dx * 0.06, dy * 0.06, 0);

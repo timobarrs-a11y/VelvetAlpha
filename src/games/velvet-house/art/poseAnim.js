@@ -31,7 +31,7 @@ function pulse(t, period, on, phase = 0) {
  *   talk: bool      mouth moves (phone calls)
  *   props: [{ kind, side, ...}]  things in hand, drawn after the arms
  */
-export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
+export function poseRig(pose, t, seed = 0, act = null, actMin = 0, env = null) {
   const ph = seed * 3.7;
   // An activity can have its own clip on top of the pose it shares with others
   // (piano and the bike both sit like the desk, but don't look like typing).
@@ -312,6 +312,7 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
         props: [{ kind: 'handset', side: 1 }].concat(note ? [{ kind: 'pen', side: -1 }] : []),
       };
     }
+    case 'hoops': return hoopsRig(t, ph, env ? { ...env, seed } : { seed });
     // Poses that belong to one activity each: the activity's own clip.
     case 'jacks': return ACT_CLIPS.yardWorkout(t, ph);
     case 'snack': return ACT_CLIPS.snack(t, ph);
@@ -320,6 +321,116 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
     default:
       return null;
   }
+}
+
+// ---- Shooting hoops: a choreography with a ball that has its own motion ----
+// One cycle is a round of play: dribble, gather, aim, shoot, watch the ball, a made basket (fist pump) or a miss (shrug), fetch the rebound, pick it up.
+// The ball is not in anyone's hand for most of it: it bounces, flies and rolls by its own simple physics, and the body reacts to where it is.
+export const HOOPS = { cycle: 6.0, release: 2.65, flight: 0.95, shoulder: 0.99, rimZ: 2.09, rim: { f: 1.8, s: 0 } };
+const mixN = (a, b, k) => a + (b - a) * k;
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+const sstep = (a, b, v) => { const k = clamp01((v - a) / (b - a)); return k * k * (3 - 2 * k); };
+const hash01 = (n, seed) => { const v = Math.sin(n * 12.9898 + seed * 78.233) * 43758.5453; return v - Math.floor(v); };
+
+/** Where the ball is, in the shooter's frame (forward from the feet, sideways, height above the floor), `s` seconds into a round, and whether the shot goes in. */
+export function hoopBall(s, made, rim = HOOPS.rim, rimZ = HOOPS.rimZ, kick = 0.5) {
+  const HAND = [0.3, 0.15], REL = HOOPS.release, T = HOOPS.flight, end = REL + T;
+  if (s < 1.8) {
+    // Dribble: down on the floor and back up to the hand every 0.6 s.
+    const u = (s % 0.6) / 0.6;
+    return { f: HAND[0], s: HAND[1], z: 0.1 + 0.52 * Math.abs(Math.cos(Math.PI * u)), phase: 'dribble' };
+  }
+  if (s < 2.4) {
+    // Gather: from the hand up through the chest to above the head.
+    const k = sstep(1.8, 2.4, s);
+    return { f: mixN(HAND[0], 0.18, k), s: mixN(HAND[1], 0.04, k), z: mixN(0.62, 1.5, k), phase: 'gather' };
+  }
+  if (s < REL) {
+    const k = sstep(2.4, REL, s);
+    return { f: mixN(0.18, 0.32, k), s: mixN(0.04, 0, k), z: mixN(1.5, 1.78, k), phase: 'shoot' };
+  }
+  if (s < end) {
+    // In the air: a straight run to the rim and an arc over it.
+    const u = (s - REL) / T, f0 = 0.32, z0 = 1.78;
+    return { f: mixN(f0, rim.f, u), s: mixN(0, rim.s, u), z: mixN(z0, rimZ, u) + 4 * 0.5 * u * (1 - u), phase: 'flight' };
+  }
+  const t = s - end;
+  if (made) {
+    // Through the net and down: it drops from the rim, bounces, and rolls back toward the shooter.
+    const g = 20, fall = Math.sqrt((2 * rimZ) / g);
+    if (t < fall) return { f: rim.f, s: rim.s, z: rimZ - 0.5 * g * t * t, phase: 'net' };
+    return bounceBack(t - fall, rim.f, rim.s, 0, HAND, 0.55);
+  }
+  // A miss: off the rim, up and away to one side, down, bounce, roll back.
+  const side = kick, up = 0.34;
+  if (t < 0.34) {
+    const k = t / 0.34;
+    return { f: mixN(rim.f, rim.f - 0.3, k), s: mixN(rim.s, rim.s + side, k), z: rimZ + up * 4 * k * (1 - k) * 0.9 + (1 - k) * 0.02, phase: 'rim' };
+  }
+  const g = 20, z0 = rimZ + 0.02, fall = Math.sqrt((2 * z0) / g), t2 = t - 0.34;
+  if (t2 < fall) return { f: mixN(rim.f - 0.3, rim.f - 0.55, t2 / fall), s: mixN(rim.s + side, rim.s + side * 1.2, t2 / fall), z: z0 - 0.5 * g * t2 * t2, phase: 'rim' };
+  return bounceBack(t2 - fall, rim.f - 0.55, rim.s + side * 1.2, 0, HAND, 0.5);
+}
+/** After the first bounce: a few smaller bounces while it rolls to the shooter's feet (taking about 1.5 s). */
+function bounceBack(t, f0, s0, _z, HAND, e) {
+  const roll = 1.45, k = Math.min(1, t / roll), ease = k * (2 - k);
+  let h = 0.55 * e, per = 0.45, tt = t, z = 0;
+  for (let i = 0; i < 6; i++) { if (tt < per) { const u = tt / per; z = h * 4 * u * (1 - u); break; } tt -= per; h *= 0.5; per *= 0.7; z = 0; }
+  return { f: mixN(f0, HAND[0], ease), s: mixN(s0, HAND[1], ease), z: 0.09 + z, phase: 'return' };
+}
+
+function hoopsRig(t, ph, env) {
+  const P = HOOPS.cycle, SH = HOOPS.shoulder, e = env || {};
+  const clock = (e.clock ?? t) + ph, n = Math.floor(clock / P), s = clock - n * P;
+  const rim = e.rim || HOOPS.rim, rimZ = e.rimZ ?? HOOPS.rimZ, seed = e.seed ?? 0;
+  const made = hash01(n, seed) < 0.62;
+  const ball = hoopBall(s, made, rim, rimZ, hash01(n + 0.5, seed) < 0.5 ? -0.5 : 0.5);
+  const REL = HOOPS.release, END = REL + HOOPS.flight;
+  // The hands follow the ball while it is theirs; otherwise each beat has its own.
+  let hands = { 1: [0.3, 0.17, -0.3], [-1]: [0.12, 0.14, -0.3] }, lean = 0.02, drop = 0, nod = 0, lookUp = false, headDown = false, bob = 0;
+  if (ball.phase === 'dribble') {
+    const u = (s % 0.6) / 0.6;
+    hands = { 1: [0.3, 0.17, ball.z + 0.1 - SH], [-1]: [0.16, 0.14, -0.34] };
+    lean = 0.04; headDown = true; bob = Math.sin(Math.PI * u * 2) * 0.012;
+  } else if (ball.phase === 'gather') {
+    const k = sstep(1.8, 2.4, s);
+    hands = { 1: [ball.f + 0.04, ball.s - 0.08, ball.z - SH + 0.02], [-1]: [ball.f + 0.04, ball.s + 0.1, ball.z - SH - 0.02] };
+    drop = 0.09 * k; lean = mixN(0.04, -0.02, k); lookUp = k > 0.5; nod = 0.02 * k;
+  } else if (ball.phase === 'shoot' || (s >= REL && s < REL + 0.35)) {
+    // The legs straighten, the arms go up, the wrist flicks, and the hands stay up after the ball is gone.
+    const k = sstep(2.4, REL, s), after = clamp01((s - REL) / 0.3);
+    const up = s < REL ? ball.z - SH : 1.82 - SH + 0.06 * Math.sin(after * Math.PI);
+    hands = { 1: [mixN(ball.f, 0.34, after), ball.s - 0.05, up], [-1]: [mixN(ball.f, 0.26, after), ball.s + 0.1 - after * 0.06, s < REL - 0.1 ? up - 0.02 : up - 0.1] };
+    drop = 0.09 * (1 - k) - 0.02 * after; lean = mixN(-0.02, 0.03, k); lookUp = true; nod = 0.03; bob = 0.03 * k * (1 - after);
+  } else if (s < END) {
+    // Watching it fly, the shooting hand held up.
+    hands = { 1: [0.34, 0.05, 1.8 - SH + 0.02], [-1]: [0.24, 0.1, 1.45 - SH] }; lookUp = true; nod = 0.03; lean = 0.02;
+  } else if (s < END + 1.5) {
+    const k = (s - END) / 1.5, kf = Math.sin(clamp01(k) * Math.PI);
+    if (made) {
+      // Made it: the fist goes up twice and the body hops a little.
+      const pump = Math.abs(Math.sin(k * Math.PI * 2.2));
+      hands = { 1: [0.14, 0.26, 0.3 + 0.35 * pump - 0.1], [-1]: [0.12, 0.16, -0.28 + 0.05 * pump] };
+      bob = Math.abs(Math.sin(k * Math.PI * 4)) * 0.05 * (1 - k * 0.4); lookUp = true; nod = 0.02; lean = 0.01;
+    } else {
+      // A miss: both hands out, palms up, and a shake of the head.
+      hands = { 1: [0.2, 0.3 + 0.06 * kf, -0.22 + 0.1 * kf], [-1]: [0.2, 0.3 + 0.06 * kf, -0.22 + 0.1 * kf] };
+      nod = -0.02; lean = -0.02 - 0.02 * kf; headDown = k > 0.5;
+    }
+  } else if (s < P - 0.7) {
+    // Waiting for the ball to roll back.
+    hands = { 1: [0.14, 0.15, -0.34], [-1]: [0.14, 0.15, -0.34] }; headDown = true; lean = 0.03;
+  } else if (s < P - 0.2) {
+    // Bending for the ball, then up with it.
+    const k = sstep(P - 0.7, P - 0.45, s) * (1 - sstep(P - 0.45, P - 0.2, s));
+    hands = { 1: [0.3, 0.15, ball.z - SH + 0.03], [-1]: [0.3, 0.2, ball.z - SH + 0.03] }; drop = 0.12 * k; lean = 0.03 + 0.1 * k; headDown = true;
+  } else {
+    hands = { 1: [0.3, 0.17, ball.z + 0.1 - SH], [-1]: [0.16, 0.14, -0.34] }; lean = 0.04; headDown = true;
+  }
+  const rig = { hands, lean, drop, nod, bob, lookUp, headDown, snap: true, props: [{ kind: 'bball', f: ball.f, s: ball.s, z: ball.z }] };
+  // The rim reacts: when the ball arrives at it, once per round, whether it went in.
+  rig.rim = { since: s - END, made, round: n };
+  return rig;
 }
 
 /**
@@ -548,7 +659,7 @@ export const ANIMATED_POSES = [
   'cook', 'eat', 'eatOut', 'sip', 'shower', 'read', 'phone', 'tv', 'run', 'lift', 'stretch', 'switch',
   'reach', 'listen', 'arcade', 'desk', 'water', 'mop', 'pet', 'play', 'mow', 'swim', 'roll', 'wipe',
   'jacks', 'snack', 'meditate', 'jumprope',
-  'operate', 'dispense', 'board', 'files', 'talk', 'sittalk', 'handset', 'deskcall',
+  'operate', 'dispense', 'board', 'files', 'talk', 'sittalk', 'handset', 'deskcall', 'hoops',
 ];
 
 export { TAU };
