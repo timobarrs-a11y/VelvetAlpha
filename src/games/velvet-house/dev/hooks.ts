@@ -3,7 +3,7 @@ import { checkPlacement } from '../state/arrange';
 import { CATALOG } from '../state/catalog';
 import { checkLamp, type WallLamp } from '../state/wallLamps';
 import { ACTIVITIES } from '../state/activities';
-import { isWalking, poseOf, startGoto, startChain } from '../state/agents';
+import { isWalking, poseOf, startGoto, startChain, tickAgent } from '../state/agents';
 import { bossLeave } from '../state/boss';
 import { type SampleFn } from '../state/companionAI';
 import { MARKS } from '../content/marks';
@@ -33,6 +33,12 @@ export function installDevHooks(g: Game): void {
       },
       // Change the pose of the activity someone is doing right now (so a seated person can be shown on the phone).
       swapPose: (who: 'jordan' | 'maya', pose: string) => { const p = who === 'maya' ? people[1] : people[0], a = p.task && (ACTIVITIES as Record<string, { pose: string }>)[p.task.act]; if (a) a.pose = pose; },
+      // The animation lab: pause the game, then move one person's task on by `sec` seconds at a time, to look at a sit, a stand or any activity frame by frame.
+      stepAgent: (who: 'jordan' | 'maya', sec: number, gameMin = sec / 60) => {
+        const p = who === 'maya' ? people[1] : people[0], o = who === 'maya' ? people[0] : people[1];
+        p.scripted = true; view.paused = true;
+        tickAgent(g.house, p, o, sec, gameMin, 1, world.minutes / 60, () => 0.5);
+      },
       // The gait lab: freeze the game, put someone in a walk and move them a little at a time, so a stride can be looked at frame by frame.
       gaitStep: (who: 'jordan' | 'maya', dx: number, dy: number) => {
         const p = who === 'maya' ? people[1] : people[0];

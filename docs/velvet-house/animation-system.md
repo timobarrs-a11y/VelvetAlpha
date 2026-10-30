@@ -1,6 +1,6 @@
 # Animation system: plan (the foundation for bespoke items, the story and visiting)
 
-*Planning note. Section 2 is the audit it starts from. Built so far: the walk fix (section 2a). Everything else is planned.*
+*Planning note. Section 2 is the audit it starts from. Built so far: the walk fix (2a) and sit down and get up (2b). Everything else is planned.*
 
 **The director's goal:** a game that separates itself from The Sims and Animal Crossing, which have a million items but rarely a *new animation* for a new item.
 New items arrive with their own memorable animation (the swing set because you want to see the swing; the basketball hoop because you want to shoot). So the
@@ -50,6 +50,11 @@ Captured frame by frame (a person moved a fixed step per frame, so the stride is
 
 - **The stride was tiny and fast.** One full cycle was 0.68 tiles with a foot reach of 0.17, on a 1.2 tile tall person at 1.5 tiles a second: about 4.4 steps a second, each a few centimetres. Now the cycle is 1.1, the reach 0.27 and the lift 0.085 (a real step), the hips settle lower at full stride and rise over the planted leg a little more, and the walk is 1.3 tiles a second (`WALK_SPEED`): about 2.4 steps a second.
 - **The arms went back as far as forward** (32 degrees each way, a march). Now they hang slightly forward and swing about 12 degrees back and 22 forward, with the elbow a little softer (`walkRig`). The walk tests encode both limits.
+
+### 2b. Sitting down and getting up (built)
+
+`Agent.posture` (`state/agents.ts`): on arriving at a seat the body is moved from the stand spot to the seat over 0.75 s (0.6 s to get up), position first and height a beat later (hips over the seat, then down), eased in and out. The activity clock waits for it. Getting up is the same motion backwards, and is skipped when the next act uses the same seat (the plate, then the coffee at the table). The art (`houseArt.js`) blends the hips from standing to seat height with the feet kept on the floor and the knees bending by the leg solver, and leans the body in over the move. Beds and lying are not covered yet (they still jump); the swing, hammock and bench will use the same posture state.
+Dev: `__velvet.stepAgent(who, seconds, gameMin)` advances one person's task in fixed steps with the game paused, so a motion is judged frame by frame.
 
 ## Decisions (from the director)
 
