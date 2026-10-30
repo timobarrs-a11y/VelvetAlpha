@@ -217,29 +217,6 @@ float ambientOcclusion(vec3 P, vec3 N, int m, vec2 s, float jit) {
   return a * (1.0 - 0.55 * clamp(occ / float(max(uAoSteps, 1)) * 2.0, 0.0, 1.0));
 }
 
-// Soft contact shadow on floors and the ground: a fixed ring of taps around the point (no jitter, so no grain) finds anything
-// standing within reach and darkens the floor under it, deepest at the foot and fading out over about half a tile.
-float contactShadow(vec3 P, vec3 N, int m) {
-  if (N.z < 0.5 || m == 3 || m == 4) return 1.0;
-  float occ = 0.0, wsum = 0.0;
-  for (int i = 0; i < 16; i++) {
-    float ang = float(i) * 2.3999632;
-    float r = 0.08 + 0.42 * sqrt((float(i) + 0.5) / 16.0);
-    vec2 q = toScreen(P + vec3(cos(ang) * r, sin(ang) * r, 0.0));
-    float w = 1.0 - r * 1.4;
-    wsum += w;
-    if (!onScreen(q)) continue;
-    vec4 d = dataAt(q);
-    if (d.a < 0.5) continue;
-    float h = d.r * uZMax - P.z;
-    if (h < 0.03) continue;
-    vec3 H = fromScreen(q, d.r * uZMax);
-    float hd = length(H.xy - P.xy);
-    occ += w * smoothstep(0.03, 0.35, h) * (1.0 - smoothstep(0.05, 0.55, hd));
-  }
-  return 1.0 - 0.5 * clamp(occ / wsum * 2.2, 0.0, 1.0);
-}
-
 float sunAt(vec3 P, vec3 N, int m, float jit) {
   float tHit = 3.0;
   float wm = uOut == 1 ? 1.0 : winMask(P, uSunDir, tHit);
@@ -266,7 +243,7 @@ void main() {
     if (m == 3) { outColor = vec4(1.0); return; }
     // outdoors the sky only fills shade; direct sun supplies the rest so cast shadows read
     if (uOut == 1) base *= mix(1.0, 0.68, uDay * (1.0 - uRain * 0.6));
-    vec3 light = base * ambientOcclusion(P, N, m, s, jit) * contactShadow(P, N, m);
+    vec3 light = base * ambientOcclusion(P, N, m, s, jit);
     for (int i = 0; i < MAXL; i++) {
       if (i >= uCount) break;
       vec3 Lv = uLP[i].xyz - Pn;

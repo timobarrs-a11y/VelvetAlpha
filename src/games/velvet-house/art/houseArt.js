@@ -4955,6 +4955,25 @@ export function createHouseArt(ctx0, opts = {}) {
       items.push({ x1: rect[0], y1: rect[1], x2: rect[2], y2: rect[3], key, d: bouncy(o, draw) });
     });
   }
+  /**
+   * Contact shadows: every piece that stands on the floor darkens the floor under and just around its footprint, deepest at the
+   * middle and softening outward, so it sits on the floor instead of floating over it. Drawn on the floor, before the pieces.
+   */
+  function contactShadows(level) {
+    const out = isOutdoor(level);
+    OBJS.forEach(o => {
+      const t = TYPES[o.type];
+      if (o.level !== level || !t || t.mount || o.on || (t.h || 0) < 0.15) return;
+      // Most pieces touch the floor across their footprint; a hoop only at its base and a tree only at its trunk.
+      const r = o.type.startsWith('hoop') ? [0.2, 0.06, 1.0, 0.5] : o.type.startsWith('tree') ? [t.W / 2 - 0.16, t.D / 2 - 0.16, t.W / 2 + 0.16, t.D / 2 + 0.16] : [0, 0, t.W, t.D];
+      const [x1, y1, x2, y2] = xrect(o, r);
+      const sz = Math.min(Math.abs(x2 - x1), Math.abs(y2 - y1)), step = Math.min(0.04, sz * 0.07); // a small piece keeps a small shadow
+      for (let k = 0; k < 6; k++) {
+        const e = -step * 1.25 + k * step, z = 0.003;
+        poly([[x1 - e, y1 - e, z], [x2 + e, y1 - e, z], [x2 + e, y2 + e, z], [x1 - e, y2 + e, z]], out ? 'rgba(8,22,6,.15)' : 'rgba(22,12,4,.15)');
+      }
+    });
+  }
   function decals(level, t) { OBJS.forEach(o => { if (o.level !== level) return; const T = makeT(o); T_OF(o).parts(o).forEach(p => { if (p.decal) p.fn(T, o, t); }); }); }
   function wallItems(level, items) {
     const c = wallTone(level), top = shade(c, -0.3), side = c.startsWith('#') ? c : '#E9DCCB';
@@ -6207,7 +6226,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const deferred = !!(G && opts.deferredLights && opts.deferredLights()) && tier() !== 'low';
     if (deferred) { G.begin(W, H, Math.min((cv.width / W) * (tier() === 'high' ? 0.75 : 0.5), 1600 / W)); ctx = G.wrap(ctx0); gOn = true; }
     try {
-    drawWalls(lv); drawFloor(lv); decals(lv, t); drawFloorDirt(lv); drawStarfield(lv, t);
+    drawWalls(lv); drawFloor(lv); decals(lv, t); contactShadows(lv); drawFloorDirt(lv); drawStarfield(lv, t);
     const items = [];
     wallItemsFull(lv, items);
     OBJS.forEach(o => { if (o.level === lv && TYPES[o.type] && !(arr.hold && arr.hold === o)) objItems(o, items, t); });
