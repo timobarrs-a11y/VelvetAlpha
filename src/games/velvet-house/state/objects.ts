@@ -365,6 +365,14 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   tvflat: { W: 1.0, D: 0.26, h: 0.72, small: true, name: 'Flat-screen TV', store: true, screen: [0.5, 0.15, 0.42] },
   tvdesk: { W: 0.52, D: 0.2, h: 0.44, small: true, name: 'Desk TV', store: true, cols: ['#2B2B30', '#F2EEE8', '#C2413A'], screen: [0.26, 0.11, 0.27] },
   tvtube: { W: 0.6, D: 0.4, h: 0.58, small: true, name: 'Tube TV', store: true, cols: ['#8A5E3B', '#E4DDD2', '#2B2B30'], screen: [0.25, 0.4, 0.27] },
+  // Five more ways to watch: a tube TV on a table of its own and one on a shelf bolted to the wall (a CRT set is deep and heavy, so it
+  // wants a table or a shelf of its own), a TV that is a framed picture until it is switched on, a wide cinema screen with a soundbar, and a
+  // slim screen on a floor stand with shelves for the console and the soundbar. The wall ones hang like the wall-mounted TV; the others stand.
+  crttable: { W: 1.1, D: 0.6, h: 1.12, name: 'CRT TV table', store: true, cols: ['#8A5E3B', '#E4DDD2', '#2B2B30'], screen: [0.55, 0.42, 0.88] },
+  crtwall: { W: 0.8, D: 0.55, h: 0.8, mount: 0.74, blocks: [], name: 'Wall shelf CRT', store: true, cols: ['#8A5E3B', '#E4DDD2', '#2B2B30'], screen: [0.4, 0.5, 1.2] },
+  frametv: { W: 1.5, D: 0.08, h: 1.0, mount: 0.85, blocks: [], name: 'Frame TV', store: true, cols: ['#3A2E2A', '#C9A24A', '#F2EEE8'], screen: [0.75, 0.08, 1.32] },
+  cinematv: { W: 2.2, D: 0.14, h: 1.3, mount: 0.84, blocks: [], name: 'Cinema wall TV', store: true, screen: [1.1, 0.1, 1.55] },
+  floortv: { W: 1.3, D: 0.45, h: 1.35, name: 'Floor-stand TV', store: true, cols: ['#2B2B30', '#E4DDD2', '#9C6B45'], screen: [0.65, 0.2, 0.92] },
   entcenter: { wall: true, W: 2.4, D: 0.55, h: 2.0, name: 'Entertainment center', store: true, cols: ['#9C6B45', '#2B2B30', '#E4DDD2'], surface: { z: 0.62, rect: [0.56, 0.04, 1.84, 0.5] } },
 };
 

@@ -48,6 +48,15 @@ to be part of the living room's back wall (a `tv` feature in `state/house.ts`); 
   The TV unit, the media console, the desk, the dresser and the new **entertainment center** (`entcenter`: shelf
   towers round a niche) have tops for them. A TV bought in the shop goes on a free stand on that floor
   (`setOnStand`: the TV unit first, then the entertainment center, a dresser, a desk), else on the floor.
+- **Five more ways to watch** (`crttable`, `crtwall`, `frametv`, `cinematv`, `floortv`; none is `small`, so none goes on a
+  stand). Two have a tube: a **CRT TV table** stands on the floor (a wooden top on four legs, a shelf with a video
+  player under it) and a **wall shelf CRT** hangs (a thick shelf on two iron brackets, the set pushed back to the wall).
+  Two more hang: a **Frame TV** (a wooden frame and a white mat round a painting while it is off, a screen when it is on)
+  and a **cinema wall TV** (wide, with a soundbar under it). The **floor-stand TV** stands on two uprights with two
+  shelves for a console and a soundbar. Hung ones cannot share a bit of wall (`checkPlacement`: "already hangs there"),
+  so a second one finds the next free spot; the standing ones take floor space like any piece. They are drawn in
+  `art/houseArt.js` (`TV_DRAWERS`, with the shared tube set `crtSet` and `sortedBoxes`, which draws a piece's boxes far
+  to near for any turn) and sold in the Furniture tab.
 - **Watching** (`tv` activity, `screen: true`): from a seat on any floor with a TV, the nearer the seat to one the
   better; with no TV in the house, nobody watches. The world knows where the TVs are (`HouseWorld.screens`).
 - **On and off:** tapping a TV switches it; tapping the TV unit, the console or the entertainment center switches the
