@@ -3,7 +3,7 @@ import { checkPlacement } from '../state/arrange';
 import { CATALOG } from '../state/catalog';
 import { checkLamp, type WallLamp } from '../state/wallLamps';
 import { ACTIVITIES } from '../state/activities';
-import { isWalking, poseOf, startGoto, startChain } from '../state/agents';
+import { isWalking, poseOf, startGoto, startChain, tickAgent } from '../state/agents';
 import { bossLeave } from '../state/boss';
 import { type SampleFn } from '../state/companionAI';
 import { MARKS } from '../content/marks';
@@ -16,8 +16,11 @@ export function installDevHooks(g: Game): void {
   if (isDev) {
     (window as unknown as { __velvet?: Record<string, unknown> }).__velvet = {
       setView: (lv: number) => g.setLevel(lv),
+      setRot: (r: number) => { view.rot = r; },
+      hoopProbe: (id: string) => art.hoopProbe(id),
+      setWeather: (w: 'auto' | 'rain' | 'snow' | 'clear') => { g.flags.weatherOverride = w; },
       // Put a piece in the house (a test for new furniture).
-      addObject: (type: string, level: number, x: number, y: number, col?: string, rot = 0) => { world.objs.push({ id: `t-${type}-${world.objs.length}`, type, level, x, y, rot, ...(col ? { col } : {}) }); },
+      addObject: (type: string, level: number, x: number, y: number, col?: string, rot = 0) => { world.objs.push({ id: `t-${type}-${world.objs.length}`, type, level, x, y, rot, ...(col ? { col } : {}) }); g.relearnLayout(world.objs[world.objs.length - 1]); },
       // Send someone somewhere (a test for the stairs).
       goto: (who: 'jordan' | 'maya', level: number, x: number, y: number) => { const p = who === 'maya' ? people[1] : people[0]; p.scripted = true; startGoto(g.house, p, { level, x, y }); },
       setMinutes: (m: number) => { world.minutes = m; },
@@ -33,6 +36,24 @@ export function installDevHooks(g: Game): void {
       },
       // Change the pose of the activity someone is doing right now (so a seated person can be shown on the phone).
       swapPose: (who: 'jordan' | 'maya', pose: string) => { const p = who === 'maya' ? people[1] : people[0], a = p.task && (ACTIVITIES as Record<string, { pose: string }>)[p.task.act]; if (a) a.pose = pose; },
+      // The animation lab: pause the game, then move one person's task on by `sec` seconds at a time, to look at a sit, a stand or any activity frame by frame.
+      stepAgent: (who: 'jordan' | 'maya', sec: number, gameMin = sec / 60) => {
+        const p = who === 'maya' ? people[1] : people[0], o = who === 'maya' ? people[0] : people[1];
+        p.scripted = true; view.paused = true;
+        tickAgent(g.house, p, o, sec, gameMin, 1, world.minutes / 60, () => 0.5);
+      },
+      // The clock lab: pause the game and set the animation clock, to look at a motion at exact moments (a ball's flight, a net's reaction).
+      setT: (t: number) => { view.paused = true; view.t = t; },
+      getT: () => view.t,
+      // The gait lab: freeze the game, put someone in a walk and move them a little at a time, so a stride can be looked at frame by frame.
+      gaitStep: (who: 'jordan' | 'maya', dx: number, dy: number) => {
+        const p = who === 'maya' ? people[1] : people[0];
+        p.scripted = true;
+        if (!view.paused) view.paused = true;
+        if (!p.task || p.task.phase !== 'walk') p.task = { act: 'goto', slot: null, phase: 'walk', route: [], time: 0, dur: 1e9, next: [] } as never;
+        const d = Math.hypot(dx, dy) || 1;
+        p.x += dx; p.y += dy; p.face = [dx / d, dy / d];
+      },
       bossLeave: (minutes = 8) => { const d = people.find((q) => q.id === 'dale'); if (d) bossLeave(g.house, d, world.day * 1440 + world.minutes, minutes); },
       startChain: (who: 'jordan' | 'maya', chain: string) => { const p = who === 'maya' ? people[1] : people[0]; p.scripted = true; return startChain(g.house, p, chain, null, () => Math.random()); },
       // The office: unlock it (it joins the floor bar), and light or clear the meeting-room sign.

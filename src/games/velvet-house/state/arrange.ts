@@ -80,6 +80,12 @@ export function checkPlacement(objs: ObjectInstance[], held: ObjectInstance, peo
   }
   const mine = rectsOf(held);
   if (isMount(held.type) && !backToWall(held)) return { ok: false, reason: `The ${(TYPES[held.type].name ?? 'piece').toLowerCase()} hangs on a wall: put its back against one.` };
+  // Two hung pieces cannot take the same bit of wall (a mounted TV hangs over what stands below it, but not over another mounted one).
+  if (isMount(held.type)) {
+    const spot = (q: ObjectInstance): Rect => { const [w, d] = footprint(q); return [q.x, q.y, q.x + w, q.y + d]; };
+    const other = objs.find((q) => q !== held && !q.on && q.level === held.level && TYPES[q.type] && isMount(q.type) && overlaps(spot(held), spot(q)));
+    if (other) return { ok: false, reason: `The ${(TYPES[other.type].name ?? 'piece').toLowerCase()} already hangs there.` };
+  }
   // Rugs lie under everything and hung pieces over it; everything else needs its own floor space.
   if (!isRug(held.type) && !isMount(held.type)) {
     for (const o of objs) {

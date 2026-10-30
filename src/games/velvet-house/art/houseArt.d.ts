@@ -16,6 +16,8 @@ export interface PersonFrame {
   pose: string;
   walking: boolean;
   sit: boolean;
+  /** Lowering into a seat or getting up: which way, how far through (0 standing, 1 seated) and the seat's height; the body is moved between the stand spot and the seat. */
+  posture?: { dir: 'sit' | 'stand'; k: number; zSeat: number };
   hidden: boolean;
   seed: number;
   /** The activity in progress (e.g. 'piano'), for clips beyond the shared pose. */
@@ -141,6 +143,8 @@ export interface HouseArt {
   setDim(amount: number): void;
   /** Where a world point lands in view coordinates (follows the current rotation). */
   project(x: number, y: number, z?: number): [number, number];
+  /** Dev: where a hoop's board, red square and ring land on screen (for checking proportions). */
+  hoopProbe(id: string): Record<string, [number, number]> | null;
   /** The world point (x, y on the floor) under a view coordinate; the opposite of project, following the rotation. */
   unproject(sx: number, sy: number): [number, number];
   /** The piece of furniture at a view point on a floor, front-most, optionally only among `ids`. */

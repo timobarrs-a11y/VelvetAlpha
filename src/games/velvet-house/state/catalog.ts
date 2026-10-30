@@ -441,6 +441,12 @@ export const CATALOG: CatalogEntry[] = [
   furn('tvdesk', 'tvdesk', 'Desk TV', 120, ['playful', 'modern'], ['#2B2B30', '#F2EEE8', '#C2413A']),
   furn('tvtube', 'tvtube', 'Tube TV', 90, ['vintage', 'playful', 'cozy'], ['#8A5E3B', '#E4DDD2', '#2B2B30']),
   furn('entcenter', 'entcenter', 'Entertainment center', 450, ['cozy', 'natural', 'vintage'], ['#9C6B45', '#2B2B30', '#E4DDD2']),
+  // Five more: two with a tube, two for the wall, one on the floor.
+  furn('crttable', 'crttable', 'CRT TV table', 160, ['vintage', 'playful', 'cozy'], ['#8A5E3B', '#E4DDD2', '#2B2B30']),
+  furn('crtwall', 'crtwall', 'Wall shelf CRT', 180, ['vintage', 'playful', 'industrial'], ['#8A5E3B', '#E4DDD2', '#2B2B30']),
+  furn('frametv', 'frametv', 'Frame TV', 520, ['modern', 'luxe', 'minimal'], ['#3A2E2A', '#C9A24A', '#F2EEE8']),
+  furn('cinematv', 'cinematv', 'Cinema wall TV', 640, ['modern', 'bold', 'cool']),
+  furn('floortv', 'floortv', 'Floor-stand TV', 340, ['modern', 'minimal', 'industrial'], ['#2B2B30', '#E4DDD2', '#9C6B45']),
 
   // Models: other shapes of a piece the house has, each with looks drawn for its own shape. One takes the place of
   // the piece it stands in for (the fridge stays in its corner of the kitchen), so mixing models changes the room.
@@ -841,6 +847,7 @@ export const CATALOG: CatalogEntry[] = [
   fruitTree('treepalm', 'treepalm', 'Palm tree', 140, ['natural', 'playful', 'warm']),
   fruitTree('treeapple', 'treeapple', 'Apple tree', 130, ['natural', 'cozy', 'playful']),
   outdoor('bench', 'bench', 'Garden bench', 90, ['natural', 'vintage', 'cozy']),
+  outdoor('hoop', 'hoop', 'Basketball hoop', 260, ['playful', 'bold', 'cool']),
   outdoor('garden', 'garden', 'Garden bed', 50, ['natural', 'cozy']),
   seed('seed-flower', 'flower', 'Tulip seeds', 6, 'A packet of tulip seeds. Picked blooms brighten the living room.'),
   seed('seed-fruit', 'fruit', 'Apple seeds', 8, 'A packet of apple seeds. Two meals of fruit when ripe.'),

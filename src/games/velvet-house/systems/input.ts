@@ -92,10 +92,10 @@ export function createInput(g: Game): void {
       const [a, b] = [...touches.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
       g.zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinchFrom);
       pinchFrom = d; g.s.suppressClick = true;
-    } else if (dragFrom && cam.tz > 1.01) {
+    } else if (dragFrom && cam.tz * g.fillScale() > 1.01) {
       const dx = e.clientX - dragFrom.x, dy = e.clientY - dragFrom.y;
       if (Math.hypot(dx, dy) > 6) {
-        const rect = canvas.getBoundingClientRect(), k = VIEW_W / rect.width / cam.tz;
+        const rect = canvas.getBoundingClientRect(), k = VIEW_W / rect.width / (cam.tz * g.fillScale());
         if (view.follow) g.toggleFollow(view.follow);
         cam.tfx = dragFrom.fx - dx * k; cam.tfy = dragFrom.fy - dy * k;
         g.s.suppressClick = true;
@@ -112,7 +112,7 @@ export function createInput(g: Game): void {
     if (touches.size < 2) pinchFrom = 0;
     if (touches.size === 0) {
       if (dragFrom && lastMove && performance.now() - lastMove.t < 80) {
-        const k = VIEW_W / canvas.getBoundingClientRect().width / cam.tz;
+        const k = VIEW_W / canvas.getBoundingClientRect().width / (cam.tz * g.fillScale());
         g.flingCamera(-lastMove.vx * k, -lastMove.vy * k);
       }
       dragFrom = null;

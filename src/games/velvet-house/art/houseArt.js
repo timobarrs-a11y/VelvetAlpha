@@ -2630,6 +2630,88 @@ export function createHouseArt(ctx0, opts = {}) {
       T.line([0.3, 0.2, 0.49], [0.12, 0.12, 0.84], '#9AA0A6', 1.3); T.line([0.3, 0.2, 0.49], [0.5, 0.26, 0.86], '#9AA0A6', 1.3);
     },
   };
+  // ---- Five more TVs: two with a tube (on a table, and on a shelf bolted to the wall), a framed one, a cinema screen and one on a floor stand ----
+  // A tube TV, scaled by `k` and set at (ox, oy, oz): a deep cabinet, knobs and a grille beside the glass, rabbit ears on top.
+  function crtSet(T, o, ox, oy, oz, k, body) {
+    const X = (x) => ox + x * k, Y = (y) => oy + y * k, Z = (z) => oz + z * k, fy = Y(0.4) + 0.002;
+    T.box(X(0), Y(0), Z(0), 0.6 * k, 0.4 * k, 0.48 * k, body);
+    T.box(X(0.08), Y(0.4), Z(0.06), 0.04 * k, 0.04 * k, 0.36 * k, shade(body, -0.18));
+    T.poly([[X(0.03), fy, Z(0.05)], [X(0.46), fy, Z(0.05)], [X(0.46), fy, Z(0.44)], [X(0.03), fy, Z(0.44)]], '#1B1A1F');
+    tvPicture(T, [[X(0.06), fy + 0.001, Z(0.09)], [X(0.43), fy + 0.001, Z(0.09)], [X(0.43), fy + 0.001, Z(0.4)], [X(0.06), fy + 0.001, Z(0.4)]], tvLit(o));
+    [0.35, 0.24].forEach((z) => { const [kx, ky] = T.P(X(0.53), fy + 0.001, Z(z)); circle(kx, ky, 2.4, '#2B2B30'); circle(kx - 0.6, ky - 0.6, 0.9, '#9AA0A6'); });
+    for (let z = 0.08; z < 0.17; z += 0.03) T.line([X(0.49), fy + 0.001, Z(z)], [X(0.57), fy + 0.001, Z(z)], 'rgba(0,0,0,.4)', 1);
+    const [bx, by] = T.P(X(0.3), Y(0.2), Z(0.48)); ell(bx, by, 4 * k, 2 * k, '#2B2B30');
+    T.line([X(0.3), Y(0.2), Z(0.49)], [X(0.12), Y(0.12), Z(0.84)], '#9AA0A6', 1.3); T.line([X(0.3), Y(0.2), Z(0.49)], [X(0.5), Y(0.26), Z(0.86)], '#9AA0A6', 1.3);
+  }
+  // A flat panel's picture, or, when it is a framed TV and it is off, a painting: a pale sky, two hills and a low sun.
+  function framePicture(T, q, lit) {
+    if (lit >= 0.05) { tvPicture(T, q, lit); return; }
+    const at = (u, v) => [0, 1, 2].map((k) => q[0][k] + (q[1][k] - q[0][k]) * u + (q[3][k] - q[0][k]) * v);
+    T.poly(q, '#CFE0E8');
+    T.poly([at(0, 0), at(1, 0), at(1, 0.34), at(0.62, 0.5), at(0.3, 0.38), at(0, 0.46)], '#7FA08A');
+    T.poly([at(0, 0), at(1, 0), at(1, 0.2), at(0.7, 0.26), at(0.35, 0.18), at(0, 0.26)], '#5E8A5A');
+    const [sx, sy] = T.P(...at(0.76, 0.66)); circle(sx, sy, 3.4, '#F4D58A');
+  }
+  // Boxes are drawn far to near for however the piece is turned, so nothing on a shelf is hidden behind the thing beside it.
+  function sortedBoxes(T, o, W, D, boxes) {
+    const depth = (x, y) => (o.rot === 1 ? (D - y) + x : o.rot === 2 ? (W - x) + (D - y) : o.rot === 3 ? y + (W - x) : x + y);
+    boxes.map((b) => ({ b, d: depth(b[0] + b[3] / 2, b[1] + b[4] / 2), z: b[2] })).sort((p, q) => p.d - q.d || p.z - q.z).forEach(({ b }) => T.box(b[0], b[1], b[2], b[3], b[4], b[5], b[6]));
+  }
+  Object.assign(TV_DRAWERS, {
+    // A tube TV on a table of its own: a wooden top on four legs, a shelf under it with a video player, the set in the middle of the top.
+    crttable: (T, o) => {
+      const wood = cl(o), dk = shade(wood, -0.3);
+      sortedBoxes(T, o, 1.1, 0.6, [
+        [0.04, 0.04, 0, 0.07, 0.07, 0.5, dk], [0.99, 0.04, 0, 0.07, 0.07, 0.5, dk], [0.04, 0.49, 0, 0.07, 0.07, 0.5, dk], [0.99, 0.49, 0, 0.07, 0.07, 0.5, dk],
+        [0.05, 0.06, 0.2, 1.0, 0.48, 0.03, shade(wood, -0.12)],
+        [0.2, 0.14, 0.23, 0.55, 0.34, 0.09, '#2B2B30'], [0.8, 0.2, 0.23, 0.16, 0.2, 0.05, '#E4DDD2'],
+        [0, 0, 0.5, 1.1, 0.6, 0.05, wood],
+      ]);
+      crtSet(T, o, 0.17, 0.08, 0.55, 1.25, shade(wood, 0.28));
+      const fy = 0.601; T.poly([[0.22, fy, 0.26], [0.74, fy, 0.26], [0.74, fy, 0.3], [0.22, fy, 0.3]], '#15141A');
+      const [lx, ly] = T.P(0.7, fy, 0.285); circle(lx, ly, 1.1, '#7FD36A');
+    },
+    // A tube TV on a shelf bolted to the wall: a thick wooden shelf on two iron brackets, the set pushed back to the wall.
+    crtwall: (T, o) => {
+      const wood = cl(o);
+      T.line([0.12, 0.02, 0.7], [0.12, 0.5, 0.9], '#2B2B30', 2.6); T.line([0.68, 0.02, 0.7], [0.68, 0.5, 0.9], '#2B2B30', 2.6);
+      T.line([0.12, 0.02, 0.9], [0.12, 0.02, 0.7], '#2B2B30', 2.6); T.line([0.68, 0.02, 0.9], [0.68, 0.02, 0.7], '#2B2B30', 2.6);
+      T.box(0, 0, 0.9, 0.8, 0.55, 0.05, wood);
+      crtSet(T, o, 0.1, 0.1, 0.95, 1.0, shade(wood, 0.28));
+    },
+    // A TV that is a picture on the wall while it is off: a wooden frame, a white mat, and the painting; a thin panel when it is on.
+    frametv: (T, o) => {
+      const fr = cl(o), z0 = 0.85, z1 = 1.8;
+      T.box(0, 0.01, z0, 1.5, 0.06, z1 - z0, fr);
+      T.box(0.06, 0.06, z0 + 0.06, 1.38, 0.012, z1 - z0 - 0.12, '#F2EEE8');
+      framePicture(T, [[0.12, 0.0745, z0 + 0.12], [1.38, 0.0745, z0 + 0.12], [1.38, 0.0745, z1 - 0.12], [0.12, 0.0745, z1 - 0.12]], tvLit(o));
+      const [lx, ly] = T.P(1.42, 0.075, z0 + 0.03); circle(lx, ly, 0.8, tvLit(o) > 0.05 ? '#7FD36A' : '#8A5A3B');
+    },
+    // A wide screen with a thin bezel, and a soundbar under it with a grille.
+    cinematv: (T, o) => {
+      const z0 = 1.0, z1 = 2.1;
+      T.box(0.5, 0.0, 1.1, 1.2, 0.04, 0.5, '#2B2B30');
+      T.box(0, 0.03, z0, 2.2, 0.07, z1 - z0, '#15141A');
+      tvPicture(T, [[0.05, 0.102, z0 + 0.05], [2.15, 0.102, z0 + 0.05], [2.15, 0.102, z1 - 0.05], [0.05, 0.102, z1 - 0.05]], tvLit(o));
+      T.box(0.45, 0.02, 0.84, 1.3, 0.11, 0.1, '#2B2B30');
+      for (let x = 0.5; x < 1.7; x += 0.06) T.line([x, 0.132, 0.87], [x, 0.132, 0.91], 'rgba(255,255,255,.22)', 1);
+      const [lx, ly] = T.P(1.68, 0.133, 0.89); circle(lx, ly, 1, tvLit(o) > 0.05 ? '#5BE3E6' : '#8A8E96');
+    },
+    // A slim screen on a floor stand: two uprights and two shelves (a console and a soundbar on them), the screen on top.
+    floortv: (T, o) => {
+      const c = cl(o), dk = shade(c, -0.1);
+      sortedBoxes(T, o, 1.3, 0.45, [
+        [0.08, 0.1, 0, 0.06, 0.28, 0.54, '#2B2B30'], [1.16, 0.1, 0, 0.06, 0.28, 0.54, '#2B2B30'],
+        [0.05, 0.08, 0.06, 1.2, 0.32, 0.03, dk], [0.05, 0.08, 0.3, 1.2, 0.32, 0.03, dk],
+        [0.2, 0.14, 0.09, 0.34, 0.22, 0.06, '#E4DDD2'], [0.7, 0.16, 0.09, 0.4, 0.14, 0.07, '#2B2B30'],
+        [0.35, 0.16, 0.33, 0.62, 0.18, 0.06, '#2B2B30'],
+        [0.0, 0.17, 0.54, 1.3, 0.06, 0.78, '#15141A'],
+      ]);
+      tvPicture(T, [[0.05, 0.232, 0.59], [1.25, 0.232, 0.59], [1.25, 0.232, 1.27], [0.05, 0.232, 1.27]], tvLit(o));
+      const [lx, ly] = T.P(0.62, 0.232, 0.565); circle(lx, ly, 0.9, tvLit(o) > 0.05 ? '#7FD36A' : '#C2413A');
+    },
+  });
+
   // The entertainment center: two tall shelf towers, a cabinet and a bridge round a niche the TV stands in.
   function entCenter(T, o) {
     const c = cl(o), dk = shade(c, -0.35), W = 2.4, D = 0.55;
@@ -2956,6 +3038,11 @@ export function createHouseArt(ctx0, opts = {}) {
     tvflat: { parts: () => [F(0, 0, 1.0, 0.26, (T) => TV_DRAWERS.tvflat(T, T.o))] },
     tvdesk: { parts: () => [F(0, 0, 0.52, 0.2, (T) => TV_DRAWERS.tvdesk(T, T.o))] },
     tvtube: { parts: () => [F(0, 0, 0.62, 0.55, (T) => TV_DRAWERS.tvtube(T, T.o))] },
+    crttable: { parts: () => [F(0, 0, 1.1, 0.6, (T) => TV_DRAWERS.crttable(T, T.o))] },
+    crtwall: { parts: () => [F(0, 0, 0.8, 0.55, (T) => TV_DRAWERS.crtwall(T, T.o))] },
+    frametv: { parts: () => [F(0, 0, 1.5, 0.08, (T) => TV_DRAWERS.frametv(T, T.o))] },
+    cinematv: { parts: () => [F(0, 0, 2.2, 0.14, (T) => TV_DRAWERS.cinematv(T, T.o))] },
+    floortv: { parts: () => [F(0, 0, 1.3, 0.45, (T) => TV_DRAWERS.floortv(T, T.o))] },
     entcenter: { parts: () => [F(0, 0, 2.4, 0.55, (T) => entCenter(T, T.o))] },
     tvunit: {    
       parts: () => [F(0, 0, 1.6, 0.45, (T) => { T.box(0, 0, 0, 1.6, 0.45, 0.42, '#3A3340'); T.line([0.8, 0.45, 0.06], [0.8, 0.45, 0.36], 'rgba(255,255,255,.12)', 1); if (!has('bigtv')) { T.box(0.1, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); T.box(1.32, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); } })] },
@@ -3269,6 +3356,37 @@ export function createHouseArt(ctx0, opts = {}) {
       parts: () => [B(0, 0, 0, 1.9, 0.9, 0.35, '#8A6A50'), B(0.05, 0.05, 0.35, 1.8, 0.8, 0.14, '#E8DCC8'), B(0, 0, 0.35, 1.9, 0.12, 0.45, '#7A5E44'), B(1.5, 0.2, 0.49, 0.3, 0.5, 0.1, '#C8D7D1')] },
     snowman: {    
       parts: () => [F(0, 0, 0.6, 0.6, (T) => { const [x, y] = T.P(0.3, 0.3, 0); circle(x, y - 10, 13, '#F4F6F8'); circle(x, y - 30, 10, '#FBFCFD'); circle(x, y - 46, 7.5, '#FFFFFF'); circle(x - 2.5, y - 48, 1.2, '#1B1A1F'); circle(x + 2.5, y - 48, 1.2, '#1B1A1F'); ctx.fillStyle = '#E07A2B'; ctx.beginPath(); ctx.moveTo(x, y - 46); ctx.lineTo(x + 9, y - 44.5); ctx.lineTo(x, y - 44); ctx.fill(); rr(x - 8, y - 56, 16, 3, 1, '#2B2B30'); rr(x - 5, y - 64, 10, 9, 1.5, '#2B2B30'); limb(x - 9, y - 30, x - 20, y - 38, '#6B4A35', 1.5); limb(x + 9, y - 30, x + 20, y - 36, '#6B4A35', 1.5); rr(x - 8, y - 39, 16, 3.5, 1.5, '#C2413A'); })] },
+    hoop: {
+      // A freestanding hoop: a steel pole on a weighted base, a backboard with its square, an arm to a rim, and a net that swings when a ball goes through or hits.
+      parts: () => [F(0, 0, 1.2, 0.8, (T, o, t) => {
+        const kick = hoopKick.get(o.id), age = kick ? t - kick.at : 9, live = age >= 0 && age < 1.6;
+        const sw = live ? Math.sin(age * 22) * Math.exp(-age * 3.2) : 0;
+        // Proportioned like a portable hoop: a wide board (a thick dark frame), a red square about 40% of its width and set high, a ring centred below the square near the board's bottom edge, a plate that bolts it to the board, a long net, and a pole that meets the board's lower middle.
+        const X = 0.6, front = iso(...xf(o, X, 0.45), 0)[1] > iso(...xf(o, X, 0.18), 0)[1]; // is the board's front toward the camera?
+        const [cx, cy, rz0] = hoopRimLocal(o), rr = 0.25, rz = rz0 + (live && kick && !kick.made ? Math.sin(age * 26) * Math.exp(-age * 5) * 0.025 : 0), N = 12, ring = [];
+        const rimNet = () => {
+          for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2; ring.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz]); }
+          T.box(cx - 0.09, 0.18, rz - 0.04, 0.18, cy - rr - 0.18 + 0.02, 0.04, '#C2413A');       // the plate and arm that hold the rim to the board
+          const net = (k) => { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2; return [[cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz - 0.01], [cx + Math.cos(b) * rr * 0.6 + sw * 0.05, cy + Math.sin(b) * rr * 0.6 + sw * 0.03, rz - 0.34 + (live && kick && kick.made ? 0.02 * Math.sin(age * 18) : 0)]]; };
+          for (let k = 0; k < N; k++) { const [p0, p1] = net(k); T.line(p0, p1, 'rgba(255,255,255,.85)', 0.9); }
+          for (let k = 0; k < N; k++) { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2, f = 0.5, z = rz - 0.17; T.line([cx + Math.cos(a) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(a) * rr * (1 - 0.3 * f), z], [cx + Math.cos(b) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(b) * rr * (1 - 0.3 * f), z], 'rgba(255,255,255,.6)', 0.8); }
+          for (let i = 0; i < N; i++) T.line(ring[i], ring[(i + 1) % N], '#E0572B', 2.4);
+        };
+        T.box(X - 0.4, 0.06, 0, 0.8, 0.44, 0.07, '#3A3F4A'); T.box(X - 0.03, 0.1, 0.07, 0.06, 0.06, 1.92, '#4A4F58');
+        const bx = [X - 0.51, X + 0.51], bz = [2.03, 2.67], sx = [X - 0.22, X + 0.22], sz = [2.24, 2.56];
+        if (front) {
+          T.box(X - 0.55, 0.13, 1.99, 1.1, 0.05, 0.72, '#2E343F');
+          T.poly([[bx[0], 0.1805, bz[0]], [bx[1], 0.1805, bz[0]], [bx[1], 0.1805, bz[1]], [bx[0], 0.1805, bz[1]]], '#F2F5F8');
+          T.poly([[sx[0], 0.1805, sz[0]], [sx[1], 0.1805, sz[0]], [sx[1], 0.1805, sz[1]], [sx[0], 0.1805, sz[1]]], null, '#C2413A', 1.8);
+          rimNet();
+        } else {
+          // From behind: a solid board, so the rim and net show only where they hang past it.
+          rimNet();
+          T.box(X - 0.55, 0.13, 1.99, 1.1, 0.05, 0.72, '#2E343F');
+          T.poly([[bx[0], 0.1295, bz[0]], [bx[1], 0.1295, bz[0]], [bx[1], 0.1295, bz[1]], [bx[0], 0.1295, bz[1]]], '#4A515C');
+        }
+      })],
+    },
     bench: {     
       parts: () => [B(0.1, 0.1, 0, 0.08, 0.08, 0.42, '#5A4A40'), B(1.42, 0.1, 0, 0.08, 0.08, 0.42, '#5A4A40'), B(0, 0.05, 0.42, 1.6, 0.5, 0.06, '#9C6B45', { name: 'seat' }), B(0, 0, 0.48, 1.6, 0.08, 0.42, '#8A5E3B')],
        },
@@ -3938,6 +4056,11 @@ export function createHouseArt(ctx0, opts = {}) {
   // transforms
   // ======================================================================
   function xf(o, lx, ly) { const { W: w, D: d } = T_OF(o); switch (o.rot) { case 1: return [o.x + (d - ly), o.y + lx]; case 2: return [o.x + (w - lx), o.y + (d - ly)]; case 3: return [o.x + ly, o.y + (w - lx)]; default: return [o.x + lx, o.y + ly]; } }
+  /**
+   * Where the hoop's rim sits in the piece's own space: [x along the board, y out from it, z up]. It is a fixed 3D spot, the same from every camera:
+   * centred across the board, a ring's radius out in front of the plate, a little below the red square. The ball is aimed at the same point.
+   */
+  function hoopRimLocal() { return [0.6, 0.48, 2.1]; }
   function xdir(o, dx, dy) { switch (o.rot) { case 1: return [-dy, dx]; case 2: return [-dx, -dy]; case 3: return [dy, -dx]; default: return [dx, dy]; } }
   function fp(o) { const t = T_OF(o); return o.rot % 2 ? [t.D, t.W] : [t.W, t.D]; }
   function xrect(o, r) { const a = xf(o, r[0], r[1]), b = xf(o, r[2], r[3]); return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])]; }
@@ -4668,13 +4791,10 @@ export function createHouseArt(ctx0, opts = {}) {
     rows.sort((a, b) => a.key - b.key).forEach(r => r.d());
     }
   }
-  // Haze toward the top (the light pass darkens it at night with the yard), then the edges fade to nothing, so the neighbourhood never ends on a line.
+  // The edges fade into the page's dark, so the neighbourhood never ends on a line. (No haze over the top and no fade to a pale rim: both read as a white glow.)
   function nbFinish() {
-    const si = seasonIdx();
-    const g = ctx.createLinearGradient(0, 0, 0, H * 0.55); g.addColorStop(0, si === 3 ? 'rgba(228,234,240,.5)' : 'rgba(214,226,232,.42)'); g.addColorStop(1, 'rgba(214,226,232,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    ctx.globalCompositeOperation = 'destination-out';
-    [[0, 0, 40, 0], [W, 0, W - 40, 0], [0, 0, 0, 36], [0, H, 0, H - 32]].forEach(([x0, y0, x1, y1]) => { const e = ctx.createLinearGradient(x0, y0, x1, y1); e.addColorStop(0, 'rgba(0,0,0,1)'); e.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = e; ctx.fillRect(0, 0, W, H); });
-    ctx.globalCompositeOperation = 'source-over';
+    // The picture ends in the page's own dark, not in a pale rim: each edge is painted over with that colour, thickest at the edge.
+    [[0, 0, 48, 0], [W, 0, W - 48, 0], [0, 0, 0, 40], [0, H, 0, H - 40]].forEach(([x0, y0, x1, y1]) => { const e = ctx.createLinearGradient(x0, y0, x1, y1); e.addColorStop(0, 'rgba(32,29,40,1)'); e.addColorStop(1, 'rgba(32,29,40,0)'); ctx.fillStyle = e; ctx.fillRect(0, 0, W, H); });
   }
   // The neighbourhood's lights, over everything lit: lit windows, the street lamps and the pools they make on the lane. They come up as it
   // gets dark and fade at dawn.
@@ -5031,6 +5151,10 @@ export function createHouseArt(ctx0, opts = {}) {
 
   // Things in hand for an activity, drawn over the arms.
   const PROP_ZOOM = { spoon: 1.5, fork: 1.6, cup: 1.4, phone: 1.5, handset: 1.7, sheet: 1.2, folder: 1.2, knife: 1.5, brush: 1.5, pen: 1.5, comb: 1.5, spatula: 1.4, apple: 1.3, rag: 1.3, can: 1.3, ball: 1.3, roller: 1.2 };
+  let hoopPs = null, curShZ = 0.99;
+  /** The rim and net of each hoop reacting to a ball: when the ball last arrived and whether it went in. */
+  const hoopKick = new Map();
+  const lateDraw = [];
   function drawProps(rig, hand, c, t, hd, local, pass) {
     (rig.props || []).forEach(p => {
       // The guitar's body sits behind the hands that play it; everything else is held in front.
@@ -5065,6 +5189,20 @@ export function createHouseArt(ctx0, opts = {}) {
         case 'parcel': { const a = hand[-1] || h, b = hand[1] || h; rr((a[0] + b[0]) / 2 - 5, (a[1] + b[1]) / 2 - 7, 10, 7, 1, '#C79A5B'); limb((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 7, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, '#E8D2A6', 1); break; }
         case 'cloth': { const a = hand[-1] || h, b = hand[1] || h; ctx.fillStyle = '#9EC5E8'; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(b[0], b[1] + 4 + (p.open || 0) * 4); ctx.lineTo(a[0], a[1] + 4 + (p.open || 0) * 4); ctx.fill(); break; }
         case 'ball': circle(h[0] + 3, h[1] - 6, 2.4, '#E5484D'); break;
+        case 'bball': {
+          // A basketball on its own: placed in the world by its own height, with a shadow on the floor under it.
+          // Once it is in the air near the hoop it is drawn after everything else, so the board and the net never hide it.
+          const pos = local([p.f, p.s, p.z - curShZ], 1), gnd = local([p.f, p.s, -curShZ], 1), z = p.z;
+          const paint = () => {
+            ell(gnd[0], gnd[1], 3.6 - Math.min(2, z * 1.2), 1.5, 'rgba(0,0,0,.25)');
+            circle(pos[0], pos[1], 4.2, '#D9792B'); ctx.strokeStyle = 'rgba(60,25,10,.7)'; ctx.lineWidth = 0.7;
+            ctx.beginPath(); ctx.moveTo(pos[0] - 4.2, pos[1]); ctx.lineTo(pos[0] + 4.2, pos[1]); ctx.moveTo(pos[0], pos[1] - 4.2); ctx.lineTo(pos[0], pos[1] + 4.2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(pos[0], pos[1], 4.2, 0, Math.PI * 2); ctx.stroke();
+            circle(pos[0] - 1.3, pos[1] - 1.4, 1, 'rgba(255,230,190,.5)');
+          };
+          if (p.phase === 'flight' || p.phase === 'net' || p.phase === 'rim') lateDraw.push(paint); else paint();
+          break;
+        }
         case 'paper': {
           // A broadsheet held open in both hands; a page lifts when they turn it.
           const a = hand[-1] || h, b = hand[1] || h, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
@@ -5467,7 +5605,20 @@ export function createHouseArt(ctx0, opts = {}) {
     // What this activity looks like right now (null: plain standing/walking).
     const standing = !c.walking && !c.sit && pose === 'stand';
     // Activity clip, or while standing around, an idle fidget now and then.
-    const rig = c.walking ? null : (poseRig(pose, t, c.seed, c.act, c.actMin || 0) || (standing && !c.lookAt ? idleRig(t, c.seed, c.expr) : null));
+    // Shooting hoops: where the rim is from here (forward and sideways from the feet, as the ball is drawn), and how long this round of play has run.
+    let hoopEnv = null;
+    if (pose === 'hoops' && !c.walking) {
+      const hp = hoopPs = poseState(c), key = c.act + '|' + c.slot;
+      if (hp.hoopKey !== key) { hp.hoopKey = key; hp.hoopT0 = t; }
+      const ho = c.slot ? OBJS.find((q) => c.slot.startsWith(q.id + ':')) : null;
+      if (ho) {
+        const [rlx, rly, rlz] = hoopRimLocal(ho), [wx, wy] = xf(ho, rlx, rly), vx = wx - c.x, vy = wy - c.y;
+        let ax = -c.face[1], ay = c.face[0];
+        if (iso(c.x + ax, c.y + ay, 0)[0] < iso(c.x, c.y, 0)[0]) { ax = -ax; ay = -ay; }
+        hoopEnv = { clock: t - hp.hoopT0, rimZ: rlz, rim: { f: vx * c.face[0] + vy * c.face[1], s: vx * ax + vy * ay }, hoop: ho.id };
+      }
+    }
+    const rig = c.walking ? null : (poseRig(pose, t, c.seed, c.act, c.actMin || 0, hoopEnv) || (standing && !c.lookAt ? idleRig(t, c.seed, c.expr) : null));
     const bl = pose === 'sleep' ? 1 : blinkAmt(t, c.seed), idle = (!rig || rig.idle) && !c.walking && !c.sit && pose !== 'sleep' && pose !== 'dance';
     const breathe = Math.sin(t * 1.9 + c.seed * 2) * (idle ? 0.012 : 0.005);
     // Walking, the hair swings once a stride, with the feet, not on a clock of its own.
@@ -5479,13 +5630,19 @@ export function createHouseArt(ctx0, opts = {}) {
     const dance = pose === 'dance' && !rig;
     // A walk rides up over the planted leg (under the hip at |sin| = 1, the other foot mid-swing) and dips as the feet
     // pass apart; the hips sit a touch lower than standing so the stride fits the legs.
-    const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.03 * amp;
+    const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.045 * amp;
     const clip = blendClip(c, rig, { drop: rig?.drop || 0, bob: rig?.bob || 0, lean: rig?.lean || 0, head: (rig?.nod || 0) - (rig?.headDown ? 0.05 : 0) + (rig?.lookUp ? 0.03 : 0) });
     // Seated: the hips, knees and feet come from the leg solver, so the shins keep their length on any seat.
-    const seat = c.sit ? seatLegs(c.z) : null;
+    const seat = c.sit ? seatLegs(c.posture ? c.posture.zSeat : c.z) : null;
+    // Lowering into a seat or getting up (the body is already moving between the stand spot and the seat): the hips go from standing height to seat height
+    // and the feet stay on the floor, the knees bending by the leg solver, with the body leaning in over the move.
+    const pe = c.posture ? smooth01(c.posture.dir === 'sit' ? c.posture.k : 1 - c.posture.k) : 1;
+    const moving = !!c.posture && pe < 1;
     const stairs = c.slope || 0;
-    const hipZ = (seat ? seat.hip[1] : 0.62 - 0.02 * amp - (stairs ? 0.06 : 0) - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
-    const [dx, dy] = c.face, lean = clip.v.lean + 0.025 * amp + stairs * 0.03;
+    const hipZ = (moving ? (0.57 * (1 - pe) + (seat.hip[1] + c.posture.zSeat - 0.0) * pe - c.z) : seat ? seat.hip[1] : 0.62 - 0.05 * amp - (stairs ? 0.06 : 0) - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
+    const [dx, dy] = c.face, lean = clip.v.lean + 0.025 * amp + stairs * 0.03 + (moving ? Math.sin(pe * Math.PI) * 0.07 : 0);
+    curShZ = shZ;
+    if (hoopEnv && rig && rig.rim && rig.rim.since > 0 && rig.rim.since < 0.3 && hoopKick.get(hoopEnv.hoop)?.round !== rig.rim.round) hoopKick.set(hoopEnv.hoop, { at: t - rig.rim.since, made: rig.rim.made, round: rig.rim.round });
     const hip = P3(0, 0, hipZ), sh = P3(dx * lean, dy * lean, shZ), hd = P3(dx * lean * 1.25, dy * lean * 1.25, hdZ);
     // A turned head slides a little toward where it looks, as a neck does.
     const nk1 = P3(hdir[0] * 0.06, hdir[1] * 0.06, 0), nk0 = P3(dx * 0.06, dy * 0.06, 0);
@@ -5616,6 +5773,12 @@ export function createHouseArt(ctx0, opts = {}) {
         const foot = P3(dx * ff, dy * ff, fz), knee = P3(dx * kn[0], dy * kn[0], kn[1]);
         thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
         shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
+        return;
+      }
+      if (moving) {
+        const fw = Math.max(0, seat.foot[0] * pe), floor = -c.z, kn = legIK([0, hipZ], [fw, floor]);
+        const knee = P3(dx * kn[0], dy * kn[0], kn[1]), foot = P3(dx * fw, dy * fw, floor);
+        thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy); shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
       }
       if (seat) { const knee = P3(dx * seat.knee[0], dy * seat.knee[0], seat.knee[1]), foot = P3(dx * seat.foot[0], dy * seat.foot[0], seat.foot[1]); thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy); shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy); return; }
@@ -5980,6 +6143,7 @@ export function createHouseArt(ctx0, opts = {}) {
     sync(s);
     // The pets, so the bowls and litter boxes can show what is in them.
     PETS.length = 0; if (s.pets) for (const p of s.pets) PETS.push(p);
+    lateDraw.length = 0;
     const t = animT, lv = viewLevel;
     const watcher = [jordan, maya].find(c => c && c.task && c.task.phase === 'do' && (c.task.name === 'tv' || c.task.name === 'movie'));
     if (watcher) tvWatchLevel = watcher.level;
@@ -6031,6 +6195,7 @@ export function createHouseArt(ctx0, opts = {}) {
       items.push({ x1: p.x - r, y1: p.y - r, x2: p.x + r, y2: p.y + r, key: vs(p.x, p.y) + 0.0005 + (p.z > 0.05 ? 0.3 : 0), d: () => { if (gOn) G.billboard(iso(p.x, p.y, 0)[1], ZH * 0.5, MATERIAL.body); drawPet(p, t); if (gOn) G.clearBase(); } });
     });
     depthSort(items).forEach(it => it.d());
+    lateDraw.forEach((f) => f()); lateDraw.length = 0;
     drawFrontWalls(lv); drawProjector(lv); drawObjectSpeech(lv, t);
     if (arrState) drawArrangeOverlay(arrState, lv);
     drawGuides(lv, t);
@@ -6047,7 +6212,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (s.focus) lastFocus = s.focus;
     if (dofAmt > 0.02 && lastFocus) drawDof(lastFocus);
     ctx.restore();
-    ctx.fillStyle = 'rgba(34,26,35,.55)'; ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillText(LEVEL_NAMES[lv].toUpperCase(), W - 14, H - 12); ctx.textAlign = 'start';
+    ctx.fillStyle = isOutdoor(lv) ? 'rgba(232,226,240,.55)' : 'rgba(34,26,35,.55)'; ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillText(LEVEL_NAMES[lv].toUpperCase(), W - 14, H - 12); ctx.textAlign = 'start';
   }
 
   // Paint, wallpaper and floors go on one room of a floor, or on the whole floor (`room` left out), which then puts every
@@ -6285,7 +6450,7 @@ export function createHouseArt(ctx0, opts = {}) {
       case 'musicbox': return run(30, 'The lid opens and a tinkly little tune starts to play.');
       case 'servicebell': return run(1.2, 'Ding!');
       case 'diffuser': return run(20, 'The diffuser hums and puffs out eucalyptus.');
-      case 'walltv': case 'tvflat': case 'tvdesk': case 'tvtube': return flipTv(o);
+      case 'walltv': case 'tvflat': case 'tvdesk': case 'tvtube': case 'crttable': case 'crtwall': case 'frametv': case 'cinematv': case 'floortv': return flipTv(o);
       // A stand switches the TV on it, or the one on the wall above it.
       case 'tvunit': case 'mediaconsole': case 'entcenter': { const tv = tvFor(o); return tv ? flipTv(tv) : null; }
       case 'fireplace': if (fireOut.has(o.id)) { fireOut.delete(o.id); return 'The fire crackles back to life.'; } fireOut.add(o.id); return 'The fire dies down.';
@@ -6316,5 +6481,5 @@ export function createHouseArt(ctx0, opts = {}) {
   // Shake a tree: it shudders, and what was ripe on it drops, bounces and is gone.
   function shakeTree(id, fell) { SHAKES.set(id, { t0: animT, n: fell }); }
   const setMeeting = (on) => { officeMeeting = !!on; };
-  return { setMeeting, shakeTree, render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, roomLook, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, hitFeature, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
+  return { setMeeting, shakeTree, render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, roomLook, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, hitFeature, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), hoopProbe: (id) => { const o = OBJS.find((q) => q.id === id); if (!o) return null; const P = (lx, ly, z) => iso(...xf(o, lx, ly), z), [cx, cy, cz] = hoopRimLocal(o), X = 0.6; return { ring: P(cx, cy, cz), bl: P(X - 0.55, 0.18, 1.99), br: P(X + 0.55, 0.18, 1.99), tl: P(X - 0.55, 0.18, 2.71), sqBL: P(X - 0.22, 0.18, 2.24), sqBR: P(X + 0.22, 0.18, 2.24), sqTL: P(X - 0.22, 0.18, 2.56), ringL: P(cx - 0.25, cy, cz), ringR: P(cx + 0.25, cy, cz) }; }, unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
 }

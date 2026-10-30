@@ -201,4 +201,46 @@ describe('drawing and tapping the TVs', () => {
     art.render({ level: 1, rot: 0, minutes: 600, day: 1, t: 1, dt: 0.016, objs: bare, wallMode: 'up', chars: [] });
     expect(art.poke(unit, '')).toBeNull();
   });
+
+  // Five more ways to watch: a tube TV on a table of its own, a tube TV on a shelf bolted to the wall, a framed TV, a cinema screen with a
+  // soundbar (those three hang) and a slim screen on a floor stand.
+  const MORE: Record<string, boolean> = { crttable: false, crtwall: true, frametv: true, cinematv: true, floortv: false };
+
+  it('the five newer TVs are sold, screens, can be put away and are never small; three hang and two stand', () => {
+    for (const [t, hangs] of Object.entries(MORE)) {
+      expect(isScreen(t), t).toBe(true);
+      expect(CATALOG.some((c) => c.type === t), t).toBe(true);
+      expect(canStore({ id: t, type: t, level: 1, x: 0, y: 0, rot: 0 }), t).toBe(true);
+      expect(isMount(t), t).toBe(hangs);
+      expect(!!TYPES[t].small, t).toBe(false);
+    }
+  });
+
+  it('a standing TV takes floor space; a hung one goes beside the wall TV but not over it', () => {
+    const objs = fresh();
+    const table: ObjectInstance = { id: 'ct', type: 'crttable', level: 1, x: 2, y: 5, rot: 0 };
+    objs.push(table);
+    expect(checkPlacement(objs, table).ok).toBe(true);
+    const sofa = objs.find((o) => o.id === 'sofa')!;
+    Object.assign(table, { x: sofa.x, y: sofa.y });
+    expect(checkPlacement(objs, table)).toMatchObject({ ok: false, reason: expect.stringMatching(/bumps/) });
+    const frame: ObjectInstance = { id: 'ft', type: 'frametv', level: 1, x: 6.5, y: 0.08, rot: 0 };
+    objs.push(frame);
+    expect(checkPlacement(objs, frame)).toMatchObject({ ok: false, reason: expect.stringMatching(/already hangs/) });
+    frame.x = 7.7;
+    expect(checkPlacement(objs, frame).ok).toBe(true);
+    expect(backToWall(frame)).toBe(true);
+  });
+
+  it('tapping any of them switches it on and off', () => {
+    const art = createHouseArt(document.createElement('canvas').getContext('2d')!);
+    const objs = fresh();
+    for (const t of Object.keys(MORE)) objs.push({ id: `m-${t}`, type: t, level: 1, x: 1, y: 1, rot: 0 });
+    art.render({ level: 1, rot: 0, minutes: 600, day: 1, t: 1, dt: 0.016, objs, wallMode: 'up', chars: [] });
+    for (const t of Object.keys(MORE)) {
+      const o = objs.find((q) => q.id === `m-${t}`)!;
+      expect(art.poke(o, ''), t).toBe('The TV flickers on.');
+      expect(art.poke(o, ''), t).toBe('TV off.');
+    }
+  });
 });

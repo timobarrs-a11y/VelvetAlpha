@@ -133,6 +133,8 @@ export interface Game {
   // camera
   fit(): void;
   applyCamera(frameDt: number): void;
+  /** How much larger than the width fit the picture is drawn at zoom 1 (above 1 only on a phone held upright, where it fills the band). */
+  fillScale(): number;
   toView(clientX: number, clientY: number): [number, number];
   zoomAt(clientX: number, clientY: number, factor: number): void;
   resetCamera(): void;

@@ -12,14 +12,20 @@ export function createCamera(g: Game): Partial<Game> {
     const isNarrow = box.width < 560;
     let w: number, h: number;
     if (isNarrow) {
+      // Held upright on a phone the picture fills the whole band the page gives it (the canvas is that band), and the house is drawn
+      // larger than the width fit by as much as the band's height allows (up to FILL_MAX), instead of floating in empty bars.
+      w = Math.max(1, Math.round(box.width * ratio));
       h = Math.max(1, Math.round(box.height * ratio));
-      w = Math.max(1, Math.round((h * VIEW_W) / VIEW_H));
+      fillK = Math.max(1, Math.min(FILL_MAX, (h / VIEW_H) / (w / VIEW_W)));
+      visW0 = VIEW_W / fillK; visH0 = (h / w) * VIEW_W / fillK;
     } else {
       w = Math.max(1, Math.round(box.width * ratio));
       h = Math.max(1, Math.round((w * VIEW_H) / VIEW_W));
+      fillK = 1; visW0 = VIEW_W; visH0 = VIEW_H;
     }
+    narrowFill = isNarrow;
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-    basePan = isNarrow ? -((w - Math.round(box.width * ratio)) / 2) * (w / VIEW_W) / w : 0;
+    basePan = 0;
     applyCamera(0);
   };
 
@@ -27,6 +33,9 @@ export function createCamera(g: Game): Partial<Game> {
   // them in a close-up (a two-shot when they're with the other person);
   // otherwise scroll or pinch to zoom, drag to pan, double-tap to reset.
   let basePan = 0;
+  // How much larger than the width fit the picture is drawn at zoom 1 (1 on a wide screen), and how much of the view it shows then (view units).
+  const FILL_MAX = 1.5;
+  let fillK = 1, visW0 = VIEW_W, visH0 = VIEW_H, narrowFill = false;
   const cam = { z: 1, fx: VIEW_W / 2, fy: VIEW_H / 2, tz: 1, tfx: VIEW_W / 2, tfy: VIEW_H / 2 };
   const CAM_MAX = 2.6;
   // A drag that ends while still moving glides on and slows down (view units per second).
@@ -67,13 +76,15 @@ export function createCamera(g: Game): Partial<Game> {
     } else if (!covering) lastFrame = null;
   }
   /** While panels cover part of the screen the camera may pull out a little, so the whole house can sit in what is left. */
-  const minZoom = (): number => (inset.ttop + inset.tbottom > 0.02 ? 0.6 : 1);
+  const minZoom = (): number => (inset.ttop + inset.tbottom > 0.02 ? 0.6 : 1) / fillK;
+  /** Where the picture rests: zoom 1 (filling the band), never closer in than the least zoom allows. */
+  const homeZoom = (): number => Math.max(minZoom(), 1);
   /** The free band's centre, as an offset from the middle of the canvas (fraction of its height). */
   const bandOffset = (): number => (inset.top - inset.bottom) / 2;
   function clampFocus(z: number, fx: number, fy: number): [number, number] {
-    const hw = VIEW_W / (2 * z);
+    const hw = visW0 / (2 * z);
     const off = bandOffset();
-    const lo = (0.5 + off) * VIEW_H / z, hi = VIEW_H - (0.5 - off) * VIEW_H / z;
+    const lo = (0.5 + off) * visH0 / z, hi = VIEW_H - (0.5 - off) * visH0 / z;
     // Pulled out past the edges of the view there is nothing to keep inside it: only stay on the map.
     return [hw * 2 >= VIEW_W ? Math.max(0, Math.min(VIEW_W, fx)) : Math.max(hw, Math.min(VIEW_W - hw, fx)), lo > hi ? Math.max(0, Math.min(VIEW_H, fy)) : Math.max(lo, Math.min(hi, fy))];
   }
@@ -119,9 +130,7 @@ export function createCamera(g: Game): Partial<Game> {
     // Leave room round the points: the piece itself is bigger than its centre.
     const spanX = Math.max(60, x1 - x0 + 90 * pad), spanY = Math.max(50, y1 - y0 + 80 * pad);
     // On a phone held upright the screen shows only the middle slice of the view's width.
-    const box = canvas.getBoundingClientRect();
-    const visW = Math.min(VIEW_W, box.height > 0 ? (VIEW_H * box.width) / box.height : VIEW_W);
-    const z = Math.min(maxZoom, visW / spanX, (VIEW_H * bandH) / spanY);
+    const z = Math.min(maxZoom, visW0 / spanX, (visH0 * bandH) / spanY);
     cam.tz = Math.max(minZoom(), z);
     cam.tfx = (x0 + x1) / 2; cam.tfy = (y0 + y1) / 2;
   }
@@ -145,9 +154,7 @@ export function createCamera(g: Game): Partial<Game> {
     // Edge scrolling: while the piece is inside the middle of the screen the picture stays still. Once it (or the spot
     // it is heading for, a little ahead of the finger) goes past that, the picture scrolls after it at a steady pace.
     const lead: [number, number] = [px + Math.max(-45, Math.min(45, heldVel.x * 0.3)), py + Math.max(-35, Math.min(35, heldVel.y * 0.3))];
-    const box = canvas.getBoundingClientRect();
-    const visW = Math.min(VIEW_W, box.height > 0 ? (VIEW_H * box.width) / box.height : VIEW_W);
-    const dx = (visW / (2 * cam.tz)) * 0.6, dy = ((VIEW_H * (1 - inset.ttop - inset.tbottom)) / (2 * cam.tz)) * 0.6;
+    const dx = (visW0 / (2 * cam.tz)) * 0.6, dy = ((visH0 * (1 - inset.ttop - inset.tbottom)) / (2 * cam.tz)) * 0.6;
     const maxStep = 260 * dt / cam.tz;
     const edge = (d: number, dz: number): number => {
       const over = Math.abs(d) - dz;
@@ -192,7 +199,7 @@ export function createCamera(g: Game): Partial<Game> {
     [cam.tfx, cam.tfy] = clampFocus(cam.tz, cam.tfx, cam.tfy);
     cam.fx += (cam.tfx - cam.fx) * k; cam.fy += (cam.tfy - cam.fy) * k;
     [cam.fx, cam.fy] = clampFocus(cam.z, cam.fx, cam.fy);
-    const w = canvas.width, h = canvas.height, sx = (w / VIEW_W) * cam.z, sy = (h / VIEW_H) * cam.z;
+    const w = canvas.width, h = canvas.height, sx = (w / VIEW_W) * fillK * cam.z, sy = narrowFill ? sx : (h / VIEW_H) * cam.z;
     let ox = 0, oy = 0;
     if (shakeLeft > 0) {
       if (frameDt > 0) shakeLeft -= frameDt;
@@ -221,8 +228,8 @@ export function createCamera(g: Game): Partial<Game> {
     cam.tfy = py - (py - cam.tfy) * (cam.tz / nz);
     cam.tz = nz;
   }
-  function resetCamera(): void { lastFrame = null; fling.vx = fling.vy = 0; cam.tz = minZoom(); cam.tfx = VIEW_W / 2; cam.tfy = VIEW_H / 2; }
+  function resetCamera(): void { lastFrame = null; fling.vx = fling.vy = 0; cam.tz = homeZoom(); cam.tfx = VIEW_W / 2; cam.tfy = VIEW_H / 2; }
   new ResizeObserver(fit).observe(canvas);
   fit();
-  return { cam, fit, applyCamera, toView, zoomAt, resetCamera, frameView, trackHeld, flingCamera, shake, cameraBeat };
+  return { cam, fit, fillScale: () => fillK, applyCamera, toView, zoomAt, resetCamera, frameView, trackHeld, flingCamera, shake, cameraBeat };
 }
