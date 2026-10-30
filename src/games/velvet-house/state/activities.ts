@@ -75,6 +75,7 @@ export const ACTIVITIES: Record<string, ActivityMeta> = {
   diffuse: { pose: 'stand', dur: 15, gives: { comfort: 35, fun: 5 }, verb: 'Breathing in eucalyptus' },
   claw: { pose: 'arcade', dur: 10, gives: { fun: 30, energy: -1 }, verb: 'Working the claw machine' },
   pinball: { pose: 'arcade', dur: 15, gives: { fun: 40, energy: -2 }, verb: 'Playing pinball' },
+  hoops: { pose: 'hoops', dur: 20, gives: { fun: 45, energy: -8, hygiene: -6 }, verb: 'Shooting hoops' },
   swing: { pose: 'tv', dur: 15, gives: { fun: 30, comfort: 15 }, verb: 'Swinging under the cloud' },
   vr: { pose: 'tv', dur: 25, gives: { fun: 45, energy: -4 }, verb: 'In VR' },
   fortune: { pose: 'operate', dur: 8, gives: { fun: 25, comfort: 10 }, verb: 'Asking the fortune teller' },

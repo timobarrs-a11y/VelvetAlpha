@@ -73,6 +73,8 @@ export interface Agent {
   face: [number, number];
   /** True while turning on the spot before walking off. */
   turning?: boolean;
+  /** Sitting down or getting up: how far through (0 standing, 1 seated), which way, and the seat's height. The body is moved between the stand spot and the seat as it goes. */
+  posture?: { dir: 'sit' | 'stand'; k: number; from: [number, number, number]; to: [number, number, number]; zSeat: number };
   needs: CharacterNeeds;
   task: AgentTask | null;
   idle: number;
@@ -104,7 +106,15 @@ export interface HouseWorld {
   bossIn?: boolean;
 }
 
-const WALK_SPEED = 1.5;
+const WALK_SPEED = 1.3;
+/** Real seconds to lower into a seat or get up from one (at the normal game speed). */
+const SIT_SECONDS = 0.75, STAND_SECONDS = 0.6;
+const easeInOut = (u: number): number => u * u * (3 - 2 * u);
+/** An activity whose seat is a real seat (a pose in SITTING_POSES at a spot with a height): sitting down and getting up are motions, not jumps. */
+function sitsAt(t: AgentTask): boolean {
+  const pos = t.slot?.pos;
+  return !!pos && pos[2] > 0.05 && SITTING_POSES.has(ACTIVITIES[t.act]?.pose ?? '');
+}
 const STAIR_SPEED = 0.6;
 // Turning: how fast they swing round (radians per second). Someone more than TURN_STOP off the
 // way they're heading stops and turns on the spot, and starts walking again once within TURN_GO.
@@ -134,7 +144,7 @@ const ACT_TAGS: Record<string, string[]> = {
   cook: ['stove'], coffee: ['coffee'], shower: ['shower'], bath: ['tub'],
   read: ['seat'], phone: ['seat'], tv: ['seat'],
   workout: ['tread'], lift: ['lift'], stretch: ['stretch'],
-  records: ['records'], arcade: ['arcade'], claw: ['claw'], pinball: ['pinball'], swing: ['swing'], vr: ['vr'], fortune: ['fortune'], gumball: ['gumball'], tiki: ['tiki'], diffuse: ['diffuse'], musicbox: ['musicbox'], glam: ['glam'], zen: ['zen'], plants: ['water'], window: ['window'],
+  hoops: ['hoop'], records: ['records'], arcade: ['arcade'], claw: ['claw'], pinball: ['pinball'], swing: ['swing'], vr: ['vr'], fortune: ['fortune'], gumball: ['gumball'], tiki: ['tiki'], diffuse: ['diffuse'], musicbox: ['musicbox'], glam: ['glam'], zen: ['zen'], plants: ['water'], window: ['window'],
   piano: ['piano'], easel: ['easel'], aquarium: ['aquarium'], guitar: ['guitar'],
   massage: ['massage'], hammock: ['hammock'], jukebox: ['jukebox'], bike: ['bike'],
   boxing: ['boxbag'], stargaze: ['stars'], fire: ['fireside'], swim: ['swim'],
@@ -152,7 +162,7 @@ for (const a of OFFICE_ACTIONS) ACT_TAGS[actionActivity(a)] = [STATIONS[a.statio
 
 const CHOICES = [
   'sleep', 'nap', 'cookeat', 'coffee', 'shower', 'bath', 'read', 'phone', 'tv',
-  'workout', 'stretch', 'records', 'arcade', 'claw', 'pinball', 'swing', 'vr', 'fortune', 'gumball', 'tiki', 'diffuse', 'musicbox', 'glam', 'zen', 'plants', 'piano', 'easel', 'aquarium',
+  'workout', 'stretch', 'hoops', 'records', 'arcade', 'claw', 'pinball', 'swing', 'vr', 'fortune', 'gumball', 'tiki', 'diffuse', 'musicbox', 'glam', 'zen', 'plants', 'piano', 'easel', 'aquarium',
   'guitar', 'massage', 'hammock', 'jukebox', 'bike', 'boxing', 'stargaze', 'fire', 'swim',
   // Everyday life on every floor, chosen even when nothing is urgent.
   'newspaper', 'tend', 'rakeYard', 'yardWorkout', 'phonePace',
@@ -445,9 +455,28 @@ function arrive(ch: Agent): void {
   t.phase = 'do';
   t.time = 0;
   const s = t.slot;
-  if (s?.pos) { [ch.x, ch.y, ch.z] = s.pos; ch.level = s.level; }
+  if (s?.pos && sitsAt(t)) {
+    // Lower into the seat: from where they stand to the seat, over a moment (see `tickPosture`).
+    ch.level = s.level;
+    ch.posture = { dir: 'sit', k: 0, from: [ch.x, ch.y, 0], to: [...s.pos], zSeat: s.pos[2] };
+  } else if (s?.pos) { [ch.x, ch.y, ch.z] = s.pos; ch.level = s.level; }
   if (s?.lie) ch.face = s.lie;
   else if (s?.dir) ch.face = s.dir;
+}
+
+/** Moves someone through a sit or a stand, one step; true while it is still going. */
+function tickPosture(ch: Agent, dt: number, mul: number): boolean {
+  const p = ch.posture;
+  if (!p) return false;
+  p.k = Math.min(1, p.k + (dt * Math.min(mul, 3)) / (p.dir === 'sit' ? SIT_SECONDS : STAND_SECONDS));
+  const e = easeInOut(p.dir === 'sit' ? p.k : 1 - p.k);
+  // Sitting, the body moves in over the seat first and its height follows a beat later (the hips go over the seat, then down); getting up is that run backwards.
+  const ez = Math.max(0, (e - 0.25) / 0.75);
+  ch.x = p.from[0] + (p.to[0] - p.from[0]) * e;
+  ch.y = p.from[1] + (p.to[1] - p.from[1]) * e;
+  ch.z = p.to[2] * easeInOut(ez);
+  if (p.k >= 1) { if (p.dir === 'sit') [ch.x, ch.y, ch.z] = p.to; ch.posture = undefined; return false; }
+  return true;
 }
 
 function finish(world: HouseWorld, ch: Agent, other: Agent | null, rng: () => number): void {
@@ -498,6 +527,7 @@ export function tickAgent(
     return;
   }
   const t = ch.task;
+  if (!t && ch.posture) ch.posture = undefined;
   const doingAct = t && t.phase === 'do' ? ACTIVITIES[t.act] : null;
   if (ch.kind !== 'npc') ch.needs = tickNeeds(ch.needs, {
     away: false, asleep: isAsleep(ch), fitness: 0, starving: ch.needs.food < 15, messLevel: 0, hasBed: true,
@@ -518,6 +548,13 @@ export function tickAgent(
     if (moveAlong(ch, dt, walkMul)) arrive(ch);
     return;
   }
+  // Lowering into a seat or getting up from one is a motion of its own: the activity's clock waits for it.
+  if (ch.posture) {
+    const standing = ch.posture.dir === 'stand';
+    if (tickPosture(ch, dt, walkMul)) return;
+    if (standing) finish(world, ch, other, rng);
+    return;
+  }
   t.time += gameMin;
   if (household && t.act === 'eat' && t.time >= 0.1 && t.time < gameMin + 0.1) consumeMeal(household);
   if (household && t.act === 'wash' && t.time >= 0.1 && t.time < gameMin + 0.1) washDishes(household, 99);
@@ -525,5 +562,11 @@ export function tickAgent(
   const done = t.act === 'sleep'
     ? ch.needs.energy >= 99 || (hourF >= sleep.wakeAt + 0.5 && hourF < 22 && ch.needs.energy >= 85)
     : t.time >= t.dur;
-  if (done) finish(world, ch, other, rng);
+  if (done) {
+    // Getting up from a seat is a motion, unless the next thing is more of the same seat (the plate, then the coffee at the table).
+    const pos = t.slot?.pos, nextAct = t.next[0];
+    const stays = !!nextAct && (ACT_TAGS[nextAct] ?? []).includes(t.slot?.tag ?? '') && SITTING_POSES.has(ACTIVITIES[nextAct]?.pose ?? '');
+    if (pos && sitsAt(t) && !stays) { ch.posture = { dir: 'stand', k: 0, from: [...t.slot!.stand, 0], to: [...pos], zSeat: pos[2] }; return; }
+    finish(world, ch, other, rng);
+  }
 }
