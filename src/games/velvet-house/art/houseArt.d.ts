@@ -143,6 +143,8 @@ export interface HouseArt {
   setDim(amount: number): void;
   /** Where a world point lands in view coordinates (follows the current rotation). */
   project(x: number, y: number, z?: number): [number, number];
+  /** Dev: where a hoop's board, red square and ring land on screen (for checking proportions). */
+  hoopProbe(id: string): Record<string, [number, number]> | null;
   /** The world point (x, y on the floor) under a view coordinate; the opposite of project, following the rotation. */
   unproject(sx: number, sy: number): [number, number];
   /** The piece of furniture at a view point on a floor, front-most, optionally only among `ids`. */

@@ -3271,27 +3271,32 @@ export function createHouseArt(ctx0, opts = {}) {
       parts: () => [F(0, 0, 0.6, 0.6, (T) => { const [x, y] = T.P(0.3, 0.3, 0); circle(x, y - 10, 13, '#F4F6F8'); circle(x, y - 30, 10, '#FBFCFD'); circle(x, y - 46, 7.5, '#FFFFFF'); circle(x - 2.5, y - 48, 1.2, '#1B1A1F'); circle(x + 2.5, y - 48, 1.2, '#1B1A1F'); ctx.fillStyle = '#E07A2B'; ctx.beginPath(); ctx.moveTo(x, y - 46); ctx.lineTo(x + 9, y - 44.5); ctx.lineTo(x, y - 44); ctx.fill(); rr(x - 8, y - 56, 16, 3, 1, '#2B2B30'); rr(x - 5, y - 64, 10, 9, 1.5, '#2B2B30'); limb(x - 9, y - 30, x - 20, y - 38, '#6B4A35', 1.5); limb(x + 9, y - 30, x + 20, y - 36, '#6B4A35', 1.5); rr(x - 8, y - 39, 16, 3.5, 1.5, '#C2413A'); })] },
     hoop: {
       // A freestanding hoop: a steel pole on a weighted base, a backboard with its square, an arm to a rim, and a net that swings when a ball goes through or hits.
-      parts: () => [F(0, 0, 0.9, 0.8, (T, o, t) => {
+      parts: () => [F(0, 0, 1.2, 0.8, (T, o, t) => {
         const kick = hoopKick.get(o.id), age = kick ? t - kick.at : 9, live = age >= 0 && age < 1.6;
         const sw = live ? Math.sin(age * 22) * Math.exp(-age * 3.2) : 0;
-        // Like a portable hoop: a weighted base, a pole that meets the bottom of the board, a board with the red square ABOVE the rim, and the rim and net hanging in front of the board's lower part.
-        const front = iso(...xf(o, 0.45, 0.4), 0)[1] > iso(...xf(o, 0.45, 0.18), 0)[1]; // is the board's front toward the camera?
-        const [cx, cy] = hoopRimLocal(o), rr = 0.14, rz = 2.2 + (live && kick && !kick.made ? Math.sin(age * 26) * Math.exp(-age * 5) * 0.025 : 0), N = 12, ring = [];
+        // Proportioned like a portable hoop: a wide board (a thick dark frame), a red square about 40% of its width and set high, a ring about a third of the board's width straddling the square's bottom edge, a plate that bolts it to the board, a long net, and a pole that meets the board's lower middle.
+        const X = 0.6, front = iso(...xf(o, X, 0.45), 0)[1] > iso(...xf(o, X, 0.18), 0)[1]; // is the board's front toward the camera?
+        const [cx, cy, rz0] = hoopRimLocal(o), rr = 0.25, rz = rz0 + (live && kick && !kick.made ? Math.sin(age * 26) * Math.exp(-age * 5) * 0.025 : 0), N = 12, ring = [];
         const rimNet = () => {
           for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2; ring.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz]); }
-          T.box(cx - 0.05, 0.18, rz - 0.03, 0.1, cy - rr - 0.18 + 0.02, 0.03, '#C2413A');       // the plate and arm that hold the rim to the board
-          const net = (k) => { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2; return [[cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz - 0.01], [cx + Math.cos(b) * rr * 0.6 + sw * 0.05, cy + Math.sin(b) * rr * 0.6 + sw * 0.03, rz - 0.3 + (live && kick && kick.made ? 0.02 * Math.sin(age * 18) : 0)]]; };
+          T.box(cx - 0.09, 0.18, rz - 0.04, 0.18, cy - rr - 0.18 + 0.02, 0.04, '#C2413A');       // the plate and arm that hold the rim to the board
+          const net = (k) => { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2; return [[cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz - 0.01], [cx + Math.cos(b) * rr * 0.6 + sw * 0.05, cy + Math.sin(b) * rr * 0.6 + sw * 0.03, rz - 0.34 + (live && kick && kick.made ? 0.02 * Math.sin(age * 18) : 0)]]; };
           for (let k = 0; k < N; k++) { const [p0, p1] = net(k); T.line(p0, p1, 'rgba(255,255,255,.85)', 0.9); }
-          for (let k = 0; k < N; k++) { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2, f = 0.5, z = rz - 0.15; T.line([cx + Math.cos(a) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(a) * rr * (1 - 0.3 * f), z], [cx + Math.cos(b) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(b) * rr * (1 - 0.3 * f), z], 'rgba(255,255,255,.6)', 0.8); }
-          for (let i = 0; i < N; i++) T.line(ring[i], ring[(i + 1) % N], '#E0572B', 2.2);
+          for (let k = 0; k < N; k++) { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2, f = 0.5, z = rz - 0.17; T.line([cx + Math.cos(a) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(a) * rr * (1 - 0.3 * f), z], [cx + Math.cos(b) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(b) * rr * (1 - 0.3 * f), z], 'rgba(255,255,255,.6)', 0.8); }
+          for (let i = 0; i < N; i++) T.line(ring[i], ring[(i + 1) % N], '#E0572B', 2.4);
         };
-        T.box(0.2, 0.06, 0, 0.5, 0.4, 0.07, '#3A3F4A'); T.box(0.42, 0.1, 0.07, 0.06, 0.06, 1.93, '#4A4F58');
-        T.box(0.03, 0.13, 2.0, 0.84, 0.05, 0.62, '#2E343F');
+        T.box(X - 0.4, 0.06, 0, 0.8, 0.44, 0.07, '#3A3F4A'); T.box(X - 0.03, 0.1, 0.07, 0.06, 0.06, 1.92, '#4A4F58');
+        const bx = [X - 0.51, X + 0.51], bz = [2.03, 2.67], sx = [X - 0.22, X + 0.22], sz = [2.1, 2.44];
         if (front) {
-          T.poly([[0.06, 0.1805, 2.03], [0.84, 0.1805, 2.03], [0.84, 0.1805, 2.59], [0.06, 0.1805, 2.59]], '#F2F5F8');
-          T.poly([[0.33, 0.1805, 2.3], [0.57, 0.1805, 2.3], [0.57, 0.1805, 2.5], [0.33, 0.1805, 2.5]], null, '#C2413A', 1.4);
+          T.box(X - 0.55, 0.13, 1.99, 1.1, 0.05, 0.72, '#2E343F');
+          T.poly([[bx[0], 0.1805, bz[0]], [bx[1], 0.1805, bz[0]], [bx[1], 0.1805, bz[1]], [bx[0], 0.1805, bz[1]]], '#F2F5F8');
+          T.poly([[sx[0], 0.1805, sz[0]], [sx[1], 0.1805, sz[0]], [sx[1], 0.1805, sz[1]], [sx[0], 0.1805, sz[1]]], null, '#C2413A', 1.8);
           rimNet();
-        } else { T.poly([[0.06, 0.1295, 2.03], [0.84, 0.1295, 2.03], [0.84, 0.1295, 2.59], [0.06, 0.1295, 2.59]], '#E4E8EE'); rimNet(); } // from behind the rim still shows, so a shot can be followed from any side
+        } else {
+          // From behind: the board is clear acrylic, so the rim and net hang where they are, seen through a pale pane in a dark frame.
+          rimNet();
+          T.poly([[X - 0.55, 0.13, 1.99], [X + 0.55, 0.13, 1.99], [X + 0.55, 0.13, 2.71], [X - 0.55, 0.13, 2.71]], 'rgba(226,232,240,.62)', '#2E343F', 3);
+        }
       })],
     },
     bench: {     
@@ -3963,11 +3968,21 @@ export function createHouseArt(ctx0, opts = {}) {
   // transforms
   // ======================================================================
   function xf(o, lx, ly) { const { W: w, D: d } = T_OF(o); switch (o.rot) { case 1: return [o.x + (d - ly), o.y + lx]; case 2: return [o.x + (w - lx), o.y + (d - ly)]; case 3: return [o.x + ly, o.y + (w - lx)]; default: return [o.x + lx, o.y + ly]; } }
-  /** Where the hoop's rim sits in the piece's own space: out from the board, and slid along it so that on screen it hangs centred under the board from this camera (the same spot the ball is aimed at). */
+  /**
+   * Where the hoop's rim sits in the piece's own space: [x along the board, y out from it, z up]. The rim is really out in front of the board, but the
+   * isometric camera drops anything in front of a face lower on screen and, from behind, lifts it. So the spot is solved so that on screen the
+   * ring is centred across the board and about 27% of the way up it, as on a real hoop seen square on; the ball is aimed at the same point.
+   */
   function hoopRimLocal(o) {
-    const cy = 0.34, a = xf(o, 0.45, 0.18), b = xf(o, 0.45, cy), e = xf(o, 0.55, cy);
-    const sa = iso(a[0], a[1], 0)[0], sb = iso(b[0], b[1], 0)[0], se = iso(e[0], e[1], 0)[0], per = (se - sb) / 0.1;
-    return [0.45 + (per ? Math.max(-0.2, Math.min(0.2, (sa - sb) / per)) : 0), cy];
+    const X = 0.6, Y = 0.5, Z = 2.2, P = (lx, ly, z) => iso(...xf(o, lx, ly), z);
+    const bl = P(X - 0.55, 0.18, 1.99), br = P(X + 0.55, 0.18, 1.99), tl = P(X - 0.55, 0.18, 2.71);
+    const want = [bl[0] + 0.5 * (br[0] - bl[0]) + 0.27 * (tl[0] - bl[0]), bl[1] + 0.5 * (br[1] - bl[1]) + 0.27 * (tl[1] - bl[1])];
+    const b = P(X, Y, Z), px = P(X + 0.1, Y, Z), pz = P(X, Y, Z + 0.1);
+    const ax = (px[0] - b[0]) / 0.1, ay = (px[1] - b[1]) / 0.1, bx = (pz[0] - b[0]) / 0.1, by = (pz[1] - b[1]) / 0.1, det = ax * by - ay * bx;
+    if (Math.abs(det) < 1e-6) return [X, Y, Z];
+    const rx = want[0] - b[0], ry = want[1] - b[1];
+    const dx = (rx * by - ry * bx) / det, dz = (ax * ry - ay * rx) / det;
+    return [X + Math.max(-0.35, Math.min(0.35, dx)), Y, Z + Math.max(-0.5, Math.min(0.5, dz))];
   }
   function xdir(o, dx, dy) { switch (o.rot) { case 1: return [-dy, dx]; case 2: return [-dx, -dy]; case 3: return [dy, -dx]; default: return [dx, dy]; } }
   function fp(o) { const t = T_OF(o); return o.rot % 2 ? [t.D, t.W] : [t.W, t.D]; }
@@ -5523,10 +5538,10 @@ export function createHouseArt(ctx0, opts = {}) {
       if (hp.hoopKey !== key) { hp.hoopKey = key; hp.hoopT0 = t; }
       const ho = c.slot ? OBJS.find((q) => c.slot.startsWith(q.id + ':')) : null;
       if (ho) {
-        const [wx, wy] = xf(ho, ...hoopRimLocal(ho)), vx = wx - c.x, vy = wy - c.y;
+        const [rlx, rly, rlz] = hoopRimLocal(ho), [wx, wy] = xf(ho, rlx, rly), vx = wx - c.x, vy = wy - c.y;
         let ax = -c.face[1], ay = c.face[0];
         if (iso(c.x + ax, c.y + ay, 0)[0] < iso(c.x, c.y, 0)[0]) { ax = -ax; ay = -ay; }
-        hoopEnv = { clock: t - hp.hoopT0, rim: { f: vx * c.face[0] + vy * c.face[1], s: vx * ax + vy * ay }, hoop: ho.id };
+        hoopEnv = { clock: t - hp.hoopT0, rimZ: rlz, rim: { f: vx * c.face[0] + vy * c.face[1], s: vx * ax + vy * ay }, hoop: ho.id };
       }
     }
     const rig = c.walking ? null : (poseRig(pose, t, c.seed, c.act, c.actMin || 0, hoopEnv) || (standing && !c.lookAt ? idleRig(t, c.seed, c.expr) : null));
@@ -6392,5 +6407,5 @@ export function createHouseArt(ctx0, opts = {}) {
   // Shake a tree: it shudders, and what was ripe on it drops, bounces and is gone.
   function shakeTree(id, fell) { SHAKES.set(id, { t0: animT, n: fell }); }
   const setMeeting = (on) => { officeMeeting = !!on; };
-  return { setMeeting, shakeTree, render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, roomLook, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, hitFeature, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
+  return { setMeeting, shakeTree, render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, roomLook, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, hitFeature, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, candles: (id, on) => { candleFx.set(id, { on: !!on, at: animT }); objectLights.set(id, !!on); }, candlesOn: (id) => objectLights.get(id) === true, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), hoopProbe: (id) => { const o = OBJS.find((q) => q.id === id); if (!o) return null; const P = (lx, ly, z) => iso(...xf(o, lx, ly), z), [cx, cy, cz] = hoopRimLocal(o), X = 0.6; return { ring: P(cx, cy, cz), bl: P(X - 0.55, 0.18, 1.99), br: P(X + 0.55, 0.18, 1.99), tl: P(X - 0.55, 0.18, 2.71), sqBL: P(X - 0.22, 0.18, 2.1), sqBR: P(X + 0.22, 0.18, 2.1), sqTL: P(X - 0.22, 0.18, 2.44), ringL: P(cx - 0.25, cy, cz), ringR: P(cx + 0.25, cy, cz) }; }, unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
 }
