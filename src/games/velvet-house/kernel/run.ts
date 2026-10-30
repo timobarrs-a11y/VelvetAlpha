@@ -7,6 +7,7 @@ import { gardenTick, treeTick } from '../state/crops';
 import { weatherTick, weatherOf, seasonOf } from '../state/weather';
 import { bossTick } from '../state/boss';
 import { UNSEEN_ACTS } from '../content/office';
+import { tickHobby, SKILL_LABEL } from '../state/skills';
 import { advanceClock } from '../engine/loop';
 import { startFixedLoop } from '../engine/fixedLoop';
 import { createFpsMeter } from '../engine/fpsMeter';
@@ -88,6 +89,9 @@ export function startGameLoop(g: Game): void {
       const snowing = !!weatherOf(g.flags).snow;
       for (const msg of gardenTick(world.objs, gameMin, raining, seasonOf(world.day), world.minutes / 60, snowing)) log(msg);
       for (const msg of treeTick(world.objs, gameMin, raining, seasonOf(world.day), world.minutes / 60, snowing)) log(msg);
+      // Practising a hobby trains the skill it belongs to; reaching a new level says so in the log.
+      const hobby = tickHobby(g.flags, jt && jt.phase === 'do' ? jt.act : undefined, gameMin);
+      if (hobby) log(`${SKILL_LABEL[hobby.skill]} went up to ${hobby.level}.`);
       if (snackTick(world.household, g.flags, gameMin)) log('Somebody raided the fridge for a snack.');
       g.concernsTick(gameMin);
       g.petsTick(dt, gameMin, walkMul, hourF);
