@@ -29,14 +29,28 @@ export interface LevelDef {
   rug?: [number, number, number, number];
   anchor: [number, number];
   yard?: boolean;
+  /** The floor's size in tiles, when it is not the house's 10 x 8 (a floor that is not stacked on the stairs can be any size). */
+  w?: number;
+  h?: number;
 }
 
 export const WX = 10;
 export const WY = 8;
+
+/** The size of a floor in tiles: the house's 10 x 8 unless the floor says otherwise. */
+export const levelW = (level: number): number => LEVELS[level]?.w ?? WX;
+export const levelH = (level: number): number => LEVELS[level]?.h ?? WY;
+
 export const TW = 32;
 export const TH = 16;
 export const ZH = 34;
 export const WH = 2.6;
+
+/** The picture a floor is drawn in (its view space): the floor's diamond plus a margin, which for the house's 10 x 8 is the game's 640 x 440. */
+export const viewSizeFor = (level: number): { w: number; h: number } => {
+  const s = levelW(level) + levelH(level);
+  return { w: s * TW + 64, h: s * TH + 152 };
+};
 
 // Names, floor-bar order and the attic's level come from the scene list (state/scenes.ts).
 export const LEVEL_NAMES: readonly string[] = SCENES.map((s) => s.name);
@@ -142,9 +156,10 @@ export const LEVELS: LevelDef[] = [
   },
   {
     // The office: one open floor. The meeting room is behind the back wall, through the door under the sign (the 'meetdoor').
-    rooms: [{ n: 'Office', r: [0, 0, 10, 8] }],
+    rooms: [{ n: 'Office', r: [0, 0, 14, 10] }],
     walls: [],
     feats: [
+      { p: 'L', u: [7.7, 9.0], z: [0.9, 2.2], k: 'window' },
       { p: 'L', u: [0.9, 2.2], z: [0.9, 2.2], k: 'window' },
       { p: 'L', u: [2.6, 3.9], z: [0.9, 2.2], k: 'window' },
       { p: 'L', u: [4.3, 5.6], z: [0.9, 2.2], k: 'window' },
@@ -154,6 +169,9 @@ export const LEVELS: LevelDef[] = [
     ],
     rug: [0, 0, 0, 0],
     anchor: [5.2, 5.0],
+    // The office stands on no stairs, so it is not tied to the house's 10 x 8.
+    w: 14,
+    h: 10,
   },
 ];
 
@@ -215,8 +233,8 @@ export const ROOM_ALIASES: Record<string, string> = {
 };
 
 export function roomName(level: number, x: number, y: number): string {
-  const cx = Math.min(WX - 0.01, Math.max(0.01, x));
-  const cy = Math.min(WY - 0.01, Math.max(0.01, y));
+  const cx = Math.min(levelW(level) - 0.01, Math.max(0.01, x));
+  const cy = Math.min(levelH(level) - 0.01, Math.max(0.01, y));
   const r = LEVELS[level].rooms.find(
     (rm) => cx >= rm.r[0] && cx <= rm.r[2] && cy >= rm.r[1] && cy <= rm.r[3],
   );

@@ -1,4 +1,4 @@
-import { VIEW_W, VIEW_H } from '../kernel/config';
+import { VIEW } from '../kernel/config';
 import type { Game } from '../kernel/game';
 
 /**
@@ -30,8 +30,8 @@ export function startAttract(g: Game): void {
     if (t > 11 && !reduced) { t = 0; i = (i + 1) % shots.length; shots[i](); }
     // While nobody is followed the frame drifts slowly.
     if (!view.follow) {
-      cam.tfx = VIEW_W / 2 + Math.sin(now / 5200) * 48;
-      cam.tfy = VIEW_H / 2 + Math.cos(now / 6800) * 22;
+      cam.tfx = VIEW.w / 2 + Math.sin(now / 5200) * 48;
+      cam.tfy = VIEW.h / 2 + Math.cos(now / 6800) * 22;
     }
     void people;
     requestAnimationFrame(frame);

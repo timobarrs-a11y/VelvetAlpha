@@ -1,25 +1,27 @@
 import type { AgentId } from '../state/agents';
 import { qualityManager } from '../engine/qualityTier';
-import { VIEW_W, VIEW_H } from '../kernel/config';
+import { VIEW } from '../kernel/config';
 import type { Game } from '../kernel/game';
 import { SOCIAL_ACTS } from '../view/social';
 
 export function createCamera(g: Game): Partial<Game> {
   const { view, people, canvas, ctx, art } = g;
   const fit = (): void => {
+    // The canvas takes the shape of the picture (a bigger floor is not 640 x 440): the style rule reads this.
+    canvas.style.setProperty('--vh-aspect', String(VIEW.w / VIEW.h));
     const ratio = qualityManager.resolveDpr(window.devicePixelRatio || 1);
     const box = canvas.getBoundingClientRect();
     const isNarrow = box.width < 560;
     let w: number, h: number;
     if (isNarrow) {
       h = Math.max(1, Math.round(box.height * ratio));
-      w = Math.max(1, Math.round((h * VIEW_W) / VIEW_H));
+      w = Math.max(1, Math.round((h * VIEW.w) / VIEW.h));
     } else {
       w = Math.max(1, Math.round(box.width * ratio));
-      h = Math.max(1, Math.round((w * VIEW_H) / VIEW_W));
+      h = Math.max(1, Math.round((w * VIEW.h) / VIEW.w));
     }
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-    basePan = isNarrow ? -((w - Math.round(box.width * ratio)) / 2) * (w / VIEW_W) / w : 0;
+    basePan = isNarrow ? -((w - Math.round(box.width * ratio)) / 2) * (w / VIEW.w) / w : 0;
     applyCamera(0);
   };
 
@@ -27,7 +29,7 @@ export function createCamera(g: Game): Partial<Game> {
   // them in a close-up (a two-shot when they're with the other person);
   // otherwise scroll or pinch to zoom, drag to pan, double-tap to reset.
   let basePan = 0;
-  const cam = { z: 1, fx: VIEW_W / 2, fy: VIEW_H / 2, tz: 1, tfx: VIEW_W / 2, tfy: VIEW_H / 2 };
+  const cam = { z: 1, fx: VIEW.w / 2, fy: VIEW.h / 2, tz: 1, tfx: VIEW.w / 2, tfy: VIEW.h / 2 };
   const CAM_MAX = 2.6;
   // A drag that ends while still moving glides on and slows down (view units per second).
   const fling = { vx: 0, vy: 0 };
@@ -71,11 +73,11 @@ export function createCamera(g: Game): Partial<Game> {
   /** The free band's centre, as an offset from the middle of the canvas (fraction of its height). */
   const bandOffset = (): number => (inset.top - inset.bottom) / 2;
   function clampFocus(z: number, fx: number, fy: number): [number, number] {
-    const hw = VIEW_W / (2 * z);
+    const hw = VIEW.w / (2 * z);
     const off = bandOffset();
-    const lo = (0.5 + off) * VIEW_H / z, hi = VIEW_H - (0.5 - off) * VIEW_H / z;
+    const lo = (0.5 + off) * VIEW.h / z, hi = VIEW.h - (0.5 - off) * VIEW.h / z;
     // Pulled out past the edges of the view there is nothing to keep inside it: only stay on the map.
-    return [hw * 2 >= VIEW_W ? Math.max(0, Math.min(VIEW_W, fx)) : Math.max(hw, Math.min(VIEW_W - hw, fx)), lo > hi ? Math.max(0, Math.min(VIEW_H, fy)) : Math.max(lo, Math.min(hi, fy))];
+    return [hw * 2 >= VIEW.w ? Math.max(0, Math.min(VIEW.w, fx)) : Math.max(hw, Math.min(VIEW.w - hw, fx)), lo > hi ? Math.max(0, Math.min(VIEW.h, fy)) : Math.max(lo, Math.min(hi, fy))];
   }
   // A short shake for big moments (none when the player asks for reduced motion).
   let shakeLeft = 0, shakeAmp = 0;
@@ -104,7 +106,7 @@ export function createCamera(g: Game): Partial<Game> {
     if (beat.kind === 'closeup' && p && p.level === view.level) {
       const [ax, ay] = art.project(p.x, p.y, 0.9);
       cam.tz = 2.3; cam.tfx = ax; cam.tfy = ay;
-    } else { cam.tz = 1; cam.tfx = VIEW_W / 2; cam.tfy = VIEW_H / 2; }
+    } else { cam.tz = 1; cam.tfx = VIEW.w / 2; cam.tfy = VIEW.h / 2; }
     return true;
   }
   /** Frame view-space points as closely as fits in the free band, never closer than maxZoom. */
@@ -120,8 +122,8 @@ export function createCamera(g: Game): Partial<Game> {
     const spanX = Math.max(60, x1 - x0 + 90 * pad), spanY = Math.max(50, y1 - y0 + 80 * pad);
     // On a phone held upright the screen shows only the middle slice of the view's width.
     const box = canvas.getBoundingClientRect();
-    const visW = Math.min(VIEW_W, box.height > 0 ? (VIEW_H * box.width) / box.height : VIEW_W);
-    const z = Math.min(maxZoom, visW / spanX, (VIEW_H * bandH) / spanY);
+    const visW = Math.min(VIEW.w, box.height > 0 ? (VIEW.h * box.width) / box.height : VIEW.w);
+    const z = Math.min(maxZoom, visW / spanX, (VIEW.h * bandH) / spanY);
     cam.tz = Math.max(minZoom(), z);
     cam.tfx = (x0 + x1) / 2; cam.tfy = (y0 + y1) / 2;
   }
@@ -146,8 +148,8 @@ export function createCamera(g: Game): Partial<Game> {
     // it is heading for, a little ahead of the finger) goes past that, the picture scrolls after it at a steady pace.
     const lead: [number, number] = [px + Math.max(-45, Math.min(45, heldVel.x * 0.3)), py + Math.max(-35, Math.min(35, heldVel.y * 0.3))];
     const box = canvas.getBoundingClientRect();
-    const visW = Math.min(VIEW_W, box.height > 0 ? (VIEW_H * box.width) / box.height : VIEW_W);
-    const dx = (visW / (2 * cam.tz)) * 0.6, dy = ((VIEW_H * (1 - inset.ttop - inset.tbottom)) / (2 * cam.tz)) * 0.6;
+    const visW = Math.min(VIEW.w, box.height > 0 ? (VIEW.h * box.width) / box.height : VIEW.w);
+    const dx = (visW / (2 * cam.tz)) * 0.6, dy = ((VIEW.h * (1 - inset.ttop - inset.tbottom)) / (2 * cam.tz)) * 0.6;
     const maxStep = 260 * dt / cam.tz;
     const edge = (d: number, dz: number): number => {
       const over = Math.abs(d) - dz;
@@ -192,13 +194,13 @@ export function createCamera(g: Game): Partial<Game> {
     [cam.tfx, cam.tfy] = clampFocus(cam.tz, cam.tfx, cam.tfy);
     cam.fx += (cam.tfx - cam.fx) * k; cam.fy += (cam.tfy - cam.fy) * k;
     [cam.fx, cam.fy] = clampFocus(cam.z, cam.fx, cam.fy);
-    const w = canvas.width, h = canvas.height, sx = (w / VIEW_W) * cam.z, sy = (h / VIEW_H) * cam.z;
+    const w = canvas.width, h = canvas.height, sx = (w / VIEW.w) * cam.z, sy = (h / VIEW.h) * cam.z;
     let ox = 0, oy = 0;
     if (shakeLeft > 0) {
       if (frameDt > 0) shakeLeft -= frameDt;
       if (shakeLeft <= 0) shakeAmp = 0;
       else {
-        const k2 = (shakeLeft / SHAKE_TIME) * shakeAmp * (w / VIEW_W), now = performance.now();
+        const k2 = (shakeLeft / SHAKE_TIME) * shakeAmp * (w / VIEW.w), now = performance.now();
         ox = Math.sin(now * 0.09) * 2.4 * k2; oy = Math.cos(now * 0.11) * 1.8 * k2;
       }
     }
@@ -221,7 +223,7 @@ export function createCamera(g: Game): Partial<Game> {
     cam.tfy = py - (py - cam.tfy) * (cam.tz / nz);
     cam.tz = nz;
   }
-  function resetCamera(): void { lastFrame = null; fling.vx = fling.vy = 0; cam.tz = minZoom(); cam.tfx = VIEW_W / 2; cam.tfy = VIEW_H / 2; }
+  function resetCamera(): void { lastFrame = null; fling.vx = fling.vy = 0; cam.tz = minZoom(); cam.tfx = VIEW.w / 2; cam.tfy = VIEW.h / 2; }
   new ResizeObserver(fit).observe(canvas);
   fit();
   return { cam, fit, applyCamera, toView, zoomAt, resetCamera, frameView, trackHeld, flingCamera, shake, cameraBeat };

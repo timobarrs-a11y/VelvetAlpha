@@ -6,7 +6,7 @@ import { TYPES, blocksOf, isRug, isWall, isMount, type ObjectInstance } from './
 import { ACTIVITIES, GAIN_OF, chainOf } from './activities';
 import { NEED_KEYS, tickNeeds, weight, type NeedKey } from './needs';
 import { buildGrid, planRoute, randomFree, type Block, type Grid, type RouteLeg } from './pathfinding';
-import { LEVELS, STAIRS, WX, WY } from './house';
+import { LEVELS, STAIRS, levelW, levelH } from './house';
 import type { CharacterNeeds } from './types';
 import type { HouseholdState } from './household';
 import { consumeMeal, washDishes, scrubDirt, worstDirt } from './household';
@@ -223,7 +223,7 @@ export function buildWorld(objs: ObjectInstance[]): HouseWorld {
         blocks.push({ x0: Math.min(a[0], b[0]), y0: Math.min(a[1], b[1]), x1: Math.max(a[0], b[0]), y1: Math.max(a[1], b[1]) });
       }
     }
-    return buildGrid(blocks, WX, WY);
+    return buildGrid(blocks, levelW(level), levelH(level));
   });
   const screens = objs.filter((o) => !!TYPES[o.type]?.screen).map((o) => {
     const [x, y] = xf(o, TYPES[o.type].screen![0], TYPES[o.type].screen![1]);
@@ -347,7 +347,7 @@ export function chooseChain(world: HouseWorld, ch: Agent, other: Agent | null, h
 }
 
 function routeTo(world: HouseWorld, ch: Agent, level: number, x: number, y: number): RouteLeg[] {
-  return planRoute(ch, level, x, y, (l) => world.grids[l], STAIRS, WX, WY);
+  return planRoute(ch, level, x, y, (l) => world.grids[l], STAIRS, Math.max(levelW(level), levelW(ch.level)), Math.max(levelH(level), levelH(ch.level)));
 }
 
 function startAct(world: HouseWorld, ch: Agent, act: string, next: string[], other: Agent | null, rng: () => number): boolean {

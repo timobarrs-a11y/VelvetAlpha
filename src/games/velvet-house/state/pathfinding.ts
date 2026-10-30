@@ -51,8 +51,9 @@ export interface StairLeg {
 export type RouteLeg = WalkLeg | StairLeg;
 
 export const RES = 0.5;
-export const NX = 20;
-export const NY = 16;
+/** The largest floor the grid can describe (in cells), and the stride cells are numbered with (`i * NY + j`). A floor's own grid is as big as the floor. */
+export const NX = 64;
+export const NY = 64;
 export const PAD = 0.18;
 
 const DIRS: [number, number][] = [
@@ -75,9 +76,10 @@ export function buildGrid(
   worldH: number,
 ): Grid {
   const g: Grid = [];
-  for (let i = 0; i < NX; i++) {
+  const nx = Math.min(NX, Math.round(worldW / RES)), ny = Math.min(NY, Math.round(worldH / RES));
+  for (let i = 0; i < nx; i++) {
     g[i] = [];
-    for (let j = 0; j < NY; j++) {
+    for (let j = 0; j < ny; j++) {
       const cx = (i + 0.5) * RES;
       const cy = (j + 0.5) * RES;
       g[i][j] =
@@ -106,16 +108,16 @@ export function isFreeAt(
 ): boolean {
   if (x < 0.3 || y < 0.3 || x > worldW - 0.2 || y > worldH - 0.2) return false;
   const [i, j] = cellOf(x, y);
-  return grid[i][j];
+  return !!grid[i]?.[j];
 }
 
 export function nearestFree(grid: Grid, cell: [number, number]): [number, number] | null {
   const [i, j] = cell;
-  if (grid[i][j]) return [i, j];
+  if (grid[i]?.[j]) return [i, j];
   let best: [number, number] | null = null;
   let bd = 1e9;
-  for (let a = 0; a < NX; a++) {
-    for (let b = 0; b < NY; b++) {
+  for (let a = 0; a < grid.length; a++) {
+    for (let b = 0; b < grid[a].length; b++) {
       if (!grid[a][b]) continue;
       const d = (a - i) ** 2 + (b - j) ** 2;
       if (d < bd) {
@@ -177,7 +179,7 @@ export function findPath(
     for (const [di, dj] of DIRS) {
       const ni = cur[0] + di;
       const nj = cur[1] + dj;
-      if (ni < 0 || nj < 0 || ni >= NX || nj >= NY || !grid[ni][nj]) continue;
+      if (ni < 0 || nj < 0 || ni >= grid.length || nj >= grid[0].length || !grid[ni][nj]) continue;
       if (di && dj && (!grid[cur[0] + di][cur[1]] || !grid[cur[0]][cur[1] + dj]))
         continue;
       const nk = cellKey(ni, nj);
@@ -204,7 +206,7 @@ export function reachableSet(grid: Grid, anchor: [number, number]): Set<number> 
     for (const [di, dj] of DIRS.slice(0, 4)) {
       const ni = i + di;
       const nj = j + dj;
-      if (ni < 0 || nj < 0 || ni >= NX || nj >= NY || !grid[ni][nj]) continue;
+      if (ni < 0 || nj < 0 || ni >= grid.length || nj >= grid[0].length || !grid[ni][nj]) continue;
       const k = cellKey(ni, nj);
       if (!seen.has(k)) {
         seen.add(k);
@@ -221,8 +223,8 @@ export function randomFree(
   anchor: [number, number],
 ): [number, number] {
   for (let k = 0; k < 200; k++) {
-    const i = Math.floor(rng() * NX);
-    const j = Math.floor(rng() * NY);
+    const i = Math.floor(rng() * grid.length);
+    const j = Math.floor(rng() * grid[0].length);
     if (grid[i][j]) return [(i + 0.5) * RES, (j + 0.5) * RES];
   }
   return anchor;

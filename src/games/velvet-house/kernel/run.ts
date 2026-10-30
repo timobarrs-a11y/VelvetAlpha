@@ -15,9 +15,9 @@ import { qualityManager } from '../engine/qualityTier';
 import { LayerCache } from '../engine/layerCache';
 import { deliveryTick, dirtTick, laundryTick, newDayReset } from '../state/household';
 import { tickFitness, snackTick } from '../state/vitals';
-import { SPEEDS, WALL_MODES } from '../kernel/config';
+import { SPEEDS, WALL_MODES, VIEW } from '../kernel/config';
 import { isOutdoor } from '../state/scenes';
-import { OFFICE } from '../state/house';
+import { OFFICE, viewSizeFor } from '../state/house';
 import type { Game } from '../kernel/game';
 
 // The Sims' fast-forwards: skipping the work day, and the night while everyone sleeps.
@@ -114,6 +114,8 @@ export function startGameLoop(g: Game): void {
       if (isOutdoor(view.level) && view.rot !== 1 && view.rot !== 2) view.rot = 2;
       // The office is built to be seen from one angle: its windows, whiteboard and the meeting door are on the two back walls, straight ahead.
       if (view.level === OFFICE && view.rot !== 0) view.rot = 0;
+      // A floor with a size of its own has a picture of its own: the view space, the canvas shape and the camera follow it.
+      { const vs = viewSizeFor(view.level); if (vs.w !== VIEW.w || vs.h !== VIEW.h) { VIEW.w = vs.w; VIEW.h = vs.h; g.fit(); g.resetCamera(); } }
       const cacheKey = { level: view.level, rot: view.rot, wallMode: WALL_MODES[view.wallIdx].mode, zoomBucket: Math.floor(canvas.width / 400) };
       if (layerCache.keyChanged(cacheKey)) g.fit();
       g.applyCamera(frameDt);

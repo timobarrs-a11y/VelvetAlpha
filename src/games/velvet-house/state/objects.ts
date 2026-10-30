@@ -162,7 +162,7 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   visitorchair: { W: 0.6, D: 0.6, h: 0.95, fixed: true, name: 'Visitor chair',
     spots: { s: { stand: [0.3, 1.15], pos: [0.3, 0.32, 0.46], dir: [0, -1], tag: 'bossvisit', base: 'seat' } } },
   officerug: { W: 3.0, D: 3.0, h: 0.02, fixed: true, rug: true, blocks: [], name: 'Boss rug' },
-  officerunner: { W: 1.1, D: 6.4, h: 0.02, fixed: true, rug: true, blocks: [], name: 'Aisle runner' },
+  officerunner: { W: 1.1, D: 8.4, h: 0.02, fixed: true, rug: true, blocks: [], name: 'Aisle runner' },
   // Each working piece carries the spot to stand at to use it (a tag per station: content/office.ts). The front is local +y, so a piece against a wall is turned to face into the room.
   officeprinter: { W: 1.6, D: 0.75, h: 1.25, fixed: true, name: 'Printer',
     spots: { f: { stand: [0.8, 1.2], dir: [0, -1], tag: 'o_printer' } } },
@@ -405,9 +405,9 @@ export const STARTER_RUG_IDS = ['rug1', 'rug2'];
 export const STARTER_TV_IDS = ['walltv'];
 
 /** The office's own pieces. A house saved before the office existed is given them once, so they are there when it is unlocked (see `kernel/config.ts`). */
-export const STARTER_OFFICE_IDS = ['off-desk2', 'off-desk3', 'off-desk4', 'off-desk5', 'off-chair2', 'off-chair3', 'off-chair4', 'off-chair5', 'off-printer', 'off-cabinet', 'off-plant', 'off-counter', 'off-fridge', 'off-vending', 'off-runner', 'off-boardspot', 'off-doorspot', 'off-coffee', 'off-boss', 'off-bosschair', 'off-visitor', 'off-rug'];
+export const STARTER_OFFICE_IDS = ['off-desk2', 'off-desk3', 'off-desk4', 'off-desk5', 'off-desk6', 'off-desk7', 'off-desk8', 'off-desk9', 'off-desk10', 'off-desk11', 'off-desk12', 'off-desk13', 'off-chair2', 'off-chair3', 'off-chair4', 'off-chair5', 'off-chair6', 'off-chair7', 'off-chair8', 'off-chair9', 'off-chair10', 'off-chair11', 'off-chair12', 'off-chair13', 'off-printer', 'off-cabinet', 'off-plant', 'off-counter', 'off-fridge', 'off-vending', 'off-runner', 'off-boardspot', 'off-doorspot', 'off-coffee', 'off-boss', 'off-bosschair', 'off-visitor', 'off-rug'];
 /** Bumped when the office's layout changes: a house saved with an older layout has its office pieces replaced (and only those) once on load. */
-export const OFFICE_LAYOUT = 9;
+export const OFFICE_LAYOUT = 10;
 
 export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'stair01', type: 'flightY', level: 0, x: 9.0, y: 0, rot: 0 },
@@ -422,13 +422,29 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   // The office (level 5). Four narrow desks in two rows along the window wall with an aisle between, the whiteboard wall kept clear, the printer and the cooler on
   // the back wall either side of the meeting door, the boss's corner at the back right (his desk faces the room, a visitor's chair in front), and the break area at the front right.
   { id: 'off-desk2', type: 'officedesk', level: 5, x: 0.4, y: 3.2, rot: 0 },
-  { id: 'off-desk3', type: 'officedesk', level: 5, x: 0.4, y: 5.4, rot: 0 },
-  { id: 'off-desk4', type: 'officedesk', level: 5, x: 2.9, y: 3.2, rot: 0 },
-  { id: 'off-desk5', type: 'officedesk', level: 5, x: 2.9, y: 5.4, rot: 0 },
+  { id: 'off-desk3', type: 'officedesk', level: 5, x: 2.9, y: 3.2, rot: 0 },
+  { id: 'off-desk4', type: 'officedesk', level: 5, x: 6.4, y: 3.2, rot: 0 },
+  { id: 'off-desk5', type: 'officedesk', level: 5, x: 8.9, y: 3.2, rot: 0 },
+  { id: 'off-desk6', type: 'officedesk', level: 5, x: 0.4, y: 5.4, rot: 0 },
+  { id: 'off-desk7', type: 'officedesk', level: 5, x: 2.9, y: 5.4, rot: 0 },
+  { id: 'off-desk8', type: 'officedesk', level: 5, x: 6.4, y: 5.4, rot: 0 },
+  { id: 'off-desk9', type: 'officedesk', level: 5, x: 8.9, y: 5.4, rot: 0 },
+  { id: 'off-desk10', type: 'officedesk', level: 5, x: 0.4, y: 7.6, rot: 0 },
+  { id: 'off-desk11', type: 'officedesk', level: 5, x: 2.9, y: 7.6, rot: 0 },
+  { id: 'off-desk12', type: 'officedesk', level: 5, x: 6.4, y: 7.6, rot: 0 },
+  { id: 'off-desk13', type: 'officedesk', level: 5, x: 8.9, y: 7.6, rot: 0 },
   { id: 'off-chair2', type: 'officechair', level: 5, x: 0.7, y: 3.85, rot: 0 },
-  { id: 'off-chair3', type: 'officechair', level: 5, x: 0.7, y: 6.05, rot: 0 },
-  { id: 'off-chair4', type: 'officechair', level: 5, x: 3.2, y: 3.85, rot: 0 },
-  { id: 'off-chair5', type: 'officechair', level: 5, x: 3.2, y: 6.05, rot: 0 },
+  { id: 'off-chair3', type: 'officechair', level: 5, x: 3.2, y: 3.85, rot: 0 },
+  { id: 'off-chair4', type: 'officechair', level: 5, x: 6.7, y: 3.85, rot: 0 },
+  { id: 'off-chair5', type: 'officechair', level: 5, x: 9.2, y: 3.85, rot: 0 },
+  { id: 'off-chair6', type: 'officechair', level: 5, x: 0.7, y: 6.05, rot: 0 },
+  { id: 'off-chair7', type: 'officechair', level: 5, x: 3.2, y: 6.05, rot: 0 },
+  { id: 'off-chair8', type: 'officechair', level: 5, x: 6.7, y: 6.05, rot: 0 },
+  { id: 'off-chair9', type: 'officechair', level: 5, x: 9.2, y: 6.05, rot: 0 },
+  { id: 'off-chair10', type: 'officechair', level: 5, x: 0.7, y: 8.25, rot: 0 },
+  { id: 'off-chair11', type: 'officechair', level: 5, x: 3.2, y: 8.25, rot: 0 },
+  { id: 'off-chair12', type: 'officechair', level: 5, x: 6.7, y: 8.25, rot: 0 },
+  { id: 'off-chair13', type: 'officechair', level: 5, x: 9.2, y: 8.25, rot: 0 },
   // The vending machine stands where the printer was, on the back wall between the whiteboard and the meeting door; the printer is at the front right.
   { id: 'off-vending', type: 'officevending', level: 5, x: 6.05, y: 0.1, rot: 0 },
   { id: 'off-cabinet', type: 'officecabinet', level: 5, x: 6.8, y: 0.1, rot: 0 },
@@ -439,12 +455,12 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'off-coffee', type: 'officecoffee', level: 5, x: 0.1, y: 0.8, rot: 3 },
   { id: 'off-counter', type: 'officecounter', level: 5, x: 2.5, y: 0.1, rot: 0 },
   { id: 'off-fridge', type: 'officefridge', level: 5, x: 3.8, y: 0.1, rot: 0 },
-  { id: 'off-printer', type: 'officeprinter', level: 5, x: 8.3, y: 7.2, rot: 2 },
+  { id: 'off-printer', type: 'officeprinter', level: 5, x: 11.5, y: 9.2, rot: 2 },
   { id: 'off-runner', type: 'officerunner', level: 5, x: 4.7, y: 0.0, rot: 0 },
-  { id: 'off-rug', type: 'officerug', level: 5, x: 7.0, y: 0.2, rot: 0 },
-  { id: 'off-boss', type: 'bossdesk', level: 5, x: 8.0, y: 1.0, rot: 2 },
-  { id: 'off-bosschair', type: 'bosschair', level: 5, x: 8.5, y: 0.2, rot: 2 },
-  { id: 'off-visitor', type: 'visitorchair', level: 5, x: 8.7, y: 2.2, rot: 0 },
+  { id: 'off-rug', type: 'officerug', level: 5, x: 11.0, y: 0.2, rot: 0 },
+  { id: 'off-boss', type: 'bossdesk', level: 5, x: 12.0, y: 1.0, rot: 2 },
+  { id: 'off-bosschair', type: 'bosschair', level: 5, x: 12.5, y: 0.2, rot: 2 },
+  { id: 'off-visitor', type: 'visitorchair', level: 5, x: 12.7, y: 2.2, rot: 0 },
   { id: 'tree', type: 'tree', level: 3, x: 7.6, y: 0.5, rot: 0 },
   { id: 'garden', type: 'garden', level: 3, x: 3.6, y: 0.35, rot: 0, grow: 0.35, wet: 0.6 },
   { id: 'sprinkler', type: 'sprinkler', level: 3, x: 5.6, y: 4.4, rot: 0 },

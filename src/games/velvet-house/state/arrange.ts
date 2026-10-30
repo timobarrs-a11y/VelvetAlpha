@@ -1,5 +1,5 @@
 import { TYPES, blocksOf, isRug, isMount, isFixed, footprint, colsOf, kindOf, type ObjectInstance } from './objects';
-import { LEVELS, STAIRS, WX, WY } from './house';
+import { LEVELS, STAIRS, levelW, levelH } from './house';
 import { buildWorld } from './agents';
 import { cellOf, reachableSet, NY } from './pathfinding';
 import { isOutdoor } from './scenes';
@@ -74,7 +74,7 @@ export interface PlacementCheck {
 export function checkPlacement(objs: ObjectInstance[], held: ObjectInstance, people: Array<{ level: number; x: number; y: number }> = []): PlacementCheck {
   if (held.on) return checkOnSurface(objs, held);
   const [fw, fd] = footprint(held);
-  const m = margin(held.level), eps = 1e-6;
+  const m = margin(held.level), eps = 1e-6, WX = levelW(held.level), WY = levelH(held.level);
   if (held.x < m.lo - eps || held.y < m.lo - eps || held.x + fw > WX - m.hi + eps || held.y + fd > WY - m.hi + eps) {
     return { ok: false, reason: 'That would poke through the wall.' };
   }
@@ -138,7 +138,7 @@ export function backToWall(o: ObjectInstance): boolean {
   const from = along ? o.x : o.y, to = along ? o.x + w : o.y + d, out = o.rot === 0 || o.rot === 3 ? -1 : 1;
   const near = (line: number) => (line - at) * out >= -0.01 && (line - at) * out <= GAP;
   // The house's own wall behind it, or one inside the house.
-  if (near(o.rot === 1 ? WX : o.rot === 2 ? WY : 0)) return true;
+  if (near(o.rot === 1 ? levelW(o.level) : o.rot === 2 ? levelH(o.level) : 0)) return true;
   return LEVELS[o.level].walls.some((wl) => (along ? wl.y !== undefined : wl.x !== undefined) && near((along ? wl.y : wl.x)!) && wl.a <= from + SLACK && wl.b >= to - SLACK);
 }
 
@@ -237,7 +237,7 @@ export function carryOnTop(objs: ObjectInstance[], host: ObjectInstance, from: P
 export function snapEdges(objs: ObjectInstance[], o: ObjectInstance, reach = 0.3): void {
   if (o.on || !TYPES[o.type] || isMount(o.type) || TYPES[o.type].small) return;
   const [fw, fd] = footprint(o), m = margin(o.level);
-  const xs = [m.lo, WX - m.hi - fw], ys = [m.lo, WY - m.hi - fd];
+  const xs = [m.lo, levelW(o.level) - m.hi - fw], ys = [m.lo, levelH(o.level) - m.hi - fd];
   for (const q of objs) {
     if (q === o || q.on || q.level !== o.level || !TYPES[q.type] || isRug(q.type) || isMount(q.type) || TYPES[q.type].wall) continue;
     const [qw, qd] = footprint(q);
@@ -282,6 +282,7 @@ export function wallSnaps(_objs: ObjectInstance[], o: ObjectInstance): WallSnap[
     const cost = Math.hypot(x + fw / 2 - cx, y + fd / 2 - cy);
     found.push({ x, y, rot, axis: perp === 'y' ? 'x' : 'y', lo, hi: top, cost });
   };
+  const WX = levelW(o.level), WY = levelH(o.level);
   const spanX: [number, number] = [m.lo, WX - m.hi], spanY: [number, number] = [m.lo, WY - m.hi];
   consider(0, 'y', m.lo, spanX[0], spanX[1]);
   { o.rot = 2; const fd = footprint(o)[1]; consider(2, 'y', WY - m.hi - fd, spanX[0], spanX[1]); }
@@ -425,12 +426,12 @@ export function canChangeFloor(o: ObjectInstance): boolean {
 export function relocate(
   objs: ObjectInstance[], o: ObjectInstance, level: number,
   people: Array<{ level: number; x: number; y: number }> = [],
-  near: [number, number] = [WX / 2, WY / 2],
+  near: [number, number] = [levelW(level) / 2, levelH(level) / 2],
 ): boolean {
   if (isMount(o.type)) return hang(objs, o, level, people, near);
   const orig = { level: o.level, x: o.x, y: o.y, rot: o.rot };
   const spots: Array<[number, number]> = [];
-  for (let x = 0; x <= WX; x += 0.5) for (let y = 0; y <= WY; y += 0.5) spots.push([x, y]);
+  for (let x = 0; x <= levelW(level); x += 0.5) for (let y = 0; y <= levelH(level); y += 0.5) spots.push([x, y]);
   spots.sort((a, b) => Math.hypot(a[0] - near[0], a[1] - near[1]) - Math.hypot(b[0] - near[0], b[1] - near[1]));
   o.level = level;
   for (const turns of [0, 1]) {
@@ -459,6 +460,7 @@ function hang(objs: ObjectInstance[], o: ObjectInstance, level: number, people: 
       else spots.push([rot, line - OFF - w, u]);
     }
   };
+  const WX = levelW(level), WY = levelH(level);
   along(0, 0, 0, WX); along(2, WY, 0, WX); along(3, 0, 0, WY); along(1, WX, 0, WY);
   for (const wl of LEVELS[level].walls) {
     if (wl.y !== undefined) { along(0, wl.y, wl.a, wl.b); along(2, wl.y, wl.a, wl.b); } else { along(3, wl.x!, wl.a, wl.b); along(1, wl.x!, wl.a, wl.b); }

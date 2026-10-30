@@ -9,8 +9,8 @@ import { createHousehold, type HouseholdState } from '../state/household';
 import { parseLife, type LifeState } from '../state/life';
 import { BOTTOM_STYLES } from '../state/clothing';
 
-export const VIEW_W = 640;
-export const VIEW_H = 440;
+/** The size of the picture's view space: 640 x 440 for the house, bigger for a bigger floor (kept in step with the floor on show: see `viewSizeFor`). */
+export const VIEW = { w: 640, h: 440 };
 
 const VELVET_COMPANION_ID = (() => {
   try { return new URLSearchParams(location.search).get('companion') || ''; } catch { return ''; }

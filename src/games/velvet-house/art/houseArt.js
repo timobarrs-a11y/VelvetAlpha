@@ -13,7 +13,7 @@ import { isOutdoor } from '../state/scenes';
 import { rand } from '../state/rng';
 import { createFabric } from './fabric.js';
 import { SLEEVE_BY_CUT } from '../state/garment';
-import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR, OFFICE } from '../state/house';
+import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR, OFFICE, levelW, levelH, viewSizeFor } from '../state/house';
 import { stageAt } from '../state/plantGrowth';
 import { drawCrop, drawGroundSpot } from './cropArt.js';
 import { createWeatherFx, hull } from './weatherFx.js';
@@ -32,7 +32,8 @@ export function createHouseArt(ctx0, opts = {}) {
   let gOn = false, gMat = MATERIAL.matte;
   const objectLights = new Map();
   const wallLightOverrides = new Map();
-  const W = 640, H = 440;
+  // The picture is the floor's diamond plus a margin (640 x 440 for the house's 10 x 8); a bigger floor has a bigger picture (see `applyLevelDims`).
+  let W = 640, H = 440;
   const cam = { z: 1, x: W / 2, y: H / 2 };
   let minutes = 380, day = 1, viewLevel = 1, animT = 0;
   let party = false, partyF = 0, tvF = 0, dishes = 0, power = true, laundryPile = 0;
@@ -63,7 +64,8 @@ export function createHouseArt(ctx0, opts = {}) {
   let fridge = { basic: 4, fresh: 0 };
   const lightSkipped = () => false;
 
-  const WX = 10, WY = 8, TW = 32, TH = 16, ZH = 34, WH = 2.6, IW = 0.55;
+  let WX = 10, WY = 8;
+  const TW = 32, TH = 16, ZH = 34, WH = 2.6, IW = 0.55;
   let OX = 288, OY = 128;
   const ANG = Math.atan2(TH, TW);
   // camera: VR turns the house in 90° steps. V maps world (x, y) to view space, where the viewer always sits at +vx +vy.
@@ -79,7 +81,16 @@ export function createHouseArt(ctx0, opts = {}) {
   const unIso = (sx, sy) => { const a = (sx - OX) / TW, b = (sy - OY) / TH; return Vi((a + b) / 2, (b - a) / 2); };
   // Outside, the yard sits right of centre so its far fence runs off the edge of the picture instead of ending in view.
   let YS = 0;
-  function setOrigin() { const vw = viewW(), vd = viewD(); OX = 320 - (vw / 2 - vd / 2) * TW + YS; OY = 272 - (vw / 2 + vd / 2) * TH; }
+  function setOrigin() { const vw = viewW(), vd = viewD(); OX = W / 2 - (vw / 2 - vd / 2) * TW + YS; OY = 128; }
+  /** The floor on show sets the size of the world and of the picture: the house's 10 x 8 and 640 x 440, or the floor's own. */
+  function applyLevelDims(level) {
+    const nw = levelW(level), nh = levelH(level);
+    if (nw === WX && nh === WY) return;
+    WX = nw; WY = nh;
+    const vs = viewSizeFor(level); W = vs.w; H = vs.h;
+    cam.x = W / 2; cam.y = H / 2;
+    setOrigin();
+  }
   function vrect(x1, y1, x2, y2) { const [a1, b1] = V(x1, y1), [a2, b2] = V(x2, y2); return [Math.min(a1, a2), Math.min(b1, b2), Math.max(a1, a2), Math.max(b1, b2)]; }
 
   function rgb(h) { if (h[0] !== '#') { const m = h.match(/[\d.]+/g) || [128, 128, 128]; return [+m[0], +m[1], +m[2]]; } h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
@@ -3104,7 +3115,7 @@ export function createHouseArt(ctx0, opts = {}) {
     },
     officerunner: {
       // A long corporate runner laid from the meeting room door down the aisle: charcoal-blue with a pale edge stripe and a darker inner border.
-      parts: () => [F(0, 0, 1.1, 6.4, (T) => { const q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1); q(0, 0, 1.1, 6.4, 0.01, '#3C4A63'); q(0.07, 0, 1.03, 6.33, 0.012, null, '#9AA7BD'); q(0.15, 0, 0.95, 6.25, 0.012, null, 'rgba(154,167,189,.45)'); }, { decal: true })],
+      parts: () => [F(0, 0, 1.1, 8.4, (T) => { const q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1); q(0, 0, 1.1, 8.4, 0.01, '#3C4A63'); q(0.07, 0, 1.03, 8.33, 0.012, null, '#9AA7BD'); q(0.15, 0, 0.95, 8.25, 0.012, null, 'rgba(154,167,189,.45)'); }, { decal: true })],
     },
     officeprinter: {
       // A floor-standing copier: a cabinet with two paper drawers, a white body, a scanner lid with a glass top, a control panel with buttons on the front half, and a tray with paper. The front (drawers, tray, panel) is local +y; the piece stands against the front wall turned (rot 2) so that front faces into the room.
@@ -4690,7 +4701,7 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.restore();
   }
   function drawBackdrop() {
-    const key = `${VR}|${seasonIdx()}|${Math.round(darkness() * 20)}|${Math.floor(hour() * 2)}|${raining() ? 1 : 0}|${cv.width}`;
+    const key = `${VR}|${seasonIdx()}|${Math.round(darkness() * 20)}|${Math.floor(hour() * 2)}|${raining() ? 1 : 0}|${cv.width}|${WX}x${WY}`;
     if (nbBack.key !== key) {
       const keepCtx = ctx, keepOn = gOn;
       for (const part of ['ground', 'objects']) {
@@ -4948,6 +4959,7 @@ export function createHouseArt(ctx0, opts = {}) {
     dimNow += (dimTarget - dimNow) * Math.min(1, rdt * 1.6);
     wallMode = s.wallMode || 'cut';
     OBJS = s.objs;
+    applyLevelDims(s.level);
     { const ys = isOutdoor(s.level) ? 56 : 0; if (s.rot !== VR || ys !== YS) { VR = s.rot; YS = ys; setOrigin(); } }
     // Who's doing what, where: the stove steams while someone cooks, the
     // washer spins during laundry, the shower runs while they shower.

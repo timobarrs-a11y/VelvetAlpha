@@ -312,7 +312,7 @@ export function createGame(app: HTMLElement): Game | null {
   ];
   // Dale, the boss, lives on the office floor and is not part of the household (see state/boss.ts).
   const daleDef = npcDef('dale');
-  if (daleDef) people.push(createNpc(daleDef.id, daleDef.name, { ...daleDef.look }, { level: 5, x: 8.2, y: 0.7 }));
+  if (daleDef) people.push(createNpc(daleDef.id, daleDef.name, { ...daleDef.look }, { level: 5, x: 12.2, y: 0.7 }));
   const house = buildWorld(world.objs);
   const rngSeed = typeof save?.rngSeed === 'number' ? save.rngSeed : Date.now() & 0xffffffff;
   const rng = new RNG(rngSeed);

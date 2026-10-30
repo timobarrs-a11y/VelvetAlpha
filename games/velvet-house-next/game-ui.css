@@ -836,7 +836,7 @@
 .vh-stage { flex-direction: column; align-items: stretch; justify-content: flex-start; }
 .vh-stage > .vh-hud { position: static; order: 0; flex-shrink: 0; margin: 16px 16px 0; }
 .vh-stage > .vh-view { order: 1; position: relative; flex: 1 1 0; min-height: 0; min-width: 0; container-type: size; display: flex; align-items: center; justify-content: center; }
-.vh-view > .vh-canvas { width: min(100cqw, calc(100cqh * 640 / 440)); height: auto; max-height: none; flex-shrink: 0; }
+.vh-view > .vh-canvas { width: min(100cqw, calc(100cqh * var(--vh-aspect, 1.4545))); height: auto; max-height: none; flex-shrink: 0; }
 .vh-view > .vh-town-sign { top: 12px; bottom: auto; left: 12px; }
 .vh-view > .vh-log { top: auto !important; bottom: 12px !important; left: 12px; }
 .vh-stage > .vh-controls { position: static; order: 3; flex-shrink: 0; transform: none; left: auto; bottom: auto; max-width: none; padding: 8px 8px 0; }

@@ -2,7 +2,7 @@ import { checkPlacement, snapEdges, snapToWall, wallSnaps, slideAlong, type Wall
 import { looksFor, changeLook, parseLook } from '../state/skins';
 import { TYPES, footprint, displayName, type ObjectInstance } from '../state/objects';
 import { IS_DEMO } from '../kernel/config';
-import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, WX, WY, roomName } from '../state/house';
+import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, levelW, levelH, roomName } from '../state/house';
 import { buildWorld } from '../state/agents';
 import { addFood } from '../state/vitals';
 import { type ArrangeState } from '../ui/drawer';
@@ -49,7 +49,7 @@ export function createArrange(g: Game): Partial<Game> {
     view.paused = true;
     g.syncControls();
     // Whole house in the band the panel leaves free (selecting a piece frames that instead).
-    const corners: Array<[number, number]> = [[0, 0], [WX, 0], [0, WY], [WX, WY]].map(([x, y]) => art.project(x, y, 0));
+    const corners: Array<[number, number]> = [[0, 0], [levelW(view.level), 0], [0, levelH(view.level)], [levelW(view.level), levelH(view.level)]].map(([x, y]) => art.project(x, y, 0));
     g.frameView(corners, 1, 0.3);
   }
   function exitArrange(): void {

@@ -1,4 +1,4 @@
-import { LEVELS, WALL_LIGHTS, WX, WY, roomName, type WallSide } from './house';
+import { LEVELS, WALL_LIGHTS, levelW, levelH, roomName, type WallSide } from './house';
 import { footprint, TYPES, type ObjectInstance } from './objects';
 
 /**
@@ -73,7 +73,7 @@ export function readWallLamps(raw: unknown): WallLamp[] | null {
   return out;
 }
 
-export const wallLength = (p: WallSide): number => (p === 'B' ? WX : WY);
+export const wallLength = (p: WallSide, level = 1): number => (p === 'B' ? levelW(level) : levelH(level));
 const clampU = (p: WallSide, u: number): number => Math.round(Math.min(wallLength(p) - END_MARGIN, Math.max(END_MARGIN, u)) * 20) / 20;
 const clampZ = (z: number): number => Math.round(Math.min(LAMP_Z.max, Math.max(LAMP_Z.min, z)) * 20) / 20;
 

@@ -1,7 +1,7 @@
 import { ACTIVITIES } from '../state/activities';
 import { buildWorld, isAsleep, placeAgent, startChain, type Agent, type AgentTask } from '../state/agents';
 import { relocate } from '../state/arrange';
-import { ATTIC, OFFICE, DOOR, LEVELS, LEVEL_NAMES, STAIRS, WX, WY } from '../state/house';
+import { ATTIC, OFFICE, DOOR, LEVELS, LEVEL_NAMES, STAIRS, levelW, levelH } from '../state/house';
 import { addDirt } from '../state/household';
 import { TYPES, type ObjectInstance } from '../state/objects';
 import { isFreeAt, planRoute, randomFree, spotNear, type RouteLeg } from '../state/pathfinding';
@@ -52,7 +52,7 @@ export function createPets(g: Game): Partial<Game> {
   };
   const objById = (id: unknown): ObjectInstance | null => (typeof id === 'string' ? world.objs.find(o => o.id === id) ?? null : null);
   const routeTo = (p: { level: number; x: number; y: number }, lv: number, x: number, y: number): RouteLeg[] =>
-    planRoute(p, lv, x, y, (l) => house.grids[l], STAIRS, WX, WY);
+    planRoute(p, lv, x, y, (l) => house.grids[l], STAIRS, Math.max(levelW(lv), levelW(p.level)), Math.max(levelH(lv), levelH(p.level)));
   const faceToward = (p: Pet, t: { x: number; y: number }): void => {
     const dx = t.x - p.x, dy = t.y - p.y, d = Math.hypot(dx, dy);
     if (d > 1e-3) p.face = [dx / d, dy / d];
@@ -164,7 +164,7 @@ export function createPets(g: Game): Partial<Game> {
       people: people.slice(0, 2).map(c => ({ id: c.id, level: c.level, x: c.x, y: c.y, asleep: isAsleep(c), away: !!c.away })),
       thing: (id) => { const o = objById(id); return o ? { level: o.level, at: (lx, ly) => xf(o, lx, ly) } : null; },
       randomFree: (lv) => randomFree(house.grids[lv], r, LEVELS[lv].anchor),
-      spotNear: (who, p) => spotNear(who, p, (l) => house.grids[l], WX, WY),
+      spotNear: (who, p) => spotNear(who, p, (l) => house.grids[l], levelW(p.level), levelH(p.level)),
       door: DOOR, mainFloor: 1, yard: YARD >= 0 ? YARD : null, floors: indoorFloors(), rng: r,
       others: world.pets.map(o => ({ id: o.id, kind: o.kind, level: o.level, x: o.x, y: o.y, z: o.z, state: o.state, busy: !!o.hold || !!o.away || onStairLeg(o) })),
     };
@@ -252,7 +252,7 @@ export function createPets(g: Game): Partial<Game> {
     }
     if (act === 'playPet' || act === 'petPet') {
       if (!holdPet(ch, p)) { if (player) log(`${p.name} is busy right now.`); return false; }
-      const [x, y] = spotNear({ level: p.level, x: p.x, y: p.y }, ch, (l) => house.grids[l], WX, WY);
+      const [x, y] = spotNear({ level: p.level, x: p.x, y: p.y }, ch, (l) => house.grids[l], levelW(p.level), levelH(p.level));
       leaveSeat(ch);
       ch.task = { act, slot: null, phase: 'walk', route: routeTo(ch, p.level, x, y), time: 0, dur: ACTIVITIES[act]?.dur ?? 10, next: [] };
       return true;
@@ -337,7 +337,7 @@ export function createPets(g: Game): Partial<Game> {
     if (p.away || p.z > 0 || LEVELS[p.level]?.yard) return;
     const spot = (type: string, spread: number): void => {
       const x = p.x + (r() - 0.5) * spread, y = p.y + (r() - 0.5) * spread;
-      if (isFreeAt(house.grids[p.level], x, y, WX, WY)) addDirt(world.household, p.level, 'floor', type, x, y);
+      if (isFreeAt(house.grids[p.level], x, y, levelW(p.level), levelH(p.level))) addDirt(world.household, p.level, 'floor', type, x, y);
     };
     if (r() < 0.08 * gameMin / 15) spot('fur', 0.8);
     if (p.cameIn && absMin() - p.cameIn < 40 && r() < 0.65 * gameMin / 15) spot('paws', 0.6);
