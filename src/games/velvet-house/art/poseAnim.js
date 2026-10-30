@@ -326,7 +326,7 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0, env = null) {
 // ---- Shooting hoops: a choreography with a ball that has its own motion ----
 // One cycle is a round of play: dribble, gather, aim, shoot, watch the ball, a made basket (fist pump) or a miss (shrug), fetch the rebound, pick it up.
 // The ball is not in anyone's hand for most of it: it bounces, flies and rolls by its own simple physics, and the body reacts to where it is.
-export const HOOPS = { cycle: 6.0, release: 2.65, flight: 0.95, shoulder: 0.99, rimZ: 2.2, rim: { f: 1.8, s: 0 } };
+export const HOOPS = { cycle: 6.0, release: 2.65, flight: 0.95, shoulder: 0.99, rimZ: 2.1, rim: { f: 1.8, s: 0 } };
 const mixN = (a, b, k) => a + (b - a) * k;
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const sstep = (a, b, v) => { const k = clamp01((v - a) / (b - a)); return k * k * (3 - 2 * k); };
