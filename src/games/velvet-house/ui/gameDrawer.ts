@@ -51,6 +51,9 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onArrangeTakeDown: () => g.takeDownWall(),
     onPickFloor: (lv) => g.setLevel(lv),
     onPickRoom: (room) => { g.view.room = room; g.refreshDrawer(); },
+    onLoadHouses: () => { void g.loadHouses?.(); },
+    onVisit: (id) => g.visitHouse?.(id),
+    onSetVisitsOpen: (open) => { void g.setHouseOpen?.(open); },
     // Furniture goes straight into Arrange, so the player can place it; anything else (paint, seeds) puts the page away.
     onBuy: (item, color) => { g.handleBuy(item, color); if (item.icon === 'obj') drawer.open('arrange'); else drawer.close(); },
     onPetOrder: (act, id) => g.petOrder(act, id),

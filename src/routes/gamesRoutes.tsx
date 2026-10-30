@@ -15,6 +15,7 @@ const SocialCombatRPGGame = lazy(() => import('../pages/SocialCombatRPGGame').th
 const ShootoutGame = lazy(() => import('../pages/ShootoutGame').then(m => ({ default: m.ShootoutGame })));
 const VelvetHouseGame = lazy(() => import('../pages/VelvetHouseGame').then(m => ({ default: m.VelvetHouseGame })));
 const VelvetHouseNextGame = lazy(() => import('../pages/VelvetHouseNextGame').then(m => ({ default: m.VelvetHouseNextGame })));
+const VelvetHouseVisit = lazy(() => import('../pages/VelvetHouseVisit').then(m => ({ default: m.VelvetHouseVisit })));
 
 /** `which`: the game's own objective (every game also counts as "play a game"). */
 function game(el: React.ReactNode, which?: ReportedKey) {
@@ -38,6 +39,8 @@ export const gamesRoutes = [
   <Route key="social-combat" path="/social-combat" element={game(<SocialCombatRPGGame />, 'play_social_combat')} />,
   // Phase 1B: the live game now loads the typed/bundled engine (velvet-house-next entry)
   <Route key="velvet-house" path="/velvet-house" element={game(<VelvetHouseNextGame />, 'play_velvet_sims')} />,
+  // A friend's house, to look round (supabase/migrations/20261111100000_velvet_house_visits.sql)
+  <Route key="velvet-house-visit" path="/velvet-house/visit/:ownerId" element={game(<VelvetHouseVisit />)} />,
   <Route key="velvet-house-next" path="/velvet-house-next" element={game(<VelvetHouseNextGame />, 'play_velvet_sims')} />,
   // Legacy route kept for any existing bookmarks — redirects to the typed game
   <Route key="velvet-house-legacy" path="/velvet-house-legacy" element={game(<VelvetHouseGame />, 'play_velvet_sims')} />,

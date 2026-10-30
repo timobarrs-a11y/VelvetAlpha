@@ -18,7 +18,7 @@ spots, doing the same job. Mixing models changes the room; each model then gets 
 | Kind | V2 model | Size (W × D × h) | Reskin (theme) |
 |---|---|---|---|
 | Fridge | Chest freezer (`chestfreezer`) | 1.2 × 0.75 × 0.92, against 0.9 × 0.85 × 1.95 | Camp cooler chest (`camp`) |
-| TV unit | Media console (`mediaconsole`) | 2.0 × 0.5 × 0.5, against 1.6 × 0.45 × 0.75 | Walnut credenza (`midcentury`) |
+| TV unit | Media console (`mediaconsole`) | 2.0 × 0.5 × 0.5, against 1.6 × 0.45 × 0.75 | Teak credenza (`danish`) |
 
 ## How a model works
 

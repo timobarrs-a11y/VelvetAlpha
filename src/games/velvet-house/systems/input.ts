@@ -1,5 +1,5 @@
 import { TYPES } from '../state/objects';
-import { VIEW_W } from '../kernel/config';
+import { VIEW_W, run } from '../kernel/config';
 import type { Game } from '../kernel/game';
 
 export function createInput(g: Game): void {
@@ -19,6 +19,14 @@ export function createInput(g: Game): void {
       return;
     }
 
+    // A friend's house: look and poke, but no talking to their companion and no telling anyone what to do.
+    if (run.visit) {
+      const obj = g.findObjectAt(sx, sy);
+      const reaction = obj ? art.poke(obj, g.counterPartAt(obj, sx, sy)) : null;
+      if (reaction) log(reaction);
+      else if (art.toggleLightAt(view.level, sx, sy) !== null) log('You flick the light.');
+      return;
+    }
     // Try clicking on Maya → open chat
     const maya = people[1];
     if (maya.level === view.level) {
