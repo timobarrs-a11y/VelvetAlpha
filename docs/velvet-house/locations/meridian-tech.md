@@ -289,6 +289,12 @@ once on load (`kernel/config.ts`), with the content version unchanged.
 - **Meetings:** Jordan walks to the door and is out of sight for the length of the meeting; the sign glows red while anyone is in there.
 - **Not built yet:** the day's list and objective matching, what an action leaves behind, the jammed printer (so no "fix the jam"), and the cooler chat (there are no coworkers yet).
 
+## Floor size (spike: the office is 14 x 10)
+
+The house's 10 x 8 is not a limit of the engine: it is the size at which the isometric diamond fits the 640 x 440 picture exactly (`(w + h) * 32 + 64` wide, `(w + h) * 16 + 152` tall). That formula is now `viewSizeFor(level)` in `state/house.ts`, and a floor can carry its own `w` and `h` (`LevelDef`). The house's floors share stairs, so they stay 10 x 8; the office has no stairs, so it is 14 x 10 on this branch (twelve desks, Dale's corner at the back right, the printer at the front right). The walking grid, the placement rules, the art, the camera and the canvas shape all follow the floor on show. What changed: `state/pathfinding.ts` (grids are as big as their floor), `state/arrange.ts`, `state/agents.ts`, `state/wallLamps.ts`, `systems/pets.ts`, `systems/arrange.ts`, `art/houseArt.js` (`applyLevelDims`), `engine/camera.ts`, `kernel/config.ts` (`VIEW`), `kernel/run.ts` and one CSS rule.
+
+Open: at full zoom-out a bigger floor draws smaller (about 0.6 times on a phone), so the camera should start closer on big floors and follow the player; the yard could take the same treatment.
+
 ## Build order (pieces first; the day's list last)
 
 The day's list is built from the pieces, so they wait until the pieces exist. Each step is its own small change, checked in the real game on desktop and
