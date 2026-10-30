@@ -175,6 +175,11 @@ export interface Game {
   celebrate(options: import('../ui/celebrate').CelebrateOptions): void;
   recolourHeld(): void;
   useLook(skin: string): void;
+  // friends' houses (systems/visits.ts)
+  visits: import('../systems/visits').VisitsView;
+  loadHouses(): Promise<void>;
+  visitHouse(ownerId: string): void;
+  setHouseOpen(open: boolean): Promise<void>;
   cancelHold(): void;
   carryTo(level: number): void;
   storeSelected(): void;

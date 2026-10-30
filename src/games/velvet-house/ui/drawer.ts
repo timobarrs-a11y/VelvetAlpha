@@ -42,6 +42,10 @@ export interface DrawerCallbacks {
   // Shop: which floor Paint, Wallpaper and Floors are going on.
   onPickFloor?: (level: number) => void;
   onPickRoom?: (room: string | null) => void;
+  /** Friends' houses on the Household page: fetch the list, go on a visit, open or close the player's own. */
+  onLoadHouses?: () => void;
+  onVisit?: (ownerId: string) => void;
+  onSetVisitsOpen?: (open: boolean) => void;
   onBuy: (item: CatalogEntry, color?: string) => void;
   onOrder: (chain: string) => void;
   // The Household page's pet buttons: 'feedPet', 'playPet', 'petPet', 'walkDog' or 'scoop' for a pet.
@@ -132,6 +136,8 @@ export interface DrawerState {
   /** The rooms of the floor being looked at, when it has more than one, and the one paint goes on (null: all of it). */
   shopRooms?: string[];
   shopRoom?: string | null;
+  /** Friends' houses (systems/visits.ts); missing when there is no account to find friends with. */
+  visits?: { online: boolean; friends: Array<{ ownerId: string; name: string; day: number | null }> | null; open: boolean | null; failed: boolean };
   arrange?: ArrangeState | null;
   page: DrawerPage;
   shopTab: string;
@@ -828,12 +834,29 @@ export function createDrawer(cb: DrawerCallbacks): {
         <button data-groceries ${state.deliveryPending ? 'disabled' : ''}>Order groceries ($40)</button>
         <button data-takeout ${state.deliveryPending ? 'disabled' : ''}>Order takeout ($25)</button>
       </div>
+      ${visitsHtml(state.visits)}
     </div>`)) return;
     sec.querySelector('[data-paybill]')?.addEventListener('click', () => cb.onPayBill());
+    sec.querySelectorAll<HTMLElement>('[data-visit]').forEach(b => b.addEventListener('click', () => cb.onVisit?.(b.dataset.visit!)));
+    sec.querySelector<HTMLElement>('[data-visits-open]')?.addEventListener('click', (e) => cb.onSetVisitsOpen?.((e.currentTarget as HTMLElement).dataset.visitsOpen === 'open'));
+    sec.querySelector('[data-visits-retry]')?.addEventListener('click', () => cb.onLoadHouses?.());
+    // The list comes the first time the page is shown.
+    if (state.visits?.online && state.visits.friends === null) cb.onLoadHouses?.();
     sec.querySelector('[data-openphone]')?.addEventListener('click', () => openPage('phone'));
     sec.querySelector('[data-groceries]')?.addEventListener('click', () => cb.onOrderGroceries());
     sec.querySelector('[data-takeout]')?.addEventListener('click', () => cb.onOrderTakeout());
     sec.querySelectorAll<HTMLElement>('[data-pact]').forEach(b => b.addEventListener('click', () => cb.onPetOrder?.(b.dataset.pact!, b.dataset.petId!)));
+  }
+
+  // Friends' houses: a Visit for each friend whose house is open, and whether friends can visit this one.
+  function visitsHtml(v: DrawerState['visits']): string {
+    if (!v?.online) return '';
+    const list = v.friends === null ? '<p class="vh-visits-note">Looking for your friends\' houses…</p>'
+      : v.failed ? '<p class="vh-visits-note">Friends\' houses could not be loaded. <button data-visits-retry>Try again</button></p>'
+      : !v.friends.length ? '<p class="vh-visits-note">None of your friends has a house open to visit yet.</p>'
+      : v.friends.map(f => `<div class="vh-visit-row"><span><strong>${esc(f.name)}</strong>${f.day ? `<small>Day ${f.day}</small>` : ''}</span><button data-visit="${esc(f.ownerId)}">Visit</button></div>`).join('');
+    const toggle = v.open === null ? '' : `<div class="vh-home-row vh-visits-open"><span>Friends can visit my house</span><button data-visits-open="${v.open ? 'closed' : 'open'}" aria-pressed="${v.open}">${v.open ? 'On' : 'Off'}</button></div>`;
+    return `<div class="vh-visits"><h4>Friends' houses</h4>${list}${toggle}</div>`;
   }
 
   function renderLog(state: DrawerState): void {

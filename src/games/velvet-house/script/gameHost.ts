@@ -304,7 +304,7 @@ export function createScripts(g: Game): Partial<Game> {
   // A new game opens with the story. A save from before scripts existed never sees the move-in. A save in the middle of
   // a script picks up where it was.
   // The demo is a sandbox: no opening, no Dez, no lessons. Every script counts as done.
-  const noScript = run.attract || IS_DEMO || (import.meta.env.DEV && new URLSearchParams(location.search).has('noscript'));
+  const noScript = run.attract || run.visit || IS_DEMO || (import.meta.env.DEV && new URLSearchParams(location.search).has('noscript'));
   const isNew = world.save === null;
   if (isNew && !noScript) {
     // The first day's furniture arrives in boxes, so the house starts without it.
