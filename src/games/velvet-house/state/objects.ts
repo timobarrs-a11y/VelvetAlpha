@@ -368,6 +368,16 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   // A freestanding hoop: a pole, a backboard and a rim at 2.1 tiles (a wide board with the red square high, the ring below it). The shooter stands 1.8 tiles in front of the rim (the spot's `stand`, local +y) and faces it.
   hoop: { W: 1.2, D: 0.8, h: 2.65, name: 'Basketball hoop', store: true,
     spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  // More hoops, built the same (the same board, rim and shooting spot), so the shot and the net work alike; only the look differs.
+  hoopretro: { W: 1.2, D: 0.8, h: 2.65, name: 'Barnyard hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  hoopstreet: { W: 1.2, D: 0.8, h: 2.65, name: 'Street hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  hooppro: { W: 1.2, D: 0.8, h: 2.65, name: 'Pro hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  hoopcolor: { W: 1.2, D: 0.8, h: 2.65, name: 'Sunshine hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  hoopsteel: { W: 1.2, D: 0.8, h: 2.65, name: 'Steel hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  hoopbamboo: { W: 1.2, D: 0.8, h: 2.65, name: 'Bamboo hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  hoopgold: { W: 1.2, D: 0.8, h: 2.65, name: 'Gold hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  hoopmarble: { W: 1.2, D: 0.8, h: 2.65, name: 'Marble hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  hoopcarbon: { W: 1.2, D: 0.8, h: 2.65, name: 'Carbon hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
   // Five more ways to watch: a tube TV on a table of its own and one on a shelf bolted to the wall (a CRT set is deep and heavy, so it
   // wants a table or a shelf of its own), a TV that is a framed picture until it is switched on, a wide cinema screen with a soundbar, and a
   // slim screen on a floor stand with shelves for the console and the soundbar. The wall ones hang like the wall-mounted TV; the others stand.

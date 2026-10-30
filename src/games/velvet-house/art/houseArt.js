@@ -3356,37 +3356,16 @@ export function createHouseArt(ctx0, opts = {}) {
       parts: () => [B(0, 0, 0, 1.9, 0.9, 0.35, '#8A6A50'), B(0.05, 0.05, 0.35, 1.8, 0.8, 0.14, '#E8DCC8'), B(0, 0, 0.35, 1.9, 0.12, 0.45, '#7A5E44'), B(1.5, 0.2, 0.49, 0.3, 0.5, 0.1, '#C8D7D1')] },
     snowman: {    
       parts: () => [F(0, 0, 0.6, 0.6, (T) => { const [x, y] = T.P(0.3, 0.3, 0); circle(x, y - 10, 13, '#F4F6F8'); circle(x, y - 30, 10, '#FBFCFD'); circle(x, y - 46, 7.5, '#FFFFFF'); circle(x - 2.5, y - 48, 1.2, '#1B1A1F'); circle(x + 2.5, y - 48, 1.2, '#1B1A1F'); ctx.fillStyle = '#E07A2B'; ctx.beginPath(); ctx.moveTo(x, y - 46); ctx.lineTo(x + 9, y - 44.5); ctx.lineTo(x, y - 44); ctx.fill(); rr(x - 8, y - 56, 16, 3, 1, '#2B2B30'); rr(x - 5, y - 64, 10, 9, 1.5, '#2B2B30'); limb(x - 9, y - 30, x - 20, y - 38, '#6B4A35', 1.5); limb(x + 9, y - 30, x + 20, y - 36, '#6B4A35', 1.5); rr(x - 8, y - 39, 16, 3.5, 1.5, '#C2413A'); })] },
-    hoop: {
-      // A freestanding hoop: a steel pole on a weighted base, a backboard with its square, an arm to a rim, and a net that swings when a ball goes through or hits.
-      parts: () => [F(0, 0, 1.2, 0.8, (T, o, t) => {
-        const kick = hoopKick.get(o.id), age = kick ? t - kick.at : 9, live = age >= 0 && age < 1.6;
-        const sw = live ? Math.sin(age * 22) * Math.exp(-age * 3.2) : 0;
-        // Proportioned like a portable hoop: a wide board (a thick dark frame), a red square about 40% of its width and set high, a ring centred below the square near the board's bottom edge, a plate that bolts it to the board, a long net, and a pole that meets the board's lower middle.
-        const X = 0.6, front = iso(...xf(o, X, 0.45), 0)[1] > iso(...xf(o, X, 0.18), 0)[1]; // is the board's front toward the camera?
-        const [cx, cy, rz0] = hoopRimLocal(o), rr = 0.25, rz = rz0 + (live && kick && !kick.made ? Math.sin(age * 26) * Math.exp(-age * 5) * 0.025 : 0), N = 12, ring = [];
-        const rimNet = () => {
-          for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2; ring.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz]); }
-          T.box(cx - 0.09, 0.18, rz - 0.04, 0.18, cy - rr - 0.18 + 0.02, 0.04, '#C2413A');       // the plate and arm that hold the rim to the board
-          const net = (k) => { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2; return [[cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz - 0.01], [cx + Math.cos(b) * rr * 0.6 + sw * 0.05, cy + Math.sin(b) * rr * 0.6 + sw * 0.03, rz - 0.34 + (live && kick && kick.made ? 0.02 * Math.sin(age * 18) : 0)]]; };
-          for (let k = 0; k < N; k++) { const [p0, p1] = net(k); T.line(p0, p1, 'rgba(255,255,255,.85)', 0.9); }
-          for (let k = 0; k < N; k++) { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2, f = 0.5, z = rz - 0.17; T.line([cx + Math.cos(a) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(a) * rr * (1 - 0.3 * f), z], [cx + Math.cos(b) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(b) * rr * (1 - 0.3 * f), z], 'rgba(255,255,255,.6)', 0.8); }
-          for (let i = 0; i < N; i++) T.line(ring[i], ring[(i + 1) % N], '#E0572B', 2.4);
-        };
-        T.box(X - 0.4, 0.06, 0, 0.8, 0.44, 0.07, '#3A3F4A'); T.box(X - 0.03, 0.1, 0.07, 0.06, 0.06, 1.92, '#4A4F58');
-        const bx = [X - 0.51, X + 0.51], bz = [2.03, 2.67], sx = [X - 0.22, X + 0.22], sz = [2.24, 2.56];
-        if (front) {
-          T.box(X - 0.55, 0.13, 1.99, 1.1, 0.05, 0.72, '#2E343F');
-          T.poly([[bx[0], 0.1805, bz[0]], [bx[1], 0.1805, bz[0]], [bx[1], 0.1805, bz[1]], [bx[0], 0.1805, bz[1]]], '#F2F5F8');
-          T.poly([[sx[0], 0.1805, sz[0]], [sx[1], 0.1805, sz[0]], [sx[1], 0.1805, sz[1]], [sx[0], 0.1805, sz[1]]], null, '#C2413A', 1.8);
-          rimNet();
-        } else {
-          // From behind: a solid board, so the rim and net show only where they hang past it.
-          rimNet();
-          T.box(X - 0.55, 0.13, 1.99, 1.1, 0.05, 0.72, '#2E343F');
-          T.poly([[bx[0], 0.1295, bz[0]], [bx[1], 0.1295, bz[0]], [bx[1], 0.1295, bz[1]], [bx[0], 0.1295, bz[1]]], '#4A515C');
-        }
-      })],
-    },
+    hoop: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoop))] },
+    hoopretro: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopretro))] },
+    hoopstreet: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopstreet))] },
+    hooppro: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hooppro))] },
+    hoopcolor: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopcolor))] },
+    hoopsteel: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopsteel))] },
+    hoopbamboo: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopbamboo))] },
+    hoopgold: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopgold))] },
+    hoopmarble: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopmarble))] },
+    hoopcarbon: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopcarbon))] },
     bench: {     
       parts: () => [B(0.1, 0.1, 0, 0.08, 0.08, 0.42, '#5A4A40'), B(1.42, 0.1, 0, 0.08, 0.08, 0.42, '#5A4A40'), B(0, 0.05, 0.42, 1.6, 0.5, 0.06, '#9C6B45', { name: 'seat' }), B(0, 0, 0.48, 1.6, 0.08, 0.42, '#8A5E3B')],
        },
@@ -4055,6 +4034,69 @@ export function createHouseArt(ctx0, opts = {}) {
   // ======================================================================
   // transforms
   // ======================================================================
+  /**
+   * The basketball hoops. Every style has the same build in the piece's own space (the base, the pole, a board 1.1 wide from 1.99 to 2.71 up,
+   * the rim at hoopRimLocal), so the shot, the ball and the net's swing work the same for all of them; only the look changes.
+   */
+  const HOOP_STYLES = {
+    hoop: { frame: '#2E343F', board: '#F2F5F8', back: '#4A515C', square: '#C2413A', plate: '#C2413A', rim: '#E0572B', net: 'rgba(255,255,255,.85)', net2: 'rgba(255,255,255,.6)', pole: '#4A4F58', poleW: 0.06, base: '#3A3F4A', baseH: 0.07 },
+    // A barn-yard hoop: a plank board on a wooden post, the square painted white.
+    hoopretro: { frame: '#6B4A30', board: '#B9854F', back: '#8A5E3B', square: '#F4EFE6', plate: '#3A3F4A', rim: '#C2413A', net: 'rgba(255,255,255,.85)', net2: 'rgba(255,255,255,.6)', pole: '#7A5236', poleW: 0.1, base: '#5A4A40', baseH: 0.05, grain: 'rgba(90,60,35,.45)' },
+    // A street hoop: a black board with an orange square, a chain net and a concrete-weighted base.
+    hoopstreet: { frame: '#16181D', board: '#2B2E35', back: '#22252B', square: '#F08A24', plate: '#16181D', rim: '#F08A24', net: 'rgba(200,205,212,.95)', net2: 'rgba(170,176,184,.8)', chain: true, pole: '#5C6470', poleW: 0.08, base: '#9A9A96', baseH: 0.1 },
+    // A pro hoop: a pale smoked board with a padded bottom edge and a padded pole.
+    hooppro: { frame: '#1E2733', board: '#DCE8F2', back: '#3A4A5C', square: '#1E2733', plate: '#1E2733', rim: '#E0572B', net: 'rgba(255,255,255,.9)', net2: 'rgba(255,255,255,.65)', pole: '#2B3542', poleW: 0.1, base: '#1E2733', baseH: 0.09, pad: '#2D5BA8', edgePad: '#2D5BA8' },
+    // A backyard colour hoop: a sunny board, a pink square and a teal base.
+    hoopcolor: { frame: '#2D8C8C', board: '#FFE27A', back: '#2D8C8C', square: '#E2557F', plate: '#2D8C8C', rim: '#E2557F', net: 'rgba(255,255,255,.9)', net2: 'rgba(255,255,255,.65)', pole: '#2D8C8C', poleW: 0.07, base: '#3FB0A8', baseH: 0.08 },
+    // The material set: the same hoop in brushed steel, bamboo, gold, marble and carbon fibre.
+    hoopsteel: { frame: '#8E979F', board: '#C9D0D6', back: '#7F8890', square: '#5C6670', plate: '#6C757D', rim: '#B8C0C7', net: 'rgba(225,230,236,.95)', net2: 'rgba(200,206,214,.8)', chain: true, pole: '#A3ACB4', poleW: 0.07, base: '#7F8890', baseH: 0.08, streaks: 'rgba(255,255,255,.55)', rings: '#7F8890', shine: 'rgba(255,255,255,.7)' },
+    hoopbamboo: { frame: '#7C8A3A', board: '#D8C27A', back: '#A9964F', square: '#5E6B2A', plate: '#5E6B2A', rim: '#C2413A', net: 'rgba(245,238,214,.9)', net2: 'rgba(230,220,190,.7)', pole: '#A8B65A', poleW: 0.09, base: '#6B5A3A', baseH: 0.05, slats: 'rgba(120,96,40,.55)', rings: '#7C8A3A' },
+    hoopgold: { frame: '#B8892B', board: '#FBF3DC', back: '#9C7322', square: '#D4A537', plate: '#B8892B', rim: '#E8C25A', net: 'rgba(255,248,225,.95)', net2: 'rgba(240,226,180,.75)', pole: '#D4A537', poleW: 0.07, base: '#8C6A1E', baseH: 0.08, shine: 'rgba(255,248,210,.9)', glint: 'rgba(255,255,255,.75)' },
+    hoopmarble: { frame: '#3B3E44', board: '#F1EFEA', back: '#D9D5CC', square: '#3B3E44', plate: '#3B3E44', rim: '#C9A24A', net: 'rgba(255,255,255,.9)', net2: 'rgba(255,255,255,.65)', pole: '#3B3E44', poleW: 0.08, base: '#E4E0D8', baseH: 0.1, veins: 'rgba(120,124,132,.55)', glint: 'rgba(255,255,255,.6)' },
+    hoopcarbon: { frame: '#0F1114', board: '#2A2D33', back: '#1A1C20', square: '#E23B3B', plate: '#0F1114', rim: '#E23B3B', net: 'rgba(235,238,242,.9)', net2: 'rgba(210,214,220,.7)', pole: '#24272C', poleW: 0.07, base: '#15171A', baseH: 0.08, weave: 'rgba(120,128,140,.35)', glint: 'rgba(255,255,255,.25)' },
+  };
+  const hoopPaint = (S) => (T, o, t) => {
+        const kick = hoopKick.get(o.id), age = kick ? t - kick.at : 9, live = age >= 0 && age < 1.6;
+        const sw = live ? Math.sin(age * 22) * Math.exp(-age * 3.2) : 0;
+        // Proportioned like a portable hoop: a wide board (a thick dark frame), a red square about 40% of its width and set high, a ring centred below the square near the board's bottom edge, a plate that bolts it to the board, a long net, and a pole that meets the board's lower middle.
+        const X = 0.6, front = iso(...xf(o, X, 0.45), 0)[1] > iso(...xf(o, X, 0.18), 0)[1]; // is the board's front toward the camera?
+        const [cx, cy, rz0] = hoopRimLocal(o), rr = 0.25, rz = rz0 + (live && kick && !kick.made ? Math.sin(age * 26) * Math.exp(-age * 5) * 0.025 : 0), N = 12, ring = [];
+        const rimNet = () => {
+          for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2; ring.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz]); }
+          T.box(cx - 0.09, 0.18, rz - 0.04, 0.18, cy - rr - 0.18 + 0.02, 0.04, S.plate);       // the plate and arm that hold the rim to the board
+          const net = (k) => { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2; return [[cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz - 0.01], [cx + Math.cos(b) * rr * 0.6 + sw * 0.05, cy + Math.sin(b) * rr * 0.6 + sw * 0.03, rz - 0.34 + (live && kick && kick.made ? 0.02 * Math.sin(age * 18) : 0)]]; };
+          for (let k = 0; k < N; k++) { const [p0, p1] = net(k); T.line(p0, p1, S.net, S.chain ? 1.3 : 0.9); }
+          for (let k = 0; k < N; k++) { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2, f = 0.5, z = rz - 0.17; T.line([cx + Math.cos(a) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(a) * rr * (1 - 0.3 * f), z], [cx + Math.cos(b) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(b) * rr * (1 - 0.3 * f), z], S.net2, S.chain ? 1.1 : 0.8); }
+          for (let i = 0; i < N; i++) T.line(ring[i], ring[(i + 1) % N], S.rim, 2.4);
+        };
+        T.box(X - 0.4, 0.06, 0, 0.8, 0.44, S.baseH, S.base); T.box(X - S.poleW / 2, 0.1 - S.poleW / 2 + 0.03, S.baseH, S.poleW, S.poleW, 1.99 - S.baseH, S.pole);
+        // Rings up the pole: a bamboo cane's nodes, or a metal pole's joints.
+        if (S.rings) for (let z = S.baseH + 0.3; z < 1.95; z += 0.36) T.box(X - S.poleW / 2 - 0.01, 0.1 - S.poleW / 2 + 0.02, z, S.poleW + 0.02, S.poleW + 0.02, 0.035, S.rings);
+        if (S.shine) T.line([X - S.poleW / 2 + 0.012, 0.1 + S.poleW / 2 + 0.031, S.baseH + 0.05], [X - S.poleW / 2 + 0.012, 0.1 + S.poleW / 2 + 0.031, 1.95], S.shine, 1);
+        if (S.pad) T.box(X - S.poleW / 2 - 0.02, 0.1 - S.poleW / 2 + 0.01, S.baseH, S.poleW + 0.04, S.poleW + 0.04, 0.9, S.pad);
+        const bx = [X - 0.51, X + 0.51], bz = [2.03, 2.67], sx = [X - 0.22, X + 0.22], sz = [2.24, 2.56];
+        if (front) {
+          T.box(X - 0.55, 0.13, 1.99, 1.1, 0.05, 0.72, S.frame);
+          T.poly([[bx[0], 0.1805, bz[0]], [bx[1], 0.1805, bz[0]], [bx[1], 0.1805, bz[1]], [bx[0], 0.1805, bz[1]]], S.board);
+          // The board's surface: brushed streaks, slats, veins in stone, a woven weave, a glint of polish.
+          const at = (u, v) => [bx[0] + u * (bx[1] - bx[0]), 0.181, bz[0] + v * (bz[1] - bz[0])];
+          if (S.streaks) for (let k = 0; k < 14; k++) { const v = 0.04 + k * 0.069, u0 = (k * 0.37) % 0.4; T.line(at(u0, v), at(Math.min(1, u0 + 0.45 + (k % 3) * 0.15), v), S.streaks, 0.6); }
+          if (S.slats) for (let k = 1; k < 9; k++) T.line(at(k / 9, 0), at(k / 9, 1), S.slats, 1);
+          if (S.veins) [[0, 0.8, 0.35, 0.55, 0.6, 0.62, 1, 0.3], [0.1, 0.1, 0.4, 0.3, 0.7, 0.18, 0.95, 0.05], [0.55, 1, 0.65, 0.75, 0.85, 0.7]].forEach((vn) => { for (let k = 0; k + 3 < vn.length; k += 2) T.line(at(vn[k], vn[k + 1]), at(vn[k + 2], vn[k + 3]), S.veins, 0.9); });
+          if (S.weave) for (let k = 1; k < 12; k++) { T.line(at(k / 12, 0), at(k / 12, 1), S.weave, 0.5); if (k < 7) T.line(at(0, k / 7), at(1, k / 7), S.weave, 0.5); }
+          if (S.glint) { T.line(at(0.06, 0.55), at(0.22, 0.95), S.glint, 2); T.line(at(0.14, 0.45), at(0.26, 0.75), S.glint, 1); }
+          if (S.grain) for (let k = 1; k < 6; k++) T.line([bx[0], 0.181, bz[0] + k * 0.107], [bx[1], 0.181, bz[0] + k * 0.107], S.grain, 0.8);
+          if (S.edgePad) T.box(X - 0.55, 0.12, 1.94, 1.1, 0.07, 0.07, S.edgePad);
+          T.poly([[sx[0], 0.1805, sz[0]], [sx[1], 0.1805, sz[0]], [sx[1], 0.1805, sz[1]], [sx[0], 0.1805, sz[1]]], null, S.square, 1.8);
+          rimNet();
+        } else {
+          // From behind: a solid board, so the rim and net show only where they hang past it.
+          rimNet();
+          T.box(X - 0.55, 0.13, 1.99, 1.1, 0.05, 0.72, S.frame);
+          if (S.edgePad) T.box(X - 0.55, 0.12, 1.94, 1.1, 0.07, 0.07, S.edgePad);
+          T.poly([[bx[0], 0.1295, bz[0]], [bx[1], 0.1295, bz[0]], [bx[1], 0.1295, bz[1]], [bx[0], 0.1295, bz[1]]], S.back);
+        }
+      };
   function xf(o, lx, ly) { const { W: w, D: d } = T_OF(o); switch (o.rot) { case 1: return [o.x + (d - ly), o.y + lx]; case 2: return [o.x + (w - lx), o.y + (d - ly)]; case 3: return [o.x + ly, o.y + (w - lx)]; default: return [o.x + lx, o.y + ly]; } }
   /**
    * Where the hoop's rim sits in the piece's own space: [x along the board, y out from it, z up]. It is a fixed 3D spot, the same from every camera:
