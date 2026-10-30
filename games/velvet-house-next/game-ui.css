@@ -849,6 +849,8 @@
 /* Phone: the dock is the bottom band; the People sheet opens above it, and vitals become a two-column block. */
 @media (max-width: 560px) {
   .vh-stage > .vh-hud { margin: 8px 8px 0; }
+  /* The picture fills the whole band between the clock chips and the buttons (the camera sizes the house to it), so there are no empty bars. */
+  .vh-view > .vh-canvas { width: 100cqw; height: 100cqh; }
   .vh-stage > .vh-dock { position: static; order: 5; flex-shrink: 0; left: auto; right: auto; top: auto; bottom: auto; transform: none; }
   .vh-stage > .vh-people { position: absolute; top: auto; right: 8px; left: 8px; width: auto; max-height: 45%; bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 8px); }
   .vh-stage > .vh-vitals { align-self: stretch; width: auto; margin: 8px 8px 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; padding: 8px 12px 6px; }
