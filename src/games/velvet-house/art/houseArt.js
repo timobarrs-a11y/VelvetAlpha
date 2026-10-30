@@ -3276,7 +3276,7 @@ export function createHouseArt(ctx0, opts = {}) {
         const sw = live ? Math.sin(age * 22) * Math.exp(-age * 3.2) : 0;
         // Like a portable hoop: a weighted base, a pole that meets the bottom of the board, a board with the red square ABOVE the rim, and the rim and net hanging in front of the board's lower part.
         const front = iso(...xf(o, 0.45, 0.4), 0)[1] > iso(...xf(o, 0.45, 0.18), 0)[1]; // is the board's front toward the camera?
-        const [cx, cy] = hoopRimLocal(o), rr = 0.16, rz = 2.09 + (live && kick && !kick.made ? Math.sin(age * 26) * Math.exp(-age * 5) * 0.025 : 0), N = 12, ring = [];
+        const [cx, cy] = hoopRimLocal(o), rr = 0.14, rz = 2.2 + (live && kick && !kick.made ? Math.sin(age * 26) * Math.exp(-age * 5) * 0.025 : 0), N = 12, ring = [];
         const rimNet = () => {
           for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2; ring.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz]); }
           T.box(cx - 0.05, 0.18, rz - 0.03, 0.1, cy - rr - 0.18 + 0.02, 0.03, '#C2413A');       // the plate and arm that hold the rim to the board
@@ -3285,14 +3285,13 @@ export function createHouseArt(ctx0, opts = {}) {
           for (let k = 0; k < N; k++) { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2, f = 0.5, z = rz - 0.15; T.line([cx + Math.cos(a) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(a) * rr * (1 - 0.3 * f), z], [cx + Math.cos(b) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(b) * rr * (1 - 0.3 * f), z], 'rgba(255,255,255,.6)', 0.8); }
           for (let i = 0; i < N; i++) T.line(ring[i], ring[(i + 1) % N], '#E0572B', 2.2);
         };
-        T.box(0.2, 0.06, 0, 0.5, 0.4, 0.07, '#3A3F4A'); T.box(0.42, 0.1, 0.07, 0.06, 0.06, 1.88, '#4A4F58');
-        if (!front) rimNet();                                                                    // seen from behind, the rim is on the far side of the board
-        T.box(0.05, 0.13, 1.95, 0.8, 0.05, 0.5, '#2E343F');
+        T.box(0.2, 0.06, 0, 0.5, 0.4, 0.07, '#3A3F4A'); T.box(0.42, 0.1, 0.07, 0.06, 0.06, 1.93, '#4A4F58');
+        T.box(0.03, 0.13, 2.0, 0.84, 0.05, 0.62, '#2E343F');
         if (front) {
-          T.poly([[0.08, 0.1805, 1.98], [0.82, 0.1805, 1.98], [0.82, 0.1805, 2.42], [0.08, 0.1805, 2.42]], '#F2F5F8');
-          T.poly([[0.3, 0.1805, 2.12], [0.6, 0.1805, 2.12], [0.6, 0.1805, 2.36], [0.3, 0.1805, 2.36]], null, '#C2413A', 1.4);
+          T.poly([[0.06, 0.1805, 2.03], [0.84, 0.1805, 2.03], [0.84, 0.1805, 2.59], [0.06, 0.1805, 2.59]], '#F2F5F8');
+          T.poly([[0.33, 0.1805, 2.3], [0.57, 0.1805, 2.3], [0.57, 0.1805, 2.5], [0.33, 0.1805, 2.5]], null, '#C2413A', 1.4);
           rimNet();
-        } else T.poly([[0.08, 0.1295, 1.98], [0.82, 0.1295, 1.98], [0.82, 0.1295, 2.42], [0.08, 0.1295, 2.42]], '#E4E8EE');
+        } else { T.poly([[0.06, 0.1295, 2.03], [0.84, 0.1295, 2.03], [0.84, 0.1295, 2.59], [0.06, 0.1295, 2.59]], '#E4E8EE'); rimNet(); } // from behind the rim still shows, so a shot can be followed from any side
       })],
     },
     bench: {     
@@ -3966,7 +3965,7 @@ export function createHouseArt(ctx0, opts = {}) {
   function xf(o, lx, ly) { const { W: w, D: d } = T_OF(o); switch (o.rot) { case 1: return [o.x + (d - ly), o.y + lx]; case 2: return [o.x + (w - lx), o.y + (d - ly)]; case 3: return [o.x + ly, o.y + (w - lx)]; default: return [o.x + lx, o.y + ly]; } }
   /** Where the hoop's rim sits in the piece's own space: out from the board, and slid along it so that on screen it hangs centred under the board from this camera (the same spot the ball is aimed at). */
   function hoopRimLocal(o) {
-    const cy = 0.38, a = xf(o, 0.45, 0.18), b = xf(o, 0.45, cy), e = xf(o, 0.55, cy);
+    const cy = 0.34, a = xf(o, 0.45, 0.18), b = xf(o, 0.45, cy), e = xf(o, 0.55, cy);
     const sa = iso(a[0], a[1], 0)[0], sb = iso(b[0], b[1], 0)[0], se = iso(e[0], e[1], 0)[0], per = (se - sb) / 0.1;
     return [0.45 + (per ? Math.max(-0.2, Math.min(0.2, (sa - sb) / per)) : 0), cy];
   }

@@ -366,7 +366,7 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   tvdesk: { W: 0.52, D: 0.2, h: 0.44, small: true, name: 'Desk TV', store: true, cols: ['#2B2B30', '#F2EEE8', '#C2413A'], screen: [0.26, 0.11, 0.27] },
   tvtube: { W: 0.6, D: 0.4, h: 0.58, small: true, name: 'Tube TV', store: true, cols: ['#8A5E3B', '#E4DDD2', '#2B2B30'], screen: [0.25, 0.4, 0.27] },
   // A freestanding hoop: a pole, a backboard and a rim at 2.1 tiles. The shooter stands 1.8 tiles in front of the rim (the spot's `stand`, local +y) and faces it.
-  hoop: { W: 0.9, D: 0.8, h: 2.4, name: 'Basketball hoop', store: true,
+  hoop: { W: 0.9, D: 0.8, h: 2.65, name: 'Basketball hoop', store: true,
     spots: { s: { stand: [0.45, 2.3], dir: [0, -1], tag: 'hoop' } } },
   entcenter: { wall: true, W: 2.4, D: 0.55, h: 2.0, name: 'Entertainment center', store: true, cols: ['#9C6B45', '#2B2B30', '#E4DDD2'], surface: { z: 0.62, rect: [0.56, 0.04, 1.84, 0.5] } },
 };
