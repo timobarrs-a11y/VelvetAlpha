@@ -3361,6 +3361,11 @@ export function createHouseArt(ctx0, opts = {}) {
     hoopstreet: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopstreet))] },
     hooppro: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hooppro))] },
     hoopcolor: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopcolor))] },
+    hoopsteel: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopsteel))] },
+    hoopbamboo: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopbamboo))] },
+    hoopgold: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopgold))] },
+    hoopmarble: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopmarble))] },
+    hoopcarbon: { parts: () => [F(0, 0, 1.2, 0.8, hoopPaint(HOOP_STYLES.hoopcarbon))] },
     bench: {     
       parts: () => [B(0.1, 0.1, 0, 0.08, 0.08, 0.42, '#5A4A40'), B(1.42, 0.1, 0, 0.08, 0.08, 0.42, '#5A4A40'), B(0, 0.05, 0.42, 1.6, 0.5, 0.06, '#9C6B45', { name: 'seat' }), B(0, 0, 0.48, 1.6, 0.08, 0.42, '#8A5E3B')],
        },
@@ -4043,6 +4048,12 @@ export function createHouseArt(ctx0, opts = {}) {
     hooppro: { frame: '#1E2733', board: '#DCE8F2', back: '#3A4A5C', square: '#1E2733', plate: '#1E2733', rim: '#E0572B', net: 'rgba(255,255,255,.9)', net2: 'rgba(255,255,255,.65)', pole: '#2B3542', poleW: 0.1, base: '#1E2733', baseH: 0.09, pad: '#2D5BA8', edgePad: '#2D5BA8' },
     // A backyard colour hoop: a sunny board, a pink square and a teal base.
     hoopcolor: { frame: '#2D8C8C', board: '#FFE27A', back: '#2D8C8C', square: '#E2557F', plate: '#2D8C8C', rim: '#E2557F', net: 'rgba(255,255,255,.9)', net2: 'rgba(255,255,255,.65)', pole: '#2D8C8C', poleW: 0.07, base: '#3FB0A8', baseH: 0.08 },
+    // The material set: the same hoop in brushed steel, bamboo, gold, marble and carbon fibre.
+    hoopsteel: { frame: '#8E979F', board: '#C9D0D6', back: '#7F8890', square: '#5C6670', plate: '#6C757D', rim: '#B8C0C7', net: 'rgba(225,230,236,.95)', net2: 'rgba(200,206,214,.8)', chain: true, pole: '#A3ACB4', poleW: 0.07, base: '#7F8890', baseH: 0.08, streaks: 'rgba(255,255,255,.55)', rings: '#7F8890', shine: 'rgba(255,255,255,.7)' },
+    hoopbamboo: { frame: '#7C8A3A', board: '#D8C27A', back: '#A9964F', square: '#5E6B2A', plate: '#5E6B2A', rim: '#C2413A', net: 'rgba(245,238,214,.9)', net2: 'rgba(230,220,190,.7)', pole: '#A8B65A', poleW: 0.09, base: '#6B5A3A', baseH: 0.05, slats: 'rgba(120,96,40,.55)', rings: '#7C8A3A' },
+    hoopgold: { frame: '#B8892B', board: '#FBF3DC', back: '#9C7322', square: '#D4A537', plate: '#B8892B', rim: '#E8C25A', net: 'rgba(255,248,225,.95)', net2: 'rgba(240,226,180,.75)', pole: '#D4A537', poleW: 0.07, base: '#8C6A1E', baseH: 0.08, shine: 'rgba(255,248,210,.9)', glint: 'rgba(255,255,255,.75)' },
+    hoopmarble: { frame: '#3B3E44', board: '#F1EFEA', back: '#D9D5CC', square: '#3B3E44', plate: '#3B3E44', rim: '#C9A24A', net: 'rgba(255,255,255,.9)', net2: 'rgba(255,255,255,.65)', pole: '#3B3E44', poleW: 0.08, base: '#E4E0D8', baseH: 0.1, veins: 'rgba(120,124,132,.55)', glint: 'rgba(255,255,255,.6)' },
+    hoopcarbon: { frame: '#0F1114', board: '#2A2D33', back: '#1A1C20', square: '#E23B3B', plate: '#0F1114', rim: '#E23B3B', net: 'rgba(235,238,242,.9)', net2: 'rgba(210,214,220,.7)', pole: '#24272C', poleW: 0.07, base: '#15171A', baseH: 0.08, weave: 'rgba(120,128,140,.35)', glint: 'rgba(255,255,255,.25)' },
   };
   const hoopPaint = (S) => (T, o, t) => {
         const kick = hoopKick.get(o.id), age = kick ? t - kick.at : 9, live = age >= 0 && age < 1.6;
@@ -4059,11 +4070,21 @@ export function createHouseArt(ctx0, opts = {}) {
           for (let i = 0; i < N; i++) T.line(ring[i], ring[(i + 1) % N], S.rim, 2.4);
         };
         T.box(X - 0.4, 0.06, 0, 0.8, 0.44, S.baseH, S.base); T.box(X - S.poleW / 2, 0.1 - S.poleW / 2 + 0.03, S.baseH, S.poleW, S.poleW, 1.99 - S.baseH, S.pole);
+        // Rings up the pole: a bamboo cane's nodes, or a metal pole's joints.
+        if (S.rings) for (let z = S.baseH + 0.3; z < 1.95; z += 0.36) T.box(X - S.poleW / 2 - 0.01, 0.1 - S.poleW / 2 + 0.02, z, S.poleW + 0.02, S.poleW + 0.02, 0.035, S.rings);
+        if (S.shine) T.line([X - S.poleW / 2 + 0.012, 0.1 + S.poleW / 2 + 0.031, S.baseH + 0.05], [X - S.poleW / 2 + 0.012, 0.1 + S.poleW / 2 + 0.031, 1.95], S.shine, 1);
         if (S.pad) T.box(X - S.poleW / 2 - 0.02, 0.1 - S.poleW / 2 + 0.01, S.baseH, S.poleW + 0.04, S.poleW + 0.04, 0.9, S.pad);
         const bx = [X - 0.51, X + 0.51], bz = [2.03, 2.67], sx = [X - 0.22, X + 0.22], sz = [2.24, 2.56];
         if (front) {
           T.box(X - 0.55, 0.13, 1.99, 1.1, 0.05, 0.72, S.frame);
           T.poly([[bx[0], 0.1805, bz[0]], [bx[1], 0.1805, bz[0]], [bx[1], 0.1805, bz[1]], [bx[0], 0.1805, bz[1]]], S.board);
+          // The board's surface: brushed streaks, slats, veins in stone, a woven weave, a glint of polish.
+          const at = (u, v) => [bx[0] + u * (bx[1] - bx[0]), 0.181, bz[0] + v * (bz[1] - bz[0])];
+          if (S.streaks) for (let k = 0; k < 14; k++) { const v = 0.04 + k * 0.069, u0 = (k * 0.37) % 0.4; T.line(at(u0, v), at(Math.min(1, u0 + 0.45 + (k % 3) * 0.15), v), S.streaks, 0.6); }
+          if (S.slats) for (let k = 1; k < 9; k++) T.line(at(k / 9, 0), at(k / 9, 1), S.slats, 1);
+          if (S.veins) [[0, 0.8, 0.35, 0.55, 0.6, 0.62, 1, 0.3], [0.1, 0.1, 0.4, 0.3, 0.7, 0.18, 0.95, 0.05], [0.55, 1, 0.65, 0.75, 0.85, 0.7]].forEach((vn) => { for (let k = 0; k + 3 < vn.length; k += 2) T.line(at(vn[k], vn[k + 1]), at(vn[k + 2], vn[k + 3]), S.veins, 0.9); });
+          if (S.weave) for (let k = 1; k < 12; k++) { T.line(at(k / 12, 0), at(k / 12, 1), S.weave, 0.5); if (k < 7) T.line(at(0, k / 7), at(1, k / 7), S.weave, 0.5); }
+          if (S.glint) { T.line(at(0.06, 0.55), at(0.22, 0.95), S.glint, 2); T.line(at(0.14, 0.45), at(0.26, 0.75), S.glint, 1); }
           if (S.grain) for (let k = 1; k < 6; k++) T.line([bx[0], 0.181, bz[0] + k * 0.107], [bx[1], 0.181, bz[0] + k * 0.107], S.grain, 0.8);
           if (S.edgePad) T.box(X - 0.55, 0.12, 1.94, 1.1, 0.07, 0.07, S.edgePad);
           T.poly([[sx[0], 0.1805, sz[0]], [sx[1], 0.1805, sz[0]], [sx[1], 0.1805, sz[1]], [sx[0], 0.1805, sz[1]]], null, S.square, 1.8);

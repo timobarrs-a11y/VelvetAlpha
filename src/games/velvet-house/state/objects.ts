@@ -373,6 +373,11 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   hoopstreet: { W: 1.2, D: 0.8, h: 2.65, name: 'Street hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
   hooppro: { W: 1.2, D: 0.8, h: 2.65, name: 'Pro hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
   hoopcolor: { W: 1.2, D: 0.8, h: 2.65, name: 'Sunshine hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  hoopsteel: { W: 1.2, D: 0.8, h: 2.65, name: 'Steel hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  hoopbamboo: { W: 1.2, D: 0.8, h: 2.65, name: 'Bamboo hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  hoopgold: { W: 1.2, D: 0.8, h: 2.65, name: 'Gold hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  hoopmarble: { W: 1.2, D: 0.8, h: 2.65, name: 'Marble hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
+  hoopcarbon: { W: 1.2, D: 0.8, h: 2.65, name: 'Carbon hoop', store: true, spots: { s: { stand: [0.6, 2.4], dir: [0, -1], tag: 'hoop' } } },
   // Five more ways to watch: a tube TV on a table of its own and one on a shelf bolted to the wall (a CRT set is deep and heavy, so it
   // wants a table or a shelf of its own), a TV that is a framed picture until it is switched on, a wide cinema screen with a soundbar, and a
   // slim screen on a floor stand with shelves for the console and the soundbar. The wall ones hang like the wall-mounted TV; the others stand.
