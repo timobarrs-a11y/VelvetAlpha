@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Brain, Edit3, Trash2, Pin, PinOff, Search, Check, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Brain, Edit3, Trash2, Pin, PinOff, Search, Check, AlertTriangle, RefreshCw, Undo2, ChevronDown } from 'lucide-react';
 import { memoryPanelService, MemoryItem } from '../services/memoryPanelService';
 import { getCompanions } from '../services/companionService';
 import { supabase } from '../shared/supabase/client';
@@ -47,6 +47,8 @@ export function MemoryPanel() {
   const [editText, setEditText] = useState('');
   const [editVersion, setEditVersion] = useState(0);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [removed, setRemoved] = useState<MemoryItem[]>([]);
+  const [showRemoved, setShowRemoved] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const showToast = (type: 'success' | 'error', text: string) => {
@@ -60,6 +62,8 @@ export function MemoryPanel() {
     try {
       const data = await memoryPanelService.list(selectedCompanionId || undefined);
       setItems(data);
+      // The "recently removed" list is a convenience; the panel works without it.
+      memoryPanelService.listRemoved(selectedCompanionId || undefined).then(setRemoved).catch(() => setRemoved([]));
     } catch (e) {
       setError('Failed to load memories. Please try again.');
     } finally {
@@ -112,6 +116,20 @@ export function MemoryPanel() {
       await load();
     } catch (e) {
       showToast('error', e instanceof Error ? e.message : 'Failed to forget');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRestore = async (item: MemoryItem) => {
+    setActionLoading(item.id);
+    try {
+      await memoryPanelService.restore(item.id);
+      showToast('success', 'Memory restored');
+      await load();
+    } catch (e) {
+      const why = e instanceof Error ? e.message : '';
+      showToast('error', why === 'duplicate' ? 'Already remembered in another form.' : why === 'expired' ? 'Too old to restore.' : 'Could not restore this memory.');
     } finally {
       setActionLoading(null);
     }
@@ -350,6 +368,36 @@ export function MemoryPanel() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {removed.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <button
+            onClick={() => setShowRemoved(v => !v)}
+            className="flex items-center gap-2 text-xs text-white/50 hover:text-white/80 transition"
+          >
+            <ChevronDown className={`w-3.5 h-3.5 transition ${showRemoved ? 'rotate-180' : ''}`} />
+            Recently removed ({removed.length})
+          </button>
+          {showRemoved && (
+            <div className="mt-2 space-y-2 max-h-[240px] overflow-y-auto pr-1">
+              <p className="text-white/30 text-xs">Removed in the last 30 days. Restore anything that was dropped by mistake.</p>
+              {removed.map(item => (
+                <div key={item.id} className="flex items-start gap-2 rounded-lg p-3 border border-white/10 bg-white/[0.02]">
+                  <p className="text-white/50 text-sm flex-1 leading-relaxed">{item.content}</p>
+                  <button
+                    onClick={() => handleRestore(item)}
+                    disabled={actionLoading === item.id}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-white/60 border border-white/10 hover:bg-white/5 transition disabled:opacity-40"
+                    title="Restore this memory"
+                  >
+                    <Undo2 className="w-3.5 h-3.5" /> Restore
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

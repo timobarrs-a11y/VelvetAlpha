@@ -15,9 +15,13 @@ import {
   buildRecentStoriesBlock,
   fetchGroundingStories,
 } from "../_shared/correspondentFramework.ts";
+import {
+  verifierMode, verifyMemory, decideRevision, wouldHave, isProtectedRow, isExplicitCorrection, parsePgVector,
+  relatednessCosine, sanitizeQuote, DEFAULT_T_RELATED, MAX_VERIFIER_CALLS_PER_TURN,
+} from "../_shared/memoryVerifier.ts";
 import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
 import {
-  EMBEDDING_MODEL, embedTexts, toPgVector, selectMemories, formatMemoryLine, estimateTokens, isGroundedIn,
+  EMBEDDING_MODEL, embedTexts, toPgVector, selectMemories, formatMemoryLine, formatAsOf, estimateTokens, isGroundedIn,
   looksLikeInstruction, isNearDuplicate, memoryRelatesTo, DEFAULT_FACT_SELECTION, DEFAULT_THREAD_SELECTION, type MemoryCandidate,
 } from "../_shared/memoryEngine.ts";
 import { buildCoachingStateBlock, markSignalsRaised, acknowledgeTickEvents } from "../_shared/coachingState.ts";
@@ -1222,6 +1226,75 @@ async function extractMemoryServerSide(
       return data;
     };
 
+
+    // Safe belief revision (docs/memory-engine-v4-spec.md). The extractor proposes; this decides. MEMORY_VERIFIER_MODE:
+    // off = as before, shadow = run and log what would have happened but apply as before, enforce = binding.
+    const revisionMode = verifierMode(Deno.env.get('MEMORY_VERIFIER_MODE'));
+    const tRaw = Deno.env.get('MEMORY_VERIFIER_T_RELATED');
+    const tRelated = tRaw !== undefined && tRaw !== '' && Number.isFinite(Number(tRaw)) ? Number(tRaw) : DEFAULT_T_RELATED;
+    let verifierCalls = 0;
+    const reviewRevision = async (
+      target: MemoryCandidate,
+      op: 'retract' | 'update' | 'close',
+      allowEntails: boolean,
+    ): Promise<'apply' | 'skip'> => {
+      if (revisionMode === 'off') return 'apply';
+      const enforcing = revisionMode === 'enforce';
+      const logRevision = (eventType: string, payload: Record<string, unknown>) =>
+        supabaseAdmin.from('memory_events').insert({
+          user_id: userId, companion_id: companionId, memory_item_id: target.id, event_type: eventType,
+          payload: { source: 'verifier', mode: revisionMode, op, target_kind: target.kind, ...payload },
+        }).then(() => {}, () => {});
+      try {
+        if (verifierCalls >= MAX_VERIFIER_CALLS_PER_TURN) {
+          await logRevision('gate_blocked', { reason: 'call_budget', applied: !enforcing });
+          return enforcing ? 'skip' : 'apply';
+        }
+        verifierCalls++;
+        const v = await verifyMemory({ apiKey, model: MODEL_CONFIG.HAIKU, kind: target.kind, content: target.content, message: userMessage,
+          ageDays: (Date.now() - new Date(target.created_at).getTime()) / 86400000, source: target.source });
+        if (!v) {
+          await logRevision('verifier_rejected', { reason: 'verifier_error', applied: !enforcing });
+          return enforcing ? 'skip' : 'apply';
+        }
+        let cosine: number | null = null;
+        let cosineNote = 'no_quote';
+        if (v.verdict !== 'unrelated' && v.quote) {
+          const [quoteVecs, { data: vecRow }] = await Promise.all([
+            embedTexts([v.quote], Deno.env.get('OPENAI_API_KEY')),
+            supabaseAdmin.from('memory_items').select('embedding').eq('id', target.id).maybeSingle(),
+          ]);
+          const targetVec = parsePgVector(vecRow?.embedding);
+          cosine = relatednessCosine(quoteVecs?.[0], targetVec);
+          cosineNote = cosine !== null ? 'ok' : !quoteVecs ? 'embed_failed' : !targetVec ? 'target_has_no_vector' : 'size_mismatch';
+        }
+        const { data: disputeRow } = await supabaseAdmin.from('memory_items').select('disputed_at, dispute_message_id').eq('id', target.id).maybeSingle();
+        const decision = decideRevision({
+          verdict: v.verdict, confidence: v.confidence, cosine, tRelated, allowEntails,
+          protectedRow: isProtectedRow({ source: target.source, confirm_count: target.confirm_count, created_at: target.created_at }),
+          explicit: isExplicitCorrection(v.quote, target.content),
+          priorDisputeAt: disputeRow?.disputed_at ?? null,
+          priorDisputeMessageId: disputeRow?.dispute_message_id ?? null,
+          currentMessageId: sourceMessageIds[0] ?? null,
+        });
+        const applied = !enforcing || decision.action === 'apply';
+        await logRevision(
+          !enforcing ? 'shadow_verdict' : decision.action === 'block' ? 'gate_blocked' : decision.action === 'dispute' ? 'dispute' : 'revision_verified',
+          {
+            verdict: v.verdict, raw_verdict: v.rawVerdict, confidence: v.confidence, quote: v.quote, reason: v.reason,
+            cosine, cosine_note: cosineNote, t_related: tRelated, decision: decision.action, why: decision.reason, would_have: wouldHave(decision), applied,
+          },
+        );
+        if (enforcing && decision.action === 'dispute') {
+          await supabaseAdmin.rpc('dispute_memory_item', { p_id: target.id, p_quote: sanitizeQuote(v.quote), p_message_id: sourceMessageIds[0] ?? null });
+        }
+        return applied ? 'apply' : 'skip';
+      } catch (err) {
+        console.error('[chat-turn] Revision review error:', err);
+        return enforcing ? 'skip' : 'apply';
+      }
+    };
+
     const confirm = (m: MemoryCandidate) =>
       supabaseAdmin.rpc('upsert_memory_item', {
         p_payload: {
@@ -1242,16 +1315,21 @@ async function extractMemoryServerSide(
 
         if (op.op === 'confirm' && target) {
           await confirm(target);
+          if (revisionMode === 'enforce') await supabaseAdmin.rpc('clear_memory_dispute', { p_id: target.id }).then(() => {}, () => {});
         } else if (op.op === 'retract' && target) {
           const { data: row } = await supabaseAdmin
             .from('memory_items').select('version').eq('id', target.id).eq('status', 'active').maybeSingle();
-          if (row) {
+          if (row && await reviewRevision(target, 'retract', false) === 'apply') {
             await supabaseAdmin.rpc('update_memory_item', {
               p_id: target.id, p_base_version: row.version, p_patch: { status: 'retired' }, p_actor_type: 'extractor',
             });
             await logCorrection(target.id, { action: 'retracted', evidence: op.evidence });
           }
         } else if (op.op === 'update' && target && fact.length >= 3) {
+          if (revisionMode !== 'off') {
+            const { data: row } = await supabaseAdmin.from('memory_items').select('version').eq('id', target.id).eq('status', 'active').maybeSingle();
+            if (!row || await reviewRevision(target, 'update', true) === 'skip') continue;
+          }
           const result = await supersede(target.id, {
             content: fact, source: 'inferred', confidence: 0.85, evidence: op.evidence,
             source_message_ids: sourceMessageIds, ...vectorFor(fact),
@@ -1308,7 +1386,7 @@ async function extractMemoryServerSide(
           }
           const { data: row } = await supabaseAdmin
             .from('memory_items').select('version').eq('id', target.id).eq('status', 'active').maybeSingle();
-          if (row) {
+          if (row && await reviewRevision(target, 'close', false) === 'apply') {
             await supabaseAdmin.rpc('update_memory_item', {
               p_id: target.id, p_base_version: row.version, p_patch: { status: 'retired' }, p_actor_type: 'extractor',
             });
@@ -1319,6 +1397,10 @@ async function extractMemoryServerSide(
           }
         } else if (op.op === 'update' && target && content) {
           if (!memoryRelatesTo(target.content, content, op.evidence)) continue;
+          if (revisionMode !== 'off') {
+            const { data: row } = await supabaseAdmin.from('memory_items').select('version').eq('id', target.id).eq('status', 'active').maybeSingle();
+            if (!row || await reviewRevision(target, 'update', true) === 'skip') continue;
+          }
           await supersede(target.id, { content, source: 'inferred', confidence: 0.8, evidence: op.evidence, source_message_ids: sourceMessageIds, ...vectorFor(content) });
         } else if (op.op === 'add' && content) {
           const twin = threads.find(t => isNearDuplicate(t.content, content));
@@ -1539,8 +1621,21 @@ async function fetchScopedMemories(
     }
 
     const now = new Date();
-    const factLines = selectedFacts.map(f => formatMemoryLine(f, now));
-    const threadLines = threads.map(t => formatMemoryLine(t, now));
+    // A memory the verifier saw contradicted once (but not enough to retire) is shown as disputed, so the companion
+    // can ask instead of asserting it. Only exists when MEMORY_VERIFIER_MODE=enforce has written a dispute.
+    const disputed = new Map<string, { disputed_at: string; dispute_quote: string | null }>();
+    if (verifierMode(Deno.env.get('MEMORY_VERIFIER_MODE')) === 'enforce') {
+      const { data: dRows } = await supabaseAdmin.from('memory_items')
+        .select('id, disputed_at, dispute_quote').in('id', [...selectedFacts, ...threads].map(m => m.id)).not('disputed_at', 'is', null);
+      for (const d of dRows ?? []) disputed.set(d.id, d);
+    }
+    const withDispute = (m: { id: string }, line: string) => {
+      const d = disputed.get(m.id);
+      const q = sanitizeQuote(d?.dispute_quote).replace(/"/g, "'");
+      return d ? `${line} (disputed ${formatAsOf(d.disputed_at, now)}${q ? `: the user said "${q}"` : ''}; check before relying on it)` : line;
+    };
+    const factLines = selectedFacts.map(f => withDispute(f, formatMemoryLine(f, now)));
+    const threadLines = threads.map(t => withDispute(t, formatMemoryLine(t, now)));
     const factTokens = factLines.reduce((sum, l) => sum + estimateTokens(l), 0);
     const threadTokens = threadLines.reduce((sum, l) => sum + estimateTokens(l), 0);
     const momentTokens = moments.reduce((sum, m) => sum + estimateTokens(m.content), 0);
