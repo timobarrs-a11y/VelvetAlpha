@@ -2630,6 +2630,88 @@ export function createHouseArt(ctx0, opts = {}) {
       T.line([0.3, 0.2, 0.49], [0.12, 0.12, 0.84], '#9AA0A6', 1.3); T.line([0.3, 0.2, 0.49], [0.5, 0.26, 0.86], '#9AA0A6', 1.3);
     },
   };
+  // ---- Five more TVs: two with a tube (on a table, and on a shelf bolted to the wall), a framed one, a cinema screen and one on a floor stand ----
+  // A tube TV, scaled by `k` and set at (ox, oy, oz): a deep cabinet, knobs and a grille beside the glass, rabbit ears on top.
+  function crtSet(T, o, ox, oy, oz, k, body) {
+    const X = (x) => ox + x * k, Y = (y) => oy + y * k, Z = (z) => oz + z * k, fy = Y(0.4) + 0.002;
+    T.box(X(0), Y(0), Z(0), 0.6 * k, 0.4 * k, 0.48 * k, body);
+    T.box(X(0.08), Y(0.4), Z(0.06), 0.04 * k, 0.04 * k, 0.36 * k, shade(body, -0.18));
+    T.poly([[X(0.03), fy, Z(0.05)], [X(0.46), fy, Z(0.05)], [X(0.46), fy, Z(0.44)], [X(0.03), fy, Z(0.44)]], '#1B1A1F');
+    tvPicture(T, [[X(0.06), fy + 0.001, Z(0.09)], [X(0.43), fy + 0.001, Z(0.09)], [X(0.43), fy + 0.001, Z(0.4)], [X(0.06), fy + 0.001, Z(0.4)]], tvLit(o));
+    [0.35, 0.24].forEach((z) => { const [kx, ky] = T.P(X(0.53), fy + 0.001, Z(z)); circle(kx, ky, 2.4, '#2B2B30'); circle(kx - 0.6, ky - 0.6, 0.9, '#9AA0A6'); });
+    for (let z = 0.08; z < 0.17; z += 0.03) T.line([X(0.49), fy + 0.001, Z(z)], [X(0.57), fy + 0.001, Z(z)], 'rgba(0,0,0,.4)', 1);
+    const [bx, by] = T.P(X(0.3), Y(0.2), Z(0.48)); ell(bx, by, 4 * k, 2 * k, '#2B2B30');
+    T.line([X(0.3), Y(0.2), Z(0.49)], [X(0.12), Y(0.12), Z(0.84)], '#9AA0A6', 1.3); T.line([X(0.3), Y(0.2), Z(0.49)], [X(0.5), Y(0.26), Z(0.86)], '#9AA0A6', 1.3);
+  }
+  // A flat panel's picture, or, when it is a framed TV and it is off, a painting: a pale sky, two hills and a low sun.
+  function framePicture(T, q, lit) {
+    if (lit >= 0.05) { tvPicture(T, q, lit); return; }
+    const at = (u, v) => [0, 1, 2].map((k) => q[0][k] + (q[1][k] - q[0][k]) * u + (q[3][k] - q[0][k]) * v);
+    T.poly(q, '#CFE0E8');
+    T.poly([at(0, 0), at(1, 0), at(1, 0.34), at(0.62, 0.5), at(0.3, 0.38), at(0, 0.46)], '#7FA08A');
+    T.poly([at(0, 0), at(1, 0), at(1, 0.2), at(0.7, 0.26), at(0.35, 0.18), at(0, 0.26)], '#5E8A5A');
+    const [sx, sy] = T.P(...at(0.76, 0.66)); circle(sx, sy, 3.4, '#F4D58A');
+  }
+  // Boxes are drawn far to near for however the piece is turned, so nothing on a shelf is hidden behind the thing beside it.
+  function sortedBoxes(T, o, W, D, boxes) {
+    const depth = (x, y) => (o.rot === 1 ? (D - y) + x : o.rot === 2 ? (W - x) + (D - y) : o.rot === 3 ? y + (W - x) : x + y);
+    boxes.map((b) => ({ b, d: depth(b[0] + b[3] / 2, b[1] + b[4] / 2), z: b[2] })).sort((p, q) => p.d - q.d || p.z - q.z).forEach(({ b }) => T.box(b[0], b[1], b[2], b[3], b[4], b[5], b[6]));
+  }
+  Object.assign(TV_DRAWERS, {
+    // A tube TV on a table of its own: a wooden top on four legs, a shelf under it with a video player, the set in the middle of the top.
+    crttable: (T, o) => {
+      const wood = cl(o), dk = shade(wood, -0.3);
+      sortedBoxes(T, o, 1.1, 0.6, [
+        [0.04, 0.04, 0, 0.07, 0.07, 0.5, dk], [0.99, 0.04, 0, 0.07, 0.07, 0.5, dk], [0.04, 0.49, 0, 0.07, 0.07, 0.5, dk], [0.99, 0.49, 0, 0.07, 0.07, 0.5, dk],
+        [0.05, 0.06, 0.2, 1.0, 0.48, 0.03, shade(wood, -0.12)],
+        [0.2, 0.14, 0.23, 0.55, 0.34, 0.09, '#2B2B30'], [0.8, 0.2, 0.23, 0.16, 0.2, 0.05, '#E4DDD2'],
+        [0, 0, 0.5, 1.1, 0.6, 0.05, wood],
+      ]);
+      crtSet(T, o, 0.17, 0.08, 0.55, 1.25, shade(wood, 0.28));
+      const fy = 0.601; T.poly([[0.22, fy, 0.26], [0.74, fy, 0.26], [0.74, fy, 0.3], [0.22, fy, 0.3]], '#15141A');
+      const [lx, ly] = T.P(0.7, fy, 0.285); circle(lx, ly, 1.1, '#7FD36A');
+    },
+    // A tube TV on a shelf bolted to the wall: a thick wooden shelf on two iron brackets, the set pushed back to the wall.
+    crtwall: (T, o) => {
+      const wood = cl(o);
+      T.line([0.12, 0.02, 0.7], [0.12, 0.5, 0.9], '#2B2B30', 2.6); T.line([0.68, 0.02, 0.7], [0.68, 0.5, 0.9], '#2B2B30', 2.6);
+      T.line([0.12, 0.02, 0.9], [0.12, 0.02, 0.7], '#2B2B30', 2.6); T.line([0.68, 0.02, 0.9], [0.68, 0.02, 0.7], '#2B2B30', 2.6);
+      T.box(0, 0, 0.9, 0.8, 0.55, 0.05, wood);
+      crtSet(T, o, 0.1, 0.1, 0.95, 1.0, shade(wood, 0.28));
+    },
+    // A TV that is a picture on the wall while it is off: a wooden frame, a white mat, and the painting; a thin panel when it is on.
+    frametv: (T, o) => {
+      const fr = cl(o), z0 = 0.85, z1 = 1.8;
+      T.box(0, 0.01, z0, 1.5, 0.06, z1 - z0, fr);
+      T.box(0.06, 0.06, z0 + 0.06, 1.38, 0.012, z1 - z0 - 0.12, '#F2EEE8');
+      framePicture(T, [[0.12, 0.0745, z0 + 0.12], [1.38, 0.0745, z0 + 0.12], [1.38, 0.0745, z1 - 0.12], [0.12, 0.0745, z1 - 0.12]], tvLit(o));
+      const [lx, ly] = T.P(1.42, 0.075, z0 + 0.03); circle(lx, ly, 0.8, tvLit(o) > 0.05 ? '#7FD36A' : '#8A5A3B');
+    },
+    // A wide screen with a thin bezel, and a soundbar under it with a grille.
+    cinematv: (T, o) => {
+      const z0 = 1.0, z1 = 2.1;
+      T.box(0.5, 0.0, 1.1, 1.2, 0.04, 0.5, '#2B2B30');
+      T.box(0, 0.03, z0, 2.2, 0.07, z1 - z0, '#15141A');
+      tvPicture(T, [[0.05, 0.102, z0 + 0.05], [2.15, 0.102, z0 + 0.05], [2.15, 0.102, z1 - 0.05], [0.05, 0.102, z1 - 0.05]], tvLit(o));
+      T.box(0.45, 0.02, 0.84, 1.3, 0.11, 0.1, '#2B2B30');
+      for (let x = 0.5; x < 1.7; x += 0.06) T.line([x, 0.132, 0.87], [x, 0.132, 0.91], 'rgba(255,255,255,.22)', 1);
+      const [lx, ly] = T.P(1.68, 0.133, 0.89); circle(lx, ly, 1, tvLit(o) > 0.05 ? '#5BE3E6' : '#8A8E96');
+    },
+    // A slim screen on a floor stand: two uprights and two shelves (a console and a soundbar on them), the screen on top.
+    floortv: (T, o) => {
+      const c = cl(o), dk = shade(c, -0.1);
+      sortedBoxes(T, o, 1.3, 0.45, [
+        [0.08, 0.1, 0, 0.06, 0.28, 0.54, '#2B2B30'], [1.16, 0.1, 0, 0.06, 0.28, 0.54, '#2B2B30'],
+        [0.05, 0.08, 0.06, 1.2, 0.32, 0.03, dk], [0.05, 0.08, 0.3, 1.2, 0.32, 0.03, dk],
+        [0.2, 0.14, 0.09, 0.34, 0.22, 0.06, '#E4DDD2'], [0.7, 0.16, 0.09, 0.4, 0.14, 0.07, '#2B2B30'],
+        [0.35, 0.16, 0.33, 0.62, 0.18, 0.06, '#2B2B30'],
+        [0.0, 0.17, 0.54, 1.3, 0.06, 0.78, '#15141A'],
+      ]);
+      tvPicture(T, [[0.05, 0.232, 0.59], [1.25, 0.232, 0.59], [1.25, 0.232, 1.27], [0.05, 0.232, 1.27]], tvLit(o));
+      const [lx, ly] = T.P(0.62, 0.232, 0.565); circle(lx, ly, 0.9, tvLit(o) > 0.05 ? '#7FD36A' : '#C2413A');
+    },
+  });
+
   // The entertainment center: two tall shelf towers, a cabinet and a bridge round a niche the TV stands in.
   function entCenter(T, o) {
     const c = cl(o), dk = shade(c, -0.35), W = 2.4, D = 0.55;
@@ -2956,6 +3038,11 @@ export function createHouseArt(ctx0, opts = {}) {
     tvflat: { parts: () => [F(0, 0, 1.0, 0.26, (T) => TV_DRAWERS.tvflat(T, T.o))] },
     tvdesk: { parts: () => [F(0, 0, 0.52, 0.2, (T) => TV_DRAWERS.tvdesk(T, T.o))] },
     tvtube: { parts: () => [F(0, 0, 0.62, 0.55, (T) => TV_DRAWERS.tvtube(T, T.o))] },
+    crttable: { parts: () => [F(0, 0, 1.1, 0.6, (T) => TV_DRAWERS.crttable(T, T.o))] },
+    crtwall: { parts: () => [F(0, 0, 0.8, 0.55, (T) => TV_DRAWERS.crtwall(T, T.o))] },
+    frametv: { parts: () => [F(0, 0, 1.5, 0.08, (T) => TV_DRAWERS.frametv(T, T.o))] },
+    cinematv: { parts: () => [F(0, 0, 2.2, 0.14, (T) => TV_DRAWERS.cinematv(T, T.o))] },
+    floortv: { parts: () => [F(0, 0, 1.3, 0.45, (T) => TV_DRAWERS.floortv(T, T.o))] },
     entcenter: { parts: () => [F(0, 0, 2.4, 0.55, (T) => entCenter(T, T.o))] },
     tvunit: {    
       parts: () => [F(0, 0, 1.6, 0.45, (T) => { T.box(0, 0, 0, 1.6, 0.45, 0.42, '#3A3340'); T.line([0.8, 0.45, 0.06], [0.8, 0.45, 0.36], 'rgba(255,255,255,.12)', 1); if (!has('bigtv')) { T.box(0.1, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); T.box(1.32, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); } })] },
@@ -6366,7 +6453,7 @@ export function createHouseArt(ctx0, opts = {}) {
       case 'musicbox': return run(30, 'The lid opens and a tinkly little tune starts to play.');
       case 'servicebell': return run(1.2, 'Ding!');
       case 'diffuser': return run(20, 'The diffuser hums and puffs out eucalyptus.');
-      case 'walltv': case 'tvflat': case 'tvdesk': case 'tvtube': return flipTv(o);
+      case 'walltv': case 'tvflat': case 'tvdesk': case 'tvtube': case 'crttable': case 'crtwall': case 'frametv': case 'cinematv': case 'floortv': return flipTv(o);
       // A stand switches the TV on it, or the one on the wall above it.
       case 'tvunit': case 'mediaconsole': case 'entcenter': { const tv = tvFor(o); return tv ? flipTv(tv) : null; }
       case 'fireplace': if (fireOut.has(o.id)) { fireOut.delete(o.id); return 'The fire crackles back to life.'; } fireOut.add(o.id); return 'The fire dies down.';
