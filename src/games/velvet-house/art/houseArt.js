@@ -4791,13 +4791,10 @@ export function createHouseArt(ctx0, opts = {}) {
     rows.sort((a, b) => a.key - b.key).forEach(r => r.d());
     }
   }
-  // Haze toward the top (the light pass darkens it at night with the yard), then the edges fade to nothing, so the neighbourhood never ends on a line.
+  // The edges fade into the page's dark, so the neighbourhood never ends on a line. (No haze over the top and no fade to a pale rim: both read as a white glow.)
   function nbFinish() {
-    const si = seasonIdx();
-    const g = ctx.createLinearGradient(0, 0, 0, H * 0.55); g.addColorStop(0, si === 3 ? 'rgba(228,234,240,.5)' : 'rgba(214,226,232,.42)'); g.addColorStop(1, 'rgba(214,226,232,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    ctx.globalCompositeOperation = 'destination-out';
-    [[0, 0, 40, 0], [W, 0, W - 40, 0], [0, 0, 0, 36], [0, H, 0, H - 32]].forEach(([x0, y0, x1, y1]) => { const e = ctx.createLinearGradient(x0, y0, x1, y1); e.addColorStop(0, 'rgba(0,0,0,1)'); e.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = e; ctx.fillRect(0, 0, W, H); });
-    ctx.globalCompositeOperation = 'source-over';
+    // The picture ends in the page's own dark, not in a pale rim: each edge is painted over with that colour, thickest at the edge.
+    [[0, 0, 48, 0], [W, 0, W - 48, 0], [0, 0, 0, 40], [0, H, 0, H - 40]].forEach(([x0, y0, x1, y1]) => { const e = ctx.createLinearGradient(x0, y0, x1, y1); e.addColorStop(0, 'rgba(32,29,40,1)'); e.addColorStop(1, 'rgba(32,29,40,0)'); ctx.fillStyle = e; ctx.fillRect(0, 0, W, H); });
   }
   // The neighbourhood's lights, over everything lit: lit windows, the street lamps and the pools they make on the lane. They come up as it
   // gets dark and fade at dawn.
@@ -6215,7 +6212,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (s.focus) lastFocus = s.focus;
     if (dofAmt > 0.02 && lastFocus) drawDof(lastFocus);
     ctx.restore();
-    ctx.fillStyle = 'rgba(34,26,35,.55)'; ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillText(LEVEL_NAMES[lv].toUpperCase(), W - 14, H - 12); ctx.textAlign = 'start';
+    ctx.fillStyle = isOutdoor(lv) ? 'rgba(232,226,240,.55)' : 'rgba(34,26,35,.55)'; ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillText(LEVEL_NAMES[lv].toUpperCase(), W - 14, H - 12); ctx.textAlign = 'start';
   }
 
   // Paint, wallpaper and floors go on one room of a floor, or on the whole floor (`room` left out), which then puts every
