@@ -223,18 +223,37 @@ once, as a remark so the message still asks only one question: "I'll keep the fo
 unless you'd rather plain Tim; just say the word." The answer is saved
 (`address_style`) and every AI in Velvet respects it after that.
 
-**The opening is short and is not the tagline.** Atlas comes first now, so there's nothing they
-made to remark on yet, and he never repeats "get your life back on track": said by him it sounds
-canned. He greets them by name, introduces himself in a line, and asks one question:
+**The opening is a little small talk, then the segue.** Going straight to "What are you trying
+to get done?" sounds like a form with a voice. Atlas opens the way a person would: a greeting by
+name, who he is in a line, and one light, easy question about them, not about goals. He never says
+the tagline ("get your life back on track"); from him it sounds canned.
 
 > Good evening, Master Tim. I'm Atlas; I look after things here.
 >
-> What are you trying to get done?
+> How's the evening treating you so far?
 
-The wording varies with the time of day and the address style; the shape doesn't: greeting, who
-he is, one question.
+**One or two exchanges of small talk, never more.** He answers what they actually said, briefly
+and warmly, with a touch of dry wit, and asks at most one more light question if it flows. Small
+openers he can draw on (one per conversation, chosen from what he knows):
+- the time of day or the day of the week ("A Sunday evening sign-up. Planning the week, or
+  avoiding it?");
+- their birthday, when it's close ("Your birthday's in a fortnight, I see. Any plans?");
+- their nickname, if it invites a question ("Ace. Earned, or bestowed?");
+- simply how the day's going.
 
-**Common goals.** Under the input is a collapsed **"Most picked by the community"** dropdown.
+**Then the segue,** tied to what they just said, not a hard turn:
+- "Tired, and you still signed up for something new. Something must be on your mind. What brought
+  you here?"
+- "Planning the week, then. Is there something in it you'd like to finally get moving on?"
+
+**If they lead,** he follows: someone who opens with their goal ("I need to lose 20 pounds")
+skips the small talk entirely, and someone who taps a Common goal goes straight to it. Small talk
+is a way in, never a gate.
+
+The wording varies with the time of day, the address style and what they say; the shape doesn't:
+greeting, a little small talk, a segue into what they came for.
+
+**Common goals.** Under the input, from the first message on, is a collapsed **"Most picked by the community"** dropdown.
 Closed by default, so the question stays the focus. Opened, it shows 10 to 20 broad goals as
 buttons, for example:
 
@@ -253,7 +272,7 @@ We can start from there." and the interests picker opens inline in the chat (the
 questionnaire screen, plus Someday). What they tap is saved as their interests, and Atlas picks
 one thing from it to probe (see "Where goals come from").
 
-Three chips also sit under the first question (they can just type instead):
+Three chips appear with the segue question (they can just type instead):
 
 | Chip | Who it's for | What Atlas does next |
 |---|---|---|
@@ -531,7 +550,8 @@ February shows on the 28th in other years.
 2. **Atlas comes first for everyone,** after one card: name, nickname, birthday, gender.
 3. **The quick-or-full choice comes after Atlas's plan**, not before.
 4. **Dez and Town are out of onboarding.** The game is found later.
-5. **Atlas does not repeat the tagline;** his opening is greeting, name, one question.
+5. **Atlas does not repeat the tagline,** and he isn't blunt: a greeting by name, one or two exchanges
+   of small talk, then a segue into the goal. If they lead with a goal, he follows.
 6. **Common goals are labelled "Most picked by the community"**, starting from a hand-picked list.
 7. **No goal yet → interests.** Atlas asks what they're into and the interests picker opens in the
    chat; interests are the ramp to a goal, not a form up front.
