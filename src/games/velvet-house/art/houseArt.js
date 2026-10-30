@@ -3274,18 +3274,25 @@ export function createHouseArt(ctx0, opts = {}) {
       parts: () => [F(0, 0, 0.9, 0.8, (T, o, t) => {
         const kick = hoopKick.get(o.id), age = kick ? t - kick.at : 9, live = age >= 0 && age < 1.6;
         const sw = live ? Math.sin(age * 22) * Math.exp(-age * 3.2) : 0;
-        T.box(0.2, 0.06, 0, 0.5, 0.4, 0.07, '#3A3F4A'); T.box(0.42, 0.1, 0.07, 0.06, 0.06, 2.12, '#4A4F58');
-        T.box(0.44, 0.14, 2.14, 0.03, 0.3, 0.04, '#4A4F58');
-        T.box(0.05, 0.13, 1.84, 0.8, 0.05, 0.6, '#EEF2F6');
-        T.poly([[0.28, 0.1295, 1.9], [0.62, 0.1295, 1.9], [0.62, 0.1295, 2.2], [0.28, 0.1295, 2.2]], null, '#C2413A', 1.2);
-        T.poly([[0.05, 0.1295, 1.84], [0.85, 0.1295, 1.84], [0.85, 0.1295, 2.44], [0.05, 0.1295, 2.44]], null, '#6B7482', 1.4);
+        // Like a portable hoop: a weighted base, a pole that meets the bottom of the board, a board with the red square ABOVE the rim, and the rim and net hanging in front of the board's lower part.
+        const front = iso(...xf(o, 0.45, 0.4), 0)[1] > iso(...xf(o, 0.45, 0.18), 0)[1]; // is the board's front toward the camera?
         const [cx, cy] = hoopRimLocal(o), rr = 0.16, rz = 2.09 + (live && kick && !kick.made ? Math.sin(age * 26) * Math.exp(-age * 5) * 0.025 : 0), N = 12, ring = [];
-        for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2; ring.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz]); }
-        T.line([cx, 0.18, rz], [cx, cy - rr, rz], '#C2413A', 2.6);
-        const net = (k) => { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2; return [[cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz - 0.01], [cx + Math.cos(b) * rr * 0.6 + sw * 0.05, cy + Math.sin(b) * rr * 0.6 + sw * 0.03, rz - 0.3 + (live && kick && kick.made ? 0.02 * Math.sin(age * 18) : 0)]]; };
-        for (let k = 0; k < N; k++) { const [p0, p1] = net(k); T.line(p0, p1, 'rgba(255,255,255,.85)', 0.9); }
-        for (let k = 0; k < N; k++) { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2, f = 0.5, z = rz - 0.15; T.line([cx + Math.cos(a) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(a) * rr * (1 - 0.3 * f), z], [cx + Math.cos(b) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(b) * rr * (1 - 0.3 * f), z], 'rgba(255,255,255,.6)', 0.8); }
-        for (let i = 0; i < N; i++) T.line(ring[i], ring[(i + 1) % N], '#E0572B', 2.2);
+        const rimNet = () => {
+          for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2; ring.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz]); }
+          T.box(cx - 0.05, 0.18, rz - 0.03, 0.1, cy - rr - 0.18 + 0.02, 0.03, '#C2413A');       // the plate and arm that hold the rim to the board
+          const net = (k) => { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2; return [[cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, rz - 0.01], [cx + Math.cos(b) * rr * 0.6 + sw * 0.05, cy + Math.sin(b) * rr * 0.6 + sw * 0.03, rz - 0.3 + (live && kick && kick.made ? 0.02 * Math.sin(age * 18) : 0)]]; };
+          for (let k = 0; k < N; k++) { const [p0, p1] = net(k); T.line(p0, p1, 'rgba(255,255,255,.85)', 0.9); }
+          for (let k = 0; k < N; k++) { const a = k / N * Math.PI * 2, b = (k + 1) / N * Math.PI * 2, f = 0.5, z = rz - 0.15; T.line([cx + Math.cos(a) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(a) * rr * (1 - 0.3 * f), z], [cx + Math.cos(b) * rr * (1 - 0.3 * f) + sw * 0.02, cy + Math.sin(b) * rr * (1 - 0.3 * f), z], 'rgba(255,255,255,.6)', 0.8); }
+          for (let i = 0; i < N; i++) T.line(ring[i], ring[(i + 1) % N], '#E0572B', 2.2);
+        };
+        T.box(0.2, 0.06, 0, 0.5, 0.4, 0.07, '#3A3F4A'); T.box(0.42, 0.1, 0.07, 0.06, 0.06, 1.88, '#4A4F58');
+        if (!front) rimNet();                                                                    // seen from behind, the rim is on the far side of the board
+        T.box(0.05, 0.13, 1.95, 0.8, 0.05, 0.5, '#2E343F');
+        if (front) {
+          T.poly([[0.08, 0.1805, 1.98], [0.82, 0.1805, 1.98], [0.82, 0.1805, 2.42], [0.08, 0.1805, 2.42]], '#F2F5F8');
+          T.poly([[0.3, 0.1805, 2.12], [0.6, 0.1805, 2.12], [0.6, 0.1805, 2.36], [0.3, 0.1805, 2.36]], null, '#C2413A', 1.4);
+          rimNet();
+        } else T.poly([[0.08, 0.1295, 1.98], [0.82, 0.1295, 1.98], [0.82, 0.1295, 2.42], [0.08, 0.1295, 2.42]], '#E4E8EE');
       })],
     },
     bench: {     
