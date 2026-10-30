@@ -427,7 +427,7 @@ function hoopsRig(t, ph, env) {
   } else {
     hands = { 1: [0.3, 0.17, ball.z + 0.1 - SH], [-1]: [0.16, 0.14, -0.34] }; lean = 0.04; headDown = true;
   }
-  const rig = { hands, lean, drop, nod, bob, lookUp, headDown, snap: true, props: [{ kind: 'bball', f: ball.f, s: ball.s, z: ball.z }] };
+  const rig = { hands, lean, drop, nod, bob, lookUp, headDown, snap: true, props: [{ kind: 'bball', f: ball.f, s: ball.s, z: ball.z, phase: ball.phase }] };
   // The rim reacts: when the ball arrives at it, once per round, whether it went in.
   rig.rim = { since: s - END, made, round: n };
   return rig;

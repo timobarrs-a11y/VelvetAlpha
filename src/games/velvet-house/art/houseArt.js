@@ -5053,6 +5053,7 @@ export function createHouseArt(ctx0, opts = {}) {
   let hoopPs = null, curShZ = 0.99;
   /** The rim and net of each hoop reacting to a ball: when the ball last arrived and whether it went in. */
   const hoopKick = new Map();
+  const lateDraw = [];
   function drawProps(rig, hand, c, t, hd, local, pass) {
     (rig.props || []).forEach(p => {
       // The guitar's body sits behind the hands that play it; everything else is held in front.
@@ -5089,12 +5090,16 @@ export function createHouseArt(ctx0, opts = {}) {
         case 'ball': circle(h[0] + 3, h[1] - 6, 2.4, '#E5484D'); break;
         case 'bball': {
           // A basketball on its own: placed in the world by its own height, with a shadow on the floor under it.
-          const pos = local([p.f, p.s, p.z - curShZ], 1), gnd = local([p.f, p.s, -curShZ], 1);
-          ell(gnd[0], gnd[1], 3.6 - Math.min(2, p.z * 1.2), 1.5, 'rgba(0,0,0,.25)');
-          circle(pos[0], pos[1], 4.2, '#D9792B'); ctx.strokeStyle = 'rgba(60,25,10,.7)'; ctx.lineWidth = 0.7;
-          ctx.beginPath(); ctx.moveTo(pos[0] - 4.2, pos[1]); ctx.lineTo(pos[0] + 4.2, pos[1]); ctx.moveTo(pos[0], pos[1] - 4.2); ctx.lineTo(pos[0], pos[1] + 4.2); ctx.stroke();
-          ctx.beginPath(); ctx.arc(pos[0], pos[1], 4.2, 0, Math.PI * 2); ctx.stroke();
-          circle(pos[0] - 1.3, pos[1] - 1.4, 1, 'rgba(255,230,190,.5)');
+          // Once it is in the air near the hoop it is drawn after everything else, so the board and the net never hide it.
+          const pos = local([p.f, p.s, p.z - curShZ], 1), gnd = local([p.f, p.s, -curShZ], 1), z = p.z;
+          const paint = () => {
+            ell(gnd[0], gnd[1], 3.6 - Math.min(2, z * 1.2), 1.5, 'rgba(0,0,0,.25)');
+            circle(pos[0], pos[1], 4.2, '#D9792B'); ctx.strokeStyle = 'rgba(60,25,10,.7)'; ctx.lineWidth = 0.7;
+            ctx.beginPath(); ctx.moveTo(pos[0] - 4.2, pos[1]); ctx.lineTo(pos[0] + 4.2, pos[1]); ctx.moveTo(pos[0], pos[1] - 4.2); ctx.lineTo(pos[0], pos[1] + 4.2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(pos[0], pos[1], 4.2, 0, Math.PI * 2); ctx.stroke();
+            circle(pos[0] - 1.3, pos[1] - 1.4, 1, 'rgba(255,230,190,.5)');
+          };
+          if (p.phase === 'flight' || p.phase === 'net' || p.phase === 'rim') lateDraw.push(paint); else paint();
           break;
         }
         case 'paper': {
@@ -6037,6 +6042,7 @@ export function createHouseArt(ctx0, opts = {}) {
     sync(s);
     // The pets, so the bowls and litter boxes can show what is in them.
     PETS.length = 0; if (s.pets) for (const p of s.pets) PETS.push(p);
+    lateDraw.length = 0;
     const t = animT, lv = viewLevel;
     const watcher = [jordan, maya].find(c => c && c.task && c.task.phase === 'do' && (c.task.name === 'tv' || c.task.name === 'movie'));
     if (watcher) tvWatchLevel = watcher.level;
@@ -6088,6 +6094,7 @@ export function createHouseArt(ctx0, opts = {}) {
       items.push({ x1: p.x - r, y1: p.y - r, x2: p.x + r, y2: p.y + r, key: vs(p.x, p.y) + 0.0005 + (p.z > 0.05 ? 0.3 : 0), d: () => { if (gOn) G.billboard(iso(p.x, p.y, 0)[1], ZH * 0.5, MATERIAL.body); drawPet(p, t); if (gOn) G.clearBase(); } });
     });
     depthSort(items).forEach(it => it.d());
+    lateDraw.forEach((f) => f()); lateDraw.length = 0;
     drawFrontWalls(lv); drawProjector(lv); drawObjectSpeech(lv, t);
     if (arrState) drawArrangeOverlay(arrState, lv);
     drawGuides(lv, t);

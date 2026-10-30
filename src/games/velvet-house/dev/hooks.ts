@@ -39,6 +39,9 @@ export function installDevHooks(g: Game): void {
         p.scripted = true; view.paused = true;
         tickAgent(g.house, p, o, sec, gameMin, 1, world.minutes / 60, () => 0.5);
       },
+      // The clock lab: pause the game and set the animation clock, to look at a motion at exact moments (a ball's flight, a net's reaction).
+      setT: (t: number) => { view.paused = true; view.t = t; },
+      getT: () => view.t,
       // The gait lab: freeze the game, put someone in a walk and move them a little at a time, so a stride can be looked at frame by frame.
       gaitStep: (who: 'jordan' | 'maya', dx: number, dy: number) => {
         const p = who === 'maya' ? people[1] : people[0];
